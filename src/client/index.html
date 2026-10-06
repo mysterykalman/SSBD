@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fff4df">
+<meta name="description" content="A warm, playful word-connection game for kids and families.">
+<title>Same Same but Different</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="%STYLES_CSS%">
+</head>
+<body>
+<a class="skip" href="#app">Skip to game</a>
+<header class="topbar">
+  <a class="brand" id="brandLink" href="/"><span class="brand-top" id="brandTop">Same Same</span><span class="brand-bottom" id="brandBottom">but different</span></a>
+  <div class="top-actions">
+    <span class="offline-pill" id="offlinePill" role="status" hidden></span>
+    <div class="lang-switch" id="langGroup" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true"><span aria-hidden="true">EN</span><span class="sr-only">English</span></button>
+      <button type="button" data-lang="fr" aria-pressed="false"><span aria-hidden="true">FR</span><span class="sr-only">Français</span></button>
+    </div>
+    <button type="button" class="avatar" id="profileBtn" aria-label="Profile">☺</button>
+  </div>
+</header>
+<main id="app" tabindex="-1"><p class="boot">Loading…</p></main>
+<div class="toasts" id="toasts"></div>
+<dialog id="dialog" class="dialog"></dialog>
+<noscript><p class="boot">This game needs JavaScript turned on.</p></noscript>
+<script type="module" src="%APP_JS%"></script>
+</body>
+</html>

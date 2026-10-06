@@ -1,0 +1,137 @@
+import {test} from "node:test";
+import assert from "node:assert/strict";
+import {chooseResponse} from "../src/shared/bot.js";
+import {getLexicon} from "../src/shared/lexicon/index.js";
+import {currentMove, seededRandom, usedKeys} from "../src/shared/rules.js";
+import {publicMove, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
+import {wordKey} from "../src/shared/words.js";
+
+const PLAYER_WORDS = ["sun", "sky", "night", "dream", "bed", "pillow", "blanket", "cozy", "winter", "snow", "cold", "ice", "skating", "fun", "party", "cake", "candle", "birthday", "gift", "surprise", "happy"];
+
+function playOut(seed, language = "en") {
+  let game = startSoloGame({id: `game-${seed}`, language, seed});
+  const words = [];
+  for (const word of PLAYER_WORDS) {
+    if (game.status !== "ACTIVE") break;
+    const before = currentMove(game);
+    const result = submitSoloWord(game, word);
+    if (!result.ok) { assert.ok(["ALREADY_USED", "SAME_AS_LAST"].includes(result.code), result.code); continue; }
+    assert.equal(result.move.number, before.number);
+    assert.equal(result.move.words.a, word);
+    if (result.game.status === "ACTIVE") assert.deepEqual(currentMove(result.game).prompts, [result.move.words.a, result.move.words.b]);
+    game = result.game;
+    words.push(result.move.words.b);
+  }
+  return {game, botWords: words};
+}
+
+test("a fresh Solo game is blank: no prompts, nothing revealed, bot word hidden", () => {
+  const game = startSoloGame({id: "fresh", seed: 7});
+  assert.equal(game.moves.length, 1);
+  const move = currentMove(game);
+  assert.equal(move.prompts, null);
+  assert.equal(move.words, null);
+  assert.ok(move.hidden.b, "bot has locked a word");
+  assert.equal(publicMove(move).hidden, undefined, "display copy has no bot word");
+});
+
+test("the bot locks its word before the player types, so the player's word cannot influence it", () => {
+  const game = startSoloGame({id: "independent", seed: 99});
+  const locked = currentMove(game).hidden.b;
+  const a = submitSoloWord(game, "banana"), b = submitSoloWord(game, locked);
+  assert.equal(a.move.words.b, locked);
+  assert.equal(b.move.words.b, locked);
+  assert.equal(b.game.status, "MATCHED", "typing the bot's word is a match");
+});
+
+test("Solo plays through: prompts chain, bot never repeats any game word, game ends cleanly", () => {
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const {game, botWords} = playOut(seed);
+    const revealedKeys = game.moves.filter(m => m.words).flatMap(m => [wordKey(m.words.a), wordKey(m.words.b)]);
+    // Bot word at move n must not equal any word revealed before move n.
+    game.moves.filter(m => m.words).forEach((m, i, list) => {
+      const earlier = new Set(list.slice(0, i).flatMap(x => [wordKey(x.words.a), wordKey(x.words.b)]));
+      assert.ok(!earlier.has(wordKey(m.words.b)), `bot reused ${m.words.b} (seed ${seed})`);
+    });
+    assert.equal(new Set(botWords.map(wordKey)).size, botWords.length);
+    assert.ok(revealedKeys.length > 0);
+    assert.ok(["ACTIVE", "MATCHED", "EXHAUSTED"].includes(game.status));
+  }
+});
+
+test("Solo reaches the 20-move limit with a valid end state", () => {
+  let game = startSoloGame({id: "long", seed: 1234});
+  let n = 0;
+  while (game.status === "ACTIVE" && n < 200) {
+    const bot = currentMove(game).hidden.b;
+    // A word guaranteed to be valid, unused and different from the bot's.
+    const word = `zz${String.fromCharCode(97 + (n % 26))}${String.fromCharCode(97 + Math.floor(n / 26))}`;
+    assert.notEqual(wordKey(word), wordKey(bot));
+    const r = submitSoloWord(game, word);
+    assert.ok(r.ok, r.code);
+    game = r.game;
+    n++;
+  }
+  assert.equal(game.status, "EXHAUSTED");
+  assert.equal(game.moves.length, 20);
+  assert.equal(currentMove(game).hidden, undefined);
+});
+
+test("bot choices vary between new games", () => {
+  const openings = new Set();
+  for (let seed = 1; seed <= 30; seed++) openings.add(currentMove(startSoloGame({id: `v${seed}`, seed})).hidden.b);
+  assert.ok(openings.size >= 15, `only ${openings.size} distinct openings`);
+  const responses = new Set();
+  for (let seed = 1; seed <= 30; seed++) responses.add(chooseResponse({prompts: ["sun", "moon"], rng: seededRandom(seed)}).word);
+  assert.ok(responses.size >= 3, `only ${[...responses].join(",")}`);
+});
+
+test("bot responses relate to both prompts", () => {
+  const lex = getLexicon("en");
+  const near = (a, b) => {
+    const A = lex.concepts.get(lex.resolve(a)), B = lex.concepts.get(lex.resolve(b));
+    return A.links.has(B.id) || [...A.links].some(x => B.links.has(x)) || A.tags.some(t => B.tags.includes(t));
+  };
+  const pairs = [["sun", "moon"], ["dog", "cat"], ["pizza", "cake"], ["beach", "summer"], ["dragon", "castle"], ["rain", "flower"], ["school", "book"], ["music", "party"]];
+  for (const [a, b] of pairs) {
+    for (let seed = 1; seed <= 10; seed++) {
+      const pick = chooseResponse({prompts: [a, b], rng: seededRandom(seed)});
+      assert.equal(pick.quality, "strong", `${a}+${b} -> ${pick.word}`);
+      assert.ok(near(pick.word, a) && near(pick.word, b), `${a}+${b} -> ${pick.word}`);
+      assert.notEqual(wordKey(pick.word), wordKey(a));
+      assert.notEqual(wordKey(pick.word), wordKey(b));
+    }
+  }
+});
+
+test("bot excludes used words and handles unknown prompts gracefully", () => {
+  const exclude = new Set(["sky", "star", "night", "space", "light"].map(wordKey));
+  for (let seed = 1; seed <= 10; seed++) {
+    const pick = chooseResponse({prompts: ["sun", "moon"], excludeKeys: exclude, rng: seededRandom(seed)});
+    assert.ok(!exclude.has(wordKey(pick.word)), pick.word);
+  }
+  const odd = chooseResponse({prompts: ["zorblax", "quuxify"], rng: seededRandom(1)});
+  assert.ok(odd.word && odd.quality === "loose");
+  const compound = chooseResponse({prompts: ["sunflower", "nightmare"], rng: seededRandom(1)});
+  assert.ok(compound.word);
+});
+
+test("French Solo uses the French word pool", () => {
+  const fr = getLexicon("fr");
+  const game = startSoloGame({id: "fr", language: "fr", seed: 5});
+  assert.ok(fr.resolve(currentMove(game).hidden.b), currentMove(game).hidden.b);
+  const r = submitSoloWord(game, "soleil");
+  assert.ok(r.ok);
+  if (r.game.status === "ACTIVE") assert.ok(fr.resolve(currentMove(r.game).hidden.b));
+});
+
+test("Solo duplicate rules: same word twice in a row and reused words are blocked", () => {
+  let game = startSoloGame({id: "dup", seed: 3});
+  let r = submitSoloWord(game, currentMove(game).hidden.b === "zebra" ? "giraffe" : "zebra");
+  game = r.game;
+  if (game.status !== "ACTIVE") return;
+  const first = game.moves[0].words.a;
+  assert.equal(submitSoloWord(game, first).code, "SAME_AS_LAST");
+  assert.equal(submitSoloWord(game, "   ").code, "EMPTY");
+  assert.ok(usedKeys(game).has(wordKey(first)));
+});
