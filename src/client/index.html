@@ -15,16 +15,16 @@
 <header class="topbar">
   <a class="brand" id="brandLink" href="/"><span class="brand-top" id="brandTop">Same Same</span><span class="brand-bottom" id="brandBottom">but different</span></a>
   <div class="top-actions">
-    <span class="offline-pill" id="offlinePill" role="status" hidden></span>
+    <span class="offline-pill" id="offlinePill" hidden></span>
     <div class="lang-switch" id="langGroup" role="group" aria-label="Language">
       <button type="button" data-lang="en" aria-pressed="true"><span aria-hidden="true">EN</span><span class="sr-only">English</span></button>
-      <button type="button" data-lang="fr" aria-pressed="false"><span aria-hidden="true">FR</span><span class="sr-only">Français</span></button>
+      <button type="button" data-lang="fr" aria-pressed="false"><span aria-hidden="true">FR</span><span class="sr-only" lang="fr">Français</span></button>
     </div>
     <button type="button" class="avatar" id="profileBtn" aria-label="Profile">☺</button>
   </div>
 </header>
 <main id="app" tabindex="-1"><p class="boot">Loading…</p></main>
-<div class="toasts" id="toasts"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 <dialog id="dialog" class="dialog"></dialog>
 <noscript><p class="boot">This game needs JavaScript turned on.</p></noscript>
 <script type="module" src="%APP_JS%"></script>

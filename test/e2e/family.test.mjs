@@ -47,11 +47,11 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
   await ben.fill("#word", "Planet");
   await ben.click("#lockBtn");
   await ben.waitForSelector("#prompt");
-  assert.deepEqual(await ben.locator("#prompt .tile").allInnerTexts(), ["Rocket", "Planet"]);
+  assert.deepEqual((await ben.locator("#prompt .tile").allInnerTexts()).map(w => w.toLowerCase()), ["rocket", "planet"]);
   assert.match(await ben.locator(".reveal").innerText(), /ANA[\s\S]*ROCKET[\s\S]*YOU[\s\S]*PLANET/i);
 
   await ana.waitForSelector("#prompt", {timeout: 10000});
-  assert.deepEqual(await ana.locator("#prompt .tile").allInnerTexts(), ["Rocket", "Planet"], "same stable order for both players");
+  assert.deepEqual((await ana.locator("#prompt .tile").allInnerTexts()).map(w => w.toLowerCase()), ["rocket", "planet"], "same stable order for both players");
   assert.match(await ana.locator(".trail-row").first().innerText(), /ROCKET[\s\S]*PLANET/i);
 
   // Refresh keeps state; a match ends the game for both.

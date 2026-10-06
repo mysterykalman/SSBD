@@ -458,7 +458,7 @@ function renderGame() {
 
   mount(
     h("div", {class: "game-nav"},
-      h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, t("back")),
+      h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, backLabel()),
       h("span", {class: "mode-chip"}, h("span", {"aria-hidden": "true"}, isSoloLike(view) ? "🤖 " : "👥 "), isSoloLike(view) ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")}))),
     board,
     trail(view));
@@ -477,6 +477,12 @@ function languageNote(view) {
     solo ? null : [t("langNoteFamily"), " "],
     t("langNoteCopy", {game, ui}), " ",
     h("button", {class: "btn small ghost", type: "button", lang: state.lang, onclick: () => (solo ? startSolo(state.lang) : ensurePlayer(() => createFamily(state.lang)))}, t("langNewGame", {ui})));
+}
+
+// "← Games": the arrow is decoration, so screen readers only hear the word (text still comes from t("back")).
+function backLabel() {
+  const text = t("back"), arrow = text.match(/^\s*[←⬅]\s*/);
+  return arrow ? [h("span", {"aria-hidden": "true"}, arrow[0]), text.slice(arrow[0].length)] : text;
 }
 
 function wordChip(word, label, cls = "") {
