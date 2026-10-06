@@ -212,3 +212,15 @@ test("speller with the full lexicon: confident fixes only", () => {
     for (const w of getLexicon(lang).words) assert.equal(speller.suggest(w), null, `${lang} ${w}`);
   }
 });
+
+test("Solo openings never start a game on a spooky or sad word", async () => {
+  const {chooseOpening} = await import("../src/shared/bot.js");
+  const {seededRandom} = await import("../src/shared/rules.js");
+  const gloomy = new Set(["nightmare", "scary", "ghost", "monster", "cauchemar", "effrayant", "fantôme", "monstre", "peur", "fear"]);
+  for (const language of ["en", "fr"]) {
+    for (let seed = 1; seed <= 300; seed++) {
+      const {word} = chooseOpening({language, rng: seededRandom(seed * 7919)});
+      if (gloomy.has(word)) throw new Error(`gloomy opening ${word} (${language}, seed ${seed})`);
+    }
+  }
+});

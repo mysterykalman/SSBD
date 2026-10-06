@@ -85,11 +85,56 @@ function isPluralOfKnown(key, byKey) {
   return false;
 }
 
+// Letter swaps that sound alike, so they are likely slips rather than a different word.
+const SOUND_ALIKE = [/^[aeiouy]{2}$/, /^[sz]{2}$/, /^[ck]{2}$/, /^[cs]{2}$/, /^[kq]{2}$/, /^[gj]{2}$/];
+const soundAlike = (x, y) => SOUND_ALIKE.some(re => re.test(x + y));
+
+/**
+ * Is `candidate` one typical childhood slip away from `typed`?
+ * Allowed: two neighbouring letters swapped, one letter left out, one letter
+ * doubled by accident, or one sound-alike letter swapped (never the first letter).
+ * Rejected: other one-letter changes, which usually make a different real word
+ * ("draft" is not a typo for "raft", nor "stamp" for "swamp").
+ */
+function isTypicalSlip(typed, candidate) {
+  if (typed.length === candidate.length) {
+    const diff = [];
+    for (let i = 0; i < typed.length; i++) if (typed[i] !== candidate[i]) diff.push(i);
+    if (diff.length === 2 && diff[1] === diff[0] + 1 && typed[diff[0]] === candidate[diff[1]] && typed[diff[1]] === candidate[diff[0]]) return true;
+    return diff.length === 1 && diff[0] > 0 && typed.length >= 4 && soundAlike(typed[diff[0]], candidate[diff[0]]);
+  }
+  if (typed.length + 1 === candidate.length) {
+    // A letter left out; never at the very start ("rain" is not "train").
+    for (let i = 1; i < candidate.length; i++) if (candidate.slice(0, i) + candidate.slice(i + 1) === typed) return typed.length >= 4;
+    return false;
+  }
+  if (typed.length === candidate.length + 1) {
+    // One extra letter, only when it repeats its neighbour ("mooon", "chatteau").
+    for (let i = 0; i < typed.length; i++) {
+      if (typed.slice(0, i) + typed.slice(i + 1) === candidate) {
+        if (typed[i] === typed[i - 1] || typed[i] === typed[i + 1]) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isInflectionOfKnown(key, byKey) {
+  for (const ending of ["ed", "ing", "er", "est", "ly", "d"]) {
+    if (key.length > ending.length + 2 && key.endsWith(ending)) {
+      const stem = key.slice(0, -ending.length);
+      if (byKey.has(stem) || byKey.has(stem + "e") || (stem.at(-1) === stem.at(-2) && byKey.has(stem.slice(0, -1)))) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Build a speller from a list of known display words.
- * suggest(raw) returns a display word only when we are confident:
- * the input is unknown, and exactly one known word is closest within the
- * allowed distance (1 edit, or 2 edits for words of 7+ letters).
+ * suggest(raw) returns a display word only when we are confident: the input is
+ * unknown, it is not a plural or inflection of a known word, exactly one known
+ * word is the closest match, and the difference is a typical slip (one slip for
+ * shorter words; two slips, keeping the first two letters, for 8+ letters).
  */
 export function createSpeller(words) {
   const byKey = new Map();
@@ -107,9 +152,9 @@ export function createSpeller(words) {
     suggest(raw) {
       const key = wordKey(raw);
       if (key.length < 3 || byKey.has(key)) return null;
-      // Simple plurals and accent-free spellings of known words are fine as typed.
-      if (isPluralOfKnown(key, byKey)) return null;
-      const limit = key.length >= 7 ? 2 : 1;
+      // Simple plurals, inflections and accent-free spellings of known words are fine as typed.
+      if (isPluralOfKnown(key, byKey) || isInflectionOfKnown(key, byKey)) return null;
+      const limit = key.length >= 8 ? 2 : 1;
       let best = limit + 1, found = [];
       for (let length = key.length - limit; length <= key.length + limit; length++) {
         for (const candidate of byLength.get(length) || []) {
@@ -119,9 +164,10 @@ export function createSpeller(words) {
         }
       }
       if (best > limit || found.length !== 1) return null;
-      // Two-edit suggestions must keep the first letter; that is where kids rarely slip.
-      if (best === 2 && found[0][0] !== key[0]) return null;
-      return byKey.get(found[0]);
+      const match = found[0];
+      if (best === 1 && !isTypicalSlip(key, match)) return null;
+      if (best === 2 && match.slice(0, 2) !== key.slice(0, 2)) return null;
+      return byKey.get(match);
     }
   };
 }

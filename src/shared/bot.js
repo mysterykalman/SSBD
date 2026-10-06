@@ -55,9 +55,12 @@ function weightedPick(items, rng) {
 }
 
 /** First move: no prompts yet, so pick a friendly, well-connected word at random. */
+// Openings set the mood of a whole game, so they skip spooky or sad concepts.
+const GLOOMY_OPENINGS = new Set(["nightmare", "scary", "fear", "ghost", "monster", "haunted_house", "skeleton", "zombie", "witch", "spider", "snake", "shark", "sad", "angry", "cry", "storm", "volcano", "dark"]);
+
 export function chooseOpening({language = "en", excludeKeys = new Set(), rng = Math.random}) {
   const lex = getLexicon(language);
-  const pool = [...lex.concepts.values()].filter(c => c.links.size >= 7 && !c.label.includes(" ") && !isExcluded(c.key, excludeKeys));
+  const pool = [...lex.concepts.values()].filter(c => c.links.size >= 7 && !c.label.includes(" ") && !GLOOMY_OPENINGS.has(c.id) && !isExcluded(c.key, excludeKeys));
   const fallback = [...lex.concepts.values()].filter(c => !isExcluded(c.key, excludeKeys));
   const list = pool.length ? pool : fallback;
   if (!list.length) throw new Error("No words left for the bot");

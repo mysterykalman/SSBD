@@ -43,3 +43,12 @@ test("speller only suggests when confident and never for known words", () => {
   assert.equal(s.suggest("etoile"), null, "accent-free spelling is accepted as typed");
   assert.equal(s.suggest("xylophonic"), null);
 });
+
+test("speller does not 'correct' real words that are one letter from another word", async () => {
+  const {getLexicon} = await import("../src/shared/lexicon/index.js");
+  const en = createSpeller(getLexicon("en").words), fr = createSpeller(getLexicon("fr").words);
+  for (const word of ["draft", "jumped", "stamp", "brand", "prime", "chime", "flight", "slight", "drape", "skool"]) assert.equal(en.suggest(word), null, word);
+  for (const word of ["vin", "bâton", "race", "lobe"]) assert.equal(fr.suggest(word), null, word);
+  for (const [typo, fix] of [["freind", "friend"], ["famly", "family"], ["rainbw", "rainbow"], ["mooon", "moon"], ["dinosuar", "dinosaur"]]) assert.equal(en.suggest(typo), fix, typo);
+  for (const [typo, fix] of [["chocolta", "chocolat"], ["grenouile", "grenouille"], ["soliel", "soleil"], ["chatteau", "château"], ["maizon", "maison"]]) assert.equal(fr.suggest(typo), fix, typo);
+});

@@ -137,3 +137,34 @@ test("reveal and win animations never block input and respect reduced motion", a
     await context.close();
   }
 });
+
+test("offline pill never covers the logo on phones (EN and FR)", async () => {
+  for (const lang of ["en", "fr"]) {
+    for (const width of [320, 390]) {
+      const context = await browser.newContext({viewport: {width, height: 700}});
+      const page = await context.newPage();
+      await page.goto(server.url);
+      await page.waitForSelector("#startSolo");
+      if (lang === "fr") await page.click('[data-lang="fr"]');
+      await context.setOffline(true);
+      await page.waitForSelector("#offlinePill:not([hidden])");
+      const brand = await page.locator(".brand").boundingBox();
+      const pill = await page.locator("#offlinePill").boundingBox();
+      const overlap = !(pill.x >= brand.x + brand.width || pill.y >= brand.y + brand.height || pill.x + pill.width <= brand.x || pill.y + pill.height <= brand.y);
+      assert.ok(!overlap, `pill overlaps logo at ${width}px (${lang})`);
+      assert.ok(pill.height < 48, `pill wraps at ${width}px (${lang})`);
+      assert.ok(await noHorizontalScroll(page));
+      await context.close();
+    }
+  }
+});
+
+test("connectivity toasts replace each other instead of stacking", async () => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto(server.url);
+  await page.waitForSelector("#startSolo");
+  for (let i = 0; i < 4; i++) { await context.setOffline(i % 2 === 0); await page.waitForTimeout(80); }
+  assert.equal(await page.locator('.toast[data-key="network"]').count(), 1);
+  await context.close();
+});

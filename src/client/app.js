@@ -54,12 +54,14 @@ function when(iso) {
 }
 
 // ---------- toasts ----------
-function toast(message, {kind = "info", timeout = 4500, action} = {}) {
+function toast(message, {kind = "info", timeout = 4500, action, key} = {}) {
   const box = $("toasts");
+  // A toast with a key replaces the previous one with the same key (e.g. offline/online flapping).
+  if (key) for (const old of box.querySelectorAll(`[data-key="${key}"]`)) old.remove();
   const close = () => { item.classList.add("leaving"); setTimeout(() => item.remove(), 200); };
   // The #toasts container is the live region (set up in ensureLiveRegions), so the
   // items carry no role of their own: one announcement per toast, never two.
-  const item = h("div", {class: `toast ${kind}`},
+  const item = h("div", {class: `toast ${kind}`, "data-key": key || null},
     h("span", {class: "toast-text"}, message),
     action && h("button", {class: "toast-action", type: "button", onclick: () => { action.run(); close(); }}, action.label),
     h("button", {class: "toast-close", type: "button", "aria-label": t("dismiss"), onclick: close}, h("span", {"aria-hidden": "true"}, "×")));
@@ -278,7 +280,11 @@ function renderChrome() {
   // Going offline/online is announced once by a toast; the pill is a visible label only.
   pill.removeAttribute("role");
   pill.hidden = state.online;
-  if (pill.textContent !== t("offline")) pill.textContent = t("offline");
+  if (pill.dataset.textLang !== state.lang) {
+    pill.dataset.textLang = state.lang;
+    pill.title = t("offline");
+    pill.replaceChildren(h("span", {class: "pill-long"}, t("offline")), h("span", {class: "pill-short"}, t("offlineShort")));
+  }
   const avatar = $("profileBtn");
   avatar.textContent = state.player?.display_name?.trim().charAt(0).toUpperCase() || "☺";
   avatar.setAttribute("aria-label", state.player ? t("profileButtonNamed", {name: state.player.display_name}) : t("profileButton"));
@@ -709,9 +715,14 @@ function focusAfterMove() {
   target?.focus({preventScroll: true});
   // Only scroll when the next control is off screen, so big screens don't jump around.
   const box = target?.getBoundingClientRect();
+  const behavior = reducedMotion() ? "auto" : "smooth";
   if (!box || box.top < 0 || box.bottom > window.innerHeight) {
-    $("app").querySelector(".board")?.scrollIntoView({block: "start", behavior: reducedMotion() ? "auto" : "smooth"});
+    $("app").querySelector(".board")?.scrollIntoView({block: "start", behavior});
+    return;
   }
+  // Short (landscape) screens: if the reveal is cut off at the top, bring it back when it still fits with the input.
+  const reveal = $("app").querySelector(".reveal")?.getBoundingClientRect();
+  if (reveal && reveal.top < 0 && box.bottom - reveal.top + 16 <= window.innerHeight) window.scrollBy({top: reveal.top - 8, behavior});
 }
 
 function celebrate() {
@@ -838,7 +849,7 @@ function profileDialog() {
 function setOnline(online) {
   if (online === state.online) return;
   state.online = online;
-  toast(online ? t("backOnline") : t("nowOffline"), {kind: online ? "success" : "info"});
+  toast(online ? t("backOnline") : t("nowOffline"), {kind: online ? "success" : "info", key: "network"});
   rerender();
   if (online && state.screen === "game" && state.game && !isSoloLike(state.game)) loadFamilyGame(state.game.id);
 }
