@@ -107,6 +107,7 @@ async function contrastFailures(page) {
       const s = getComputedStyle(el);
       if (s.display === "none" || s.visibility === "hidden" || Number(s.opacity) === 0) continue;
       if (el.closest("button:disabled")) continue; // disabled controls are exempt (WCAG 1.4.3)
+      if (el.closest(".brand")) continue; // logotype is exempt (WCAG 1.4.3); reported separately
       const fg = parse(s.color);
       if (!fg) continue;
       const bg = background(el);
@@ -183,7 +184,11 @@ test("keyboard-only Solo: Tab to start, type, Enter, focus returns to the word b
     assert.match(await page.getAttribute("#word", "aria-describedby"), /\bprompt\b/, "the prompt words describe the input");
     assert.equal(await page.getAttribute("#prompt", "lang"), "en");
   }
-  // Re-rendering (language switch back and forth) does not repeat the announcement key.
+  // Re-rendering (language switch back and forth) does not announce the same reveal again.
+  await page.click('[data-lang="fr"]');
+  await page.click('[data-lang="en"]');
+  await page.waitForTimeout(250);
+  assert.equal(await page.locator("#srAnnounce").textContent(), said);
   assert.deepEqual(await audit(page), []);
   assert.deepEqual(errors, []);
   await context.close();
@@ -268,7 +273,12 @@ test("dialogs are labelled, trap focus, close on Escape and return focus; errors
   assert.deepEqual(await audit(page), []);
   for (let i = 0; i < 6; i++) {
     await page.keyboard.press("Tab");
-    assert.ok(await page.evaluate(() => document.getElementById("dialog").contains(document.activeElement)), "focus stays in the dialog");
+    // Native modal: focus cycles through the dialog and may step out to the browser's own UI
+    // (activeElement = body), but never onto the inert page behind it.
+    assert.ok(await page.evaluate(() => {
+      const el = document.activeElement;
+      return document.getElementById("dialog").contains(el) || el === document.body || el === null;
+    }), "focus never reaches the page behind the dialog");
   }
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => !document.getElementById("dialog").open);

@@ -193,7 +193,7 @@ export const CONCEPTS = [
 
   // Food
   ["food","food","nourriture",["food"],["eat","hungry","cook","lunch","dinner","kitchen","plate","fruit","vegetable"]],
-  ["pizza","pizza","pizza",["food"],["cheese","oven","tomato","party","dinner"]],
+  ["pizza","pizza","pizza",["food"],["cheese","oven","tomato","party","dinner","food","bake","birthday","lunch"]],
   ["apple","apple","pomme",["food","plant"],["tree","fruit","red","pie","juice","green","teacher"]],
   ["banana","banana","banane",["food","plant"],["monkey","yellow","fruit","jungle","snack"]],
   ["orange","orange","orange",["color","food"],["fruit","juice","color","pumpkin","carrot","fox","tiger"]],
@@ -201,7 +201,7 @@ export const CONCEPTS = [
   ["strawberry","strawberry","fraise",["food","plant","sweet"],["red","fruit","cake","jam","summer"]],
   ["grape","grape","raisin",["food","plant"],["fruit","purple","juice","green","snack"]],
   ["lemon","lemon","citron",["food","plant"],["yellow","juice","fruit","lemonade","tea"]],
-  ["cake","cake","gâteau",["food","sweet","celebration"],["birthday","candle","party","chocolate","oven","sugar","dessert","bake"]],
+  ["cake","cake","gâteau",["food","sweet","celebration"],["birthday","candle","party","chocolate","oven","sugar","dessert","bake","food","snack"]],
   ["cookie","cookie","biscuit",["food","sweet"],["chocolate","milk","oven","bake","sugar","grandma","dessert"]],
   ["ice_cream","ice cream","glace",["food","sweet","cold"],["summer","cold","chocolate","dessert","strawberry","beach"]],
   ["chocolate","chocolate","chocolat",["food","sweet"],["cake","candy","cookie","easter","sweet","brown","ice_cream","hot_chocolate"]],
@@ -226,7 +226,7 @@ export const CONCEPTS = [
   ["tomato","tomato","tomate",["food","plant"],["red","pizza","salad","vegetable","garden"]],
   ["sandwich","sandwich","sandwich",["food"],["bread","cheese","lunch","picnic","butter"]],
   ["picnic","picnic","pique-nique",["food","nature","adventure"],["park","sandwich","basket","ant","summer","blanket","grass","lunch"]],
-  ["oven","oven","four",["home","food","hot"],["bake","cake","cookie","pizza","bread","kitchen","hot","cook"]],
+  ["oven","oven","four",["home","food","hot"],["bake","cake","cookie","pizza","bread","kitchen","hot","cook","food"]],
   ["cook","cook","cuisiner",["food","home"],["kitchen","oven","chef","food","bake","dinner","soup"]],
   ["bake","bake","pâtisserie",["food","sweet"],["cake","cookie","oven","bread","pie"]],
   ["party","party","fête",["celebration"],["birthday","cake","balloon","dance","music","friend","gift","candy","fun","game","costume"]],
@@ -269,13 +269,13 @@ export const CONCEPTS = [
 
   // Music and art
   ["music","music","musique",["music","sound"],["song","dance","sing","guitar","piano","drum","party","radio","band"]],
-  ["song","song","chanson",["music"],["sing","music","dance","radio","band","birthday"]],
-  ["sing","sing","chanter",["music","sound"],["song","music","bird","band"]],
+  ["song","song","chanson",["music"],["sing","music","dance","radio","band","birthday","party"]],
+  ["sing","sing","chanter",["music","sound"],["song","music","bird","band","party"]],
   ["dance","dance","danse",["music","celebration"],["music","party","song","jump"]],
   ["drum","drum","tambour",["music","sound"],["music","band","loud","guitar","concert"]],
   ["guitar","guitar","guitare",["music"],["music","song","band","rock","drum","sing"]],
   ["piano","piano","piano",["music"],["music","song","black","white"]],
-  ["band","band","groupe",["music"],["music","drum","guitar","sing","concert"]],
+  ["band","band","groupe",["music"],["music","drum","guitar","sing","concert","party","dance"]],
   ["art","art","art",["art"],["paint","draw","color","museum","picture","artist","pencil"]],
   ["paint","paint","peinture",["art","color"],["art","color","picture","draw","rainbow"]],
   ["draw","draw","dessiner",["art"],["pencil","paper","art","picture","paint"]],

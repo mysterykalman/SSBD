@@ -6,7 +6,7 @@ import {getLexicon} from "./lexicon/index.js";
 import {wordKey} from "./words.js";
 
 const TOP_CHOICES = 6;
-const TEMPERATURE = 1.6;
+const TEMPERATURE = 2.2;
 
 /** Singular/plural spellings a word key might also be written as (en + fr). */
 export function wordForms(key) {
