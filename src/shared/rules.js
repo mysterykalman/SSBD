@@ -17,7 +17,8 @@ export const SIDES = ["a", "b"];
 export const FINISHED = new Set(["MATCHED", "EXHAUSTED"]);
 
 export function moveOutcome(number, wordA, wordB) {
-  if (wordKey(wordA) === wordKey(wordB)) return "MATCHED";
+  const key = wordKey(wordA);
+  if (key && key === wordKey(wordB)) return "MATCHED";
   return number >= MAX_MOVES ? "EXHAUSTED" : "REVEALED";
 }
 
@@ -81,7 +82,8 @@ export function checkWord(game, side, raw) {
 export function revealMove(game, words, now = new Date().toISOString()) {
   if (isFinished(game)) throw new Error("Game is already finished");
   const move = currentMove(game);
-  if (move.status !== "OPEN") throw new Error("Move is not open");
+  if (!move || move.status !== "OPEN") throw new Error("Move is not open");
+  if (!words || !wordKey(words.a) || !wordKey(words.b)) throw new Error("Both words are needed to reveal a move");
   const status = moveOutcome(move.number, words.a, words.b);
   const closed = {...move, words: {a: words.a, b: words.b}, status, revealedAt: now};
   const moves = [...game.moves.slice(0, -1), closed];

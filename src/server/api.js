@@ -9,6 +9,7 @@ import {wordKey} from "../shared/words.js";
 
 const BOT = "BOT";
 const FINISHED = new Set(["MATCHED", "EXHAUSTED", "COMPLETE"]);
+const isPlayable = row => row.status !== "WAITING" && !FINISHED.has(row.status);
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -66,12 +67,13 @@ async function loadGame(db, gameId) {
     const played = submissions.filter(s => s.round_id === round.id);
     const bySide = {};
     for (const s of played) if (slotOf.has(s.player_id)) bySide[slotOf.get(s.player_id)] = s;
-    const revealed = round.status !== "OPEN";
+    const status = round.status === "COMPLETE" ? "MATCHED" : round.status;
+    const revealed = status !== "OPEN";
     return {
       id: round.id,
       number: round.round_number,
       prompts: round.previous_a || round.previous_b ? [round.previous_a, round.previous_b] : null,
-      status: round.status,
+      status,
       openedAt: round.created_at,
       revealedAt: round.revealed_at,
       words: revealed && bySide.a && bySide.b ? {a: bySide.a.word, b: bySide.b.word} : null,
@@ -123,7 +125,7 @@ const notify = (db, playerId, gameId, kind, message, key, at) =>
 async function revealIfReady(db, loaded) {
   const {row, members, moves} = loaded;
   const move = moves[moves.length - 1];
-  if (!move || move.status !== "OPEN" || !move.submitted.a || !move.submitted.b) return false;
+  if (!isPlayable(row) || !move || move.status !== "OPEN" || !move.submitted.a || !move.submitted.b) return false;
   const a = move.submitted.a.word, b = move.submitted.b.word, at = now();
   const outcome = moveOutcome(move.number, a, b);
   const humans = members.filter(m => m.player_id !== BOT);
@@ -158,6 +160,31 @@ function legacyBotWord(loaded) {
     : chooseOpening({language, excludeKeys, rng});
 }
 
+/**
+ * Finish any work an earlier request left half-done (for example a worker that
+ * stopped between storing a word and revealing): a legacy Solo bot that has not
+ * played yet plays now, and a move with both words is revealed. Idempotent.
+ * Returns the (re)loaded game.
+ */
+async function settle(db, loaded) {
+  const move = loaded.moves[loaded.moves.length - 1];
+  if (!isPlayable(loaded.row) || !move || move.status !== "OPEN") return loaded;
+  const botSide = loaded.slotOf.get(BOT);
+  let changed = false;
+  if (botSide && !move.submitted[botSide] && Object.keys(move.submitted).length) {
+    const pick = legacyBotWord(loaded);
+    const at = now();
+    await db.batch([
+      db.prepare("INSERT OR IGNORE INTO submissions VALUES(?,?,?,?)").bind(move.id, BOT, pick.word, at),
+      db.prepare("UPDATE rounds SET bot_quality = ?, bot_reason = NULL WHERE id = ? AND status = 'OPEN'").bind(pick.quality, move.id)
+    ]);
+    changed = true;
+  }
+  if (changed) loaded = await loadGame(db, loaded.row.id);
+  if (await revealIfReady(db, loaded)) changed = true;
+  return changed ? loadGame(db, loaded.row.id) : loaded;
+}
+
 const MESSAGES = {
   EMPTY: "Add a word first, then lock it in.",
   TOO_LONG: "That word is a bit long. Try a shorter one.",
@@ -184,7 +211,7 @@ async function submit(db, body) {
     if (askedMove.status === "OPEN" && wordKey(askedMove.submitted[side].word) !== wordKey(body.word)) {
       return fail(409, "ALREADY_LOCKED", "Your word for this move is already locked in.", {game: viewFor(loaded, playerId)});
     }
-    return json({ok: true, duplicate: true, game: viewFor(loaded, playerId)});
+    return json({ok: true, duplicate: true, game: viewFor(await settle(db, loaded), playerId)});
   }
   if (loaded.row.status === "WAITING") return fail(409, "WAITING_FOR_PLAYER", "Waiting for the other player to join.");
   if (FINISHED.has(loaded.row.status)) return fail(409, "GAME_OVER", MESSAGES.GAME_OVER, {game: viewFor(loaded, playerId)});
@@ -286,6 +313,9 @@ export async function handleApi(request, env) {
         ...members.map(m => notify(db, m.player_id, game.id, "PLAYER_JOINED", `${player.display_name} joined your game!`, "joined", joined))
       ]);
     } catch {
+      // Lost a race: either this player's other request joined first (fine) or someone else did.
+      const member = await first(db, "SELECT 1 AS ok FROM game_players WHERE game_id = ? AND player_id = ?", [game.id, playerId]);
+      if (member) return json({id: game.id, join_code: game.join_code});
       return fail(409, "GAME_FULL", "That game already has two players.");
     }
     return json({id: game.id, join_code: game.join_code});
@@ -322,7 +352,7 @@ export async function handleApi(request, env) {
     const loaded = await loadGame(db, url.searchParams.get("id") || "");
     if (!loaded) return fail(404, "GAME_NOT_FOUND", "Game not found");
     if (!loaded.slotOf.has(playerId)) return fail(403, "NOT_A_MEMBER", "You are not part of this game");
-    return json({ok: true, game: viewFor(loaded, playerId)});
+    return json({ok: true, game: viewFor(await settle(db, loaded), playerId)});
   }
 
   if (path === "/api/submit" && request.method === "POST") return submit(db, body);
