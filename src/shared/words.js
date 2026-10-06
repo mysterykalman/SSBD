@@ -76,6 +76,15 @@ export function editDistance(a, b, limit = Infinity) {
   return rows[a.length][b.length];
 }
 
+const PLURAL_ENDINGS = [["s", ""], ["x", ""], ["es", ""], ["ies", "y"], ["ves", "f"], ["aux", "al"]];
+
+function isPluralOfKnown(key, byKey) {
+  for (const [ending, replacement] of PLURAL_ENDINGS) {
+    if (key.length > ending.length + 1 && key.endsWith(ending) && byKey.has(key.slice(0, -ending.length) + replacement)) return true;
+  }
+  return false;
+}
+
 /**
  * Build a speller from a list of known display words.
  * suggest(raw) returns a display word only when we are confident:
@@ -99,7 +108,7 @@ export function createSpeller(words) {
       const key = wordKey(raw);
       if (key.length < 3 || byKey.has(key)) return null;
       // Simple plurals and accent-free spellings of known words are fine as typed.
-      if (/s$|x$/.test(key) && byKey.has(key.slice(0, -1))) return null;
+      if (isPluralOfKnown(key, byKey)) return null;
       const limit = key.length >= 7 ? 2 : 1;
       let best = limit + 1, found = [];
       for (let length = key.length - limit; length <= key.length + limit; length++) {

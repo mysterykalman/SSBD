@@ -8,14 +8,22 @@ import {wordKey} from "./words.js";
 const TOP_CHOICES = 6;
 const TEMPERATURE = 1.6;
 
-function stems(key) {
-  const out = [key];
-  if (key.length > 3 && /[sx]$/.test(key)) out.push(key.slice(0, -1));
+/** Singular/plural spellings a word key might also be written as (en + fr). */
+export function wordForms(key) {
+  const out = new Set([key, key + "s", key + "x", key + "es"]);
+  if (key.length > 3 && /[sx]$/.test(key)) out.add(key.slice(0, -1));
+  if (key.length > 4 && key.endsWith("es")) out.add(key.slice(0, -2));
+  if (key.length > 4 && key.endsWith("ies")) out.add(key.slice(0, -3) + "y");
+  if (key.length > 2 && key.endsWith("y")) out.add(key.slice(0, -1) + "ies");
+  if (key.length > 4 && key.endsWith("ves")) out.add(key.slice(0, -3) + "f");
+  if (key.length > 2 && key.endsWith("f")) out.add(key.slice(0, -1) + "ves");
+  if (key.length > 4 && key.endsWith("aux")) out.add(key.slice(0, -3) + "al");
+  if (key.length > 3 && key.endsWith("al")) out.add(key.slice(0, -2) + "aux");
   return out;
 }
 
 function isExcluded(key, excludeKeys) {
-  for (const k of stems(key)) if (excludeKeys.has(k) || excludeKeys.has(k + "s") || excludeKeys.has(k + "x")) return true;
+  for (const form of wordForms(key)) if (excludeKeys.has(form)) return true;
   return false;
 }
 
@@ -68,7 +76,7 @@ export function chooseResponse({prompts, language = "en", excludeKeys = new Set(
   const scored = [];
   for (const candidate of lex.concepts.values()) {
     if (candidate.id === idA || candidate.id === idB) continue;
-    if (promptKeys.has(candidate.key) || isExcluded(candidate.key, excludeKeys)) continue;
+    if (isExcluded(candidate.key, promptKeys) || isExcluded(candidate.key, excludeKeys)) continue;
     const a = relation(lex, idA, candidate), b = relation(lex, idB, candidate);
     if (a + b <= 0) continue;
     const both = a >= 3 && b >= 3;

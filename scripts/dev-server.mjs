@@ -1,14 +1,18 @@
 // Runs the built Worker on Node with a local SQLite-backed D1.
 // Usage: node scripts/dev-server.mjs [port] [sqlite-file]
+// WORKER_FILE=path runs a different built worker (tests use it to simulate a new release).
 import {createServer} from "node:http";
 import {mkdirSync} from "node:fs";
+import {resolve} from "node:path";
+import {pathToFileURL} from "node:url";
 import {createD1} from "./d1-sqlite.mjs";
 
 const port = Number(process.argv[2] || process.env.PORT || 8787);
 const file = process.argv[3] || process.env.DB_FILE || ".dev-data/dev.sqlite";
 if (file !== ":memory:") mkdirSync(".dev-data", {recursive: true});
 const env = {DB: createD1(file)};
-const worker = (await import(new URL("../dist/server/index.js", import.meta.url) + "?t=" + Date.now())).default;
+const workerUrl = process.env.WORKER_FILE ? pathToFileURL(resolve(process.env.WORKER_FILE)).href : new URL("../dist/server/index.js", import.meta.url).href;
+const worker = (await import(workerUrl + "?t=" + Date.now())).default;
 
 createServer(async (req, res) => {
   const chunks = [];

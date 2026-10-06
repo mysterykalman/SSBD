@@ -21,10 +21,14 @@ const hash = value => createHash("sha256").update(value).digest("hex").slice(0, 
 const appName = `/assets/app.${hash(appJs)}.js`;
 const cssName = `/assets/styles.${hash(css)}.css`;
 const html = (await readFile(src("client/index.html"), "utf8")).replace("%APP_JS%", appName).replace("%STYLES_CSS%", cssName);
-const version = hash(appJs + css + html + icon + manifest);
-const swSource = (await readFile(src("client/sw.js"), "utf8"))
+const swTemplate = await readFile(src("client/sw.js"), "utf8");
+// The version covers every precached file and the worker's own logic, so any
+// change produces a new cache and a clean, all-at-once switch.
+const version = hash(appJs + css + html + icon + manifest + swTemplate);
+const swSource = swTemplate
   .replace("%VERSION%", version)
   .replace("%PRECACHE%", JSON.stringify(["/", appName, cssName, "/icon.svg", "/manifest.webmanifest"]));
+if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEHOLDER%");
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
 const immutable = "public, max-age=31536000, immutable";

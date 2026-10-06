@@ -6,7 +6,7 @@ import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js"
 import {publicMove, startSoloGame, submitSoloWord} from "../shared/solo.js";
 import {getLexicon} from "../shared/lexicon/index.js";
 import {createSpeller} from "../shared/words.js";
-import {translator} from "./i18n.js";
+import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
 
 const store = createStore();
@@ -57,13 +57,40 @@ function when(iso) {
 function toast(message, {kind = "info", timeout = 4500, action} = {}) {
   const box = $("toasts");
   const close = () => { item.classList.add("leaving"); setTimeout(() => item.remove(), 200); };
-  const item = h("div", {class: `toast ${kind}`, role: kind === "error" ? "alert" : "status"},
+  // The #toasts container is the live region (set up in ensureLiveRegions), so the
+  // items carry no role of their own: one announcement per toast, never two.
+  const item = h("div", {class: `toast ${kind}`},
     h("span", {class: "toast-text"}, message),
     action && h("button", {class: "toast-action", type: "button", onclick: () => { action.run(); close(); }}, action.label),
-    h("button", {class: "toast-close", type: "button", "aria-label": t("dismiss"), onclick: close}, "×"));
+    h("button", {class: "toast-close", type: "button", "aria-label": t("dismiss"), onclick: close}, h("span", {"aria-hidden": "true"}, "×")));
+  ensureLiveRegions();
   box.append(item);
   while (box.children.length > 3) box.firstChild.remove();
   if (timeout) setTimeout(close, timeout);
+}
+
+// ---------- screen-reader announcements ----------
+// Live regions must exist before their text changes, so they live outside #app
+// (which is re-rendered) and are created once.
+function ensureLiveRegions() {
+  const box = $("toasts");
+  if (box && !box.hasAttribute("aria-live")) {
+    box.setAttribute("aria-live", "polite");
+    box.setAttribute("aria-relevant", "additions");
+  }
+  if (!$("srAnnounce")) document.body.append(h("div", {id: "srAnnounce", class: "sr-only", "aria-live": "polite", "aria-atomic": "true"}));
+}
+
+let lastAnnounced = null;
+/** Speak `text` once per `key` (re-renders and language switches don't repeat it). */
+function announce(text, key = text) {
+  if (key === lastAnnounced) return;
+  lastAnnounced = key;
+  ensureLiveRegions();
+  const region = $("srAnnounce");
+  region.textContent = "";
+  // Let focus moves (e.g. back into the word box) settle first so they don't cut this off.
+  setTimeout(() => { region.textContent = text; }, 150);
 }
 
 // ---------- network ----------
@@ -234,18 +261,28 @@ function schedulePoll() {
 function renderChrome() {
   document.documentElement.lang = state.lang;
   document.title = "Same Same but Different";
+  ensureLiveRegions();
+  // The game's name is English in both languages; say so for screen readers.
+  $("brandLink").setAttribute("lang", "en");
   $("brandTop").textContent = t("brandTop");
   $("brandBottom").textContent = t("brandBottom");
+  const skip = document.querySelector(".skip");
+  if (skip) skip.textContent = t("skip");
   $("langGroup").setAttribute("aria-label", t("langLabel"));
   for (const button of document.querySelectorAll("[data-lang]")) {
+    // Each option is named in its own language ("English", "Français") and pronounced that way.
+    button.setAttribute("lang", button.dataset.lang);
     button.setAttribute("aria-pressed", String(button.dataset.lang === state.lang));
   }
   const pill = $("offlinePill");
+  // Going offline/online is announced once by a toast; the pill is a visible label only.
+  pill.removeAttribute("role");
   pill.hidden = state.online;
-  pill.textContent = t("offline");
+  if (pill.textContent !== t("offline")) pill.textContent = t("offline");
   const avatar = $("profileBtn");
   avatar.textContent = state.player?.display_name?.trim().charAt(0).toUpperCase() || "☺";
-  avatar.setAttribute("aria-label", state.player ? t("profileTitle", {name: state.player.display_name}) : t("nameTitle"));
+  avatar.setAttribute("aria-label", state.player ? t("profileButtonNamed", {name: state.player.display_name}) : t("profileButton"));
+  avatar.setAttribute("aria-haspopup", "dialog");
 }
 
 function rerender() {
@@ -267,7 +304,7 @@ function renderLoading() {
 function renderMessage(message, retry) {
   renderChrome();
   mount(h("section", {class: "card center"},
-    h("p", {class: "notice error"}, message),
+    h("p", {class: "notice error", role: "alert"}, message),
     h("div", {class: "row center"},
       h("button", {class: "btn ghost", type: "button", onclick: () => navigate("/")}, t("back")),
       retry && h("button", {class: "btn", type: "button", onclick: retry}, t("retry")))));
@@ -313,6 +350,7 @@ function gameListItems() {
     createdAt: game.createdAt,
     status: game.status,
     move: currentMove(game).number,
+    language: game.language,
     yourTurn: game.status === "ACTIVE",
     open: () => navigate(`/solo/${game.id}`)
   }));
@@ -326,6 +364,7 @@ function gameListItems() {
       createdAt: g.created_at,
       status: g.status,
       move: g.round_number,
+      language: g.language,
       yourTurn: g.status === "ACTIVE" && !g.locked,
       theirTurn: g.status === "ACTIVE" && g.locked && !g.bot ? g.opponent_name || t("friend") : null,
       code: !g.bot ? g.join_code : null,
@@ -346,8 +385,8 @@ function gameListItems() {
       h("div", {class: "game-info"},
         h("strong", {}, item.title),
         h("span", {class: "game-meta"}, when(item.createdAt)),
-        h("span", {class: "game-meta"}, [status, finished ? null : t("moveOf", {n: item.move, max: MAX_MOVES})].filter(Boolean).join(" · "))),
-      h("button", {class: `btn small ${finished ? "ghost" : ""}`, type: "button", onclick: item.open, "aria-label": `${finished ? t("view") : t("resume")}: ${item.title}, ${when(item.createdAt)}`}, finished ? t("view") : t("resume")));
+        h("span", {class: "game-meta"}, [status, finished ? null : t("moveOf", {n: item.move, max: MAX_MOVES}), item.language && item.language !== state.lang ? t("gameInLang", {lang: languageName(t, item.language)}) : null].filter(Boolean).join(" · "))),
+      h("button", {class: `btn small ${finished ? "ghost" : ""}`, type: "button", onclick: item.open, "aria-label": t("openGame", {action: finished ? t("view") : t("resume"), title: item.title, date: when(item.createdAt)})}, finished ? t("view") : t("resume")));
   });
 }
 
@@ -359,7 +398,7 @@ async function refreshDashboard() {
     if (state.screen === "home") $("gameList")?.replaceChildren(...gameListItems());
     const fresh = (data.notifications || []).filter(n => n.kind === "PLAYER_JOINED" || n.kind === "YOUR_TURN" || n.kind === "READY_TO_REVEAL");
     if (fresh.length) {
-      toast(state.lang === "fr" ? "Du nouveau dans vos parties en famille !" : "Something new in your family games!", {kind: "success"});
+      toast(t("familyNews"), {kind: "success"});
     }
     if (data.notifications?.length) api("/api/notifications/read", {player_id: state.player.id, ids: data.notifications.map(n => n.id)}).catch(() => {});
   } catch (error) {
@@ -383,7 +422,8 @@ function startSolo(language = state.lang) {
   const game = startSoloGame({id: newId(), language, seed: randomSeed()});
   if (!store.saveSolo(game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
   navigate(`/solo/${game.id}`);
-  setTimeout(() => $("word")?.focus(), 30);
+  $("word")?.focus(); // Solo renders synchronously; focus now so typing right away is never lost
+  setTimeout(() => { if (document.activeElement?.id !== "word") $("word")?.focus(); }, 30);
 }
 
 async function createFamily(language = state.lang) {
@@ -406,18 +446,20 @@ function renderGame() {
   const fresh = revealed && revealed.number === state.freshReveal;
   const progressMove = finished ? revealed.number : move.number;
 
+  // Mode lives next to the back button; the board starts with move count + progress on one line.
   const board = h("section", {class: `card board ${finished ? "finished" : ""}`, "aria-labelledby": "boardTitle"},
     h("div", {class: "board-top"},
-      h("span", {class: "mode-chip"}, isSoloLike(view) ? `🤖 ${t("solo")}` : `👥 ${t("vs", {name: view.otherName || t("friend")})}`),
-      h("span", {class: "move-count", id: "moveLabel"}, t("moveOf", {n: progressMove, max: view.maxMoves}))),
-    h("div", {class: "meter", role: "progressbar", "aria-label": t("moveOf", {n: progressMove, max: view.maxMoves}), "aria-valuemin": "0", "aria-valuemax": String(view.maxMoves), "aria-valuenow": String(progressMove)},
-      h("i", {style: `width:${Math.max(5, (progressMove / view.maxMoves) * 100)}%`})),
+      h("span", {class: "move-count", id: "moveLabel"}, t("moveOf", {n: progressMove, max: view.maxMoves})),
+      h("div", {class: "meter", role: "progressbar", "aria-label": t("progressLabel"), "aria-valuetext": t("moveOf", {n: progressMove, max: view.maxMoves}), "aria-valuemin": "0", "aria-valuemax": String(view.maxMoves), "aria-valuenow": String(progressMove)},
+        h("i", {style: `width:${Math.max(5, (progressMove / view.maxMoves) * 100)}%`}))),
     languageNote(view),
     fresh ? revealBanner(view, revealed) : null,
     finished ? endPanel(view, revealed) : playPanel(view, move));
 
   mount(
-    h("div", {class: "game-nav"}, h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, t("back"))),
+    h("div", {class: "game-nav"},
+      h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, t("back")),
+      h("span", {class: "mode-chip"}, h("span", {"aria-hidden": "true"}, isSoloLike(view) ? "🤖 " : "👥 "), isSoloLike(view) ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")}))),
     board,
     trail(view));
   restoreInput(keep);
@@ -426,25 +468,35 @@ function renderGame() {
 
 function languageNote(view) {
   if (view.language === state.lang) return null;
-  const game = t(view.language === "fr" ? "langFrench" : "langEnglish");
-  const ui = t(state.lang === "fr" ? "langFrench" : "langEnglish");
-  return h("div", {class: "notice lang-note", role: "note"},
-    h("strong", {}, t("langNoteTitle", {game})), " ", t("langNoteCopy", {game, ui}), " ",
-    h("button", {class: "btn small ghost", type: "button", onclick: () => (isSoloLike(view) ? startSolo(state.lang) : ensurePlayer(() => createFamily(state.lang)))}, t("langNewGame", {ui})));
+  // The game keeps its own word language; nothing is re-rolled or translated behind the player's back.
+  const game = languageName(t, view.language);
+  const ui = languageName(t, state.lang);
+  const solo = isSoloLike(view);
+  return h("div", {class: "notice lang-note", role: "note", id: "langNote"},
+    h("strong", {}, t("langNoteTitle", {game})), " ",
+    solo ? null : [t("langNoteFamily"), " "],
+    t("langNoteCopy", {game, ui}), " ",
+    h("button", {class: "btn small ghost", type: "button", lang: state.lang, onclick: () => (solo ? startSolo(state.lang) : ensurePlayer(() => createFamily(state.lang)))}, t("langNewGame", {ui})));
 }
 
 function wordChip(word, label, cls = "") {
-  return h("span", {class: `chip ${cls}`}, label ? h("small", {}, label) : null, h("span", {class: "chip-word"}, word));
+  return h("span", {class: `chip ${cls}`}, label ? h("small", {}, label) : null, h("span", {class: "chip-word", lang: state.game?.language}, word));
 }
 
 function revealBanner(view, move) {
   const matched = move.status === "MATCHED";
-  return h("div", {class: `reveal ${matched ? "match" : ""} ${reducedMotion() ? "" : "animate"}`, role: "status", "aria-live": "polite"},
+  const outcome = matched ? t("revealMatch") : move.status === "EXHAUSTED" ? t("exhaustedTitle") : t("revealDifferent");
+  // Spoken once through the persistent live region; the banner itself is not a live
+  // region (it is rebuilt on every render and would be announced twice or not at all).
+  announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: move.words[view.youSide].toUpperCase()}),
+    t("revealSaid", {name: sideLabel(view, view.otherSide), word: move.words[view.otherSide].toUpperCase()}), outcome].join(" "), `reveal:${view.id}:${move.number}`);
+  return h("div", {class: `reveal ${matched ? "match" : ""} ${reducedMotion() ? "" : "animate"}`},
     h("p", {class: "reveal-title"}, t("revealTitle")),
     h("div", {class: "reveal-words"},
       wordChip(move.words.a, sideLabel(view, "a"), `flip ${view.youSide === "a" ? "you" : "other"}`),
-      h("span", {class: "op", "aria-hidden": "true"}, matched ? "=" : "+"),
-      wordChip(move.words.b, sideLabel(view, "b"), `flip delay ${view.youSide === "b" ? "you" : "other"}`)),
+      h("span", {class: "join"},
+        h("span", {class: "op", "aria-hidden": "true"}, matched ? "=" : "+"),
+        wordChip(move.words.b, sideLabel(view, "b"), `flip delay ${view.youSide === "b" ? "you" : "other"}`))),
     h("p", {class: "reveal-copy"}, matched ? t("revealMatch") : move.status === "EXHAUSTED" ? t("exhaustedTitle") : t("revealDifferent")),
     move.botQuality === "loose" && !matched ? h("p", {class: "reveal-note"}, t("revealLoose")) : null);
 }
@@ -457,14 +509,18 @@ function playPanel(view, move) {
   const waiting = view.waitingForPlayer;
   const panel = h("div", {class: "play"});
 
+  // A family game nobody has joined yet only shows the invite (never in Solo: waitingForPlayer is unset there).
   panel.append(
-    h("h1", {id: "boardTitle", class: "board-title"}, first ? t("firstTitle") : t("promptTitle")),
-    first
-      ? h("p", {class: "instruction"}, solo ? t("firstSolo") : t("firstFamily", {name: otherName}))
-      : h("p", {class: "instruction"}, t("promptCopy")));
+    h("h1", {id: "boardTitle", class: "board-title"}, waiting && !solo ? t("waitingJoin") : first ? t("firstTitle") : t("promptTitle")),
+    ...(waiting && !solo) || locked ? []
+      : first
+        ? [h("p", {class: "instruction"}, solo ? t("firstSolo") : t("firstFamily", {name: otherName}))]
+        : [h("p", {class: "instruction"}, t("promptCopy"))]);
   if (!first) {
-    panel.append(h("div", {class: "prompt", id: "prompt", "aria-label": `${move.prompts[0]} + ${move.prompts[1]}`},
-      h("span", {class: "tile"}, move.prompts[0]), h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "tile"}, move.prompts[1])));
+    // The "+" is glued to the second word so it never dangles at the end of a line.
+    panel.append(h("div", {class: "prompt", id: "prompt", lang: view.language},
+      h("span", {class: "tile"}, move.prompts[0]),
+      h("span", {class: "join"}, h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "tile"}, move.prompts[1]))));
   }
 
   if (waiting) {
@@ -486,7 +542,7 @@ function playPanel(view, move) {
 
   const form = h("form", {class: "word-form", id: "wordForm", novalidate: true, onsubmit: event => { event.preventDefault(); submitWord(); }},
     h("label", {class: "sr-only", for: "word"}, t("placeholder")),
-    h("input", {id: "word", name: "word", type: "text", class: "word-input", placeholder: t("placeholder"), autocomplete: "off", autocapitalize: "none", autocorrect: "off", spellcheck: "true", lang: view.language, maxlength: "40", enterkeyhint: "go", "aria-describedby": "formHelp", oninput: onWordInput}),
+    h("input", {id: "word", name: "word", type: "text", class: "word-input", placeholder: t("placeholder"), autocomplete: "off", autocapitalize: "none", autocorrect: "off", spellcheck: "true", lang: view.language, maxlength: "40", enterkeyhint: "go", "aria-describedby": first ? "formHelp" : "prompt formHelp", "aria-invalid": "false", oninput: onWordInput}),
     h("button", {class: "btn big", type: "submit", id: "lockBtn"}, t("lockIn")),
     h("div", {id: "suggestion", class: "suggestion", "aria-live": "polite"}),
     h("p", {id: "formHelp", class: "form-help", "aria-live": "polite"}, solo ? t("botReady") : move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})));
@@ -507,24 +563,30 @@ function endPanel(view, last) {
 
 function trail(view) {
   const revealed = view.moves.filter(m => m.words);
-  const header = isSoloLike(view) ? t("solo") : t("vs", {name: view.otherName || t("friend")});
+  const header = isSoloLike(view) ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")});
   return h("section", {class: "card trail", "aria-labelledby": "trailTitle"},
     h("div", {class: "trail-head"},
       h("h2", {id: "trailTitle"}, t("trailTitle")),
-      h("p", {class: "trail-meta"}, h("strong", {}, header), " · ", when(view.createdAt))),
+      h("p", {class: "trail-meta"}, h("strong", {}, header), h("span", {class: "trail-when"}, h("span", {"aria-hidden": "true"}, "· "), when(view.createdAt)))),
     revealed.length
       ? h("ol", {class: "trail-list", reversed: true}, revealed.slice().reverse().map(m =>
         h("li", {class: `trail-row ${m.status === "MATCHED" ? "match" : ""}`},
-          h("span", {class: "move-badge", "aria-label": t("moveOf", {n: m.number, max: view.maxMoves})}, m.number),
+          h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, m.number), h("span", {class: "sr-only"}, t("moveOf", {n: m.number, max: view.maxMoves}))),
+          // WORD 1 + WORD 2 → WORD 3 + WORD 4; each "+" is glued to the word after it so lines break cleanly.
           h("div", {class: "trail-eq"},
-            m.prompts
-              ? [h("span", {class: "chip plain"}, m.prompts[0]), h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "chip plain"}, m.prompts[1])]
-              : h("span", {class: "start-label"}, t("start")),
-            h("span", {class: "arrow", "aria-hidden": "true"}, "→"),
-            wordChip(m.words.a, sideLabel(view, "a"), view.youSide === "a" ? "you" : "other"),
-            h("span", {class: "op", "aria-hidden": "true"}, "+"),
-            wordChip(m.words.b, sideLabel(view, "b"), view.youSide === "b" ? "you" : "other"),
-            m.status === "MATCHED" ? h("span", {class: "match-badge"}, t("matchBadge")) : null))))
+            h("span", {class: "trail-in"},
+              m.prompts
+                ? [h("span", {class: "chip plain", lang: view.language}, m.prompts[0]),
+                  h("span", {class: "join"}, h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "chip plain", lang: view.language}, m.prompts[1]))]
+                : h("span", {class: "start-label"}, t("start"))),
+            h("span", {class: "trail-out"},
+              h("span", {class: "join"},
+                h("span", {class: "arrow", "aria-hidden": "true"}, "→"),
+                wordChip(m.words.a, sideLabel(view, "a"), view.youSide === "a" ? "you" : "other")),
+              h("span", {class: "join"},
+                h("span", {class: "op", "aria-hidden": "true"}, m.status === "MATCHED" ? "=" : "+"),
+                wordChip(m.words.b, sideLabel(view, "b"), view.youSide === "b" ? "you" : "other")),
+              m.status === "MATCHED" ? h("span", {class: "match-badge"}, t("matchBadge")) : null)))))
       : h("p", {class: "empty"}, t("trailEmpty")));
 }
 
@@ -557,9 +619,19 @@ function setHelp(message, isError = false) {
   if (!help) return;
   const view = state.game;
   const move = view.moves[view.moves.length - 1];
-  help.classList.toggle("error", Boolean(message && isError));
-  help.textContent = message || (isSoloLike(view) ? t("botReady") : move.otherLocked ? t("otherLocked", {name: otherLabel(view)}) : t("otherThinking", {name: otherLabel(view)}));
-  $("word")?.setAttribute("aria-invalid", String(Boolean(message && isError)));
+  const error = Boolean(message && isError);
+  const text = message || (isSoloLike(view) ? t("botReady") : move.otherLocked ? t("otherLocked", {name: otherLabel(view)}) : t("otherThinking", {name: otherLabel(view)}));
+  help.classList.toggle("error", error);
+  // #formHelp is a polite live region and the input's description (aria-describedby).
+  // Only touch it when the text really changes, so typing doesn't re-announce the
+  // hint on every keystroke; a repeated error is cleared first so it is heard again.
+  if (error && help.textContent === text) {
+    help.textContent = "";
+    setTimeout(() => { if (help.isConnected) help.textContent = text; }, 60);
+  } else if (help.textContent !== text) {
+    help.textContent = text;
+  }
+  $("word")?.setAttribute("aria-invalid", String(error));
 }
 
 function updateSuggestion() {
@@ -567,6 +639,9 @@ function updateSuggestion() {
   if (!input || !box) return;
   const value = input.value.trim();
   const suggestion = value && value !== state.dismissedSuggestion ? speller(state.game.language).suggest(value) : null;
+  // Same suggestion as already shown: leave the live region alone (no repeat announcement).
+  if ((box.dataset.word || null) === (suggestion || null) && box.childElementCount === (suggestion ? 3 : 0)) return;
+  box.dataset.word = suggestion || "";
   if (!suggestion) return box.replaceChildren();
   box.replaceChildren(
     h("span", {}, t("didYouMean", {word: suggestion.toUpperCase()})),
@@ -624,9 +699,13 @@ async function submitWord() {
 function focusAfterMove() {
   const input = $("word");
   // Keep the keyboard up on touch devices; the reveal never blocks typing.
-  if (input) input.focus({preventScroll: true});
-  else $("newGameBtn")?.focus({preventScroll: true});
-  $("app").querySelector(".board")?.scrollIntoView({block: "start", behavior: reducedMotion() ? "auto" : "smooth"});
+  const target = input || $("newGameBtn");
+  target?.focus({preventScroll: true});
+  // Only scroll when the next control is off screen, so big screens don't jump around.
+  const box = target?.getBoundingClientRect();
+  if (!box || box.top < 0 || box.bottom > window.innerHeight) {
+    $("app").querySelector(".board")?.scrollIntoView({block: "start", behavior: reducedMotion() ? "auto" : "smooth"});
+  }
 }
 
 function celebrate() {
@@ -644,10 +723,18 @@ function celebrate() {
 function dialog(title, copy, body, actions) {
   const dlg = $("dialog");
   const close = () => { if (dlg.open) dlg.close(); };
+  // Native modal <dialog>: focus is trapped, Escape closes, the rest of the page is inert.
+  // Remember the opener so focus goes back there when the dialog closes.
+  const opener = dlg.open ? null : document.activeElement;
+  if (opener) {
+    dlg.addEventListener("close", () => {
+      if (opener.isConnected && !dlg.open && !dlg.contains(document.activeElement)) opener.focus?.({preventScroll: true});
+    }, {once: true});
+  }
   dlg.replaceChildren(
     h("form", {method: "dialog", class: "dialog-body", onsubmit: event => { event.preventDefault(); actions.submit?.(); }},
       h("h2", {id: "dialogTitle"}, title),
-      copy ? h("p", {}, copy) : null,
+      copy ? h("p", {id: "dialogCopy"}, copy) : null,
       body,
       h("p", {class: "form-help error", id: "dialogError", role: "alert"}),
       h("div", {class: "row end"},
@@ -655,13 +742,23 @@ function dialog(title, copy, body, actions) {
         actions.submit ? h("button", {class: "btn", type: "submit"}, actions.label) : null),
       actions.extra || null));
   dlg.setAttribute("aria-labelledby", "dialogTitle");
+  if (copy) dlg.setAttribute("aria-describedby", "dialogCopy");
+  else dlg.removeAttribute("aria-describedby");
   if (!dlg.open) dlg.showModal();
   setTimeout(() => dlg.querySelector("input")?.focus(), 20);
-  return {close, error: message => { $("dialogError").textContent = message; }};
+  return {close, error: message => {
+    const box = $("dialogError"), input = dlg.querySelector("input");
+    // role="alert": clear first so the same message is announced again on a second try.
+    box.textContent = "";
+    setTimeout(() => { box.textContent = message; }, 30);
+    input?.setAttribute("aria-invalid", message ? "true" : "false");
+    if (message) input?.focus();
+  }};
 }
 
 function field(id, label, attrs = {}) {
-  return h("div", {class: "field"}, h("label", {for: id}, label), h("input", {id, type: "text", class: "text-input", autocomplete: "off", ...attrs}));
+  // The dialog's error line describes the field, so a screen reader reads it with the input.
+  return h("div", {class: "field"}, h("label", {for: id}, label), h("input", {id, type: "text", class: "text-input", autocomplete: "off", "aria-describedby": "dialogError", "aria-invalid": "false", ...attrs}));
 }
 
 function ensurePlayer(next) {
@@ -743,8 +840,12 @@ function setOnline(online) {
 function boot() {
   for (const button of document.querySelectorAll("[data-lang]")) {
     button.addEventListener("click", () => {
-      state.lang = button.dataset.lang;
-      store.setLanguage(state.lang);
+      // Only the interface changes. An open game keeps its own word language
+      // (languageNote offers an explicit "new game in …" instead).
+      const lang = button.dataset.lang === "fr" ? "fr" : "en";
+      store.setLanguage(lang);
+      if (lang === state.lang) return;
+      state.lang = lang;
       rerender();
     });
   }
@@ -768,18 +869,38 @@ function boot() {
   try { sessionStorage.setItem("ssbd.booted", "1"); } catch {}
   route();
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").then(registration => {
-      registration.addEventListener("updatefound", () => {
-        const worker = registration.installing;
-        worker?.addEventListener("statechange", () => {
-          if (worker.state === "installed" && navigator.serviceWorker.controller) {
-            toast(t("updateReady"), {timeout: 0, action: {label: t("reload"), run: () => location.reload()}});
-          }
-        });
+  registerServiceWorker();
+}
+
+// A new version waits (see sw.js) until the player taps Reload, so a page
+// never mixes files from two versions. Tapping Reload lets it take over, and
+// the page reloads once it controls this tab.
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  let announced = null, reloading = false, requested = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!requested || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+  const announce = worker => {
+    if (!worker || announced === worker || !navigator.serviceWorker.controller) return;
+    announced = worker;
+    toast(t("updateReady"), {timeout: 0, action: {label: t("reload"), run: () => {
+      requested = true;
+      if (worker.state === "redundant" || worker.state === "activated") return location.reload();
+      worker.postMessage({type: "SKIP_WAITING"});
+    }}});
+  };
+  navigator.serviceWorker.register("/sw.js", {updateViaCache: "none"}).then(registration => {
+    if (registration.waiting) announce(registration.waiting);
+    registration.addEventListener("updatefound", () => {
+      const worker = registration.installing;
+      worker?.addEventListener("statechange", () => {
+        if (worker.state === "installed") announce(registration.waiting || worker);
       });
-    }).catch(() => {});
-  }
+    });
+  }).catch(() => {});
 }
 
 boot();

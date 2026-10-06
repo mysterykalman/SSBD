@@ -5,6 +5,10 @@ import {EXTRA_WORDS} from "./vocab.js";
 import {wordKey} from "../words.js";
 
 const cache = new Map();
+const PLURAL_ENDINGS = {
+  en: [["s", ""], ["es", ""], ["ies", "y"], ["ves", "f"]],
+  fr: [["s", ""], ["x", ""], ["e", ""], ["es", ""], ["aux", "al"]]
+};
 
 export function getLexicon(language = "en") {
   const lang = language === "fr" ? "fr" : "en";
@@ -36,9 +40,9 @@ function buildLexicon(lang) {
     const key = wordKey(raw);
     if (!key) return null;
     if (byKey.has(key)) return byKey.get(key);
-    for (const ending of lang === "fr" ? ["s", "x", "e", "es"] : ["s", "es", "ies"]) {
+    for (const [ending, replacement] of PLURAL_ENDINGS[lang]) {
       if (key.length > ending.length + 2 && key.endsWith(ending)) {
-        const stem = key.slice(0, -ending.length) + (ending === "ies" ? "y" : "");
+        const stem = key.slice(0, -ending.length) + replacement;
         if (byKey.has(stem)) return byKey.get(stem);
       }
     }
