@@ -3,7 +3,7 @@
 // on automatically under webdriver). Offline Solo one-letter cases live in offline.test.mjs.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {continueReveal, launch, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
+import {continueReveal, launch, soloRecord, startServer, startSolo, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -16,7 +16,7 @@ async function soloPage({lang = "en", viewport = {width: 390, height: 844}} = {}
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   return {context, page, errors};
 }
@@ -224,7 +224,7 @@ test("no trace outside automation unless asked for", async () => {
   const logs = [];
   page.on("console", m => logs.push(m.text()));
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.fill("#word", "s");
   await page.press("#word", "Enter");
   await waitForReveal(page, 0);
@@ -232,7 +232,7 @@ test("no trace outside automation unless asked for", async () => {
   assert.equal(logs.filter(l => l.includes("[submit]")).length, 0);
   // ?debug=1 turns it on.
   await page.goto(`${server.url}/?debug=1`);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.fill("#word", "s");
   await page.press("#word", "Enter");
   await waitForReveal(page, 0);

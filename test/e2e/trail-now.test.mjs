@@ -2,7 +2,7 @@
 // these two words!"), and finished rows are quiet history that never reads as something to play.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, lockIn, startServer} from "./helpers.mjs";
+import {botWord, launch, lockIn, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -21,7 +21,7 @@ test("the NOW PLAYING row says to match its two words; finished rows are history
     const context = await browser.newContext({viewport, reducedMotion: "reduce"});
     const page = await context.newPage();
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#trailNow");
     // Move 1 has no two words yet, so no instruction about them.
     assert.equal(await page.locator("#trailNow #nowHint").count(), 0);
@@ -61,7 +61,7 @@ test("French, and the end of a game: the same rule, and no instruction once noth
   const page = await context.newPage();
   await page.goto(server.url);
   await page.click('[data-lang="fr"]');
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#trailNow");
   const bot = await botWord(page);
   await lockIn(page, bot.toLowerCase() === "jardin" ? "fusée" : "jardin");

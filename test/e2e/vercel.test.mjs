@@ -3,7 +3,7 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {botWord, launch, startServer} from "./helpers.mjs";
+import {botWord, launch, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -113,7 +113,7 @@ test("Family mode unavailable: no database (JSON 503) and a host answering HTML 
     assert.equal(await page.isDisabled("#createFamily"), true);
     assert.equal(await page.isDisabled("#joinFamily"), true);
     // Solo is untouched.
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     const bot = await botWord(page);
     await page.fill("#word", bot.toLowerCase() === "acorn" ? "maple" : "acorn");

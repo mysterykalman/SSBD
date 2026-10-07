@@ -781,3 +781,40 @@ The NOW PLAYING row now says "Match these two words!" / "Old rows are just your 
 "Trouve un mot pour ces deux-là !" / "Les lignes du dessous, c’est juste ton histoire."), its two
 words are the biggest in the trail, finished rows sit quietly under "Earlier moves", and only the
 newest finished row keeps "↑ Next round's words". Test: `test/e2e/trail-now.test.mjs`.
+
+## Family room codes: AA00 (latest)
+
+- Codes are exactly two uppercase letters and two digits (`AB12`), defined once in `src/shared/codes.js`
+  (`JOIN_CODE_PATTERN`, `randomJoinCode`, `normalizeJoinCode`, `isJoinCode`) and used by the server and the join dialog.
+- Typed codes are normalised (spaces removed, uppercased); anything else, including the old `ABCD-12` format, is
+  rejected with `400 BAD_JOIN_CODE` before any lookup.
+- A code is unique only among active rooms (`WAITING`/`ACTIVE`). Create and rematch skip codes in use (up to 25
+  tries); joining only ever finds the active room with that code, so a finished room can never be joined by mistake.
+- The waiting room shows the code big and centred, with no "Copy invite link" button.
+- **Migration to apply in Supabase:** `supabase/migrations/20261008120000_short_join_codes.sql`. It swaps the
+  full unique index for a partial one on active rooms and rewrites non-conforming codes. The server works before
+  and after it, but old-format codes stay in the database until it runs.
+- Tests: `test/room-codes.test.mjs`, `test/e2e/room-code.test.mjs`.
+
+## Solo characters: Gary and Milo (latest)
+
+- New Solo games from home open "Who do you want to play with?" (`#characterPicker`): two big radio cards,
+  "Gary from Accounting / He was told there would be cake." and "Milo / Ready. Probably too ready.".
+  The last choice is remembered (`localStorage.ssbd_character`) and preselected. "Play again" keeps the
+  character, skips the picker and shows a rematch greeting; a new Solo from home can switch.
+- One config system: `src/client/characters.js` (`CHARACTERS`: id, name, title, tagline, personality,
+  voiceId, voiceStyle, art, intro, reaction pools, and `copy`, the character's own wording of shared Solo
+  sentences). Portraits come from `characterArt(id)` in `gary-art.js` (`gary.webp`, `milo.webp`).
+- Reaction pools per character: mismatch (by mood), close, strange, middle/near end of a long game,
+  early match (move ≤ 3), match, late match (move ≥ 12), rematch, and the game-over goodbye. `revealKind()`
+  decides close/strange from the lexicon (presentation only). Neither character's match lines repeat "high five".
+- Shared copy is neutral (the picker, "{name}'s word", the match and win copy, "Match these two words!").
+  Gary keeps the wording players already know; Milo has his own for the first-move help, "ready" line,
+  reveal outcome, next pair, the Keep playing button, game over and loose-word note.
+- **Same engine:** the game stores `character` (and `rematch`) for presentation only. `src/shared` never reads
+  it, so both characters choose identical words with identical diagnostics (`test/characters-engine.test.mjs`).
+  Every human-first, weak-side and lazy-answer invariant therefore holds for both. Old games without the field
+  are Gary's. `?debug=gary` still works for both characters and shows which one was chosen.
+- Tests: `test/gary.test.mjs` (config, pools, copy, tone), `test/characters-engine.test.mjs`,
+  `test/e2e/characters.test.mjs` (picker, persistence, rematch, labels/avatars, no stray Gary with Milo, EN/FR).
+  The e2e helper `startSolo(page, character?)` goes through the picker.

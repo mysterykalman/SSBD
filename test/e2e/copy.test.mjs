@@ -2,7 +2,7 @@
 // and inflected matches presented as normal wins in each player's own word.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, startServer} from "./helpers.mjs";
+import {botWord, launch, startServer, startSolo} from "./helpers.mjs";
 
 // Emoji characters in copy. ★ (U+2605) and ✓ are drawn marks inside designed components (progress stones,
 // win badge), not emoji in text, so they are excluded.
@@ -29,7 +29,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
   assert.match(solo, /Play Solo\s+We heard you had no friends\.\s+So we lured Gary from Accounting over with the promise of cake\.\s+There is no cake\./);
-  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Play Gary");
+  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Let’s play!");
   assert.match(solo, /Plays offline too\. Fancy\./);
   assert.doesNotMatch(solo, /without internet/i);
   const together = await page.locator(".family-card").innerText();
@@ -51,7 +51,7 @@ test("no inline emoji in game states: Solo start, locked, reveal, win, game over
   const context = await browser.newContext({reducedMotion: "reduce", garyRandomValue: 0.1}); // Gary makes remarks
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   assert.doesNotMatch(await visibleText(page), EMOJI, "Solo start");
   const bot = await botWord(page);

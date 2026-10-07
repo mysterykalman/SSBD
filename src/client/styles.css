@@ -578,6 +578,32 @@ main:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   .gary-end .end-art .gary-art { animation: none; }
 }
+/* "Who do you want to play with?": the step before a new Solo game. Two big cards; the radio buttons
+   stay real (keyboard + screen readers) and the whole card shows the choice. */
+.character-picker { width: min(560px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: 0; border: 3px solid var(--ink); border-radius: var(--radius); background: var(--cream); color: var(--ink); box-shadow: 0 8px 0 var(--ink); }
+.character-picker::backdrop { background: rgba(43, 27, 61, .6); }
+.pick-body { display: grid; gap: 16px; padding: 22px 18px 20px; }
+.pick-body h2 { margin: 0; text-align: center; font-size: clamp(1.35rem, 5.2vw, 1.75rem); }
+.pick-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pick-card { position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; padding: 16px 10px 14px; border: 3px solid var(--ink); border-radius: var(--radius); background: var(--paper); text-align: center; cursor: pointer; box-shadow: 0 4px 0 var(--ink); transition: transform .12s ease, background .12s ease; }
+.pick-card:hover { transform: translateY(-2px); }
+.pick-radio { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.pick-card:has(.pick-radio:checked) { background: var(--sun); box-shadow: 0 6px 0 var(--ink); transform: translateY(-2px); }
+.pick-card:has(.pick-radio:checked)::after { content: "✓"; position: absolute; top: 8px; right: 10px; display: grid; place-items: center; width: 30px; height: 30px; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); font-weight: 900; }
+.pick-card:has(.pick-radio:focus-visible) { outline: 4px solid var(--grape); outline-offset: 4px; }
+.pick-card .pick-art { width: clamp(92px, 28vw, 132px); height: clamp(92px, 28vw, 132px); border: 3px solid var(--ink); border-radius: 50%; overflow: hidden; background: var(--paper); }
+.pick-name { font-size: clamp(1.05rem, 4.4vw, 1.3rem); font-weight: 900; line-height: 1.15; }
+.pick-line { font-size: .98rem; font-weight: 700; line-height: 1.3; color: var(--ink); }
+.pick-body .row.end { flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+@media (max-width: 340px) { .pick-cards { grid-template-columns: 1fr; } }
+@media (orientation: landscape) and (max-height: 500px) {
+  .pick-body { gap: 10px; padding: 14px; }
+  .pick-card .pick-art { width: 72px; height: 72px; }
+}
+@media (prefers-reduced-motion: reduce) { .pick-card, .pick-card:hover { transition: none; transform: none; } }
+/* "Play again": the character greets the rematch on the first move. */
+.rematch-line { margin: 4px 0 0; }
+
 .win-burst .burst-star { color: var(--coral-dark); font-size: 1.1em; text-shadow: 2px 2px 0 var(--paper); }
 
 /* Developer diagnostics: Gary's decision (development mode only, never shown to players). */

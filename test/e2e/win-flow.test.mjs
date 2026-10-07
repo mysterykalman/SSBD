@@ -3,7 +3,7 @@
 // screen only. Against Gary, his reaction reads as Gary speaking: his avatar beside a speech bubble.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, startServer} from "./helpers.mjs";
+import {botWord, launch, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -18,7 +18,7 @@ test("Gary win: match copy with the word in the modal, Gary's avatar speaking hi
     const context = await browser.newContext({viewport, reducedMotion: "reduce", garyRandomValue: 0.1});
     const page = await context.newPage();
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     // Move 1: no match. Move 2: say Gary's word.
     const first = await botWord(page);
@@ -43,7 +43,7 @@ test("Gary win: match copy with the word in the modal, Gary's avatar speaking hi
     const reaction = page.locator("#revealModal #garyLine");
     assert.ok(await reaction.isVisible(), "Gary reacts");
     assert.equal(await reaction.locator(".gary-art").count(), 1, "with his avatar");
-    assert.match(await reaction.locator(".gary-bubble").innerText(), /well that's inconvenient|you win this one/);
+    assert.match(await reaction.locator(".gary-bubble").innerText(), /already\? huh/, "a move-2 match gets Gary's early-match line");
     const avatar = await box(page, "#garyLine .gary-art"), bubble = await box(page, "#garyLine .gary-bubble");
     assert.ok(avatar.x + avatar.width <= bubble.x + 1 && bubble.x - (avatar.x + avatar.width) <= 16, "the avatar sits right beside the bubble");
     assert.ok(avatar.y < bubble.y + bubble.height && bubble.y < avatar.y + avatar.height, "on the same row");
@@ -113,7 +113,7 @@ test("French: the same two-step sequence, translated", async () => {
   const page = await context.newPage();
   await page.goto(server.url);
   await page.click('[data-lang="fr"]');
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const word = (await botWord(page)).toUpperCase();
   await page.fill("#word", word.toLowerCase());

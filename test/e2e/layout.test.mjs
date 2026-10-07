@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {SHOTS, botWord, launch, lockIn, noHorizontalScroll, revealShown, startServer} from "./helpers.mjs";
+import {botWord, launch, lockIn, noHorizontalScroll, revealShown, SHOTS, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -43,7 +43,7 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
       assert.ok(await noHorizontalScroll(page), `home overflow (fr=${fr})`);
     }
     await page.click('[data-lang="en"]');
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     // Solo move 1: instruction + input only, no fabricated words, no multiplayer chrome.
     assert.equal(await page.locator("#prompt, .tile, .trail-row, .share, .notice.pending").count(), 0, "Solo move 1 shows only the instruction and input");
@@ -97,6 +97,8 @@ test("keyboard: start and play Solo with the keyboard only, focus is visible", a
   const outline = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
   assert.notEqual(outline, "none", "focus ring visible");
   await page.keyboard.press("Enter");
+  await page.waitForSelector("#characterPicker[open]");
+  await page.keyboard.press("Enter");
   await page.waitForSelector("#word");
   await page.waitForFunction(() => document.activeElement?.id === "word", null, {timeout: 2000});
   await page.keyboard.type("lighthouse");
@@ -120,7 +122,7 @@ test("reveal and win animations never block input and respect reduced motion", a
     const context = await browser.newContext({viewport: {width: 390, height: 844}, reducedMotion});
     const page = await context.newPage();
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     const bot = await botWord(page);
     await lockIn(page, bot.toLowerCase() === "giraffe" ? "penguin" : "giraffe", {reveal: false});

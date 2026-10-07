@@ -12,6 +12,7 @@ import {SCHEMA_VERSION, isFinished} from "../shared/rules.js";
 export const KEY = "ssbd.store";
 export const LANGUAGE_KEY = "ssbd_language"; // same key as earlier releases
 export const PLAYER_KEY = "ssbd_player"; // same key as earlier releases
+export const CHARACTER_KEY = "ssbd_character"; // who the player last chose to play Solo with
 export const MAX_SOLO_GAMES = 30;
 const MOVE_STATUSES = new Set(["OPEN", "REVEALED", "MATCHED", "EXHAUSTED"]);
 
@@ -141,6 +142,9 @@ export function createStore() {
     get healthy() { return healthy; },
     language() { const lang = read(LANGUAGE_KEY); return lang === "fr" || lang === "en" ? lang : null; },
     setLanguage(lang) { return write(LANGUAGE_KEY, lang === "fr" ? "fr" : "en"); },
+    /** The last chosen Solo character id (validated by the caller), or null. */
+    character() { const id = read(CHARACTER_KEY); return id && /^[a-z]{1,20}$/.test(id) ? id : null; },
+    setCharacter(id) { return write(CHARACTER_KEY, String(id)); },
     player() { try { const p = JSON.parse(read(PLAYER_KEY) || "null"); return isObject(p) ? p : null; } catch { return null; } },
     setPlayer(player) { return write(PLAYER_KEY, JSON.stringify(player)); },
     soloGames() { refresh(); return Object.values(data.solo); },

@@ -10,8 +10,9 @@ import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
 import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
-import {GARY, garyRandom, hasMetGary, markMetGary, pickReaction, recentLines, rememberLines, typeInto} from "./gary.js";
-import {garyArt} from "./gary-art.js";
+import {garyRandom, hasMet, markMet, recentLines, rememberLines, typeInto} from "./gary.js";
+import {CHARACTER_IDS, character, characterId, copyKey, pickReaction, rematchLine, revealKind} from "./characters.js";
+import {characterArt} from "./gary-art.js";
 
 const store = createStore();
 const state = {
@@ -189,6 +190,8 @@ function soloView(game) {
     youSide: "a",
     otherSide: "b",
     otherName: null,
+    character: characterId(game.character),
+    rematch: Boolean(game.rematch),
     moves: game.moves.map(m => ({...publicMove(m), mine: null, otherLocked: m.status === "OPEN"}))
   };
 }
@@ -212,8 +215,13 @@ function serverView(game) {
 }
 
 const isSoloLike = view => view.kind === "solo" || view.kind === "legacy-solo";
-// The Solo opponent is always Gary; family opponents keep their own names.
-const otherLabel = view => (isSoloLike(view) ? t("garyName") : view.otherName || t("friend"));
+/** The Solo character the player chose for this game (older and server-side Solo games: Gary). */
+const soloCharacter = view => character(view?.character);
+const characterName = view => t(soloCharacter(view).name);
+/** Shared Solo copy in the chosen character's own words (family games: the shared copy). */
+const ct = (view, key, vars) => t(isSoloLike(view) ? copyKey(view.character, key) : key, vars);
+// The Solo opponent is the chosen character; family opponents keep their own names.
+const otherLabel = view => (isSoloLike(view) ? characterName(view) : view.otherName || t("friend"));
 const sideLabel = (view, side) => (side === view.youSide ? t("you") : otherLabel(view));
 
 // ---------- player badges ----------
@@ -226,11 +234,11 @@ function initialOf(name) {
   return first.toLocaleUpperCase(state.lang);
 }
 /** Decorative badge; the name is always written next to it, so it is hidden from screen readers. */
-function badge(name, {bot = false, cls = ""} = {}) {
-  if (bot) return h("span", {class: `badge gary ${cls}`, "aria-hidden": "true"}, garyArt("meh", "badge-art"));
+function badge(name, {bot = false, who = "gary", cls = ""} = {}) {
+  if (bot) return h("span", {class: `badge gary ${cls}`, "aria-hidden": "true"}, characterArt(characterId(who), "meh", "badge-art"));
   return h("span", {class: `badge ${cls}`, "aria-hidden": "true"}, initialOf(name));
 }
-const otherBadge = (view, cls) => badge(view.otherName, {bot: isSoloLike(view), cls});
+const otherBadge = (view, cls) => badge(view.otherName, {bot: isSoloLike(view), who: view.character, cls});
 
 // ---------- routing ----------
 function navigate(path, replace = false) {
@@ -397,10 +405,10 @@ function renderHome() {
       h("p", {class: "lede"}, t("heroCopy"))),
     h("div", {class: "start-grid"},
       h("section", {class: "card start solo-card", "aria-labelledby": "soloTitle"},
-        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {bot: true})),
+        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {bot: true, who: lastCharacter()})),
         h("h2", {id: "soloTitle"}, t("soloTitle")),
         h("div", {class: "start-copy"}, h("p", {}, t("soloCopy1")), h("p", {}, t("soloCopy2")), h("p", {}, t("soloCopy3"))),
-        h("button", {class: "btn big", type: "button", id: "startSolo", onclick: () => startSolo()}, t("soloStart")),
+        h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart")),
         h("p", {class: "start-note"}, t("soloOfflineNote"))),
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
         h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {cls: "other"})),
@@ -425,7 +433,7 @@ function gameListItems() {
     key: `solo:${game.id}`,
     updatedAt: game.updatedAt,
     title: t("solo"),
-    badge: badge(null, {bot: true}),
+    badge: badge(null, {bot: true, who: game.character}),
     createdAt: game.createdAt,
     status: game.status,
     move: currentMove(game).number,
@@ -493,14 +501,56 @@ function randomSeed() {
   try { return crypto.getRandomValues(new Uint32Array(1))[0]; } catch { return Math.floor(Math.random() * 2 ** 32); }
 }
 
-function startSolo(language = state.lang) {
-  const game = startSoloGame({id: newId(), language, seed: randomSeed()});
+/** The character the player last chose (preselected next time), Gary by default. */
+const lastCharacter = () => characterId(store.character());
+
+/**
+ * Start a Solo game with a character. Every character plays with the same word engine; the choice
+ * is stored with the game (presentation only) and remembered for next time.
+ * `rematch`: "Play again" from a finished game (same character, with a greeting).
+ */
+function startSolo(language = state.lang, {who = lastCharacter(), rematch = false} = {}) {
+  const id = characterId(who);
+  store.setCharacter(id);
+  const game = startSoloGame({id: newId(), language, seed: randomSeed(), character: id, rematch});
   if (!store.saveSolo(game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
   navigate(`/solo/${game.id}`);
   $("word")?.focus(); // Solo renders synchronously; focus now so typing right away is never lost
-  if (!hasMetGary()) showGaryIntro({onDone: () => $("word")?.focus()});
+  if (!hasMet(id)) showCharacterIntro(id, {onDone: () => $("word")?.focus()});
   // Retry only if focus was lost (e.g. to <body>), never pulling it away from a control the player moved to.
   setTimeout(() => { const active = document.activeElement; if (!active || active === document.body) $("word")?.focus(); }, 30);
+}
+
+/**
+ * "Who do you want to play with?": the step before a new Solo game from home. Two big cards
+ * (radio buttons underneath, so arrows, Tab and screen readers all work), the last choice preselected.
+ */
+function pickCharacter() {
+  $("characterPicker")?.remove();
+  let chosen = lastCharacter();
+  const close = () => { const dlg = $("characterPicker"); if (dlg) { if (dlg.open) dlg.close(); dlg.remove(); } };
+  const startLabel = () => t("pickStart", {name: t(character(chosen).name)});
+  const card = id => {
+    const c = character(id);
+    return h("label", {class: "pick-card", "data-character": id, for: `pick-${id}`},
+      h("input", {type: "radio", name: "character", value: id, id: `pick-${id}`, class: "pick-radio", checked: id === chosen,
+        "aria-describedby": `pick-${id}-line`, onchange: () => { chosen = id; $("startCharacter").textContent = startLabel(); }}),
+      characterArt(id, "meh", "pick-art"),
+      h("span", {class: "pick-name"}, t(c.title)),
+      h("span", {class: "pick-line", id: `pick-${id}-line`}, t(c.tagline)));
+  };
+  const dlg = h("dialog", {id: "characterPicker", class: "character-picker", "aria-labelledby": "pickTitle", onclose: () => $("characterPicker")?.remove()},
+    h("form", {method: "dialog", class: "pick-body", onsubmit: event => { event.preventDefault(); close(); startSolo(state.lang, {who: chosen}); }},
+      h("h2", {id: "pickTitle"}, t("pickTitle")),
+      h("div", {class: "pick-cards", role: "radiogroup", "aria-labelledby": "pickTitle"}, ...CHARACTER_IDS.map(card)),
+      h("div", {class: "row end"},
+        h("button", {class: "btn ghost", type: "button", id: "cancelCharacter", onclick: close}, t("cancel")),
+        h("button", {class: "btn big", type: "submit", id: "startCharacter"}, startLabel()))));
+  const opener = document.activeElement;
+  dlg.addEventListener("close", () => { if (opener?.isConnected && state.screen === "home") opener.focus?.({preventScroll: true}); }, {once: true});
+  document.body.append(dlg);
+  dlg.showModal();
+  $(`pick-${chosen}`).focus();
 }
 
 async function createFamily(language = state.lang) {
@@ -560,6 +610,7 @@ function garyDebugPanel(view) {
     ? [h("p", {}, "No decision recorded yet (diagnostics were off when this move was locked, or nothing has been revealed).")]
     : [
       h("dl", {},
+        cell("dt", "Character"), cell("dd", `${view.character} (presentation only: every character uses this same engine)`),
         cell("dt", "Current pair"), cell("dd", d.pair ? d.pair.map(w => w.toUpperCase()).join(" + ") : "(opening move)"),
         cell("dt", "Trail theme from"), cell("dd", d.trail?.length ? d.trail.join(", ") : "(no trail yet)"),
         cell("dt", "Selected word"), cell("dd", String(d.selected).toUpperCase(), {class: "gd-selected"}),
@@ -625,7 +676,7 @@ function languageNote(view) {
     h("strong", {}, t("langNoteTitle", {game})), " ",
     solo ? null : [t("langNoteFamily"), " "],
     t("langNoteCopy", {game, ui}), " ",
-    h("button", {class: "btn small ghost", type: "button", lang: state.lang, disabled: !solo && !state.online, onclick: () => (solo ? startSolo(state.lang) : ensurePlayer(() => createFamily(state.lang)))}, t("langNewGame", {ui})));
+    h("button", {class: "btn small ghost", type: "button", lang: state.lang, disabled: !solo && !state.online, onclick: () => (solo ? startSolo(state.lang, {who: view.character}) : ensurePlayer(() => createFamily(state.lang)))}, t("langNewGame", {ui})));
 }
 
 // "← Games": the arrow is decoration, so screen readers only hear the word (text still comes from t("back")).
@@ -667,8 +718,9 @@ function startReveal(view, move) {
   closeReveal();
   const token = Symbol("reveal");
   const solo = isSoloLike(view);
-  // Gary's occasional remark: flavour only, decided here and never fed back into the game.
-  const reaction = solo ? pickReaction({status: move.status, move: move.number, recent: recentLines(view.id), random: garyRandom}) : null;
+  // The character's occasional remark: flavour only, decided here and never fed back into the game.
+  const kind = solo && move.status === "REVEALED" ? revealKind(getLexicon(view.language), {prompts: move.prompts, mine: move.words[view.youSide], theirs: move.words[view.otherSide]}) : null;
+  const reaction = solo ? pickReaction({character: view.character, status: move.status, move: move.number, kind, recent: recentLines(view.id), random: garyRandom}) : null;
   if (reaction) rememberLines(view.id, reaction.keys);
   state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token, reaction};
   const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
@@ -681,13 +733,13 @@ function startReveal(view, move) {
         h("div", {class: "rv-words"},
           revealWord(t("revealYourWord"), shownWords(view, move)[view.youSide], "you"),
           h("span", {class: "op rv-step", "aria-hidden": "true"}, move.status === "MATCHED" ? "=" : "+"),
-          solo ? garyRevealWord() : revealWord(t("revealTheirWord", {name: otherLabel(view)}), shownWords(view, move)[view.otherSide], "other")),
-        reaction ? garyReaction() : null,
+          solo ? garyRevealWord(view) : revealWord(t("revealTheirWord", {name: otherLabel(view)}), shownWords(view, move)[view.otherSide], "other")),
+        reaction ? garyReaction(view) : null,
         h("p", {class: "rv-outcome rv-step"}, ...(move.status === "MATCHED"
           ? [h("span", {class: "rv-headline"}, t("revealMatchTitle")), " ", h("span", {class: "rv-subline"}, matchCopy(view, move))]
-          : [move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")])),
-        move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, t("revealLoose")) : null,
-        ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(move)))));
+          : [move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : ct(view, "revealNice")])),
+        move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, ct(view, "revealLoose", {name: characterName(view)})) : null,
+        ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(view, move)))));
   document.body.append(dlg);
   dlg.showModal();
   runReveal(view, move, ended, token);
@@ -706,16 +758,16 @@ function shownWords(view, move) {
 
 
 /** "Next move starts with A + B", keeping "A + B" together on one line when it fits. */
-function nextStartsText(move) {
+function nextStartsText(view, move) {
   const pair = `${move.words.a.toUpperCase()} + ${move.words.b.toUpperCase()}`;
-  const [before, after = ""] = t("revealNextStarts", {a: "@@A@@", b: "@@B@@"}).split(/@@A@@\s*\+\s*@@B@@/);
+  const [before, after = ""] = ct(view, "revealNextStarts", {a: "@@A@@", b: "@@B@@"}).split(/@@A@@\s*\+\s*@@B@@/);
   return [before, h("span", {class: "rv-pair"}, pair), after];
 }
 
-/** Gary's chip starts empty; his word is typed in once the reveal begins (see runReveal). */
-function garyRevealWord() {
-  return h("div", {class: "rv-word other gary rv-step", "data-gary": "word"},
-    h("small", {}, garyArt("meh", "tiny"), t("revealBotWord")),
+/** The character's chip starts empty; the word is typed in once the reveal begins (see runReveal). */
+function garyRevealWord(view) {
+  return h("div", {class: "rv-word other gary rv-step", "data-gary": "word", "data-character": view.character},
+    h("small", {}, characterArt(view.character, "meh", "tiny"), t("revealBotWord", {name: characterName(view)})),
     h("span", {class: "chip-word", id: "garyWord", lang: state.game?.language}));
 }
 
@@ -725,12 +777,12 @@ function matchCopy(view, move) {
 }
 
 /**
- * Gary's reaction: his avatar with the remark in a speech bubble beside it, so it reads as Gary
- * talking, not as a system message. The remark is typed into .gary-says (see garySays).
+ * The character's reaction: their avatar with the remark in a speech bubble beside it, so it reads as
+ * the character talking, not as a system message. The remark is typed into .gary-says (see garySays).
  */
-function garyReaction() {
-  return h("div", {class: "gary-reaction", id: "garyLine", hidden: true},
-    garyArt("meh", "gary-reaction-art"),
+function garyReaction(view) {
+  return h("div", {class: "gary-reaction", id: "garyLine", "data-character": view.character, hidden: true},
+    characterArt(view.character, "meh", "gary-reaction-art"),
     h("p", {class: "gary-bubble"}, h("span", {class: "gary-says"})));
 }
 
@@ -797,9 +849,9 @@ async function runReveal(view, move, ended, token) {
   const said = shownWords(view, move);
   announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: said[view.youSide].toUpperCase()}),
     t("revealSaid", {name: sideLabel(view, view.otherSide), word: said[view.otherSide].toUpperCase()}),
-    remark ? t("revealSaid", {name: t("garyName"), word: remark}) : "",
-    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
-  const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : t("keepPlaying"));
+    remark ? t("revealSaid", {name: characterName(view), word: remark}) : "",
+    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : ct(view, "revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
+  const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : ct(view, "keepPlaying"));
   result.append(button);
   setRevealPhase("ready");
   button.focus();
@@ -840,7 +892,7 @@ function playPanel(view, move) {
     h("h1", {id: "boardTitle", class: "board-title"}, waiting && !solo ? t("waitingJoin") : first ? t("firstTitle") : t("promptTitle")),
     ...(waiting && !solo) || locked ? []
       : first
-        ? [h("p", {class: "instruction"}, solo ? t("firstSolo") : t("firstFamily", {name: otherName}))]
+        ? [h("p", {class: "instruction"}, solo ? ct(view, "firstSolo", {name: otherName}) : t("firstFamily", {name: otherName})), solo && view.rematch ? rematchGreeting(view) : null]
         : [h("p", {class: "instruction"}, t("promptCopy"))]);
   if (!first) {
     // The "+" is glued to the second word so it never dangles at the end of a line.
@@ -876,7 +928,7 @@ function playPanel(view, move) {
     submitWord(source);
   }},
     h("label", {class: "sr-only", for: "word"}, t("placeholder")),
-    h("p", {id: "formHelp", class: "form-help", "aria-live": "polite"}, solo ? t("botReady") : move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})),
+    h("p", {id: "formHelp", class: "form-help", "aria-live": "polite"}, solo ? ct(view, "botReady", {name: otherName}) : move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})),
     h("div", {id: "suggestion", class: "suggestion", "aria-live": "polite"}),
     h("input", {id: "word", name: "word", type: "text", class: "word-input", placeholder: t("placeholder"), autocomplete: "off", autocapitalize: "none", autocorrect: "off", spellcheck: "true", lang: view.language, maxlength: "40", enterkeyhint: "go", "aria-describedby": first ? "formHelp" : "prompt formHelp", "aria-invalid": "false", oninput: onWordInput,
       onkeydown: event => { submitSource = event.key === "Enter" && !event.isComposing ? "enter" : null; }}),
@@ -892,29 +944,29 @@ function endPanel(view, last, fresh) {
   return h("div", {class: `end ${matched ? "win" : "over"}`},
     matched
       ? h("div", {class: "end-icon win-burst", "aria-hidden": "true"}, h("span", {class: "burst-star"}, "★"))
-      : solo ? garyGoodbye(fresh && !reducedMotion()) : sleepyToken(fresh && !reducedMotion()),
+      : solo ? garyGoodbye(view, fresh && !reducedMotion()) : sleepyToken(fresh && !reducedMotion()),
     h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
     h("p", {}, matched
       ? t("winCopy", {n: last.number})
-      : t("gameOverCopy")),
+      : ct(view, "gameOverCopy")),
     h("div", {class: "row center end-actions"},
       h("button", {class: "btn big", type: "button", id: "newGameBtn", disabled: !solo && !state.online && !view.rematchId, onclick: event => {
         // A held or doubled Enter from the last word must not skip the game-over screen.
         if (event.detail === 0 && performance.now() - shownAt < 800) return;
         playAgain(view, event.currentTarget);
-      }}, solo ? t("playAgain") : t("rematch")),
+      }}, solo ? t("playAgainWith", {name: characterName(view)}) : t("rematch")),
       h("button", {class: "btn ghost", type: "button", id: "homeBtn", onclick: () => navigate("/")}, t("returnHome")),
       h("button", {class: "btn ghost", type: "button", id: "historyBtn", onclick: viewHistory}, t("viewHistory"))));
 }
 
-/** Solo game over: Gary says "finally", then, after a beat, "...same time tomorrow?". */
-function garyGoodbye(animate) {
-  const [first, second] = GARY.special.gameOver.map(key => t(key));
+/** Solo game over: the character says goodbye in two beats (Gary: "finally", then "...same time tomorrow?"). */
+function garyGoodbye(view, animate) {
+  const [first, second] = soloCharacter(view).lines.gameOver.map(key => t(key));
   const one = h("span", {class: "bye-line", "aria-hidden": "true"});
   const two = h("span", {class: "bye-line later", "aria-hidden": "true"});
   const block = h("div", {class: `gary-end ${animate ? "animate" : ""}`},
-    garyArt("sleepy", "end-art"),
-    h("p", {class: "gary-bye", id: "garyBye"}, one, two, h("span", {class: "sr-only"}, `${t("garyName")}: ${first} ${second}`)));
+    characterArt(view.character, "sleepy", "end-art"),
+    h("p", {class: "gary-bye", id: "garyBye"}, one, two, h("span", {class: "sr-only"}, `${characterName(view)}: ${first} ${second}`)));
   if (!animate) {
     one.textContent = first;
     two.textContent = second;
@@ -926,25 +978,44 @@ function garyGoodbye(animate) {
   return block;
 }
 
-/** First Solo game: a short "Meet your rival" moment. Shown once; can be reopened from the profile badge. */
-function showGaryIntro({onDone} = {}) {
+/**
+ * "Play again" with the same character: a one-line greeting from them on the first move
+ * (avatar + speech bubble, like their reveal remarks).
+ */
+function rematchGreeting(view) {
+  const key = rematchLine(view.character, seededPick(view.id));
+  return h("div", {class: "gary-reaction rematch-line", id: "rematchLine", "data-character": view.character},
+    characterArt(view.character, "meh", "gary-reaction-art"),
+    h("p", {class: "gary-bubble"}, h("span", {class: "sr-only"}, `${characterName(view)}: `), t(key)));
+}
+
+/** A stable 0..1 value per game id, so a re-render never swaps the greeting. */
+function seededPick(id) {
+  let hash = 0;
+  for (const ch of String(id)) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+  return () => (hash % 1000) / 1000;
+}
+
+/** First Solo game with a character: a short "Meet your rival" / "Say hi to Milo" moment. Shown once per character; can be reopened from the profile badge. */
+function showCharacterIntro(id = "gary", {onDone} = {}) {
+  const c = character(id);
   $("garyIntro")?.remove();
   const done = () => {
-    markMetGary();
+    markMet(c.id);
     const dlg = $("garyIntro");
     if (dlg) { if (dlg.open) dlg.close(); dlg.remove(); }
     onDone?.();
   };
-  const dlg = h("dialog", {id: "garyIntro", class: `gary-intro ${reducedMotion() ? "" : "animate"}`, "aria-labelledby": "garyIntroTitle", "aria-describedby": "garyIntroSays",
+  const dlg = h("dialog", {id: "garyIntro", class: `gary-intro ${reducedMotion() ? "" : "animate"}`, "data-character": c.id, "aria-labelledby": "garyIntroTitle", "aria-describedby": "garyIntroSays",
     oncancel: event => { event.preventDefault(); done(); }},
     h("div", {class: "gi-body"},
-      h("p", {class: "rv-kicker"}, t(GARY.intro.kicker)),
-      garyArt("meh", "intro-art"),
-      h("h2", {class: "gi-title", id: "garyIntroTitle"}, t(GARY.title)),
+      h("p", {class: "rv-kicker"}, t(c.intro.kicker)),
+      characterArt(c.id, "meh", "intro-art"),
+      h("h2", {class: "gi-title", id: "garyIntroTitle"}, t(c.title)),
       h("div", {class: "gi-says", id: "garyIntroSays"},
-        ...GARY.intro.lines.map((key, i) => h("p", {class: "gi-line", style: `--i:${i}`}, t(key))),
-        h("p", {class: "gi-aside", style: `--i:${GARY.intro.lines.length}`}, t(GARY.intro.aside))),
-      h("button", {class: "btn big", type: "button", id: "garyIntroGo", onclick: done}, t(GARY.intro.cta))));
+        ...c.intro.lines.map((key, i) => h("p", {class: "gi-line", style: `--i:${i}`}, t(key))),
+        h("p", {class: "gi-aside", style: `--i:${c.intro.lines.length}`}, t(c.intro.aside))),
+      h("button", {class: "btn big", type: "button", id: "garyIntroGo", onclick: done}, t(c.intro.cta))));
   document.body.append(dlg);
   dlg.showModal();
   $("garyIntroGo").focus();
@@ -959,7 +1030,8 @@ function sleepyToken(animate) {
 }
 
 async function playAgain(view, button) {
-  if (isSoloLike(view)) return startSolo(state.lang);
+  // Solo: a new game with the same character (changing character happens from home).
+  if (isSoloLike(view)) return startSolo(state.lang, {who: view.character, rematch: true});
   // Family: a rematch with the same friend. The server returns the same rematch if one already exists.
   if (view.rematchId) return navigate(`/games/${view.rematchId}`);
   if (!state.player || !state.online) return toast(t("familyOffline"), {kind: "error"});
@@ -1096,7 +1168,7 @@ function setHelp(message, isError = false) {
   const view = state.game;
   const move = view.moves[view.moves.length - 1];
   const error = Boolean(message && isError);
-  const text = message || (isSoloLike(view) ? t("botReady") : move.otherLocked ? t("otherLocked", {name: otherLabel(view)}) : t("otherThinking", {name: otherLabel(view)}));
+  const text = message || (isSoloLike(view) ? ct(view, "botReady", {name: otherLabel(view)}) : move.otherLocked ? t("otherLocked", {name: otherLabel(view)}) : t("otherThinking", {name: otherLabel(view)}));
   help.classList.toggle("error", error);
   const input = $("word");
   // #formHelp is a polite live region and the input's description (aria-describedby).
@@ -1473,9 +1545,9 @@ function joinDialog(prefill) {
 }
 
 function profileDialog() {
-  const meetGary = h("button", {class: "link", type: "button", id: "meetGaryAgain", onclick: () => { $("dialog")?.close(); showGaryIntro(); }}, t("garyMeetAgain"));
+  const meetGary = CHARACTER_IDS.map(id => h("button", {class: "link", type: "button", id: `meet${id[0].toUpperCase()}${id.slice(1)}Again`, onclick: () => { $("dialog")?.close(); showCharacterIntro(id); }}, t(character(id).meetAgain)));
   if (!state.player) {
-    dialog(t("solo"), t("profileSolo"), null, {cancelLabel: t("close"), extra: [h("button", {class: "link", type: "button", onclick: () => recoveryDialog(null)}, t("haveRecovery")), meetGary]});
+    dialog(t("solo"), t("profileSolo"), null, {cancelLabel: t("close"), extra: [h("button", {class: "link", type: "button", onclick: () => recoveryDialog(null)}, t("haveRecovery")), ...meetGary]});
     return;
   }
   dialog(t("profileTitle", {name: state.player.display_name}), t("profileCopy"),

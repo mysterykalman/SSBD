@@ -2,7 +2,7 @@
 // or "NaN" anywhere in the UI (it once appeared under the Word Trail, from an absent optional panel).
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, continueReveal, launch, startServer} from "./helpers.mjs";
+import {botWord, continueReveal, launch, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -30,7 +30,7 @@ test("no null/undefined/false text in the game UI when optional content is absen
   assert.deepEqual(await leaks(page), [], "home");
 
   // Solo game: the developer-only Gary panel is absent for players.
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   assert.equal(await page.locator("#garyDebug").count(), 0);
   assert.deepEqual(await leaks(page), [], "Solo start");

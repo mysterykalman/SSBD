@@ -52,12 +52,14 @@ function lockBotWord(game) {
 }
 
 /**
- * @param {{id: string, language?: string, seed?: number, now?: string}} options
+ * @param {{id: string, language?: string, seed?: number, character?: string, rematch?: boolean, now?: string}} options
  * @returns {GameState} a fresh game whose first move already holds the bot's hidden word
  */
-export function startSoloGame({id, language = "en", seed, now = new Date().toISOString()}) {
+export function startSoloGame({id, language = "en", seed, character, rematch = false, now = new Date().toISOString()}) {
   const game = createGame({id, mode: "solo", language, seed: seed ?? Math.floor(Math.random() * 2 ** 32), now});
-  return lockBotWord(game);
+  // Who the player chose to play with (presentation only: the engine never reads it), and whether
+  // this game is a "Play again" of the previous one. Older games have neither, and are Gary's.
+  return lockBotWord({...game, ...(character ? {character: String(character)} : {}), ...(rematch ? {rematch: true} : {})});
 }
 
 /**

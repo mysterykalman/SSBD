@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, continueReveal, launch, lockIn, revealShown, startServer} from "./helpers.mjs";
+import {botWord, continueReveal, launch, lockIn, revealShown, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -14,7 +14,7 @@ test("fresh Solo: blank start, one input, simultaneous reveal, next prompt equal
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   assert.equal(await page.inputValue("#word"), "");
   assert.equal(await page.locator("#prompt").count(), 0, "no prompt words on move 1");
@@ -51,7 +51,7 @@ test("Solo duplicate and invalid input get friendly messages", async () => {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   for (const [input, pattern] of [["", /type a word/i], ["   ", /type a word/i], ["!!!", /type a word/i], ["abc123", /letters only/i], ["x".repeat(30), /24 letters/i]]) {
     await page.fill("#word", input);
     await page.click("#lockBtn");
@@ -79,7 +79,7 @@ test("Solo survives refresh and reopening, and a match ends the game", async () 
   const context = await browser.newContext();
   let page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   const played = [];
   for (const w of ["apple", "orchard", "basket"]) {
     if (await page.locator(".end").count()) break;
@@ -121,7 +121,7 @@ test("language switch persists and does not corrupt an active Solo game", async 
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   const bot = await botWord(page);
   await lockIn(page, bot.toLowerCase() === "piano" ? "violin" : "piano");
   await page.waitForSelector("#prompt");

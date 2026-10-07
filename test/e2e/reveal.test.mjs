@@ -3,7 +3,7 @@
 // active turn after "Keep playing", and there is never a frame showing it in both places.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, startServer} from "./helpers.mjs";
+import {botWord, launch, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -58,7 +58,7 @@ test("When the reveal modal is open, the pending next pair is not rendered in th
   const context = await browser.newContext({viewport: {width: 390, height: 844}});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const bot = await botWord(page);
   const mine = bot.toLowerCase() === "night" ? "story" : "night";
@@ -95,7 +95,7 @@ test("After Keep playing is pressed, the modal disappears and the pending pair b
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   for (let move = 1; move <= 3; move++) {
     const bot = await botWord(page);
@@ -133,7 +133,7 @@ test("one-letter word, refresh during the reveal, Escape and FR copy", async () 
   const context = await browser.newContext({locale: "fr-CA"});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const bot = await botWord(page);
   const mine = bot.toLowerCase() === "s" ? "t" : "s";
@@ -163,7 +163,7 @@ test("reduced motion: no countdown, the reveal is shown straight away", async ()
   const context = await browser.newContext({reducedMotion: "reduce"});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const bot = await botWord(page);
   await submit(page, bot.toLowerCase() === "acorn" ? "maple" : "acorn");
@@ -178,7 +178,7 @@ test("a match: the modal reveals it, then Continue shows the celebration", async
   const context = await browser.newContext({reducedMotion: "reduce"});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   await submit(page, await botWord(page));
   await page.waitForSelector("#revealContinue");
@@ -240,7 +240,7 @@ for (const [name, viewport] of [["phone 390x844", {width: 390, height: 844}], ["
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     let used = 0;
     for (let move = 1; move <= 20; move++) {
@@ -312,7 +312,7 @@ test("long words: the revealed pair stays together and the modal never overflows
     const context = await browser.newContext({viewport, reducedMotion: "reduce"});
     const page = await context.newPage();
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     const bot = (await botWord(page)).toLowerCase();
     await submit(page, bot === "supercalifragilistic" ? "abracadabra" : "Supercalifragilistic");
@@ -335,7 +335,7 @@ test("an inflected match (Gary's word, pluralised) looks exactly like a normal w
   let bot, plural;
   for (let tries = 0; tries < 15 && !plural; tries++) {
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     bot = await botWord(page);
     const candidate = `${bot}s`;

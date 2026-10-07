@@ -51,12 +51,23 @@ export async function launch() {
   browser.newContext = async ({meetGary = false, garyRandomValue = 0.99, ...options} = {}) => {
     const context = await newContext(options);
     await context.addInitScript(([met, value]) => {
-      if (!met) { try { localStorage.setItem("ssbd_gary_met", "1"); } catch {} }
+      if (!met) { try { localStorage.setItem("ssbd_gary_met", "1"); localStorage.setItem("ssbd_milo_met", "1"); } catch {} }
       if (value !== null) window.__garyRandom = () => value;
     }, [meetGary, garyRandomValue]);
     return context;
   };
   return browser;
+}
+
+/**
+ * Start a Solo game from home: "Let's play!" opens "Who do you want to play with?", then pick a
+ * character (by default whoever is preselected: the last choice, or Gary) and start.
+ */
+export async function startSolo(page, character = null) {
+  await page.click("#startSolo");
+  await page.waitForSelector("#characterPicker[open]");
+  if (character) await page.click(`#characterPicker label[data-character="${character}"]`);
+  await page.click("#startCharacter");
 }
 
 /** The bot's locked word for the open Solo move, read from device storage (test-only peek). */
