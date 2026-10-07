@@ -148,16 +148,19 @@ test("reveal and win animations never block input and respect reduced motion", a
     assert.equal(await page.evaluate(() => document.activeElement?.id), "word", "focus returns to the word box");
     await page.keyboard.type("zebra");
     assert.equal(await page.inputValue("#word"), "zebra");
-    // Win: type the bot's word; confetti never intercepts clicks and is gone quickly.
+    // Win: type the bot's word; a big two-wave confetti burst that never intercepts clicks and cleans itself up.
     await lockIn(page, await botWord(page));
     await page.waitForSelector(".end.win");
     const confetti = page.locator(".confetti");
     if (reducedMotion === "reduce") assert.equal(await confetti.count(), 0, "no confetti with reduced motion");
     else {
       assert.equal(await confetti.evaluate(el => getComputedStyle(el).pointerEvents), "none");
+      const pieces = await confetti.evaluate(el => [...el.children].map(i => parseFloat(i.style.animationDelay)));
+      assert.ok(pieces.length >= 100, `plenty of confetti (${pieces.length} pieces)`);
+      assert.ok(pieces.some(d => d >= 0.55), "a second wave follows the first");
       await page.locator("#newGameBtn").click({timeout: 1000});
       await page.waitForSelector("#word");
-      await page.waitForFunction(() => !document.querySelector(".confetti"), null, {timeout: 2500});
+      await page.waitForFunction(() => !document.querySelector(".confetti"), null, {timeout: 4500});
     }
     await context.close();
   }

@@ -1113,15 +1113,30 @@ function focusAfterMove() {
   }
 }
 
+/**
+ * Win confetti: two quick waves (about 120 pieces) of dots, squares and streamers in the app's colours.
+ * Decorative only: it never catches taps (pointer-events: none), it is skipped under reduced motion,
+ * and it cleans itself up after about 3.6 seconds.
+ */
+const CONFETTI = {pieces: 120, firstWave: 70, waveGap: 0.55, cleanupMs: 3600};
 function celebrate() {
   if (reducedMotion()) return;
+  document.querySelector(".confetti")?.remove();
   const layer = h("div", {class: "confetti", "aria-hidden": "true"});
-  const colors = ["#ff6b57", "#ffc93c", "#1fb5a8", "#7b4fc9", "#ff7ab6"];
-  for (let i = 0; i < 28; i++) {
-    layer.append(h("i", {style: `left:${Math.random() * 100}%;background:${colors[i % colors.length]};animation-delay:${Math.random() * 0.25}s;--drift:${(Math.random() - 0.5) * 160}px`}));
+  const colors = ["#ff6b57", "#ffc93c", "#1fb5a8", "#7b4fc9", "#ff7ab6", "#fffbf3"];
+  const shapes = ["", "dot", "strip"];
+  for (let i = 0; i < CONFETTI.pieces; i++) {
+    const wave = i < CONFETTI.firstWave ? 0 : 1;
+    const delay = wave * CONFETTI.waveGap + Math.random() * 0.45;
+    const duration = 1.6 + Math.random() * 1;
+    const spin = (Math.random() < 0.5 ? -1 : 1) * (360 + Math.random() * 720);
+    layer.append(h("i", {class: shapes[i % shapes.length], style: [
+      `left:${Math.random() * 100}%`, `background:${colors[i % colors.length]}`, `animation-delay:${delay.toFixed(2)}s`,
+      `--dur:${duration.toFixed(2)}s`, `--drift:${Math.round((Math.random() - 0.5) * 300)}px`, `--spin:${Math.round(spin)}deg`,
+      `--scale:${(0.7 + Math.random() * 0.6).toFixed(2)}`].join(";")}));
   }
   document.body.append(layer);
-  setTimeout(() => layer.remove(), 1800);
+  setTimeout(() => layer.remove(), CONFETTI.cleanupMs);
 }
 
 // ---------- notifications (family games only) ----------
