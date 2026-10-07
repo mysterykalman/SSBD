@@ -5,7 +5,8 @@
 import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js";
 import {publicMove, startSoloGame, submitSoloWord} from "../shared/solo.js";
 import {getLexicon} from "../shared/lexicon/index.js";
-import {createSpeller} from "../shared/words.js";
+import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
+import {trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
 
@@ -160,6 +161,7 @@ function serverView(game) {
     youSide: game.you.side,
     otherSide: game.opponent.side,
     otherName: game.opponent.name,
+    rematchId: game.rematchId || null,
     moves: game.moves
   };
 }
@@ -167,6 +169,21 @@ function serverView(game) {
 const isSoloLike = view => view.kind === "solo" || view.kind === "legacy-solo";
 const otherLabel = view => (isSoloLike(view) ? t("bot") : view.otherName || t("friend"));
 const sideLabel = (view, side) => (side === view.youSide ? t("you") : otherLabel(view));
+
+// ---------- player badges ----------
+// Players are shown as a round badge with the first letter of their name (never a picture).
+function initialOf(name) {
+  const text = String(name || "").trim().normalize("NFC");
+  if (!text) return "?";
+  let first = [...text][0];
+  try { first = new Intl.Segmenter(state.lang, {granularity: "grapheme"}).segment(text)[Symbol.iterator]().next().value.segment; } catch {}
+  return first.toLocaleUpperCase(state.lang);
+}
+/** Decorative badge; the name is always written next to it, so it is hidden from screen readers. */
+function badge(name, {bot = false, cls = ""} = {}) {
+  return h("span", {class: `badge ${bot ? "bot" : ""} ${cls}`, "aria-hidden": "true"}, bot ? t("botInitial") : initialOf(name));
+}
+const otherBadge = (view, cls) => badge(view.otherName, {bot: isSoloLike(view), cls});
 
 // ---------- routing ----------
 function navigate(path, replace = false) {
@@ -251,6 +268,7 @@ function schedulePoll() {
       if (state.screen === "game" && state.game?.id === data.game.id && JSON.stringify(serverView(data.game)) !== JSON.stringify(state.game)) {
         const wasWaiting = state.game.waitingForPlayer;
         openView(serverView(data.game));
+        refreshNotifications();
         if (wasWaiting && !state.game.waitingForPlayer) toast(t("statusYourTurn"), {kind: "success"});
         return;
       }
@@ -286,9 +304,11 @@ function renderChrome() {
     pill.replaceChildren(h("span", {class: "pill-long"}, t("offline")), h("span", {class: "pill-short"}, t("offlineShort")));
   }
   const avatar = $("profileBtn");
-  avatar.textContent = state.player?.display_name?.trim().charAt(0).toUpperCase() || "☺";
+  // The header badge shows the player's initial, or a neutral "?" before they pick a name.
+  avatar.textContent = state.player?.display_name?.trim() ? initialOf(state.player.display_name) : "?";
   avatar.setAttribute("aria-label", state.player ? t("profileButtonNamed", {name: state.player.display_name}) : t("profileButton"));
   avatar.setAttribute("aria-haspopup", "dialog");
+  renderBell();
 }
 
 function rerender() {
@@ -330,12 +350,12 @@ function renderHome() {
       h("p", {class: "lede"}, t("heroCopy"))),
     h("div", {class: "start-grid"},
       h("section", {class: "card start solo-card", "aria-labelledby": "soloTitle"},
-        h("div", {class: "start-icon", "aria-hidden": "true"}, "🤖"),
+        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name, {cls: "you"}), badge(null, {bot: true})),
         h("h2", {id: "soloTitle"}, t("soloTitle")),
         h("p", {}, t("soloCopy")),
         h("button", {class: "btn big", type: "button", id: "startSolo", onclick: () => startSolo()}, t("soloStart"))),
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
-        h("div", {class: "start-icon", "aria-hidden": "true"}, "👨‍👩‍👧"),
+        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name, {cls: "you"}), badge(null, {cls: "other"})),
         h("h2", {id: "familyTitle"}, t("familyTitle")),
         h("p", {}, familyDisabled ? t("familyOffline") : t("familyCopy")),
         h("div", {class: "row"},
@@ -352,7 +372,7 @@ function gameListItems() {
     key: `solo:${game.id}`,
     updatedAt: game.updatedAt,
     title: t("solo"),
-    icon: "🤖",
+    badge: badge(null, {bot: true}),
     createdAt: game.createdAt,
     status: game.status,
     move: currentMove(game).number,
@@ -366,7 +386,7 @@ function gameListItems() {
       key: `family:${g.id}`,
       updatedAt: g.updated_at,
       title: g.bot ? t("solo") : waiting ? t("waitingJoin") : t("vs", {name: g.opponent_name || t("friend")}),
-      icon: g.bot ? "🤖" : "👥",
+      badge: g.bot ? badge(null, {bot: true}) : badge(waiting ? null : g.opponent_name || t("friend"), {cls: "other"}),
       createdAt: g.created_at,
       status: g.status,
       move: g.round_number,
@@ -382,12 +402,12 @@ function gameListItems() {
   return items.map(item => {
     const finished = item.status === "MATCHED" || item.status === "EXHAUSTED";
     const status = item.status === "MATCHED" ? t("statusMatched")
-      : item.status === "EXHAUSTED" ? t("statusExhausted")
+      : item.status === "EXHAUSTED" ? t("gameOverTitle")
       : item.status === "WAITING" ? t("waitingJoin")
       : item.theirTurn ? t("statusTheirTurn", {name: item.theirTurn})
       : item.yourTurn ? t("statusYourTurn") : t("statusActive");
     return h("li", {class: `game-item ${finished ? "finished" : ""} ${item.yourTurn ? "your-turn" : ""}`, "data-key": item.key},
-      h("span", {class: "game-icon", "aria-hidden": "true"}, item.icon),
+      h("span", {class: "game-icon", "aria-hidden": "true"}, item.badge),
       h("div", {class: "game-info"},
         h("strong", {}, item.title),
         h("span", {class: "game-meta"}, when(item.createdAt)),
@@ -402,11 +422,8 @@ async function refreshDashboard() {
     const data = await api(`/api/dashboard?player_id=${encodeURIComponent(state.player.id)}`);
     state.dashboard = data;
     if (state.screen === "home") $("gameList")?.replaceChildren(...gameListItems());
-    const fresh = (data.notifications || []).filter(n => n.kind === "PLAYER_JOINED" || n.kind === "YOUR_TURN" || n.kind === "READY_TO_REVEAL");
-    if (fresh.length) {
-      toast(t("familyNews"), {kind: "success"});
-    }
-    if (data.notifications?.length) api("/api/notifications/read", {player_id: state.player.id, ids: data.notifications.map(n => n.id)}).catch(() => {});
+    // News lives in the notifications panel (bell); nothing is marked read until the player opens it.
+    refreshNotifications();
   } catch (error) {
     if (error.code === "UNKNOWN_PLAYER") {
       // The server no longer knows this player (e.g. a different database). Keep Solo working.
@@ -450,26 +467,57 @@ function renderGame() {
   const finished = view.status === "MATCHED" || view.status === "EXHAUSTED";
   const revealed = [...view.moves].reverse().find(m => m.words);
   const fresh = revealed && revealed.number === state.freshReveal;
-  const progressMove = finished ? revealed.number : move.number;
+  const solo = isSoloLike(view);
 
-  // Mode lives next to the back button; the board starts with move count + progress on one line.
+  // Mode lives next to the back button; the board starts with the progress trail.
   const board = h("section", {class: `card board ${finished ? "finished" : ""}`, "aria-labelledby": "boardTitle"},
-    h("div", {class: "board-top"},
-      h("span", {class: "move-count", id: "moveLabel"}, t("moveOf", {n: progressMove, max: view.maxMoves})),
-      h("div", {class: "meter", role: "progressbar", "aria-label": t("progressLabel"), "aria-valuetext": t("moveOf", {n: progressMove, max: view.maxMoves}), "aria-valuemin": "0", "aria-valuemax": String(view.maxMoves), "aria-valuenow": String(progressMove)},
-        h("i", {style: `width:${Math.max(5, (progressMove / view.maxMoves) * 100)}%`}))),
+    progressTrail(view, move, finished, revealed, fresh),
     languageNote(view),
     fresh ? revealBanner(view, revealed) : null,
-    finished ? endPanel(view, revealed) : playPanel(view, move));
+    finished ? endPanel(view, revealed, fresh) : playPanel(view, move));
 
   mount(
     h("div", {class: "game-nav"},
       h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, backLabel()),
-      h("span", {class: "mode-chip"}, h("span", {"aria-hidden": "true"}, isSoloLike(view) ? "🤖 " : "👥 "), isSoloLike(view) ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")}))),
+      h("span", {class: "mode-chip"},
+        view.waitingForPlayer && !solo ? null : otherBadge(view, "small"),
+        h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")})))),
     board,
     trail(view));
   restoreInput(keep);
   if (fresh && revealed.status === "MATCHED") celebrate();
+}
+
+/**
+ * 20 stepping stones instead of a bar: played moves carry a check, the current move is
+ * bigger (it pops once when you arrive), future moves are outlined. At the end every
+ * stone lights up and the last one becomes a trophy (match) or a star (20 moves).
+ */
+function progressTrail(view, move, finished, revealed, fresh) {
+  const max = view.maxMoves;
+  const current = finished ? revealed.number : move.number;
+  const togo = Math.max(0, max - current);
+  const label = t("moveOf", {n: current, max});
+  const sub = finished
+    ? (view.status === "MATCHED" ? t("progressMatched", {n: current}) : t("progressFinale"))
+    : current <= 1 ? t("progressStart") : t("progressToGo", {n: togo});
+  const pop = fresh && !finished && !reducedMotion();
+  const stones = [];
+  for (let n = 1; n <= max; n++) {
+    let cls, mark;
+    if (finished) {
+      cls = n < current ? "done lit" : n === current ? "final lit" : "lit spare";
+      mark = n === current ? (view.status === "MATCHED" ? "🏆" : "★") : n < current ? "✓" : "★";
+    } else if (n < current) { cls = "done"; mark = "✓"; }
+    else if (n === current) { cls = `now ${pop ? "pop" : ""}`; mark = String(n); }
+    else { cls = "todo"; mark = ""; }
+    stones.push(h("span", {class: `stone ${cls}`}, mark));
+  }
+  return h("div", {class: `progress ${finished ? "finale" : ""}`},
+    h("p", {class: "progress-labels"},
+      h("span", {class: "move-count", id: "moveLabel"}, label),
+      h("span", {class: "progress-sub", id: "progressSub"}, sub)),
+    h("div", {class: "stones", role: "progressbar", "aria-label": t("progressLabel2"), "aria-valuemin": "0", "aria-valuemax": String(max), "aria-valuenow": String(finished && view.status === "EXHAUSTED" ? max : current), "aria-valuetext": `${label}, ${sub}`}, stones));
 }
 
 function languageNote(view) {
@@ -497,7 +545,8 @@ function wordChip(word, label, cls = "") {
 
 function revealBanner(view, move) {
   const matched = move.status === "MATCHED";
-  const outcome = matched ? t("revealMatch") : move.status === "EXHAUSTED" ? t("exhaustedTitle") : t("revealDifferent");
+  // Different words are never a failure: they are new words for the trail.
+  const outcome = matched ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice");
   // Spoken once through the persistent live region; the banner itself is not a live
   // region (it is rebuilt on every render and would be announced twice or not at all).
   announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: move.words[view.youSide].toUpperCase()}),
@@ -509,7 +558,7 @@ function revealBanner(view, move) {
       h("span", {class: "join"},
         h("span", {class: "op", "aria-hidden": "true"}, matched ? "=" : "+"),
         wordChip(move.words.b, sideLabel(view, "b"), `flip delay ${view.youSide === "b" ? "you" : "other"}`))),
-    h("p", {class: "reveal-copy"}, matched ? t("revealMatch") : move.status === "EXHAUSTED" ? t("exhaustedTitle") : t("revealDifferent")),
+    h("p", {class: "reveal-copy"}, outcome),
     move.botQuality === "loose" && !matched ? h("p", {class: "reveal-note"}, t("revealLoose")) : null);
 }
 
@@ -552,45 +601,121 @@ function playPanel(view, move) {
     return panel;
   }
 
-  const form = h("form", {class: "word-form", id: "wordForm", novalidate: true, onsubmit: event => { event.preventDefault(); submitWord(); }},
+  // The hint/feedback line and the "Did you mean?" box sit directly ABOVE the input
+  // (full-width grid rows), so on phones they stay in view next to the focused input
+  // instead of below the button, behind the on-screen keyboard.
+  // Enter in the input is noted on keydown: implicit submission reports the button
+  // as event.submitter, so it cannot tell Enter from a click on its own.
+  const form = h("form", {class: "word-form", id: "wordForm", novalidate: true, onsubmit: event => {
+    event.preventDefault();
+    const source = submitSource || (event.submitter ? "button" : "form");
+    submitSource = null;
+    submitWord(source);
+  }},
     h("label", {class: "sr-only", for: "word"}, t("placeholder")),
-    h("input", {id: "word", name: "word", type: "text", class: "word-input", placeholder: t("placeholder"), autocomplete: "off", autocapitalize: "none", autocorrect: "off", spellcheck: "true", lang: view.language, maxlength: "40", enterkeyhint: "go", "aria-describedby": first ? "formHelp" : "prompt formHelp", "aria-invalid": "false", oninput: onWordInput}),
-    h("button", {class: "btn big", type: "submit", id: "lockBtn"}, t("lockIn")),
+    h("p", {id: "formHelp", class: "form-help", "aria-live": "polite"}, solo ? t("botReady") : move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})),
     h("div", {id: "suggestion", class: "suggestion", "aria-live": "polite"}),
-    h("p", {id: "formHelp", class: "form-help", "aria-live": "polite"}, solo ? t("botReady") : move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})));
+    h("input", {id: "word", name: "word", type: "text", class: "word-input", placeholder: t("placeholder"), autocomplete: "off", autocapitalize: "none", autocorrect: "off", spellcheck: "true", lang: view.language, maxlength: "40", enterkeyhint: "go", "aria-describedby": first ? "formHelp" : "prompt formHelp", "aria-invalid": "false", oninput: onWordInput,
+      onkeydown: event => { submitSource = event.key === "Enter" && !event.isComposing ? "enter" : null; }}),
+    h("button", {class: "btn big", type: "submit", id: "lockBtn"}, t("lockIn")));
   panel.append(form);
   return panel;
 }
 
-function endPanel(view, last) {
+function endPanel(view, last, fresh) {
   const matched = view.status === "MATCHED";
   const solo = isSoloLike(view);
-  return h("div", {class: `end ${matched ? "win" : "over"}`},
-    h("div", {class: "end-icon", "aria-hidden": "true"}, matched ? "🎉" : "🌈"),
-    h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("exhaustedTitle")),
-    h("p", {}, matched ? t("winCopy", {word: last.words.a.toUpperCase(), n: last.number}) : t("exhaustedCopy")),
-    h("div", {class: "row center"},
-      h("button", {class: "btn big", type: "button", id: "newGameBtn", onclick: () => (solo ? startSolo(state.lang) : ensurePlayer(() => createFamily(state.lang)))}, solo ? t("newSolo") : t("newFamily"))));
+  // The last reveal shows first; the end panel slides in just after it (instantly with reduced motion).
+  return h("div", {class: `end ${matched ? "win" : "over"} ${fresh && !reducedMotion() ? "later" : ""}`},
+    matched
+      ? h("div", {class: "end-icon", "aria-hidden": "true"}, "🎉")
+      : sleepyToken(fresh && !reducedMotion()),
+    h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
+    h("p", {}, matched ? t("winCopy", {word: last.words.a.toUpperCase(), n: last.number}) : t("gameOverCopy")),
+    h("div", {class: "row center end-actions"},
+      h("button", {class: "btn big", type: "button", id: "newGameBtn", onclick: event => playAgain(view, event.currentTarget)}, solo ? t("playAgain") : t("rematch")),
+      h("button", {class: "btn ghost", type: "button", id: "homeBtn", onclick: () => navigate("/")}, t("returnHome")),
+      h("button", {class: "btn ghost", type: "button", id: "historyBtn", onclick: viewHistory}, t("viewHistory"))));
+}
+
+/** A round sleepy token: it droops and yawns once, then rests. Purely decorative. */
+function sleepyToken(animate) {
+  return h("div", {class: `sleepy ${animate ? "animate" : ""}`, "aria-hidden": "true"},
+    h("span", {class: "sleepy-face"},
+      h("i", {class: "eye left"}), h("i", {class: "eye right"}), h("i", {class: "mouth"})),
+    h("span", {class: "zzz"}, h("b", {}, "z"), h("b", {}, "z"), h("b", {}, "Z")));
+}
+
+async function playAgain(view, button) {
+  if (isSoloLike(view)) return startSolo(state.lang);
+  // Family: a rematch with the same friend. The server returns the same rematch if one already exists.
+  if (view.rematchId) return navigate(`/games/${view.rematchId}`);
+  if (!state.player || !state.online) return toast(t("familyOffline"), {kind: "error"});
+  button?.setAttribute("aria-busy", "true");
+  if (button) button.disabled = true;
+  try {
+    const data = await api("/api/games/rematch", {player_id: state.player.id, game_id: view.id});
+    toast(t("rematchSent"), {kind: "success"});
+    navigate(`/games/${data.id}`);
+  } catch (error) {
+    if (button?.isConnected) { button.disabled = false; button.removeAttribute("aria-busy"); }
+    toast(errorText(error.code), {kind: "error"});
+  }
+}
+
+function viewHistory() {
+  const heading = $("trailTitle");
+  if (!heading) return;
+  heading.setAttribute("tabindex", "-1");
+  heading.scrollIntoView({block: "start", behavior: reducedMotion() ? "auto" : "smooth"});
+  heading.focus({preventScroll: true});
+}
+
+function promptChips(view, prompts) {
+  return [h("span", {class: "chip plain", lang: view.language}, prompts[0]),
+    h("span", {class: "join"}, h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "chip plain", lang: view.language}, prompts[1]))];
+}
+
+/** The open round, pinned above the finished ones. Only shows your own locked word, never the other side's. */
+function activeRow(view) {
+  const move = view.moves[view.moves.length - 1];
+  if (!move || move.words || view.waitingForPlayer || view.status === "MATCHED" || view.status === "EXHAUSTED") return null;
+  const hidden = () => h("span", {class: "chip mystery"}, h("small", {}, otherLabel(view)), h("span", {class: "chip-word"}, h("span", {"aria-hidden": "true"}, "?"), h("span", {class: "sr-only"}, t("hiddenWord"))));
+  const yours = move.mine
+    ? wordChip(move.mine, t("you"), "you")
+    : h("span", {class: "chip mystery you"}, h("small", {}, t("you")), h("span", {class: "chip-word"}, h("span", {"aria-hidden": "true"}, "?"), h("span", {class: "sr-only"}, t("hiddenWord"))));
+  const pair = view.youSide === "a" ? [yours, hidden()] : [hidden(), yours];
+  return h("div", {class: "trail-now", id: "trailNow"},
+    h("p", {class: "now-label"}, h("span", {class: "now-dot", "aria-hidden": "true"}), t("nowPlaying")),
+    h("div", {class: "trail-row-inner"},
+      h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, move.number), h("span", {class: "sr-only"}, t("moveOf", {n: move.number, max: view.maxMoves}))),
+      h("div", {class: "trail-eq"},
+        h("span", {class: "trail-in"}, move.prompts ? promptChips(view, move.prompts) : h("span", {class: "start-label"}, t("start"))),
+        h("span", {class: "trail-out"},
+          h("span", {class: "join"}, h("span", {class: "arrow", "aria-hidden": "true"}, "→"), pair[0]),
+          h("span", {class: "join"}, h("span", {class: "op", "aria-hidden": "true"}, "+"), pair[1])))));
 }
 
 function trail(view) {
   const revealed = view.moves.filter(m => m.words);
   const header = isSoloLike(view) ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")});
+  const now = activeRow(view);
+  // Newest first; one row per revealed move (keyed by move number, rebuilt from the game on every render).
+  const rows = [...new Map(revealed.map(m => [m.number, m])).values()].sort((x, y) => y.number - x.number);
   return h("section", {class: "card trail", "aria-labelledby": "trailTitle"},
     h("div", {class: "trail-head"},
       h("h2", {id: "trailTitle"}, t("trailTitle")),
       h("p", {class: "trail-meta"}, h("strong", {}, header), h("span", {class: "trail-when"}, h("span", {"aria-hidden": "true"}, "· "), when(view.createdAt)))),
-    revealed.length
-      ? h("ol", {class: "trail-list", reversed: true}, revealed.slice().reverse().map(m =>
-        h("li", {class: `trail-row ${m.status === "MATCHED" ? "match" : ""}`},
+    now,
+    rows.length
+      ? h("ol", {class: "trail-list", reversed: true}, rows.map(m => {
+        const ending = m.status === "MATCHED" || m.status === "EXHAUSTED";
+        return h("li", {class: `trail-row ${m.status === "MATCHED" ? "match" : ""}`, "data-move": m.number},
           h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, m.number), h("span", {class: "sr-only"}, t("moveOf", {n: m.number, max: view.maxMoves}))),
           // WORD 1 + WORD 2 → WORD 3 + WORD 4; each "+" is glued to the word after it so lines break cleanly.
           h("div", {class: "trail-eq"},
             h("span", {class: "trail-in"},
-              m.prompts
-                ? [h("span", {class: "chip plain", lang: view.language}, m.prompts[0]),
-                  h("span", {class: "join"}, h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "chip plain", lang: view.language}, m.prompts[1]))]
-                : h("span", {class: "start-label"}, t("start"))),
+              m.prompts ? promptChips(view, m.prompts) : h("span", {class: "start-label", title: t("startingPair")}, t("start"))),
             h("span", {class: "trail-out"},
               h("span", {class: "join"},
                 h("span", {class: "arrow", "aria-hidden": "true"}, "→"),
@@ -598,7 +723,9 @@ function trail(view) {
               h("span", {class: "join"},
                 h("span", {class: "op", "aria-hidden": "true"}, m.status === "MATCHED" ? "=" : "+"),
                 wordChip(m.words.b, sideLabel(view, "b"), view.youSide === "b" ? "you" : "other")),
-              m.status === "MATCHED" ? h("span", {class: "match-badge"}, t("matchBadge")) : null)))))
+              m.status === "MATCHED" ? h("span", {class: "match-badge"}, t("matchBadge")) : null)),
+          ending ? null : h("p", {class: "trail-next"}, h("span", {"aria-hidden": "true"}, "↑ "), t("nextPrompt")));
+      }))
       : h("p", {class: "empty"}, t("trailEmpty")));
 }
 
@@ -620,10 +747,31 @@ function restoreInput(keep) {
 }
 
 let suggestTimer = null;
+let submitSource = null; // "enter" when the last key in the input was Enter (see playPanel)
 function onWordInput() {
   setHelp(null);
   clearTimeout(suggestTimer);
   suggestTimer = setTimeout(updateSuggestion, 350);
+}
+
+/**
+ * Keep the feedback line and the input inside the part of the screen the player can
+ * actually see. On phones the on-screen keyboard shrinks the visual viewport, not the
+ * layout viewport, so scrollIntoView alone can leave the message behind the keyboard.
+ */
+function keepFeedbackInView() {
+  const help = $("formHelp"), input = $("word");
+  if (!help || !input) return;
+  const top = Math.min(help.getBoundingClientRect().top, input.getBoundingClientRect().top);
+  const bottom = Math.max(help.getBoundingClientRect().bottom, input.getBoundingClientRect().bottom);
+  const vv = window.visualViewport;
+  const viewTop = vv ? vv.offsetTop : 0;
+  const viewBottom = viewTop + (vv ? vv.height : window.innerHeight);
+  const margin = 12;
+  let delta = 0;
+  if (top < viewTop + margin) delta = top - viewTop - margin;
+  else if (bottom > viewBottom - margin) delta = Math.min(bottom - viewBottom + margin, top - viewTop - margin);
+  if (delta) window.scrollBy({top: delta, behavior: reducedMotion() ? "auto" : "smooth"});
 }
 
 function setHelp(message, isError = false) {
@@ -634,16 +782,23 @@ function setHelp(message, isError = false) {
   const error = Boolean(message && isError);
   const text = message || (isSoloLike(view) ? t("botReady") : move.otherLocked ? t("otherLocked", {name: otherLabel(view)}) : t("otherThinking", {name: otherLabel(view)}));
   help.classList.toggle("error", error);
+  const input = $("word");
   // #formHelp is a polite live region and the input's description (aria-describedby).
   // Only touch it when the text really changes, so typing doesn't re-announce the
   // hint on every keystroke; a repeated error is cleared first so it is heard again.
   if (error && help.textContent === text) {
     help.textContent = "";
-    setTimeout(() => { if (help.isConnected) help.textContent = text; }, 60);
+    setTimeout(() => { if (help.isConnected) { help.textContent = text; keepFeedbackInView(); } }, 60);
   } else if (help.textContent !== text) {
     help.textContent = text;
   }
-  $("word")?.setAttribute("aria-invalid", String(error));
+  if (error && input) {
+    // Replay the little nudge on every rejected try, even when the message is the same.
+    input.setAttribute("aria-invalid", "false");
+    void input.offsetWidth;
+    keepFeedbackInView();
+  }
+  input?.setAttribute("aria-invalid", String(error));
 }
 
 function updateSuggestion() {
@@ -655,6 +810,7 @@ function updateSuggestion() {
   if ((box.dataset.word || null) === (suggestion || null) && box.childElementCount === (suggestion ? 3 : 0)) return;
   box.dataset.word = suggestion || "";
   if (!suggestion) return box.replaceChildren();
+  // Only a hint: the player can always lock in their own word as typed.
   box.replaceChildren(
     h("span", {}, t("didYouMean", {word: suggestion.toUpperCase()})),
     h("button", {class: "btn tiny teal", type: "button", onclick: () => { input.value = suggestion; box.replaceChildren(); input.focus(); }}, t("useSuggestion", {word: suggestion.toUpperCase()})),
@@ -665,22 +821,38 @@ function rulesGame(view) {
   return {status: view.status === "WAITING" ? "ACTIVE" : view.status, moves: view.moves};
 }
 
-async function submitWord() {
-  if (state.busy) return;
+/** Show why a word was not taken, right next to the input, and keep the keyboard up. */
+function rejectWord(code, word, info) {
+  trace("rejected", {...info, code, reason: errorText(code, word)});
+  setHelp(errorText(code, word), true);
+  $("word")?.focus({preventScroll: true});
+}
+
+async function submitWord(source = "direct") {
   const view = state.game, input = $("word");
-  if (!input) return;
-  const check = checkWord(rulesGame(view), view.youSide, input.value);
-  if (!check.ok) {
-    setHelp(errorText(check.code, check.word), true);
-    input.focus();
-    return;
-  }
+  const raw = input ? input.value : null;
+  const info = {source, raw, trimmed: raw == null ? null : raw.trim(), cleaned: raw == null ? null : cleanWord(raw), key: raw == null ? null : wordKey(raw),
+    kind: view?.kind, language: view?.language, buttonDisabled: $("lockBtn")?.disabled ?? null, inputDisabled: input?.disabled ?? null};
+  trace("submit", info);
+  // A submission is already on its way: the button already says "Locking it in…".
+  if (state.busy) { trace("ignored", {...info, reason: "in-flight"}); return; }
+  if (!input) { trace("ignored", {...info, reason: "no-input"}); return; }
+  const check = checkWord(rulesGame(view), view.youSide, raw);
+  Object.assign(info, {
+    keyLength: info.key.length,
+    minLengthOk: check.code !== "TOO_SHORT" && info.key.length > 0,
+    validation: check.ok ? "ok" : check.code,
+    duplicate: check.code === "SAME_AS_LAST" || check.code === "ALREADY_USED" ? check.code : false
+  });
+  trace("checked", info);
+  if (!check.ok) return rejectWord(check.code, check.word, info);
   state.dismissedSuggestion = null;
 
   if (view.kind === "solo") {
     const game = store.soloGame(view.id);
-    const result = submitSoloWord(game, input.value);
-    if (!result.ok) { setHelp(errorText(result.code, result.word), true); return; }
+    const result = submitSoloWord(game, raw);
+    trace("result", {...info, path: "local", ok: result.ok, code: result.ok ? null : result.code});
+    if (!result.ok) return rejectWord(result.code, result.word, info);
     if (!store.saveSolo(result.game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
     input.value = "";
     openView(soloView(result.game));
@@ -694,16 +866,18 @@ async function submitWord() {
   if (button) { button.disabled = true; button.textContent = t("locking"); }
   try {
     const data = await api("/api/submit", {game_id: view.id, player_id: state.player.id, word: check.word, move: view.moves[view.moves.length - 1].number});
+    trace("result", {...info, path: "api", ok: true});
     input.value = "";
     state.busy = false;
     openView(serverView(data.game));
     focusAfterMove();
   } catch (error) {
+    trace("result", {...info, path: "api", ok: false, code: error.code || null});
     state.busy = false;
     if (error.data?.game) openView(serverView(error.data.game));
     else { input.disabled = false; if (button) { button.disabled = false; button.textContent = t("lockIn"); } }
     if (error.code === "NETWORK") toast(t("errNETWORK"), {kind: "error"});
-    else if ($("formHelp")) setHelp(errorText(error.code, error.data?.word), true);
+    else if ($("formHelp")) rejectWord(error.code, error.data?.word, info);
     else toast(errorText(error.code, error.data?.word), {kind: "error"});
   }
 }
@@ -735,6 +909,134 @@ function celebrate() {
   document.body.append(layer);
   setTimeout(() => layer.remove(), 1800);
 }
+
+// ---------- notifications (family games only) ----------
+// The bell lists news from GET /api/notifications. Entries are keyed by id, so a refresh never
+// duplicates them, and nothing is marked read until the player opens one or taps "Mark all as read".
+const notifs = {items: new Map(), unread: 0, status: "idle", loadedFor: null, inflight: null};
+const NOTIF_TEXT = {YOUR_TURN: "notifYourTurn", READY_TO_REVEAL: "notifReveal", PLAYER_JOINED: "notifJoined", GAME_COMPLETE: "notifMatch", GAME_EXHAUSTED: "notifComplete", REMATCH: "notifRematch"};
+const bellAllowed = () => Boolean(state.player?.id && state.player.display_name?.trim() && state.online);
+
+function renderBell() {
+  const bell = $("notifBtn");
+  if (!bell) return;
+  if (!bell.dataset.wired) { bell.dataset.wired = "1"; bell.addEventListener("click", openNotifications); }
+  bell.hidden = !bellAllowed();
+  if (bell.hidden) return;
+  const n = notifs.unread;
+  const count = $("notifCount");
+  count.hidden = !n;
+  count.textContent = n > 99 ? "99+" : String(n);
+  bell.setAttribute("aria-label", n ? t("notifButtonUnread", {n}) : t("notifButton"));
+  bell.setAttribute("aria-haspopup", "dialog");
+  bell.title = t("notifTitle");
+  if (notifs.loadedFor !== state.player.id) refreshNotifications();
+}
+
+function refreshNotifications() {
+  if (!bellAllowed()) return Promise.resolve();
+  if (notifs.inflight) return notifs.inflight;
+  const playerId = state.player.id;
+  if (notifs.loadedFor !== playerId) { notifs.items = new Map(); notifs.unread = 0; notifs.status = "idle"; }
+  notifs.loadedFor = playerId;
+  if (notifs.status !== "ok") { notifs.status = "loading"; renderNotifPanel(); }
+  notifs.inflight = (async () => {
+    try {
+      const data = await api(`/api/notifications?player_id=${encodeURIComponent(playerId)}`);
+      if (state.player?.id !== playerId) return;
+      const items = new Map();
+      for (const n of data.notifications || []) if (n && n.id != null && !items.has(String(n.id))) items.set(String(n.id), n);
+      notifs.items = items;
+      notifs.unread = Number.isFinite(data.unread) ? data.unread : [...items.values()].filter(n => !n.read_at).length;
+      notifs.status = "ok";
+    } catch {
+      // Keep showing what we had; only an empty panel turns into the error state.
+      if (notifs.status !== "ok") notifs.status = "error";
+    } finally {
+      notifs.inflight = null;
+      renderBell();
+      renderNotifPanel();
+    }
+  })();
+  return notifs.inflight;
+}
+
+function notifText(n) {
+  return t(NOTIF_TEXT[n.kind] || "notifYourTurn", {name: n.opponent_name || t("friend")});
+}
+
+function openNotifications() {
+  dialog(t("notifTitle"), null, h("div", {class: "notif-panel", id: "notifPanel"}), {cancelLabel: t("close")});
+  $("dialog").classList.add("notif-dialog");
+  $("dialog").addEventListener("close", () => $("dialog").classList.remove("notif-dialog"), {once: true});
+  renderNotifPanel();
+  refreshNotifications();
+}
+
+function renderNotifPanel() {
+  const box = $("notifPanel");
+  if (!box || !box.isConnected) return;
+  const focusedId = document.activeElement?.closest?.("#notifPanel [data-id]")?.dataset.id;
+  const focusedRetry = document.activeElement?.id === "notifRetry";
+  const items = [...notifs.items.values()].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const parts = [];
+  if (notifs.unread > 0 && items.length) {
+    parts.push(h("div", {class: "row end notif-tools"},
+      h("button", {class: "btn tiny ghost", type: "button", id: "notifMarkAll", onclick: markAllRead}, t("notifMarkAll"))));
+  }
+  if (!items.length && notifs.status === "loading") {
+    parts.push(h("p", {class: "loading", role: "status"}, h("span", {class: "spinner", "aria-hidden": "true"}), t("notifLoading")));
+  } else if (!items.length && notifs.status === "error") {
+    parts.push(h("p", {class: "notice error", role: "alert"}, t("notifError")),
+      h("div", {class: "row center"}, h("button", {class: "btn small", type: "button", id: "notifRetry", onclick: () => refreshNotifications()}, t("retry"))));
+  } else if (!items.length) {
+    parts.push(h("p", {class: "empty notif-empty"}, t("notifEmpty")));
+  } else {
+    parts.push(h("ul", {class: "notif-list", id: "notifList"}, items.map(n => {
+      const unread = !n.read_at;
+      return h("li", {class: `notif-item ${unread ? "unread" : ""}`},
+        h("button", {class: "notif-row", type: "button", "data-id": String(n.id), onclick: () => openNotification(n)},
+          badge(n.opponent_name || t("friend"), {cls: "other"}),
+          h("span", {class: "notif-body"},
+            h("span", {class: "notif-text"}, notifText(n)),
+            h("span", {class: "notif-when"}, when(n.created_at))),
+          unread ? h("span", {class: "notif-new"}, t("notifNew")) : null));
+    })));
+  }
+  box.replaceChildren(...parts);
+  if (focusedId) box.querySelector(`[data-id="${CSS.escape(focusedId)}"]`)?.focus();
+  else if (focusedRetry) (box.querySelector(".notif-row") || box.querySelector("#notifRetry"))?.focus();
+}
+
+function markRead(body) {
+  if (!state.player) return;
+  api("/api/notifications/read", {player_id: state.player.id, ...body}).catch(() => {});
+}
+
+function openNotification(n) {
+  if (!n.read_at) {
+    n.read_at = new Date().toISOString();
+    notifs.unread = Math.max(0, notifs.unread - 1);
+    markRead({ids: [n.id]});
+    renderBell();
+  }
+  if ($("dialog").open) $("dialog").close();
+  if (n.game_id) navigate(`/games/${n.game_id}`);
+}
+
+function markAllRead() {
+  const at = new Date().toISOString();
+  for (const n of notifs.items.values()) if (!n.read_at) n.read_at = at;
+  notifs.unread = 0;
+  markRead({all: true});
+  renderBell();
+  renderNotifPanel();
+  $("notifPanel")?.querySelector(".notif-row")?.focus();
+}
+
+// Fresh news when the player comes back to the app.
+window.addEventListener("focus", () => { refreshNotifications(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshNotifications(); });
 
 // ---------- dialogs ----------
 function dialog(title, copy, body, actions) {
@@ -851,6 +1153,9 @@ function setOnline(online) {
   state.online = online;
   toast(online ? t("backOnline") : t("nowOffline"), {kind: online ? "success" : "info", key: "network"});
   rerender();
+  // Family dialogs (name, join, recovery) need the server: close them rather than let a submit fail.
+  const dlg = $("dialog");
+  if (!online && dlg?.open && dlg.querySelector("#joinInput, #nameInput, #recoveryInput")) dlg.close();
   if (online && state.screen === "game" && state.game && !isSoloLike(state.game)) loadFamilyGame(state.game.id);
 }
 
@@ -884,6 +1189,11 @@ function boot() {
     if (last.kind === "solo" && store.soloGame(last.id) && !isFinished(store.soloGame(last.id))) history.replaceState({}, "", `/solo/${last.id}`);
   }
   try { sessionStorage.setItem("ssbd.booted", "1"); } catch {}
+  // An invite link opened offline: joining needs the internet, so explain instead of offering a join dialog.
+  if (!state.online && /^\/join\//.test(location.pathname)) {
+    history.replaceState({}, "", "/");
+    toast(t("familyOffline"), {kind: "info", key: "network"});
+  }
   route();
 
   registerServiceWorker();

@@ -1,3 +1,4 @@
+// @ts-check
 // Family-game API backed by D1. The schema is unchanged from earlier
 // releases so existing players, games and rounds keep working. Solo games
 // are played on the device and never call this API; Solo games created by
@@ -7,14 +8,38 @@ import {chooseOpening, chooseResponse} from "../shared/bot.js";
 import {MAX_MOVES, checkWord, hashString, moveOutcome, seededRandom} from "../shared/rules.js";
 import {wordKey} from "../shared/words.js";
 
-const BOT = "BOT";
-const FINISHED = new Set(["MATCHED", "EXHAUSTED", "COMPLETE"]);
-const isPlayable = row => row.status !== "WAITING" && !FINISHED.has(row.status);
+/**
+ * @typedef {import("../shared/types.js").D1Database} D1Database
+ * @typedef {import("../shared/types.js").D1PreparedStatement} D1PreparedStatement
+ * @typedef {import("../shared/types.js").GameView} GameView
+ * @typedef {import("../shared/types.js").GameStatus} GameStatus
+ * @typedef {import("../shared/types.js").Move} Move
+ * @typedef {import("../shared/types.js").MoveStatus} MoveStatus
+ * @typedef {import("../shared/types.js").NotificationKind} NotificationKind
+ * @typedef {import("../shared/types.js").Side} Side
+ * @typedef {import("../shared/types.js").Submission} Submission
+ *
+ * @typedef {{id: string, join_code: string, status: string, round_number: number, created_at: string, updated_at: string, language?: string | null, rematch_of?: string | null}} GameRow
+ * @typedef {{player_id: string, slot: number, display_name: string | null}} MemberRow
+ * @typedef {{id: string, number: number, prompts: [string, string] | null, status: MoveStatus, openedAt: string, revealedAt: string | null, words: {a: string, b: string} | null, submitted: Partial<Record<Side, Submission>>, botQuality: any}} LoadedMove
+ * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, rules: {status: GameStatus, moves: LoadedMove[]}}} LoadedGame
+ */
 
+const BOT = "BOT";
+/** Finished game statuses, including COMPLETE from earlier releases (read as MATCHED). */
+const FINISHED = new Set(["MATCHED", "EXHAUSTED", "COMPLETE"]);
+/** @param {GameRow} row */
+const isPlayable = row => row.status !== "WAITING" && !FINISHED.has(row.status);
+/** Notification kinds the API creates (family games only). */
+export const NOTIFICATION_KINDS = ["YOUR_TURN", "READY_TO_REVEAL", "PLAYER_JOINED", "GAME_COMPLETE", "GAME_EXHAUSTED", "REMATCH"];
+const NOTIFICATION_LIMIT = 50;
+
+/** @param {unknown} data @param {number} [status] */
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
   headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}
 });
+/** @param {number} status @param {string} code @param {string} error @param {object} [extra] */
 const fail = (status, code, error, extra = {}) => json({error, code, ...extra}, status);
 const uuid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -25,14 +50,32 @@ const joinCode = () => {
   return out + "-" + Math.floor(10 + Math.random() * 90);
 };
 
+/**
+ * @param {D1Database} db
+ * @param {string} sql
+ * @param {unknown[]} [args]
+ * @returns {Promise<any[]>}
+ */
 async function all(db, sql, args = []) {
   return (await db.prepare(sql).bind(...args).all()).results || [];
 }
+/**
+ * @param {D1Database} db
+ * @param {string} sql
+ * @param {unknown[]} [args]
+ * @returns {Promise<any>}
+ */
 async function first(db, sql, args = []) {
   return (await all(db, sql, args))[0] || null;
 }
 
+/** @type {Promise<void> | null} */
 let ready = null;
+/**
+ * Create missing tables and add missing columns. Additive only: never alters
+ * or drops existing columns or data.
+ * @param {D1Database} db
+ */
 export function ensureSchema(db) {
   ready ??= (async () => {
     await db.batch([
@@ -43,11 +86,13 @@ export function ensureSchema(db) {
       db.prepare("CREATE TABLE IF NOT EXISTS submissions (round_id TEXT NOT NULL, player_id TEXT NOT NULL, word TEXT NOT NULL, submitted_at TEXT NOT NULL, PRIMARY KEY(round_id, player_id))"),
       db.prepare("CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, player_id TEXT NOT NULL, game_id TEXT, kind TEXT NOT NULL, message TEXT NOT NULL, read_at TEXT, created_at TEXT NOT NULL)")
     ]).catch(() => {});
-    // Columns added by earlier releases; these fail harmlessly once present.
+    // Added columns; these fail harmlessly once present. rematch_of links a
+    // rematch to the finished game it was started from (nullable, additive).
     for (const sql of [
       "ALTER TABLE games ADD COLUMN language TEXT DEFAULT 'en'",
       "ALTER TABLE rounds ADD COLUMN bot_quality TEXT DEFAULT NULL",
-      "ALTER TABLE rounds ADD COLUMN bot_reason TEXT DEFAULT NULL"
+      "ALTER TABLE rounds ADD COLUMN bot_reason TEXT DEFAULT NULL",
+      "ALTER TABLE games ADD COLUMN rematch_of TEXT"
     ]) {
       try { await db.prepare(sql).run(); } catch {}
     }
@@ -55,18 +100,46 @@ export function ensureSchema(db) {
   return ready;
 }
 
-/** Load everything about one game and shape it as a rules-style game. */
+/**
+ * The id of the rematch started from a game. Deterministic, so two players (or
+ * a retry) asking at the same time can only ever create one rematch: the
+ * second insert hits the primary key.
+ * @param {string} gameId
+ * @returns {Promise<string>}
+ */
+export async function rematchIdFor(gameId) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`rematch:${gameId}`));
+  const bytes = new Uint8Array(digest).slice(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50; // UUID version 5 layout (name-based, SHA)
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/**
+ * Load everything about one game and shape it as a rules-style game.
+ * @param {D1Database} db
+ * @param {string} gameId
+ * @returns {Promise<LoadedGame | null>}
+ */
 async function loadGame(db, gameId) {
+  /** @type {GameRow | null} */
   const game = await first(db, "SELECT * FROM games WHERE id = ?", [gameId]);
   if (!game) return null;
   const members = await all(db, "SELECT gp.player_id, gp.slot, p.display_name FROM game_players gp LEFT JOIN players p ON p.id = gp.player_id WHERE gp.game_id = ? ORDER BY gp.slot", [gameId]);
   const rounds = await all(db, "SELECT * FROM rounds WHERE game_id = ? ORDER BY round_number", [gameId]);
   const submissions = await all(db, "SELECT s.round_id, s.player_id, s.word, s.submitted_at FROM submissions s JOIN rounds r ON r.id = s.round_id WHERE r.game_id = ?", [gameId]);
+  /** @type {Map<string, Side>} */
   const slotOf = new Map(members.map(m => [m.player_id, m.slot === 1 ? "a" : "b"]));
+  /** @type {LoadedMove[]} */
   const moves = rounds.map(round => {
     const played = submissions.filter(s => s.round_id === round.id);
+    /** @type {Partial<Record<Side, Submission>>} */
     const bySide = {};
-    for (const s of played) if (slotOf.has(s.player_id)) bySide[slotOf.get(s.player_id)] = s;
+    for (const s of played) {
+      const side = slotOf.get(s.player_id);
+      if (side) bySide[side] = s;
+    }
     const status = round.status === "COMPLETE" ? "MATCHED" : round.status;
     const revealed = status !== "OPEN";
     return {
@@ -81,17 +154,36 @@ async function loadGame(db, gameId) {
       botQuality: round.bot_quality || null
     };
   });
-  return {row: game, members, moves, slotOf, rules: {status: FINISHED.has(game.status) ? (game.status === "COMPLETE" ? "MATCHED" : game.status) : "ACTIVE", moves}};
+  let rematchId = null;
+  if (FINISHED.has(game.status)) {
+    const candidate = await rematchIdFor(game.id);
+    const linked = await first(db, "SELECT id FROM games WHERE id = ? AND rematch_of = ?", [candidate, game.id]);
+    rematchId = linked ? linked.id : null;
+  }
+  /** @type {GameStatus} */
+  const status = game.status === "COMPLETE" ? "MATCHED" : game.status === "MATCHED" || game.status === "EXHAUSTED" ? game.status : "ACTIVE";
+  return {row: game, members, moves, slotOf, rematchId, rules: {status, moves}};
 }
 
-/** The game as one player is allowed to see it: the other side's word stays hidden until reveal. */
+/**
+ * A game is a legacy Solo game exactly when the BOT is one of its members.
+ * @param {{members: Array<{player_id: string}>}} loaded
+ */
+const isLegacySolo = loaded => loaded.members.some(m => m.player_id === BOT);
+
+/**
+ * The game as one player is allowed to see it: the other side's word stays hidden until reveal.
+ * @param {LoadedGame} loaded
+ * @param {string} playerId
+ * @returns {GameView}
+ */
 function viewFor(loaded, playerId) {
   const {row, members, moves, slotOf} = loaded;
   const side = slotOf.get(playerId);
   const otherSide = side === "a" ? "b" : "a";
   const other = members.find(m => m.player_id !== playerId);
-  const bot = members.some(m => m.player_id === BOT);
-  const status = row.status === "COMPLETE" ? "MATCHED" : row.status;
+  const bot = isLegacySolo(loaded);
+  const status = /** @type {GameView["status"]} */ (row.status === "COMPLETE" ? "MATCHED" : row.status);
   return {
     kind: bot ? "legacy-solo" : "family",
     id: row.id,
@@ -104,6 +196,7 @@ function viewFor(loaded, playerId) {
     maxMoves: MAX_MOVES,
     you: {side, name: members.find(m => m.player_id === playerId)?.display_name || null},
     opponent: {side: otherSide, bot, name: bot ? null : other?.display_name || null, joined: Boolean(other)},
+    rematchId: bot ? null : loaded.rematchId,
     moves: moves.map(move => ({
       number: move.number,
       prompts: move.prompts,
@@ -112,23 +205,42 @@ function viewFor(loaded, playerId) {
       revealedAt: move.revealedAt,
       words: move.words,
       botQuality: move.botQuality,
-      mine: move.status === "OPEN" ? move.submitted[side]?.word || null : null,
+      mine: move.status === "OPEN" && side ? move.submitted[side]?.word || null : null,
       otherLocked: move.status === "OPEN" ? Boolean(move.submitted[otherSide]) : false
     }))
   };
 }
 
+/**
+ * One notification row. The id is deterministic (`${gameId}:${key}:${playerId}`)
+ * and inserted with INSERT OR IGNORE, so retries and races never duplicate it.
+ * Only call this for family games.
+ * @param {D1Database} db
+ * @param {string} playerId
+ * @param {string} gameId
+ * @param {NotificationKind} kind
+ * @param {string} message
+ * @param {string} key
+ * @param {string} at
+ * @returns {D1PreparedStatement}
+ */
 const notify = (db, playerId, gameId, kind, message, key, at) =>
   db.prepare("INSERT OR IGNORE INTO notifications VALUES(?,?,?,?,?,?,?)").bind(`${gameId}:${key}:${playerId}`, playerId, gameId, kind, message, null, at);
 
-/** Reveal the open round once every member has a word. Safe to run twice concurrently. */
+/**
+ * Reveal the open round once every member has a word. Safe to run twice concurrently.
+ * @param {D1Database} db
+ * @param {LoadedGame} loaded
+ * @returns {Promise<boolean>} whether a reveal was attempted
+ */
 async function revealIfReady(db, loaded) {
   const {row, members, moves} = loaded;
   const move = moves[moves.length - 1];
   if (!isPlayable(row) || !move || move.status !== "OPEN" || !move.submitted.a || !move.submitted.b) return false;
   const a = move.submitted.a.word, b = move.submitted.b.word, at = now();
   const outcome = moveOutcome(move.number, a, b);
-  const humans = members.filter(m => m.player_id !== BOT);
+  // Notifications are for family games only; legacy Solo games never get any.
+  const humans = isLegacySolo(loaded) ? [] : members;
   const statements = [
     db.prepare("UPDATE rounds SET status = ?, revealed_at = ? WHERE id = ? AND status = 'OPEN'").bind(outcome, at, move.id)
   ];
@@ -148,7 +260,10 @@ async function revealIfReady(db, loaded) {
   return true;
 }
 
-/** Older Solo games stored in D1: the bot picks from the prompts and earlier words only. */
+/**
+ * Older Solo games stored in D1: the bot picks from the prompts and earlier words only.
+ * @param {LoadedGame} loaded
+ */
 function legacyBotWord(loaded) {
   const move = loaded.moves[loaded.moves.length - 1];
   const excludeKeys = new Set();
@@ -165,6 +280,9 @@ function legacyBotWord(loaded) {
  * stopped between storing a word and revealing): a legacy Solo bot that has not
  * played yet plays now, and a move with both words is revealed. Idempotent.
  * Returns the (re)loaded game.
+ * @param {D1Database} db
+ * @param {LoadedGame} loaded
+ * @returns {Promise<LoadedGame>}
  */
 async function settle(db, loaded) {
   const move = loaded.moves[loaded.moves.length - 1];
@@ -180,28 +298,45 @@ async function settle(db, loaded) {
     ]);
     changed = true;
   }
-  if (changed) loaded = await loadGame(db, loaded.row.id);
+  if (changed) loaded = await reload(db, loaded);
   if (await revealIfReady(db, loaded)) changed = true;
-  return changed ? loadGame(db, loaded.row.id) : loaded;
+  return changed ? reload(db, loaded) : loaded;
 }
 
+/**
+ * Re-read a game that is known to exist (games are never deleted).
+ * @param {D1Database} db
+ * @param {LoadedGame} loaded
+ * @returns {Promise<LoadedGame>}
+ */
+async function reload(db, loaded) {
+  const fresh = await loadGame(db, loaded.row.id);
+  if (!fresh) throw new Error(`Game ${loaded.row.id} disappeared`);
+  return fresh;
+}
+
+/** @type {Record<string, string>} */
 const MESSAGES = {
   EMPTY: "Add a word first, then lock it in.",
   TOO_LONG: "That word is a bit long. Try a shorter one.",
   INVALID_CHARACTERS: "Use letters only (spaces, hyphens and apostrophes are fine).",
-  TOO_SHORT: "Try a word with at least two letters.",
+  TOO_SHORT: "Try a word with at least two letters.", // retired: one-letter words are allowed
   TOO_MANY_WORDS: "Try one word (or a short phrase of up to three words).",
   SAME_AS_LAST: "You just played that word. Try a different one!",
   ALREADY_USED: "You already used that word in this game. Try a new one!",
   GAME_OVER: "This game is over. Start a new game to play again."
 };
 
+/**
+ * @param {D1Database} db
+ * @param {any} body
+ */
 async function submit(db, body) {
   const playerId = String(body.player_id || "");
   const loaded = await loadGame(db, String(body.game_id || ""));
   if (!loaded) return fail(404, "GAME_NOT_FOUND", "Game not found");
-  if (!loaded.slotOf.has(playerId)) return fail(403, "NOT_A_MEMBER", "You are not part of this game");
   const side = loaded.slotOf.get(playerId);
+  if (!side) return fail(403, "NOT_A_MEMBER", "You are not part of this game");
   const current = loaded.moves[loaded.moves.length - 1];
   const asked = Number(body.move) || current.number;
 
@@ -222,8 +357,8 @@ async function submit(db, body) {
 
   const at = now();
   const statements = [db.prepare("INSERT OR IGNORE INTO submissions VALUES(?,?,?,?)").bind(current.id, playerId, check.word, at)];
-  const botMember = loaded.members.find(m => m.player_id === BOT);
-  if (botMember && !current.submitted[loaded.slotOf.get(BOT)]) {
+  const botSide = loaded.slotOf.get(BOT);
+  if (botSide && !current.submitted[botSide]) {
     const pick = legacyBotWord(loaded);
     statements.push(
       db.prepare("INSERT OR IGNORE INTO submissions VALUES(?,?,?,?)").bind(current.id, BOT, pick.word, at),
@@ -232,23 +367,101 @@ async function submit(db, body) {
   }
   await db.batch(statements);
 
-  let fresh = await loadGame(db, loaded.row.id);
-  const mine = fresh.moves.find(m => m.number === current.number).submitted[side];
+  // Never report success unless the stored row is confirmed.
+  let fresh = await reload(db, loaded);
+  const mine = fresh.moves.find(m => m.number === current.number)?.submitted[side];
+  if (!mine) return fail(503, "NOT_SAVED", "We couldn't save your word. Please try again.");
   if (wordKey(mine.word) !== check.key) return fail(409, "ALREADY_LOCKED", "Your word for this move is already locked in.", {game: viewFor(fresh, playerId)});
-  if (await revealIfReady(db, fresh)) fresh = await loadGame(db, loaded.row.id);
-  else {
-    const other = fresh.members.find(m => m.player_id !== playerId && m.player_id !== BOT);
-    if (other) await notify(db, other.player_id, loaded.row.id, "YOUR_TURN", "Your friend played. Your turn!", `turn-${current.number}`, at).run();
+  if (await revealIfReady(db, fresh)) fresh = await reload(db, fresh);
+  else if (!isLegacySolo(fresh)) {
+    const other = fresh.members.find(m => m.player_id !== playerId);
+    // Best effort: the word is already saved, so a failed notification must not turn into an error.
+    if (other) await notify(db, other.player_id, loaded.row.id, "YOUR_TURN", "Your friend played. Your turn!", `turn-${current.number}`, at).run().catch(() => {});
   }
   return json({ok: true, game: viewFor(fresh, playerId)});
 }
 
+/**
+ * Start (or return) the rematch of a finished family game: same players in
+ * the same slots, same language, a fresh round 1. Idempotent for both players.
+ * @param {D1Database} db
+ * @param {any} body
+ */
+async function rematch(db, body) {
+  const playerId = String(body.player_id || "");
+  const player = await first(db, "SELECT id, display_name FROM players WHERE id = ?", [playerId]);
+  if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
+  const loaded = await loadGame(db, String(body.game_id || ""));
+  if (!loaded) return fail(404, "GAME_NOT_FOUND", "Game not found");
+  if (!loaded.slotOf.has(playerId)) return fail(403, "NOT_A_MEMBER", "You are not part of this game");
+  if (isLegacySolo(loaded)) return fail(409, "NOT_FAMILY_GAME", "Rematches are for family games.");
+  if (!FINISHED.has(loaded.row.status) || loaded.members.length !== 2) return fail(409, "GAME_NOT_FINISHED", "Finish this game first, then start a rematch.");
+
+  const id = await rematchIdFor(loaded.row.id);
+  /** @returns {Promise<{id: string, join_code: string} | null>} */
+  const existing = () => first(db, "SELECT id, join_code FROM games WHERE id = ?", [id]);
+  const found = await existing();
+  if (found) return json({id: found.id, join_code: found.join_code, existing: true});
+
+  const created = now();
+  const language = loaded.row.language === "fr" ? "fr" : "en";
+  const others = loaded.members.filter(m => m.player_id !== playerId);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = joinCode();
+    try {
+      await db.batch([
+        db.prepare("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language,rematch_of) VALUES(?,?,?,?,?,?,?,?)").bind(id, code, "ACTIVE", 1, created, created, language, loaded.row.id),
+        ...loaded.members.map(m => db.prepare("INSERT INTO game_players VALUES(?,?,?,?)").bind(id, m.player_id, m.slot, created)),
+        db.prepare("INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES(?,?,?,?,?,?,?,?)").bind(`${id}:1`, id, 1, null, null, "OPEN", created, null),
+        ...others.map(m => notify(db, m.player_id, id, "REMATCH", `${player.display_name} wants a rematch!`, "rematch", created))
+      ]);
+      return json({id, join_code: code, existing: false});
+    } catch {
+      // Lost a race with the other player (or a retry): the rematch exists now.
+      const raced = await existing();
+      if (raced) return json({id: raced.id, join_code: raced.join_code, existing: true});
+    }
+  }
+  return fail(500, "GAME_CREATE_FAILED", "Could not create a game right now. Please try again.");
+}
+
+/** Notifications for family games only: never for legacy Solo (BOT) games. */
+const FAMILY_NOTIFICATION = "n.player_id = ? AND n.game_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM game_players b WHERE b.game_id = n.game_id AND b.player_id = 'BOT')";
+
+/**
+ * @param {D1Database} db
+ * @param {string} playerId
+ * @returns {Promise<number>}
+ */
+async function unreadCount(db, playerId) {
+  const row = await first(db, `SELECT COUNT(*) AS n FROM notifications n WHERE ${FAMILY_NOTIFICATION} AND n.read_at IS NULL`, [playerId]);
+  return Number(row?.n || 0);
+}
+
+/**
+ * @param {D1Database} db
+ * @param {string} playerId
+ * @returns {Promise<import("../shared/types.js").Notification[]>}
+ */
+async function listNotifications(db, playerId) {
+  return all(db, `SELECT n.id, n.kind, n.game_id, n.created_at, n.read_at,
+    (SELECT p.display_name FROM game_players o JOIN players p ON p.id = o.player_id WHERE o.game_id = n.game_id AND o.player_id != n.player_id LIMIT 1) AS opponent_name
+    FROM notifications n WHERE ${FAMILY_NOTIFICATION}
+    ORDER BY n.created_at DESC, n.rowid DESC LIMIT ${NOTIFICATION_LIMIT}`, [playerId]);
+}
+
+/**
+ * @param {Request} request
+ * @param {{DB?: D1Database}} env
+ * @returns {Promise<Response>}
+ */
 export async function handleApi(request, env) {
   const db = env.DB;
   if (!db) return fail(503, "NO_DATABASE", "Database is not configured");
   await ensureSchema(db);
   const url = new URL(request.url);
   const path = url.pathname;
+  /** @type {any} */
   let body = {};
   if (request.method !== "GET") {
     try { body = await request.json(); } catch {}
@@ -278,7 +491,8 @@ export async function handleApi(request, env) {
   if (path === "/api/games" && request.method === "POST") {
     const player = await first(db, "SELECT id FROM players WHERE id = ?", [String(body.player_id || "")]);
     if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
-    const created = now(), gameId = uuid(), solo = Boolean(body.solo);
+    // Only an explicit `solo: true` creates a legacy Solo game, so a family game is never mislabelled.
+    const created = now(), gameId = uuid(), solo = body.solo === true;
     const language = body.language === "fr" ? "fr" : "en";
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = joinCode();
@@ -331,7 +545,8 @@ export async function handleApi(request, env) {
       (SELECT p2.display_name FROM game_players o JOIN players p2 ON p2.id = o.player_id WHERE o.game_id = g.id AND o.player_id != ? LIMIT 1) AS opponent_name,
       EXISTS(SELECT 1 FROM rounds r JOIN submissions s ON s.round_id = r.id WHERE r.game_id = g.id AND r.round_number = g.round_number AND s.player_id = ?) AS locked
       FROM games g JOIN game_players gp ON gp.game_id = g.id WHERE gp.player_id = ? ORDER BY g.updated_at DESC LIMIT 50`, [playerId, playerId, playerId]);
-    const notes = await all(db, "SELECT id, game_id, kind, message, created_at FROM notifications WHERE player_id = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT 10", [playerId]);
+    // Unread family-game notifications, for older clients. Reading the dashboard never marks anything read.
+    const notes = await all(db, `SELECT n.id, n.game_id, n.kind, n.message, n.created_at FROM notifications n WHERE ${FAMILY_NOTIFICATION} AND n.read_at IS NULL ORDER BY n.created_at DESC, n.rowid DESC LIMIT 10`, [playerId]);
     return json({
       player,
       games: games.map(g => ({...g, bot: Boolean(g.bot), locked: Boolean(g.locked), status: g.status === "COMPLETE" ? "MATCHED" : g.status})),
@@ -340,12 +555,29 @@ export async function handleApi(request, env) {
     });
   }
 
-  if (path === "/api/notifications/read" && request.method === "POST") {
-    const ids = Array.isArray(body.ids) ? body.ids.slice(0, 50).map(String) : [];
-    const at = now();
-    if (ids.length) await db.batch(ids.map(nid => db.prepare("UPDATE notifications SET read_at = ? WHERE id = ? AND player_id = ?").bind(at, nid, String(body.player_id || ""))));
-    return json({ok: true});
+  if (path === "/api/notifications" && request.method === "GET") {
+    const playerId = url.searchParams.get("player_id") || "";
+    const player = await first(db, "SELECT id FROM players WHERE id = ?", [playerId]);
+    if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
+    return json({notifications: await listNotifications(db, playerId), unread: await unreadCount(db, playerId)});
   }
+
+  if (path === "/api/notifications/read" && request.method === "POST") {
+    const playerId = String(body.player_id || "");
+    const player = await first(db, "SELECT id FROM players WHERE id = ?", [playerId]);
+    if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
+    const at = now();
+    // Only the owner's rows, and the first read time is kept.
+    if (body.all === true) {
+      await db.prepare("UPDATE notifications SET read_at = ? WHERE player_id = ? AND read_at IS NULL").bind(at, playerId).run();
+    } else if (Array.isArray(body.ids)) {
+      const ids = [...new Set(body.ids.slice(0, 200).map(String))];
+      if (ids.length) await db.batch(ids.map(nid => db.prepare("UPDATE notifications SET read_at = ? WHERE id = ? AND player_id = ? AND read_at IS NULL").bind(at, nid, playerId)));
+    }
+    return json({ok: true, unread: await unreadCount(db, playerId)});
+  }
+
+  if (path === "/api/games/rematch" && request.method === "POST") return rematch(db, body);
 
   if (path === "/api/game" && request.method === "GET") {
     const playerId = url.searchParams.get("player_id") || "";

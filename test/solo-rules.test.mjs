@@ -138,7 +138,7 @@ test("player word errors return a code and leave the game untouched", () => {
   game = submitSoloWord(game, nonsense(6)).game;
   const frozen = deepFreeze(game);
   const before = JSON.stringify(frozen);
-  const cases = {"": "EMPTY", "  ": "EMPTY", "abc1": "INVALID_CHARACTERS", ["x".repeat(30)]: "TOO_LONG", "a": "TOO_SHORT", "one two three four": "TOO_MANY_WORDS"};
+  const cases = {"": "EMPTY", "  ": "EMPTY", "abc1": "INVALID_CHARACTERS", ["x".repeat(30)]: "TOO_LONG", "one two three four": "TOO_MANY_WORDS"};
   for (const [raw, code] of Object.entries(cases)) {
     const r = submitSoloWord(frozen, raw);
     assert.equal(r.ok, false);
@@ -223,5 +223,31 @@ test("property: random Solo games (EN and FR) keep every invariant after every s
       finished++;
     }
     assert.equal(finished, 60);
+  }
+});
+
+test("Solo accepts one-letter words in EN and FR, with the same duplicate rules", () => {
+  for (const language of ["en", "fr"]) {
+    let game = startSoloGame({id: `one-${language}`, language, seed: 21});
+    const r1 = submitSoloWord(game, " s ");
+    assert.equal(r1.ok, true, `${language}: "s" is accepted`);
+    assert.equal(r1.move.words.a, "s");
+    game = r1.game;
+    if (isFinished(game)) continue;
+    assert.deepEqual(currentMove(game).prompts, ["s", r1.move.words.b]);
+    assert.equal(submitSoloWord(game, "S").code, "SAME_AS_LAST", `${language}: "S" after "s"`);
+    const r2 = submitSoloWord(game, "é");
+    assert.equal(r2.ok, true, `${language}: "é" is accepted`);
+    game = r2.game;
+    if (isFinished(game)) continue;
+    assert.equal(submitSoloWord(game, "E").code, "SAME_AS_LAST", `${language}: "E" after "é"`);
+    assert.equal(submitSoloWord(game, "É").code, "SAME_AS_LAST");
+    const r3 = submitSoloWord(game, "I");
+    assert.equal(r3.ok, true);
+    if (!isFinished(r3.game)) {
+      assert.equal(submitSoloWord(r3.game, "s").code, "ALREADY_USED");
+      assert.equal(submitSoloWord(r3.game, "a").ok, true);
+    }
+    checkSoloInvariants(r3.game, `${language} one-letter`);
   }
 });

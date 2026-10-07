@@ -1,3 +1,4 @@
+// @ts-check
 // Game rules and the move state machine shared by Solo (in the browser) and
 // family games (on the server).
 //
@@ -11,17 +12,42 @@
 
 import {validateWord, wordKey} from "./words.js";
 
+/**
+ * @typedef {import("./types.js").GameState} GameState
+ * @typedef {import("./types.js").GameStatus} GameStatus
+ * @typedef {import("./types.js").Language} Language
+ * @typedef {import("./types.js").Move} Move
+ * @typedef {import("./types.js").MoveStatus} MoveStatus
+ * @typedef {import("./types.js").Reveal} Reveal
+ * @typedef {import("./types.js").RulesGame} RulesGame
+ * @typedef {import("./types.js").Side} Side
+ * @typedef {import("./types.js").WordCheck} WordCheck
+ */
+
 export const MAX_MOVES = 20;
 export const SCHEMA_VERSION = 2;
+/** @type {readonly Side[]} */
 export const SIDES = ["a", "b"];
+/** @type {ReadonlySet<string>} */
 export const FINISHED = new Set(["MATCHED", "EXHAUSTED"]);
 
+/**
+ * The status a move gets when it is revealed with these two words.
+ * @param {number} number
+ * @param {string} wordA
+ * @param {string} wordB
+ * @returns {Exclude<MoveStatus, "OPEN">}
+ */
 export function moveOutcome(number, wordA, wordB) {
   const key = wordKey(wordA);
   if (key && key === wordKey(wordB)) return "MATCHED";
   return number >= MAX_MOVES ? "EXHAUSTED" : "REVEALED";
 }
 
+/**
+ * @param {{id: string, mode?: "solo" | "family", language?: string, seed?: number, now?: string}} options
+ * @returns {GameState}
+ */
 export function createGame({id, mode = "solo", language = "en", seed = 0, now = new Date().toISOString()}) {
   return {
     schema: SCHEMA_VERSION,
@@ -37,19 +63,39 @@ export function createGame({id, mode = "solo", language = "en", seed = 0, now = 
   };
 }
 
+/**
+ * @param {number} number
+ * @param {[string, string] | null} prompts
+ * @param {string} now
+ * @returns {Move}
+ */
 function openMove(number, prompts, now) {
   return {number, prompts, words: null, status: "OPEN", openedAt: now, revealedAt: null};
 }
 
+/**
+ * @template {{moves: any[]}} G
+ * @param {G} game
+ * @returns {G["moves"][number]}
+ */
 export function currentMove(game) {
   return game.moves[game.moves.length - 1];
 }
 
+/**
+ * @param {{status: string}} game
+ * @returns {boolean}
+ */
 export function isFinished(game) {
   return FINISHED.has(game.status);
 }
 
-/** Keys of every word revealed so far, optionally for one side only. */
+/**
+ * Keys of every word revealed so far, optionally for one side only.
+ * @param {{moves: Array<{words: Reveal | null}>}} game
+ * @param {Side} [side]
+ * @returns {Set<string>}
+ */
 export function usedKeys(game, side) {
   const keys = new Set();
   for (const move of game.moves) {
@@ -64,12 +110,16 @@ export function usedKeys(game, side) {
  * Errors: GAME_OVER, plus validateWord codes, plus
  *   SAME_AS_LAST  - the side's previous word, typed again
  *   ALREADY_USED  - the side used this word earlier in the game
+ * @param {RulesGame} game
+ * @param {Side} side
+ * @param {unknown} raw
+ * @returns {WordCheck}
  */
 export function checkWord(game, side, raw) {
   if (isFinished(game)) return {ok: false, code: "GAME_OVER"};
   const valid = validateWord(raw);
   if (!valid.ok) return valid;
-  const own = game.moves.filter(m => m.words).map(m => wordKey(m.words[side]));
+  const own = game.moves.flatMap(m => (m.words ? [wordKey(m.words[side])] : []));
   if (own.length && own[own.length - 1] === valid.key) return {ok: false, code: "SAME_AS_LAST", word: valid.word};
   if (own.includes(valid.key)) return {ok: false, code: "ALREADY_USED", word: valid.word};
   return valid;
@@ -78,6 +128,10 @@ export function checkWord(game, side, raw) {
 /**
  * Reveal the open move with both sides' words. Returns a new game; the input is untouched.
  * Both words must already have passed checkWord.
+ * @param {GameState} game
+ * @param {Partial<Reveal> | undefined} words
+ * @param {string} [now]
+ * @returns {GameState}
  */
 export function revealMove(game, words, now = new Date().toISOString()) {
   if (isFinished(game)) throw new Error("Game is already finished");
@@ -91,7 +145,11 @@ export function revealMove(game, words, now = new Date().toISOString()) {
   return {...game, moves, status: status === "REVEALED" ? "ACTIVE" : status, updatedAt: now};
 }
 
-/** Small, fast, seedable PRNG (mulberry32). */
+/**
+ * Small, fast, seedable PRNG (mulberry32).
+ * @param {number} seed
+ * @returns {() => number} values in [0, 1)
+ */
 export function seededRandom(seed) {
   let state = seed >>> 0;
   return () => {
@@ -103,13 +161,22 @@ export function seededRandom(seed) {
   };
 }
 
+/**
+ * @param {string} text
+ * @returns {number} unsigned 32-bit FNV-1a hash
+ */
 export function hashString(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
   return h >>> 0;
 }
 
-/** Deterministic per game and move, so a refresh never re-rolls the bot. */
+/**
+ * Deterministic per game and move, so a refresh never re-rolls the bot.
+ * @param {{seed: number, id: string}} game
+ * @param {number} number
+ * @returns {() => number}
+ */
 export function moveRandom(game, number) {
   return seededRandom(hashString(`${game.seed}:${game.id}:${number}`));
 }

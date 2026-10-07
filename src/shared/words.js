@@ -1,14 +1,23 @@
+// @ts-check
 // Word cleaning, comparison and validation shared by the server, the browser
 // and the Solo bot. The "display" form keeps what the player typed (minus
 // stray punctuation); the "key" form is what we compare.
 
+/** @typedef {import("./types.js").WordCheck} WordCheck */
+
 export const MAX_WORD_LENGTH = 24;
 export const MAX_WORD_PARTS = 3;
+/** One letter is enough: "s", "a", "I" and "é" are all playable. */
+export const MIN_KEY_LENGTH = 1;
 
 const EDGE_PUNCTUATION = /^[\s"'“”‘’«»`.,!?¿¡;:()[\]{}*_~-]+|[\s"'“”‘’«»`.,!?¿¡;:()[\]{}*_~-]+$/gu;
 const ALLOWED = /^[\p{L}\p{M}]+(?:[ '\-][\p{L}\p{M}]+)*$/u;
 
-/** Friendly display form: trimmed, single spaces, straight apostrophes, no edge punctuation. */
+/**
+ * Friendly display form: trimmed, single spaces, straight apostrophes, no edge punctuation.
+ * @param {unknown} raw
+ * @returns {string}
+ */
 export function cleanWord(raw) {
   return String(raw ?? "")
     .normalize("NFC")
@@ -20,7 +29,11 @@ export function cleanWord(raw) {
     .trim();
 }
 
-/** Comparison key: case, accents, spaces, hyphens and apostrophes do not matter. */
+/**
+ * Comparison key: case, accents, spaces, hyphens and apostrophes do not matter.
+ * @param {unknown} raw
+ * @returns {string}
+ */
 export function wordKey(raw) {
   return cleanWord(raw)
     .toLowerCase()
@@ -32,6 +45,11 @@ export function wordKey(raw) {
     .replace(/[\s'\-]+/g, "");
 }
 
+/**
+ * @param {unknown} a
+ * @param {unknown} b
+ * @returns {boolean}
+ */
 export function sameWord(a, b) {
   const left = wordKey(a);
   return left !== "" && left === wordKey(b);
@@ -40,7 +58,13 @@ export function sameWord(a, b) {
 /**
  * Validate one submitted word.
  * Returns {ok:true, word, key} or {ok:false, code, word}.
- * Codes: EMPTY, TOO_LONG, INVALID_CHARACTERS, TOO_SHORT, TOO_MANY_WORDS.
+ * Codes: EMPTY, TOO_LONG, INVALID_CHARACTERS, TOO_MANY_WORDS.
+ *
+ * A single letter ("s", "a", "I", "é") is a valid word: unusual input must not
+ * block play. TOO_SHORT is no longer returned; it stays in the code lists of
+ * the client and server only so older messages keep a translation.
+ * @param {unknown} raw
+ * @returns {WordCheck}
  */
 export function validateWord(raw) {
   const word = cleanWord(raw);
@@ -48,7 +72,8 @@ export function validateWord(raw) {
   if (word.length > MAX_WORD_LENGTH) return {ok: false, code: "TOO_LONG", word};
   if (!ALLOWED.test(word)) return {ok: false, code: "INVALID_CHARACTERS", word};
   const key = wordKey(word);
-  if (key.length < 2) return {ok: false, code: "TOO_SHORT", word};
+  // Only possible for input made of combining marks alone (no base letter).
+  if (key.length < MIN_KEY_LENGTH) return {ok: false, code: "INVALID_CHARACTERS", word};
   if (word.split(" ").length > MAX_WORD_PARTS) return {ok: false, code: "TOO_MANY_WORDS", word};
   return {ok: true, word, key};
 }

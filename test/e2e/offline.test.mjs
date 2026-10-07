@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {botWord, launch, lockIn, startServer} from "./helpers.mjs";
+import {botWord, launch, lockIn, lockInEnter, playDistinct, progressOf, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -239,4 +239,303 @@ test("service worker update: new version waits for Reload, then switches over co
     await next?.stop();
     await rm(dir, {recursive: true, force: true});
   }
+});
+
+// ---------- round 2: offline Solo regression ----------
+
+/** A context that has visited once online (SW installed, controlling), then gone offline, with /api/ calls recorded. */
+async function offlineContext(options = {}) {
+  const context = await browser.newContext(options);
+  const page = await visitOnce(context);
+  const apiCalls = watchApi(context);
+  await context.setOffline(true);
+  await page.reload();
+  await page.waitForSelector("#startSolo");
+  return {context, page, apiCalls};
+}
+
+const lower = s => String(s).toLowerCase();
+
+/** What the player sees of the game, checked against the stored record. */
+async function assertGameShown(page, game, label) {
+  const revealed = game.moves.filter(m => m.words);
+  const open = game.moves[game.moves.length - 1];
+  const finished = game.status !== "ACTIVE";
+  const expectedMove = finished ? revealed[revealed.length - 1].number : open.number;
+  const progress = await progressOf(page);
+  assert.equal(progress.now, expectedMove, `${label}: aria-valuenow`);
+  assert.equal(progress.max, 20, `${label}: aria-valuemax`);
+  const moveText = game.language === "fr" ? `Coup ${expectedMove} sur 20` : `Move ${expectedMove} of 20`;
+  // The visible move count (whatever element carries it) uses the UI language; the game here matches it.
+  if (await page.getAttribute("html", "lang") === game.language) {
+    assert.ok((await page.locator(".board").innerText()).includes(moveText), `${label}: shows "${moveText}"`);
+  }
+  // History: one row per revealed move, newest first.
+  const rows = (await page.locator(".trail-row").allInnerTexts()).map(lower);
+  assert.equal(rows.length, revealed.length, `${label}: history rows`);
+  revealed.slice().reverse().forEach((m, i) => {
+    assert.ok(rows[i].includes(lower(m.words.a)) && rows[i].includes(lower(m.words.b)), `${label}: history row ${i} is move ${m.number}`);
+  });
+  if (finished) {
+    assert.equal(await page.locator(".end").count(), 1, `${label}: game over panel`);
+  } else if (open.prompts) {
+    const prompt = lower(await page.locator("#prompt").innerText());
+    assert.ok(prompt.includes(lower(open.prompts[0])) && prompt.includes(lower(open.prompts[1])), `${label}: current prompt`);
+    assert.equal(await page.getAttribute("#prompt", "lang"), game.language, `${label}: prompt language`);
+  }
+}
+
+test("offline Solo regression: new game, several moves, reveal, history, progress; refresh and reopen keep it all", async () => {
+  const {context, page: first, apiCalls} = await offlineContext({locale: "en-US"});
+  let page = first;
+  await page.click("#startSolo");
+  await page.waitForSelector("#word");
+  let game = await soloRecord(page);
+  assert.equal(game.mode, "solo");
+  assert.equal(game.language, "en");
+  assert.equal((await progressOf(page)).now, 1);
+  assert.equal(await page.locator(".trail-row").count(), 0, "a new game has no history");
+
+  // Move 1: the bot's locked word is revealed next to ours.
+  const bot = await botWord(page);
+  const played = await playDistinct(page, 1);
+  await page.waitForSelector(".reveal");
+  const reveal = lower(await page.locator(".reveal").innerText());
+  assert.ok(reveal.includes(played[0]) && reveal.includes(lower(bot)), "reveal shows both words");
+  played.push(...await playDistinct(page, 3));
+  game = await soloRecord(page);
+  assert.equal(game.moves.filter(m => m.words).length, 4);
+  assert.equal(game.status, "ACTIVE");
+  await assertGameShown(page, game, "after 4 moves");
+
+  await page.reload();
+  await page.waitForSelector("#word");
+  await assertGameShown(page, game, "after refresh");
+  assert.equal(await page.getAttribute("html", "lang"), "en");
+
+  const url = page.url();
+  await page.close();
+  page = await context.newPage();
+  await page.goto(server.url); // bare URL resumes the active game
+  await page.waitForSelector("#word");
+  assert.equal(page.url(), url);
+  await assertGameShown(page, game, "after close and reopen");
+  assert.deepEqual(await soloRecord(page), game, "record unchanged by reloads");
+
+  // Keep playing after reopening.
+  await playDistinct(page, 1);
+  game = await soloRecord(page);
+  assert.equal(game.moves.filter(m => m.words).length, 5);
+  await assertGameShown(page, game, "after a move post-reopen");
+  assert.deepEqual(apiCalls, [], "no /api/ requests offline");
+  await context.close();
+});
+
+test("offline Solo: one-letter words submit by Enter and by button; repeating one is a friendly SAME_AS_LAST (EN and FR)", async () => {
+  const {context, page, apiCalls} = await offlineContext({locale: "en-US"});
+  const cases = [
+    {lang: "en", first: lockInEnter, again: lockIn, message: /You just played S\b/},
+    {lang: "fr", first: lockIn, again: lockInEnter, message: /Tu viens de jouer S\b/}
+  ];
+  for (const c of cases) {
+    await page.goto(server.url + "/");
+    await page.waitForSelector("#startSolo");
+    await page.click(`[data-lang=${c.lang}]`);
+    await page.click("#startSolo");
+    await page.waitForSelector("#word");
+    // Make sure "s" can't match the bot (it never would, but keep the test honest).
+    assert.notEqual(lower(await botWord(page)), "s");
+    await c.first(page, "s");
+    await waitForReveal(page, 0);
+    let game = await soloRecord(page);
+    assert.equal(game.language, c.lang);
+    assert.equal(game.moves[0].words.a, "s", `${c.lang}: one-letter word accepted`);
+    assert.equal((await progressOf(page)).now, 2);
+
+    await c.again(page, "S");
+    await page.waitForFunction(() => document.querySelector("#formHelp")?.classList.contains("error"));
+    assert.match(await page.locator("#formHelp").innerText(), c.message);
+    assert.equal(await page.getAttribute("#word", "aria-invalid"), "true");
+    game = await soloRecord(page);
+    assert.equal(game.moves.filter(m => m.words).length, 1, `${c.lang}: rejected word did not become a move`);
+    assert.equal(await page.inputValue("#word"), "S", "the typed word is kept so the player can fix it");
+
+    // Survives a refresh in that language.
+    await page.reload();
+    await page.waitForSelector("#word");
+    assert.equal(await page.getAttribute("html", "lang"), c.lang);
+    await assertGameShown(page, game, `${c.lang} one-letter after refresh`);
+  }
+  assert.deepEqual(apiCalls, []);
+  await context.close();
+});
+
+test("offline Solo: play to move 19, then 20, final reveal then game over; no move 21; refresh keeps it; Play again starts clean", async () => {
+  const {context, page, apiCalls} = await offlineContext({locale: "en-US"});
+  await page.click("#startSolo");
+  await page.waitForSelector("#word");
+  const id = new URL(page.url()).pathname.split("/").pop();
+  assert.equal((await soloRecord(page)).mode, "solo", "mode at creation");
+
+  await playDistinct(page, 18);
+  let game = await soloRecord(page);
+  assert.equal(game.mode, "solo", "mode mid-game");
+  assert.equal(game.moves.length, 19);
+  assert.equal(game.status, "ACTIVE");
+  assert.equal((await progressOf(page)).now, 19);
+  await assertGameShown(page, game, "move 19 open");
+
+  await playDistinct(page, 1);
+  game = await soloRecord(page);
+  assert.equal(game.moves.length, 20);
+  assert.equal(game.status, "ACTIVE", "move 20 is still playable");
+  assert.equal((await progressOf(page)).now, 20);
+  assert.equal(await page.isEnabled("#word"), true);
+  await assertGameShown(page, game, "move 20 open");
+
+  const [last] = await playDistinct(page, 1);
+  await page.waitForSelector(".end");
+  game = await soloRecord(page);
+  assert.equal(game.status, "EXHAUSTED");
+  assert.equal(game.mode, "solo", "mode at completion");
+  assert.equal(game.moves.length, 20);
+  // The final reveal is shown together with the game-over state.
+  const reveal = lower(await page.locator(".reveal").innerText());
+  assert.ok(reveal.includes(last) && reveal.includes(lower(game.moves[19].words.b)), "final reveal visible");
+  assert.equal(await page.isVisible(".end"), true);
+  await assertGameShown(page, game, "game over");
+  for (const sel of ["#word", "#lockBtn"]) {
+    const n = await page.locator(sel).count();
+    assert.ok(n === 0 || await page.isDisabled(sel), `${sel} absent or disabled after move 20`);
+  }
+
+  // Trying to submit anyway (Enter with no button focused, or a scripted form submit) does nothing harmful.
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.keyboard.press("Enter");
+  await page.evaluate(() => {
+    const form = document.querySelector("#wordForm");
+    form?.requestSubmit?.();
+  });
+  await page.waitForTimeout(200);
+  assert.deepEqual(await soloRecord(page), game, "no move 21, record untouched");
+  assert.equal(await page.isVisible(".end"), true);
+
+  await page.reload();
+  await page.waitForSelector(".end");
+  assert.deepEqual(await soloRecord(page), game);
+  await assertGameShown(page, game, "game over after refresh");
+  assert.equal(await page.locator("#word").count(), 0);
+
+  // Play again: a fresh game, nothing carried over.
+  await page.click("#newGameBtn");
+  await page.waitForSelector("#word");
+  const nextId = new URL(page.url()).pathname.split("/").pop();
+  assert.notEqual(nextId, id);
+  const fresh = await soloRecord(page);
+  assert.equal(fresh.mode, "solo");
+  assert.equal(fresh.status, "ACTIVE");
+  assert.equal(fresh.moves.length, 1);
+  assert.equal(fresh.moves[0].words, null);
+  assert.equal(fresh.moves[0].prompts, null);
+  assert.equal(await page.locator(".trail-row").count(), 0, "no stale history");
+  assert.equal(await page.locator(".end").count(), 0);
+  assert.equal(await page.locator(".reveal").count(), 0, "no stale reveal");
+  assert.equal(await page.inputValue("#word"), "");
+  assert.equal((await progressOf(page)).now, 1, "progress restarts");
+  assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem("ssbd.store")).solo[id].status, id), "EXHAUSTED", "old game kept as finished");
+  await playDistinct(page, 1);
+  assert.equal((await soloRecord(page)).moves.filter(m => m.words).length, 1);
+  assert.deepEqual(apiCalls, []);
+  await context.close();
+});
+
+test("offline: family create/join/invite and notifications are not offered; a friendly note explains", async () => {
+  const context = await browser.newContext({locale: "en-US"});
+  const page = await visitOnce(context);
+  // A device that already has a family player: the riskiest case (no name prompt stands in the way).
+  await page.evaluate(() => localStorage.setItem("ssbd_player", JSON.stringify({id: "p_test", display_name: "Kim", recovery_code: "ABCD-EFGH"})));
+  const apiCalls = watchApi(context);
+  await context.setOffline(true);
+  await page.reload();
+  await page.waitForSelector("#startSolo");
+
+  const bell = "#notifBtn, #notificationsBtn, #bellBtn, .bell, [data-notifications]";
+  const assertNoFamily = async label => {
+    for (const sel of ["#createFamily", "#joinFamily"]) {
+      const n = await page.locator(sel).count();
+      assert.ok(n === 0 || await page.isDisabled(sel), `${label}: ${sel} not offered`);
+    }
+    for (const el of await page.locator(bell).all()) {
+      assert.ok(!(await el.isVisible()) || await el.isDisabled(), `${label}: notifications bell not offered`);
+    }
+    assert.equal(await page.locator("#joinCode").count(), 0, `${label}: no invite code`);
+    assert.equal(await page.evaluate(() => document.querySelector("#dialog")?.open || false), false, `${label}: no join/name dialog`);
+  };
+  await assertNoFamily("home");
+  assert.match(await page.locator(".family-card").innerText(), /Family games need the internet/);
+
+  // Clicking the disabled buttons does nothing.
+  await page.locator("#joinFamily").click({force: true}).catch(() => {});
+  await assertNoFamily("after clicking join");
+
+  // An invite link opened offline lands on home without offering to join.
+  await page.goto(server.url + "/join/ABCD");
+  await page.waitForSelector("#startSolo");
+  await page.waitForTimeout(100);
+  await assertNoFamily("invite link");
+
+  // A family game link offline explains instead of breaking.
+  await page.goto(server.url + "/games/abc123");
+  await page.waitForSelector("#app .notice.error, #startSolo");
+  if (await page.locator("#app .notice.error").count()) {
+    assert.match(await page.locator("#app .notice.error").innerText(), /internet/i);
+  }
+  await assertNoFamily("family game link");
+
+  // Solo game screen never shows invite or notifications offline.
+  await page.goto(server.url + "/");
+  await page.click("#startSolo");
+  await page.waitForSelector("#word");
+  await assertNoFamily("solo game");
+  await playDistinct(page, 1);
+  await assertNoFamily("solo game after a move");
+  // Only the family game link tried the network; Solo never did.
+  assert.ok(apiCalls.every(u => new URL(u).pathname === "/api/game"), `unexpected API calls: ${apiCalls}`);
+  await context.close();
+});
+
+test("offline Solo: a second Enter right after the final move does not skip the game-over screen", async () => {
+  const {context, page, apiCalls} = await offlineContext({locale: "en-US"});
+  await page.click("#startSolo");
+  await page.waitForSelector("#word");
+  await playDistinct(page, 19);
+  const game = await soloRecord(page);
+  const bot = lower(game.moves[19].hidden.b);
+  const word = ["lantern", "trumpet", "walrus"].find(w => w !== bot && !game.moves.some(m => m.words && lower(m.words.a) === w));
+  // A child types the last word and presses Enter twice (or holds it a little too long).
+  await page.fill("#word", word);
+  await page.press("#word", "Enter");
+  await page.waitForSelector(".end");
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(300);
+  const after = await soloRecord(page);
+  assert.equal(after.id, game.id, "still on the finished game, not a new one");
+  assert.equal(after.status, "EXHAUSTED");
+  assert.equal(await page.isVisible(".end"), true, "game-over screen stays up");
+  assert.equal(await page.locator(".reveal").count(), 1, "final reveal stays up");
+  assert.deepEqual(apiCalls, []);
+  await context.close();
+});
+
+test("going offline closes an open family join dialog instead of letting it fail", async () => {
+  const context = await browser.newContext({locale: "en-US"});
+  const page = await visitOnce(context);
+  await page.evaluate(() => localStorage.setItem("ssbd_player", JSON.stringify({id: "p_test", display_name: "Kim", recovery_code: "ABCD-EFGH"})));
+  await page.goto(server.url + "/join/ABCD");
+  await page.waitForSelector("#joinInput");
+  await context.setOffline(true);
+  await page.waitForFunction(() => !document.querySelector("#dialog").open);
+  assert.equal(await page.isDisabled("#joinFamily"), true);
+  assert.match(await page.locator(".family-card").innerText(), /Family games need the internet/);
+  await context.close();
 });

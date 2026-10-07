@@ -155,8 +155,8 @@ test("invalid word codes come straight from validation", () => {
     "": "EMPTY", "   ": "EMPTY", "?!": "EMPTY",
     ["x".repeat(30)]: "TOO_LONG",
     "abc1": "INVALID_CHARACTERS", "a@b": "INVALID_CHARACTERS", "sun_moon": "INVALID_CHARACTERS",
-    "a": "TOO_SHORT",
-    "one two three four": "TOO_MANY_WORDS"
+    "one two three four": "TOO_MANY_WORDS",
+    "\u0301": "INVALID_CHARACTERS"
   };
   for (const [raw, code] of Object.entries(cases)) assert.equal(checkWord(g, "a", raw).code, code, JSON.stringify(raw));
   assert.equal(checkWord(g, "a", undefined).code, "EMPTY");
@@ -270,4 +270,32 @@ test("property: 400 random games keep every invariant after every step", () => {
     if (g.status === "MATCHED") matched++; else exhausted++;
   }
   assert.ok(matched > 0 && exhausted > 0, `both endings exercised (matched ${matched}, exhausted ${exhausted})`);
+});
+
+// ---------- one-letter words ----------
+
+test("one-letter words are accepted and follow the same duplicate rules", () => {
+  let g = createGame({id: "one"});
+  for (const raw of ["s", "S", " s ", "a", "I", "é", "É", "x"]) assert.equal(checkWord(g, "a", raw).ok, true, JSON.stringify(raw));
+  assert.deepEqual(checkWord(g, "a", " s "), {ok: true, word: "s", key: "s"});
+  g = revealMove(g, {a: "s", b: "é"});
+  assert.equal(g.status, "ACTIVE");
+  assert.deepEqual(currentMove(g).prompts, ["s", "é"]);
+  assert.deepEqual(checkWord(g, "a", "S"), {ok: false, code: "SAME_AS_LAST", word: "S"});
+  assert.equal(checkWord(g, "a", " s! ").code, "SAME_AS_LAST");
+  assert.equal(checkWord(g, "b", "e").code, "SAME_AS_LAST", "É/é/e share one key");
+  assert.equal(checkWord(g, "b", "É").code, "SAME_AS_LAST");
+  assert.equal(checkWord(g, "a", "é").ok, true, "the other side's one-letter word is fine");
+  g = revealMove(g, {a: "a", b: "I"});
+  assert.equal(checkWord(g, "a", "s").code, "ALREADY_USED");
+  assert.equal(checkWord(g, "a", "A").code, "SAME_AS_LAST");
+  assert.equal(checkWord(g, "b", "i").code, "SAME_AS_LAST");
+  assert.equal(checkWord(g, "a", "ss").ok, true, "a longer word is not a duplicate");
+});
+
+test("one-letter words can match and end the game", () => {
+  const g = revealMove(createGame({id: "one-match"}), {a: "É", b: "e"});
+  assert.equal(g.status, "MATCHED");
+  assert.equal(moveOutcome(4, "s", "S"), "MATCHED");
+  assert.equal(moveOutcome(4, "s", "a"), "REVEALED");
 });

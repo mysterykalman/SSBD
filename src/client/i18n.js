@@ -173,6 +173,9 @@ const EN = {
   rematchSent: "Rematch started! Your friend will get a notification.",
   botInitial: "B",
   badgeFor: "{name}",
+  progressMatched: "Matched on move {n}!",
+  hiddenWord: "Hidden until the reveal",
+  notifOpen: "Open game",
 };
 
 const FR = {
@@ -342,6 +345,9 @@ const FR = {
   rematchSent: "Revanche lancée ! Ton ami·e va recevoir une notification.",
   botInitial: "R",
   badgeFor: "{name}",
+  progressMatched: "Pareil au coup {n} !",
+  hiddenWord: "Caché jusqu’à la révélation",
+  notifOpen: "Ouvrir la partie",
 };
 
 /** Put a narrow no-break space before French high punctuation (and keep it from wrapping). */

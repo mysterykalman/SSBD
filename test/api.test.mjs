@@ -166,7 +166,7 @@ async function activeFamily() {
   return g;
 }
 
-const VIEW_KEYS = ["kind", "id", "joinCode", "language", "status", "waitingForPlayer", "createdAt", "updatedAt", "maxMoves", "you", "opponent", "moves"].sort();
+const VIEW_KEYS = ["kind", "id", "joinCode", "language", "status", "waitingForPlayer", "createdAt", "updatedAt", "maxMoves", "you", "opponent", "rematchId", "moves"].sort();
 const MOVE_KEYS = ["number", "prompts", "status", "openedAt", "revealedAt", "words", "botQuality", "mine", "otherLocked"].sort();
 
 test("view shape: family and legacy-solo kinds carry the fields the client reads", async () => {

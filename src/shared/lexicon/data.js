@@ -629,4 +629,103 @@ export const CONCEPTS = [
   ["evening","evening","soir",["time","night"],["night","dinner","sunset","bedtime","moon"]],
   ["grey","grey","gris",["color"],["cloud","elephant","rock","mouse","color","storm"]],
   ["weather","weather","météo",["weather"],["rain","sun","snow","cloud","wind","storm"]],
+  // Compound and phrase helpers (also used by PHRASES below)
+  ["bow","bow","arc",["sport","adventure"],["rainbow","arrow","gift","violin","knight","hero"]],
+  ["arrow","arrow","flèche",["sport","adventure"],["bow","knight","map","heart","hero","fast"]],
+  ["worm","worm","ver",["animal","nature"],["earth","garden","bird","apple","mud","book","rain","fish"]],
+  ["cream","cream","crème",["food","sweet"],["ice_cream","cake","milk","strawberry","dessert","coffee","butter"]],
+  ["peanut","peanut","cacahuète",["food"],["butter","elephant","sandwich","jam","snack"]],
+  ["goldfish","goldfish","poisson rouge",["animal","pet","water"],["fish","gold","pet","aquarium","orange","bowl","water"]],
+  ["dragonfly","dragonfly","libellule",["animal","nature"],["dragon","fly","insect","pond","wing","butterfly"]],
+  ["firefly","firefly","luciole",["animal","night","light"],["fire","fly","night","light","insect","summer"]],
+  ["seahorse","seahorse","hippocampe",["animal","ocean"],["sea","horse","ocean","fish","starfish","mermaid"]],
+  ["lighthouse","lighthouse","phare",["ocean","light"],["light","sea","boat","island","tower","night"]],
+  ["teapot","teapot","théière",["home","drink"],["tea","cup","kitchen","hot","pot"]],
+  ["toothpaste","toothpaste","dentifrice",["home","body"],["tooth","toothbrush","dentist","clean","mouth"]],
+  ["cupcake","cupcake","cupcake",["food","sweet"],["cup","cake","birthday","candle","party","chocolate","bake"]],
+  ["notebook","notebook","cahier",["school"],["school","pencil","paper","write","book","homework","pen"]],
+  ["sailboat","sailboat","voilier",["ocean","transport"],["boat","wind","sea","ocean","lake","ship","captain"]],
+  ["raincoat","raincoat","imperméable",["clothes","weather"],["rain","coat","umbrella","boots","wet","puddle"]],
+  ["moonlight","moonlight","clair de lune",["night","light"],["moon","light","night","owl","wolf","dream"]],
+  ["sandbox","sandbox","bac à sable",["toy","game"],["sand","box","playground","bucket","park","play"]],
+  ["beehive","beehive","ruche",["animal","nature"],["bee","honey","tree","garden","insect"]],
+  ["doghouse","doghouse","niche",["pet","home"],["dog","home","garden","puppy","bone"]],
+  ["cowboy","cowboy","cowboy",["job","story","adventure"],["horse","hat","boots","ride","desert","farm","cow"]],
+  ["bathtub","bathtub","baignoire",["home","water"],["bath","water","bubble","soap","duck","towel"]],
+  ["pot","pot","pot",["home","plant"],["flower","honey","plant","garden","cauldron","kitchen","paint"]],
+  ["bowl","bowl","bol",["home","food"],["soup","cereal","spoon","fish","milk","kitchen"]],
+  ["sunglasses","sunglasses","lunettes de soleil",["clothes","hot"],["sun","glasses","beach","summer","hot","eye"]],
+  ["sunscreen","sunscreen","crème solaire",["hot","body"],["sun","beach","cream","summer","hot","swimsuit"]],
+  ["treehouse","treehouse","cabane",["home","nature","adventure"],["tree","home","play","hide","wood","garden"]],
+  ["spaceship","spaceship","vaisseau spatial",["space","transport"],["space","ship","rocket","alien","astronaut","star","planet"]],
 ];
+
+// Common phrases and compounds, per language: [conceptId, conceptId, phrase].
+// The two concepts' labels in that language appear in the phrase ("snow" +
+// "ball" -> "snowball"), so each side counts as a strong link for the other.
+// Pairs are undirected. Only everyday, family-friendly phrases.
+const phraseRows = text => text.trim().split("\n").flatMap(line => line.split("|")).map(item => item.trim()).filter(Boolean)
+  .map(item => { const [pair, phrase] = item.split(":"); const [a, b] = pair.trim().split("+"); return [a, b, phrase.trim()]; });
+
+export const PHRASES = {
+  en: phraseRows(`
+    snow+ball: snowball | snow+angel: snow angel | snow+boots: snow boots | snow+storm: snowstorm | snow+white: snow white | snow+day: snow day
+    rain+bow: rainbow | rain+coat: raincoat | rain+cloud: rain cloud | rain+boots: rain boots | rain+forest: rainforest
+    sun+flower: sunflower | sun+glasses: sunglasses | sun+light: sunlight | sun+hat: sun hat | sun+screen: sunscreen | sun+shine: sunshine
+    star+fish: starfish | star+light: starlight | star+ship: starship | gold+star: gold star | rock+star: rock star
+    moon+light: moonlight | moon+walk: moonwalk | night+light: night light | night+owl: night owl | day+light: daylight | candle+light: candlelight
+    fire+truck: fire truck | fire+fly: firefly | fire+wood: firewood | fire+ball: fireball | monster+truck: monster truck
+    butter+fly: butterfly | butter+cup: buttercup | peanut+butter: peanut butter | bread+butter: bread and butter
+    cup+cake: cupcake | tea+cup: teacup | tea+pot: teapot | tea+party: tea party | tea+time: teatime | coffee+cup: coffee cup
+    cheese+cake: cheesecake | birthday+cake: birthday cake | birthday+party: birthday party | birthday+gift: birthday gift | birthday+candle: birthday candle | birthday+song: birthday song
+    chocolate+cake: chocolate cake | chocolate+milk: chocolate milk | chocolate+cookie: chocolate cookie | hot+chocolate: hot chocolate | hot+dog: hot dog
+    ice+cream: ice cream | ice+skate: ice skate | ice+queen: ice queen | cream+cake: cream cake
+    gold+fish: goldfish | gold+medal: gold medal | gold+crown: gold crown | cat+fish: catfish | sword+fish: swordfish | fish+bowl: fishbowl
+    dragon+fly: dragonfly | sea+horse: seahorse | sea+shell: seashell | sea+lion: sea lion | sea+turtle: sea turtle
+    horse+shoe: horseshoe | pony+tail: ponytail | mermaid+tail: mermaid tail | bear+hug: bear hug | lion+king: lion king | queen+bee: queen bee
+    honey+bee: honeybee | honey+pot: honey pot | flower+pot: flowerpot | flower+garden: flower garden
+    tooth+fairy: tooth fairy | sweet+tooth: sweet tooth | sweet+heart: sweetheart | sweet+dream: sweet dreams | day+dream: daydream
+    fairy+wand: fairy wand | fairy+wing: fairy wings | magic+wand: magic wand | magic+spell: magic spell | magic+show: magic show | magic+potion: magic potion
+    witch+hat: witch hat | witch+broom: witch broom | wizard+hat: wizard hat | ghost+story: ghost story
+    book+worm: bookworm | earth+worm: earthworm | story+book: storybook | picture+book: picture book | book+shop: bookshop | story+time: story time
+    bed+time: bedtime | play+time: playtime | bath+time: bath time | bubble+bath: bubble bath | bath+towel: bath towel | soap+bubble: soap bubble
+    soup+bowl: soup bowl | cereal+bowl: cereal bowl | sand+castle: sandcastle | sand+box: sandbox | beach+ball: beach ball | beach+towel: beach towel
+    foot+ball: football | basket+ball: basketball | soccer+ball: soccer ball | soccer+team: soccer team | tennis+ball: tennis ball
+    swim+pool: swimming pool | water+slide: water slide | water+park: water park | skate+park: skate park
+    space+ship: spaceship | rocket+ship: rocket ship | space+station: space station | pirate+ship: pirate ship
+    treasure+map: treasure map | treasure+island: treasure island | school+bus: school bus | police+car: police car | race+car: race car
+    train+station: train station | bike+helmet: bike helmet | mountain+bike: mountain bike | toy+car: toy car | toy+box: toy box | toy+shop: toy shop
+    music+box: music box | lunch+box: lunch box | candy+shop: candy shop | apple+pie: apple pie | apple+tree: apple tree | apple+juice: apple juice
+    orange+juice: orange juice | fruit+juice: fruit juice | fruit+salad: fruit salad | strawberry+jam: strawberry jam | pumpkin+pie: pumpkin pie | banana+bread: banana bread
+    chicken+soup: chicken soup | tomato+soup: tomato soup | cheese+sandwich: cheese sandwich | corn+field: cornfield
+    easter+egg: easter egg | egg+shell: eggshell | christmas+tree: christmas tree | christmas+gift: christmas gift | halloween+costume: halloween costume | halloween+pumpkin: halloween pumpkin
+    party+hat: party hat | wedding+cake: wedding cake | wedding+ring: wedding ring | wedding+dress: wedding dress | love+song: love song
+    winter+coat: winter coat | summer+holiday: summer holiday | autumn+leaf: autumn leaves | tree+frog: tree frog | frog+prince: frog prince
+    bird+nest: bird nest | bird+song: birdsong | duck+pond: duck pond | farm+animal: farm animal | computer+game: computer game | clock+tower: clock tower
+    ear+ring: earring | eye+glasses: eyeglasses | arm+chair: armchair | wheel+chair: wheelchair | sleep+walk: sleepwalk | bow+arrow: bow and arrow
+  `),
+  fr: phraseRows(`
+    apple+earth: pomme de terre | fish+red: poisson rouge | bow+sky: arc-en-ciel | star+sea: étoile de mer | castle+sand: château de sable | castle+strong: château fort
+    glasses+sun: lunettes de soleil | chocolate+hot: chocolat chaud | cake+chocolate: gâteau au chocolat | cake+birthday: gâteau d'anniversaire
+    candle+birthday: bougie d'anniversaire | party+birthday: fête d'anniversaire | gift+birthday: cadeau d'anniversaire | tree+christmas: arbre de noël | gift+christmas: cadeau de noël
+    juice+orange: jus d'orange | juice+apple: jus de pomme | juice+fruit: jus de fruit | pie+apple: tarte aux pommes | pie+lemon: tarte au citron | pie+strawberry: tarte aux fraises
+    jam+strawberry: confiture de fraises | bread+chocolate: pain au chocolat | toast+butter: tartine de beurre | toast+jam: tartine de confiture | butter+peanut: beurre de cacahuète
+    salad+fruit: salade de fruits | soup+vegetable: soupe de légumes | soup+tomato: soupe à la tomate | egg+easter: œuf de pâques | rabbit+easter: lapin de pâques
+    home+doll: maison de poupée | race+horse: course de chevaux | car+race: voiture de course | car+police: voiture de police | truck+firefighter: camion de pompiers
+    fire+wood: feu de bois | mouse+small: petite souris | hat+witch: chapeau de sorcière | broom+witch: balai de sorcière | hat+wizard: chapeau de sorcier
+    fairy_tale+fairy: conte de fées | story+evening: histoire du soir | book+picture: livre d'images | book+story: livre d'histoires | map+treasure: carte au trésor | island+treasure: île au trésor
+    boat+pirate: bateau pirate | ship+pirate: navire pirate | queen+snow: reine des neiges | king+lion: roi lion | white+snow: blanche-neige
+    night+star: nuit étoilée | sky+blue: ciel bleu | sky+star: ciel étoilé | bath+sun: bain de soleil | bubble+soap: bulle de savon | towel+bath: serviette de bain
+    towel+beach: serviette de plage | ball+beach: ballon de plage | ball+soccer: ballon de foot | scarf+wool: écharpe en laine | sweater+wool: pull en laine | coat+winter: manteau d'hiver
+    boots+rain: bottes de pluie | boots+snow: bottes de neige | holiday+summer: vacances d'été | holiday+christmas: vacances de noël | leaf+autumn: feuille d'automne
+    pot+flower: pot de fleurs | pot+honey: pot de miel | pot+paint: pot de peinture | worm+earth: ver de terre | nest+bird: nid d'oiseau | queen+bee: reine des abeilles
+    mouse+green: une souris verte | cup+tea: tasse de thé | cup+coffee: tasse de café | glass+milk: verre de lait | glass+water: verre d'eau | bowl+cereal: bol de céréales
+    bowl+soup: bol de soupe | spoon+soup: cuillère à soupe | box+music: boîte à musique | box+letter: boîte aux lettres | letter+santa: lettre au père noël | game+map: jeu de cartes
+    teacher+school: maîtresse d'école | pencil+color: crayon de couleur | paper+gift: papier cadeau | helmet+bike: casque de vélo | plane+paper: avion en papier | boat+paper: bateau en papier
+    fire+red: feu rouge | fire+green: feu vert | fish+clown: poisson-clown | tomato+cherry: tomate cerise | ice_cream+strawberry: glace à la fraise | ice_cream+chocolate: glace au chocolat
+    pancake+sugar: crêpe au sucre | pancake+chocolate: crêpe au chocolat | beard+dad: barbe à papa | apple+love: pomme d'amour | cream+chocolate: crème au chocolat | cheese+goat: fromage de chèvre
+    tail+mermaid: queue de sirène | tail+horse: queue de cheval | tooth+milk: dent de lait | bow+arrow: arc et flèches | race+foot: course à pied | planet+earth: planète terre
+    snowflake+snow: flocon de neige | butterfly+night: papillon de nuit | bat+mouse: chauve-souris | horse+wood: cheval de bois | tower+magic: tour de magie | dog+wolf: chien-loup
+    fish+aquarium: poisson d'aquarium | castle+princess: château de princesse | cake+cream: gâteau à la crème
+  `)
+};
