@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {botWord, launch, lockIn, lockInEnter, playDistinct, progressOf, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
+import {botWord, continueReveal, launch, lockIn, lockInEnter, playDistinct, progressOf, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -33,6 +33,7 @@ async function playMoves(page, words) {
     const before = await page.locator(".trail-row").count();
     const bot = await botWord(page);
     await lockIn(page, bot.toLowerCase() === w ? `${w}s` : w);
+    await continueReveal(page);
     await page.waitForFunction(n => document.querySelectorAll(".trail-row").length > n || document.querySelector(".end"), before);
   }
 }
@@ -70,7 +71,7 @@ test("offline Solo: start, play, refresh, reopen and finish with no network", as
   assert.deepEqual(await trailText(page), trail);
 
   if (!(await page.locator(".end").count())) {
-    await lockIn(page, await botWord(page));
+    await lockIn(page, await botWord(page), {reveal: true});
     await page.waitForSelector(".end.win");
   }
   await page.reload();
@@ -124,7 +125,7 @@ test("offline: a finished Solo game reloads to its end state and is not auto-res
   let page = await visitOnce(context);
   await context.setOffline(true);
   await page.click("#startSolo");
-  await lockIn(page, await botWord(page)); // match the bot on move 1
+  await lockIn(page, await botWord(page), {reveal: true}); // match the bot on move 1
   await page.waitForSelector(".end.win");
   const soloUrl = page.url();
   await page.reload();
@@ -255,6 +256,8 @@ async function offlineContext(options = {}) {
 }
 
 const lower = s => String(s).toLowerCase();
+// The reveal: inline banner today, a modal after the integrator's change.
+const REVEAL = "#revealModal, .reveal";
 
 /** What the player sees of the game, checked against the stored record. */
 async function assertGameShown(page, game, label) {
@@ -298,10 +301,10 @@ test("offline Solo regression: new game, several moves, reveal, history, progres
 
   // Move 1: the bot's locked word is revealed next to ours.
   const bot = await botWord(page);
-  const played = await playDistinct(page, 1);
-  await page.waitForSelector(".reveal");
-  const reveal = lower(await page.locator(".reveal").innerText());
+  const played = await playDistinct(page, 1, undefined, {continueLast: false});
+  const reveal = lower(await page.locator(REVEAL).first().innerText());
   assert.ok(reveal.includes(played[0]) && reveal.includes(lower(bot)), "reveal shows both words");
+  await continueReveal(page);
   played.push(...await playDistinct(page, 3));
   game = await soloRecord(page);
   assert.equal(game.moves.filter(m => m.words).length, 4);
@@ -347,6 +350,7 @@ test("offline Solo: one-letter words submit by Enter and by button; repeating on
     assert.notEqual(lower(await botWord(page)), "s");
     await c.first(page, "s");
     await waitForReveal(page, 0);
+    await continueReveal(page);
     let game = await soloRecord(page);
     assert.equal(game.language, c.lang);
     assert.equal(game.moves[0].words.a, "s", `${c.lang}: one-letter word accepted`);
@@ -393,15 +397,17 @@ test("offline Solo: play to move 19, then 20, final reveal then game over; no mo
   assert.equal(await page.isEnabled("#word"), true);
   await assertGameShown(page, game, "move 20 open");
 
-  const [last] = await playDistinct(page, 1);
-  await page.waitForSelector(".end");
+  const [last] = await playDistinct(page, 1, undefined, {continueLast: false});
   game = await soloRecord(page);
   assert.equal(game.status, "EXHAUSTED");
   assert.equal(game.mode, "solo", "mode at completion");
   assert.equal(game.moves.length, 20);
-  // The final reveal is shown together with the game-over state.
-  const reveal = lower(await page.locator(".reveal").innerText());
+  // The final reveal is shown first, then the game-over state.
+  await page.locator(REVEAL).first().waitFor({state: "visible"});
+  const reveal = lower(await page.locator(REVEAL).first().innerText());
   assert.ok(reveal.includes(last) && reveal.includes(lower(game.moves[19].words.b)), "final reveal visible");
+  await continueReveal(page);
+  await page.waitForSelector(".end");
   assert.equal(await page.isVisible(".end"), true);
   await assertGameShown(page, game, "game over");
   for (const sel of ["#word", "#lockBtn"]) {
@@ -439,7 +445,7 @@ test("offline Solo: play to move 19, then 20, final reveal then game over; no mo
   assert.equal(fresh.moves[0].prompts, null);
   assert.equal(await page.locator(".trail-row").count(), 0, "no stale history");
   assert.equal(await page.locator(".end").count(), 0);
-  assert.equal(await page.locator(".reveal").count(), 0, "no stale reveal");
+  assert.equal(await page.locator(REVEAL).count(), 0, "no stale reveal");
   assert.equal(await page.inputValue("#word"), "");
   assert.equal((await progressOf(page)).now, 1, "progress restarts");
   assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem("ssbd.store")).solo[id].status, id), "EXHAUSTED", "old game kept as finished");
@@ -515,14 +521,16 @@ test("offline Solo: a second Enter right after the final move does not skip the 
   // A child types the last word and presses Enter twice (or holds it a little too long).
   await page.fill("#word", word);
   await page.press("#word", "Enter");
-  await page.waitForSelector(".end");
+  await waitForReveal(page, 19);
   await page.keyboard.press("Enter");
   await page.waitForTimeout(300);
+  await continueReveal(page);
   const after = await soloRecord(page);
   assert.equal(after.id, game.id, "still on the finished game, not a new one");
   assert.equal(after.status, "EXHAUSTED");
+  await page.waitForSelector(".end");
   assert.equal(await page.isVisible(".end"), true, "game-over screen stays up");
-  assert.equal(await page.locator(".reveal").count(), 1, "final reveal stays up");
+  assert.ok(lower(await page.locator("#app").innerText()).includes(word), "final word still shown");
   assert.deepEqual(apiCalls, []);
   await context.close();
 });

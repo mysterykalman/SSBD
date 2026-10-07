@@ -187,3 +187,112 @@ test("setLast validates input", () => {
   store.setLast({kind: "family", id: "abc"});
   assert.equal(createStore().last().id, "abc");
 });
+
+// ---------- progress, completion and fresh games ----------
+
+const WORDS = ["apple", "river", "cloud", "tiger", "candle", "pencil", "rocket", "violin", "jungle", "turtle",
+  "pillow", "marble", "forest", "ladder", "rabbit", "button", "carrot", "dragon", "mirror", "kettle", "puzzle", "anchor"];
+/** Play `n` moves that never match the bot (a word equal to the bot's locked word is skipped). */
+function playNoMatch(game, n) {
+  for (let i = 0; i < n && game.status === "ACTIVE"; i++) {
+    const bot = game.moves[game.moves.length - 1].hidden.b.toLowerCase();
+    const mine = new Set(game.moves.filter(m => m.words).map(m => m.words.a));
+    const word = WORDS.find(w => w !== bot && !mine.has(w));
+    const r = submitSoloWord(game, word, tick());
+    assert.equal(r.ok, true, `move ${i + 1}: ${r.code}`);
+    game = r.game;
+  }
+  return game;
+}
+const revealedCount = g => g.moves.filter(m => m.words).length;
+
+test("progress persists move by move across refreshes, and mode stays solo", () => {
+  let game = newGame("p1");
+  assert.equal(game.mode, "solo");
+  createStore().saveSolo(game);
+  for (let n = 1; n <= 19; n++) {
+    game = playNoMatch(createStore().soloGame("p1"), 1);
+    createStore().saveSolo(game);
+    const back = createStore().soloGame("p1");
+    assert.equal(back.moves.length, n + 1, `open move ${n + 1}`);
+    assert.equal(revealedCount(back), n);
+    assert.equal(back.status, "ACTIVE");
+    assert.equal(back.mode, "solo");
+    assert.deepEqual(back.moves.at(-1).prompts, [back.moves[n - 1].words.a, back.moves[n - 1].words.b], "current prompt");
+  }
+});
+
+test("a game finished on move 20 reloads as EXHAUSTED with all 20 moves; a stale copy cannot reopen it", () => {
+  const store = createStore();
+  const atMove20 = playNoMatch(newGame("done"), 19);
+  assert.equal(atMove20.moves.length, 20);
+  assert.equal(atMove20.status, "ACTIVE");
+  store.saveSolo(atMove20);
+  const finished = playNoMatch(atMove20, 1);
+  assert.equal(finished.status, "EXHAUSTED");
+  store.saveSolo(finished);
+  store.setLast({kind: "solo", id: "done"});
+
+  const back = createStore().soloGame("done");
+  assert.deepEqual(back, finished);
+  assert.equal(back.moves.length, 20);
+  assert.equal(revealedCount(back), 20);
+  assert.equal(back.mode, "solo");
+  assert.equal(submitSoloWord(back, "zebra").code, "GAME_OVER", "no move 21");
+
+  // Another tab still holding the move-20-open copy saves it: the finished game wins.
+  const stale = createStore();
+  stale.saveSolo(atMove20);
+  assert.equal(createStore().soloGame("done").status, "EXHAUSTED");
+  // Same for a matched game.
+  let m = newGame("won");
+  store.saveSolo(m);
+  m = submitSoloWord(m, m.moves[0].hidden.b, tick()).game;
+  assert.equal(m.status, "MATCHED");
+  store.saveSolo(m);
+  createStore().saveSolo(newGame("won"));
+  assert.equal(createStore().soloGame("won").status, "MATCHED");
+});
+
+test("a new game after a finished one inherits nothing (moves, prompts, seen, status)", () => {
+  const store = createStore();
+  const old = playNoMatch(newGame("old"), 20);
+  assert.equal(old.status, "EXHAUSTED");
+  store.saveSolo(old);
+  store.markSeen("old", 20);
+  store.setLast({kind: "solo", id: "old"});
+
+  const fresh = newGame("new");
+  store.saveSolo(fresh);
+  store.setLast({kind: "solo", id: "new"});
+  const reloaded = createStore();
+  const g = reloaded.soloGame("new");
+  assert.equal(g.status, "ACTIVE");
+  assert.equal(g.mode, "solo");
+  assert.equal(g.moves.length, 1);
+  assert.equal(g.moves[0].words, null);
+  assert.equal(g.moves[0].prompts, null);
+  assert.equal(g.moves[0].number, 1);
+  assert.equal(reloaded.seen("new"), 0, "reveal-seen counter starts at zero");
+  assert.equal(reloaded.last().id, "new");
+  // The old game is untouched and still finished.
+  assert.deepEqual(reloaded.soloGame("old"), old);
+  // Playing the new game never changes the old one, and every word is allowed again.
+  const next = playNoMatch(g, 1);
+  assert.equal(next.moves[0].words.a, WORDS[0] === g.moves[0].hidden.b.toLowerCase() ? WORDS[1] : WORDS[0]);
+  reloaded.saveSolo(next);
+  assert.deepEqual(createStore().soloGame("old"), old);
+  assert.equal(revealedCount(createStore().soloGame("new")), 1);
+});
+
+test("pruning never drops an unfinished game in favour of finished ones", () => {
+  const store = createStore();
+  const active = play(newGame("keep-active"), 2); // oldest, unfinished, not the last-opened game
+  store.saveSolo(active);
+  for (let i = 0; i < MAX_SOLO_GAMES + 5; i++) {
+    let g = newGame(`f${i}`);
+    g = submitSoloWord(g, g.moves[0].hidden.b, tick()).game; // finished (matched)
+    store.saveSolo(g);
+  }
+  assert.deepEqual(createStore().soloGame("keep-active"), active);
+});

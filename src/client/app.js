@@ -350,12 +350,12 @@ function renderHome() {
       h("p", {class: "lede"}, t("heroCopy"))),
     h("div", {class: "start-grid"},
       h("section", {class: "card start solo-card", "aria-labelledby": "soloTitle"},
-        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name, {cls: "you"}), badge(null, {bot: true})),
+        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {bot: true})),
         h("h2", {id: "soloTitle"}, t("soloTitle")),
         h("p", {}, t("soloCopy")),
         h("button", {class: "btn big", type: "button", id: "startSolo", onclick: () => startSolo()}, t("soloStart"))),
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
-        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name, {cls: "you"}), badge(null, {cls: "other"})),
+        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {cls: "other"})),
         h("h2", {id: "familyTitle"}, t("familyTitle")),
         h("p", {}, familyDisabled ? t("familyOffline") : t("familyCopy")),
         h("div", {class: "row"},
@@ -625,8 +625,7 @@ function playPanel(view, move) {
 function endPanel(view, last, fresh) {
   const matched = view.status === "MATCHED";
   const solo = isSoloLike(view);
-  // The last reveal shows first; the end panel slides in just after it (instantly with reduced motion).
-  return h("div", {class: `end ${matched ? "win" : "over"} ${fresh && !reducedMotion() ? "later" : ""}`},
+  return h("div", {class: `end ${matched ? "win" : "over"}`},
     matched
       ? h("div", {class: "end-icon", "aria-hidden": "true"}, "🎉")
       : sleepyToken(fresh && !reducedMotion()),

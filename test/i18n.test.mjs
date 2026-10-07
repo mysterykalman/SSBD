@@ -74,3 +74,22 @@ test("translator substitutes variables and falls back to English, then the key",
   lang = "en";
   assert.equal(t("langNoteCopy", {game: languageName(t, "fr"), ui: languageName(t, "en")}), "Its words stay in French. Start a new game to play in English.");
 });
+
+test("copy stays warm and kid-facing: no technical or failure words", () => {
+  const banned = {
+    en: [/\berrors?\b/i, /\binvalid\b/i, /no moves left/i, /different,? so keep going/i, /\bfail(s|ed|ure)?\b/i, /\bwrong\b/i,
+      /\bnot allowed\b/i, /\bforbidden\b/i, /\billegal\b/i, /\brejected\b/i, /\bexception\b/i, /\bserver\b/i, /\bnull\b/i, /\bundefined\b/i, /\byou lose\b/i],
+    fr: [/\berreurs?\b/i, /\binvalides?\b/i, /plus de coups/i, /\béchec\b/i, /\béchoué/i, /\bimpossible\b/i, /problème est survenu/i,
+      /\binterdit/i, /\brefusé/i, /\bserveur\b/i, /\bnull\b/i, /\bundefined\b/i, /\btu as perdu\b/i]
+  };
+  for (const lang of LANGUAGES) {
+    for (const [key, value] of Object.entries(STRINGS[lang])) {
+      for (const re of banned[lang]) assert.doesNotMatch(value, re, `${lang}.${key}: ${value}`);
+    }
+  }
+});
+
+test("one-letter words are welcome: no copy asks for two letters", () => {
+  assert.doesNotMatch(STRINGS.en.errTOO_SHORT, /two letters/i);
+  assert.doesNotMatch(STRINGS.fr.errTOO_SHORT, /deux lettres/i);
+});

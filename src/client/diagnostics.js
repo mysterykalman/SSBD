@@ -25,3 +25,6 @@ export function trace(event, data = {}) {
   if (log.length > MAX_ENTRIES) log.splice(0, log.length - MAX_ENTRIES);
   try { console.debug("[submit]", event, entry); } catch {}
 }
+
+// Decide once at load: the app rewrites the URL (and drops ?debug=1) as soon as a game opens.
+diagnosticsEnabled();

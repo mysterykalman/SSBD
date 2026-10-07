@@ -1,3 +1,4 @@
+// @ts-check
 // Cloudflare Worker entry: the family-game API plus the app shell.
 // Static files are embedded at build time (see scripts/build.mjs).
 
@@ -6,9 +7,15 @@ import {assets} from "virtual:assets";
 
 const SHELL_ROUTES = /^\/(?:$|index\.html$|games\/|join\/|solo\/?)/;
 
+/**
+ * @param {string} path
+ * @param {Request} request
+ * @returns {Response | null}
+ */
 function serveAsset(path, request) {
   const asset = assets[path];
   if (!asset) return null;
+  /** @type {Record<string, string>} */
   const headers = {"content-type": asset.type, "cache-control": asset.cache, etag: asset.etag};
   if (path === "/sw.js") headers["service-worker-allowed"] = "/";
   if (request.headers.get("if-none-match") === asset.etag) return new Response(null, {status: 304, headers});
@@ -16,6 +23,11 @@ function serveAsset(path, request) {
 }
 
 export default {
+  /**
+   * @param {Request} request
+   * @param {{DB?: import("../shared/types.js").D1Database}} env
+   * @returns {Promise<Response>}
+   */
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) {
@@ -28,7 +40,8 @@ export default {
     }
     const direct = serveAsset(url.pathname, request);
     if (direct) return direct;
-    if (SHELL_ROUTES.test(url.pathname)) return serveAsset("/index.html", request);
+    const shell = SHELL_ROUTES.test(url.pathname) ? serveAsset("/index.html", request) : null;
+    if (shell) return shell;
     return new Response("Not found", {status: 404, headers: {"content-type": "text/plain"}});
   }
 };

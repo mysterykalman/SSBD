@@ -29,9 +29,34 @@ export async function botWord(page) {
   });
 }
 
-export async function lockIn(page, word) {
+/**
+ * If a reveal modal is up (or about to come up), press its "Keep playing" button and wait for it to close.
+ * A no-op when the app shows the reveal inline: if neither #revealModal nor #revealContinue shows up
+ * within a short grace period, it returns straight away (so long games stay fast).
+ */
+export async function continueReveal(page, {timeout = 3000, grace = 300} = {}) {
+  const present = () => page.locator("#revealModal, #revealContinue").count();
+  const graceEnd = Date.now() + grace;
+  while (!(await present())) {
+    if (Date.now() > graceEnd) return false;
+    await page.waitForTimeout(50);
+  }
+  const button = page.locator("#revealContinue");
+  try {
+    await button.waitFor({state: "visible", timeout});
+  } catch {
+    return false;
+  }
+  await button.click();
+  await page.locator("#revealModal").waitFor({state: "hidden", timeout}).catch(() => {});
+  return true;
+}
+
+/** Type a word and press the lock button. `{reveal: true}` also dismisses a reveal modal afterwards. */
+export async function lockIn(page, word, {reveal = false} = {}) {
   await page.fill("#word", word);
   await page.click("#lockBtn");
+  if (reveal) await continueReveal(page);
 }
 
 export async function noHorizontalScroll(page) {
@@ -39,9 +64,10 @@ export async function noHorizontalScroll(page) {
 }
 
 /** Submit with the Enter key instead of the button. */
-export async function lockInEnter(page, word) {
+export async function lockInEnter(page, word, {reveal = false} = {}) {
   await page.fill("#word", word);
   await page.press("#word", "Enter");
+  if (reveal) await continueReveal(page);
 }
 
 /** The Solo game record for the page's /solo/<id> URL, straight from device storage. */
@@ -69,9 +95,10 @@ export const PLAY_WORDS = ["whale", "garden", "pencil", "rocket", "banana", "vio
 
 /**
  * Play `count` Solo moves without ever matching the bot, so the game keeps going.
- * Words already played on this side are skipped. Returns the words played.
+ * Words already played on this side are skipped. Each reveal modal is dismissed, except the last one
+ * when `continueLast` is false (so a test can inspect it). Returns the words played.
  */
-export async function playDistinct(page, count, pool = PLAY_WORDS) {
+export async function playDistinct(page, count, pool = PLAY_WORDS, {continueLast = true} = {}) {
   const played = [];
   for (let i = 0; i < count; i++) {
     const game = await soloRecord(page);
@@ -83,6 +110,7 @@ export async function playDistinct(page, count, pool = PLAY_WORDS) {
     const before = revealedCount(game);
     await lockIn(page, word);
     await waitForReveal(page, before);
+    if (continueLast || i < count - 1) await continueReveal(page);
     played.push(word);
   }
   return played;

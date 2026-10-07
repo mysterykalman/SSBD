@@ -9,6 +9,7 @@ import {wordKey} from "./words.js";
 
 /**
  * @typedef {import("./types.js").GameState} GameState
+ * @typedef {import("./types.js").BotQuality} BotQuality
  * @typedef {import("./types.js").Move} Move
  * @typedef {import("./types.js").WordError} WordError
  * @typedef {{ok: true, game: GameState, move: Move}} SoloSubmitOk
@@ -29,7 +30,8 @@ function lockBotWord(game) {
     ? chooseResponse({prompts: move.prompts, language: game.language, excludeKeys, rng})
     : chooseOpening({language: game.language, excludeKeys, rng});
   const {hidden: _previous, ...rest} = move;
-  const locked = {...rest, hidden: {b: pick.word, quality: pick.quality}};
+  /** @type {Move} */
+  const locked = {...rest, hidden: {b: pick.word, quality: /** @type {BotQuality} */ (pick.quality)}};
   return {...game, moves: [...game.moves.slice(0, -1), locked]};
 }
 

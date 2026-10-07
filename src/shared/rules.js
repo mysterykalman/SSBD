@@ -137,11 +137,13 @@ export function revealMove(game, words, now = new Date().toISOString()) {
   if (isFinished(game)) throw new Error("Game is already finished");
   const move = currentMove(game);
   if (!move || move.status !== "OPEN") throw new Error("Move is not open");
-  if (!words || !wordKey(words.a) || !wordKey(words.b)) throw new Error("Both words are needed to reveal a move");
-  const status = moveOutcome(move.number, words.a, words.b);
-  const closed = {...move, words: {a: words.a, b: words.b}, status, revealedAt: now};
+  const a = words?.a, b = words?.b;
+  if (!a || !b || !wordKey(a) || !wordKey(b)) throw new Error("Both words are needed to reveal a move");
+  const status = moveOutcome(move.number, a, b);
+  /** @type {Move} */
+  const closed = {...move, words: {a, b}, status, revealedAt: now};
   const moves = [...game.moves.slice(0, -1), closed];
-  if (status === "REVEALED") moves.push(openMove(move.number + 1, [words.a, words.b], now));
+  if (status === "REVEALED") moves.push(openMove(move.number + 1, [a, b], now));
   return {...game, moves, status: status === "REVEALED" ? "ACTIVE" : status, updatedAt: now};
 }
 
