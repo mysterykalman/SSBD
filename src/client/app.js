@@ -682,8 +682,10 @@ function startReveal(view, move) {
           revealWord(t("revealYourWord"), shownWords(view, move)[view.youSide], "you"),
           h("span", {class: "op rv-step", "aria-hidden": "true"}, move.status === "MATCHED" ? "=" : "+"),
           solo ? garyRevealWord() : revealWord(t("revealTheirWord", {name: otherLabel(view)}), shownWords(view, move)[view.otherSide], "other")),
-        reaction ? h("p", {class: "gary-line", id: "garyLine", hidden: true}, h("span", {class: "gary-says"})) : null,
-        h("p", {class: "rv-outcome rv-step"}, move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")),
+        reaction ? garyReaction() : null,
+        h("p", {class: "rv-outcome rv-step"}, ...(move.status === "MATCHED"
+          ? [h("span", {class: "rv-headline"}, t("revealMatchTitle")), " ", h("span", {class: "rv-subline"}, matchCopy(view, move))]
+          : [move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")])),
         move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, t("revealLoose")) : null,
         ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(move)))));
   document.body.append(dlg);
@@ -715,6 +717,21 @@ function garyRevealWord() {
   return h("div", {class: "rv-word other gary rv-step", "data-gary": "word"},
     h("small", {}, garyArt("meh", "tiny"), t("revealBotWord")),
     h("span", {class: "chip-word", id: "garyWord", lang: state.game?.language}));
+}
+
+/** "You both said WORD. Your brains did a high five." with the player's own (matched) word. */
+function matchCopy(view, move) {
+  return t("revealMatchCopy", {word: shownWords(view, move)[view.youSide].toUpperCase()});
+}
+
+/**
+ * Gary's reaction: his avatar with the remark in a speech bubble beside it, so it reads as Gary
+ * talking, not as a system message. The remark is typed into .gary-says (see garySays).
+ */
+function garyReaction() {
+  return h("div", {class: "gary-reaction", id: "garyLine", hidden: true},
+    garyArt("meh", "gary-reaction-art"),
+    h("p", {class: "gary-bubble"}, h("span", {class: "gary-says"})));
 }
 
 /** Type Gary's line (one or more short phrases with a beat between them). */
@@ -781,7 +798,7 @@ async function runReveal(view, move, ended, token) {
   announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: said[view.youSide].toUpperCase()}),
     t("revealSaid", {name: sideLabel(view, view.otherSide), word: said[view.otherSide].toUpperCase()}),
     remark ? t("revealSaid", {name: t("garyName"), word: remark}) : "",
-    move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
+    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : t("keepPlaying"));
   result.append(button);
   setRevealPhase("ready");
@@ -881,7 +898,7 @@ function endPanel(view, last, fresh) {
       : solo ? garyGoodbye(fresh && !reducedMotion()) : sleepyToken(fresh && !reducedMotion()),
     h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
     h("p", {}, matched
-      ? t("winCopy", {word: last.words[view.youSide].toUpperCase(), n: last.number})
+      ? t("winCopy", {n: last.number})
       : t("gameOverCopy")),
     h("div", {class: "row center end-actions"},
       h("button", {class: "btn big", type: "button", id: "newGameBtn", disabled: !solo && !state.online && !view.rematchId, onclick: event => {

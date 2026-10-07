@@ -495,6 +495,8 @@ main:focus { outline: none; }
 .rv-word small { font-size: .72rem; letter-spacing: .1em; color: var(--muted); font-weight: 800; }
 .rv-word .chip-word { font-size: clamp(1.4rem, 6vw, 2.1rem); line-height: 1.1; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
 .rv-outcome { font-weight: 800; font-size: 1.1rem; line-height: 1.35; text-wrap: balance; }
+.rv-outcome .rv-headline { display: block; font-size: 1.35rem; letter-spacing: .02em; }
+.rv-outcome .rv-subline { display: block; }
 .rv-note { color: var(--muted); font-size: .95rem; }
 .rv-next { padding: 8px 14px; border: 2px dashed var(--ink); border-radius: 14px; background: var(--paper); font-weight: 800; overflow-wrap: anywhere; }
 .rv-continue { margin-top: 4px; }
@@ -524,8 +526,14 @@ main:focus { outline: none; }
 .rv-word.gary small { display: inline-flex; align-items: center; gap: 6px; }
 .rv-word.gary .tiny { width: 26px; height: 26px; }
 .rv-word .chip-word .ghost { visibility: hidden; }
-.gary-line { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin: 0; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 14px 14px 14px 4px; background: var(--paper); font-weight: 800; font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
-.gary-line[hidden] { display: none; }
+/* Gary's reaction: his avatar, then a speech bubble whose tail points at him. */
+.gary-reaction { display: inline-flex; align-items: flex-end; gap: 10px; max-width: 100%; margin: 0; }
+.gary-reaction[hidden] { display: none; }
+.gary-reaction .gary-reaction-art { width: 40px; height: 40px; }
+.gary-bubble { position: relative; min-width: 0; margin: 0; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 14px 14px 14px 4px; background: var(--paper); font-weight: 800; font-size: 1rem; line-height: 1.3; text-align: left; overflow-wrap: anywhere; }
+.gary-bubble::before, .gary-bubble::after { content: ""; position: absolute; bottom: 6px; border-style: solid; border-color: transparent; }
+.gary-bubble::before { left: -10px; border-width: 6px 10px 6px 0; border-right-color: var(--ink); }
+.gary-bubble::after { left: -7px; border-width: 5px 8px 5px 0; border-right-color: var(--paper); margin-bottom: 1px; }
 .gary-says .ghost { visibility: hidden; }
 
 /* Solo game over: sleepy Gary says goodbye. */

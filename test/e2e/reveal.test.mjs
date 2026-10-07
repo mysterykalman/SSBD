@@ -182,7 +182,7 @@ test("a match: the modal reveals it, then Continue shows the celebration", async
   await page.waitForSelector("#word");
   await submit(page, await botWord(page));
   await page.waitForSelector("#revealContinue");
-  assert.match(await page.locator("#revealModal").innerText(), /SAME WORD/);
+  assert.match(await page.locator("#revealModal").innerText(), /THAT’S A MATCH!/);
   assert.equal(await page.locator("#app .end").count(), 0, "game over waits for the reveal to be dismissed");
   assert.match(await page.locator("#revealContinue").innerText(), /Continue/);
   await page.click("#revealContinue");
@@ -348,13 +348,13 @@ test("an inflected match (Gary's word, pluralised) looks exactly like a normal w
   // Both sides read as the player's own word: the inflection rule is invisible.
   assert.deepEqual((await page.locator("#revealModal .rv-word .chip-word .typed, #revealModal .rv-word.you .chip-word").allTextContents()).map(w => w.trim().toUpperCase()), [plural.toUpperCase(), plural.toUpperCase()]);
   assert.match(modal, new RegExp(`GARY.S WORD\\s+${plural}`, "i"), "Gary's side shows the player's form");
-  assert.match(modal, /SAME WORD! You win!/, "the standard exact-match copy");
+  assert.match(modal, new RegExp(`THAT’S A MATCH!\\s+You both said ${plural}\\. Your brains did a high five\\.`, "i"), "the standard match copy, in the player's word");
   assert.doesNotMatch(modal, /close enough|plural|schmural|tense|variant|same idea/i);
   assert.equal(await page.locator("#revealNext").count(), 0, "no 'next move starts with' for a match");
   await page.click("#revealContinue");
   await page.waitForSelector("#app .end.win");
   const end = await page.locator("#app .end").innerText();
-  assert.match(end, new RegExp(`You both said ${plural} on move 1\\.`, "i"), "standard win copy, in the player's word");
+  assert.match(end, /YOU DID IT!\s+Matched on move 1\. Somebody cue the tiny parade\./, "standard win copy");
   assert.doesNotMatch(end, /close enough|plural|schmural|tense|variant|same idea/i);
   const trailRow = await page.locator("#app .trail-row.match").innerText();
   assert.equal((trailRow.match(new RegExp(`\\b${plural}\\b`, "gi")) || []).length, 2, "the trail shows the player's word on both sides");

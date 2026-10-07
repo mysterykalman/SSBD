@@ -161,12 +161,12 @@ test("an inflected Family match looks like a normal win, each player seeing thei
     const words = (await page.locator("#revealModal .rv-word .chip-word").allTextContents()).map(w => w.trim().toUpperCase());
     assert.deepEqual(words, [mine, mine], `${mine}: both sides read as this player's word`);
     const modal = await page.locator("#revealModal").innerText();
-    assert.match(modal, /SAME WORD! You win!/);
+    assert.match(modal, new RegExp(`THAT’S A MATCH!\\s+You both said ${mine}\\. Your brains did a high five\\.`));
     assert.doesNotMatch(modal, /close enough|plural|schmural|tense|variant|same idea/i);
     await page.click("#revealContinue");
     await page.waitForSelector("#app .end.win");
     const end = await page.locator("#app .end").innerText();
-    assert.match(end, new RegExp(`You both said ${mine} on move 1\\.`));
+    assert.match(end, /YOU DID IT!\s+Matched on move 1\. Somebody cue the tiny parade\./);
     assert.doesNotMatch(end, /close enough|plural|schmural|tense|variant/i);
     assert.doesNotMatch(await visibleText(page), EMOJI);
   }

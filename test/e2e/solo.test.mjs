@@ -109,7 +109,7 @@ test("Solo survives refresh and reopening, and a match ends the game", async () 
   const bot = await botWord(page);
   await lockIn(page, bot);
   await page.waitForSelector(".end.win");
-  assert.match(await page.locator(".board").innerText(), /Same same/i);
+  assert.match(await page.locator(".board").innerText(), /YOU DID IT!/);
   assert.equal(await page.locator("#word").count(), 0);
   await page.click("#newGameBtn");
   await page.waitForSelector("#word");

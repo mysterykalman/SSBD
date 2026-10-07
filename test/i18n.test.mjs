@@ -55,7 +55,7 @@ test("English has no stray space before punctuation", () => {
 test("French copy speaks to kids with tu, not vous", () => {
   const formal = /\b(vous|votre|vos)\b/i;
   // The few lines addressed to both players together legitimately use the plural.
-  const plural = new Set(["heroTitle", "heroCopy", "firstSolo", "firstFamily", "revealDifferent", "winCopy"]);
+  const plural = new Set(["heroTitle", "heroCopy", "firstSolo", "firstFamily", "revealDifferent", "revealMatchCopy", "winCopy"]);
   for (const [key, value] of Object.entries(STRINGS.fr)) {
     if (!plural.has(key)) assert.doesNotMatch(value, formal, `fr.${key}`);
   }

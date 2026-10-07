@@ -75,7 +75,7 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
   await ben.fill("#word", "Space");
   await ben.click("#lockBtn");
   for (const page of [ben, ana]) {
-    assert.match(await revealShown(page), /SAME WORD/);
+    assert.match(await revealShown(page), /THAT’S A MATCH!/);
     assert.equal(await page.locator("#app .end").count(), 0, "game over waits for the reveal to be dismissed");
     assert.ok(await continueReveal(page));
     await page.waitForSelector(".end.win");
