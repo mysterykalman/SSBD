@@ -1,8 +1,5 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile} from "node:fs/promises";
-import {tmpdir} from "node:os";
-import {dirname, join} from "node:path";
 import {botWord, continueReveal, launch, lockIn, lockInEnter, playDistinct, progressOf, revealShown, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
@@ -189,60 +186,6 @@ test("service worker: one versioned cache, no API responses cached, and going ba
   await page.waitForSelector("#offlinePill", {state: "hidden"});
   assert.equal(await page.isDisabled("#createFamily"), false);
   await context.close();
-});
-
-test("service worker update: new version waits for Reload, then switches over completely", async () => {
-  // A second "release": the same build with a different cache version, served on the same origin.
-  const dir = await mkdtemp(join(tmpdir(), "ssbd-sw-"));
-  const context = await browser.newContext();
-  let local = await startServer();
-  let next;
-  try {
-    const page = await visitOnce(context, local.url);
-    await page.click("#startSolo");
-    await playMoves(page, ["kite"]);
-    const trail = await trailText(page);
-    const [oldCache] = await page.evaluate(() => caches.keys());
-    const oldVersion = oldCache.slice("shell-".length);
-    const newVersion = "0123456789".slice(0, oldVersion.length);
-    // Copy the build with the version swapped in every file that carries it.
-    for (const file of await readdir("dist", {recursive: true})) {
-      const from = join("dist", file);
-      if ((await stat(from)).isDirectory()) continue;
-      await mkdir(dirname(join(dir, file)), {recursive: true});
-      await writeFile(join(dir, file), (await readFile(from, "utf8")).split(oldVersion).join(newVersion));
-    }
-    assert.ok((await readFile(join(dir, "sw.js"), "utf8")).includes(newVersion));
-    await local.stop();
-    local = null;
-    next = await startServer({port: Number(new URL(page.url()).port), staticDir: dir});
-
-    await page.reload();
-    await page.waitForSelector(".toast-action", {timeout: 10000});
-    // Still the old version in control until the player chooses to reload.
-    assert.deepEqual((await page.evaluate(() => caches.keys())).sort(), [`shell-${newVersion}`, oldCache].sort());
-    const scriptBefore = await page.evaluate(() => navigator.serviceWorker.controller.scriptURL);
-    assert.ok(scriptBefore.endsWith("/sw.js"));
-
-    await Promise.all([page.waitForEvent("load"), page.click(".toast-action")]);
-    await page.waitForFunction(async v => {
-      const keys = await caches.keys();
-      return keys.length === 1 && keys[0] === `shell-${v}`;
-    }, newVersion, {timeout: 10000});
-    await page.waitForSelector(".trail-row");
-    assert.deepEqual(await trailText(page), trail, "game survives the update");
-
-    // The new version works offline too.
-    await context.setOffline(true);
-    await page.reload();
-    await page.waitForSelector(".trail-row");
-    assert.deepEqual(await trailText(page), trail);
-  } finally {
-    await context.close();
-    await local?.stop();
-    await next?.stop();
-    await rm(dir, {recursive: true, force: true});
-  }
 });
 
 // ---------- round 2: offline Solo regression ----------

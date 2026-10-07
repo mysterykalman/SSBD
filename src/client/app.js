@@ -1518,31 +1518,72 @@ function boot() {
 // A new version waits (see sw.js) until the player taps Reload, so a page
 // never mixes files from two versions. Tapping Reload lets it take over, and
 // the page reloads once it controls this tab.
+/** This page's build version (stamped into index.html by scripts/build.mjs). */
+const PAGE_VERSION = document.querySelector('meta[name="app-version"]')?.getAttribute("content") || "";
+const UPDATE_CHECK_MS = 30 * 60 * 1000;
+
+/**
+ * Service worker and updates. A new deployment's worker takes over by itself (see sw.js), and
+ * navigations are network-first, so a fresh visit or a reload always shows the newest frontend.
+ * What is left for the page: an open tab that is now older than the worker in control offers
+ * "A new version is ready" + Reload, and Reload always lands on the new shell (it activates any
+ * waiting worker first, then reloads).
+ */
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-  let announced = null, reloading = false, requested = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!requested || reloading) return;
+  let offered = false, reloading = false;
+  const reload = () => {
+    if (reloading) return;
     reloading = true;
     location.reload();
-  });
-  const announce = worker => {
-    if (!worker || announced === worker || !navigator.serviceWorker.controller) return;
-    announced = worker;
-    toast(t("updateReady"), {timeout: 0, action: {label: t("reload"), run: () => {
-      requested = true;
-      if (worker.state === "redundant" || worker.state === "activated") return location.reload();
-      worker.postMessage({type: "SKIP_WAITING"});
-    }}});
   };
+  const activateAndReload = async () => {
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.update().catch(() => {});
+      const waiting = registration?.waiting;
+      if (waiting) {
+        // An older-style worker may still be waiting: activate it, then reload under it.
+        const switched = new Promise(resolve => navigator.serviceWorker.addEventListener("controllerchange", resolve, {once: true}));
+        waiting.postMessage({type: "SKIP_WAITING"});
+        await Promise.race([switched, new Promise(resolve => setTimeout(resolve, 3000))]);
+      }
+    } catch {}
+    reload();
+  };
+  const offer = () => {
+    if (offered) return;
+    offered = true;
+    toast(t("updateReady"), {timeout: 0, action: {label: t("reload"), run: activateAndReload}});
+  };
+  /** Is the worker in control serving a different build than this page? (Its cache is named after its version.) */
+  const pageIsOutdated = async () => {
+    if (!PAGE_VERSION || !navigator.serviceWorker.controller) return false;
+    try {
+      const keys = (await caches.keys()).filter(key => key.startsWith("shell-"));
+      return keys.length > 0 && !keys.includes(`shell-${PAGE_VERSION}`);
+    } catch {
+      return false;
+    }
+  };
+  const check = async () => { if (await pageIsOutdated()) offer(); };
+  navigator.serviceWorker.addEventListener("controllerchange", check);
   navigator.serviceWorker.register("/sw.js", {updateViaCache: "none"}).then(registration => {
-    if (registration.waiting) announce(registration.waiting);
+    if (registration.waiting && navigator.serviceWorker.controller) offer();
     registration.addEventListener("updatefound", () => {
       const worker = registration.installing;
       worker?.addEventListener("statechange", () => {
-        if (worker.state === "installed") announce(registration.waiting || worker);
+        if (worker.state === "activated") check();
+        // A worker that stays waiting (an older-style one) still gets the Reload offer.
+        if (worker.state === "installed" && registration.waiting === worker && navigator.serviceWorker.controller) setTimeout(() => { if (registration.waiting === worker) offer(); }, 1000);
       });
     });
+    // Long-lived tabs look for a new deployment when they come back, and every half hour.
+    const update = () => registration.update().catch(() => {});
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && state.online) update(); });
+    window.addEventListener("online", update);
+    setInterval(() => { if (!document.hidden && state.online) update(); }, UPDATE_CHECK_MS);
+    check();
   }).catch(() => {});
 }
 

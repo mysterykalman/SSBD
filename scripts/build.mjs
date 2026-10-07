@@ -25,6 +25,8 @@ const swTemplate = await readFile(src("client/sw.js"), "utf8");
 // The version covers every precached file and the worker's own logic, so any
 // change produces a new cache and a clean, all-at-once switch.
 const version = hash(appJs + css + html + icon + manifest + swTemplate);
+// The page carries its own version so it can tell when a newer worker has taken over.
+const page = html.replace("%APP_VERSION%", version);
 const swSource = swTemplate
   .replace("%VERSION%", version)
   .replace("%PRECACHE%", JSON.stringify(["/", appName, cssName, "/icon.svg", "/manifest.webmanifest"]));
@@ -32,7 +34,7 @@ if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEH
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
 const files = {
-  "/index.html": html,
+  "/index.html": page,
   [appName]: appJs,
   [cssName]: css,
   "/sw.js": sw,

@@ -459,7 +459,9 @@ Never edit it by hand.
 
 ### Offline Solo
 - **Caching.** A versioned app-shell service worker precaches the shell. The API
-  is never cached. Updates wait for the player's Reload, so versions never mix.
+  is never cached. Navigations are network-first (cached shell only offline), and a
+  new worker takes over at once and deletes older caches (see "Service-worker
+  updates" below).
 - **Storage.** Solo lives only on the device (`localStorage`, schema-versioned)
   and never calls the API. Old data is migrated or backed up, never dropped.
   Saves merge safely across tabs, and the active game is never pruned.
@@ -672,3 +674,32 @@ next move. "Relates to both words" is only the entry ticket.
   SISTER+PLAY, sideways swaps, French, the bounded influence of the trail, the diagnostics shape
   (every score equals its documented weighted sum) and Solo recording. `test/e2e/gary-debug.test.mjs`
   checks the panel and that players never see it.
+
+## Service-worker updates (latest)
+
+The preview could show an older app shell, and the "A new version is ready" Reload could land on
+stale content. Causes found in the previous worker and page:
+- **Navigations were cache-first, forever.** Every in-app page was answered from the cached shell,
+  so a fresh visit to a newer deployment showed the old frontend until the update flow finished.
+- **Reload could activate nothing.** The banner was bound to the first new worker it saw. If
+  another deploy landed first, that worker became redundant, and Reload just reloaded under the
+  old active worker, which served the stale shell again.
+- **Open tabs never checked for updates** on their own.
+
+Now (`src/client/sw.js`, `registerServiceWorker` in `src/client/app.js`):
+- Navigations (`/`, `/games/…`, `/join/…`, `/solo…`) are network-first with a 4 s timeout; the
+  cached shell answers only when the network fails or hangs (offline Solo keeps working).
+- A new worker calls `skipWaiting()` on install, `clients.claim()` on activate, and deletes every
+  other `shell-*` cache. Safe because the app is one script and one stylesheet loaded at start-up.
+- The page knows its own build (`<meta name="app-version">`, stamped by `scripts/build.mjs`). When
+  the worker in control serves a different build, the open tab offers "A new version is ready";
+  Reload activates any waiting worker first, then reloads (a network-first navigation, so always
+  the newest shell). A page that is already current never gets the offer.
+- Tabs call `registration.update()` when they become visible, come back online, and every 30 min.
+- `/sw.js` is sent with `Cache-Control: no-store` (vercel.json) and registered with
+  `updateViaCache: "none"`; `/api/*` is never intercepted or cached.
+- Tests: `test/e2e/sw-update.test.mjs`: the real previous release (its cache-first, waiting
+  worker, from git) followed by this deployment; a newer deployment seen by a fresh visit and by an
+  open older tab's Reload; the worker never caching `/api/*` and Family mode using the live API.
+  Putting cache-first navigation back makes the fresh-visit test fail.
+
