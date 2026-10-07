@@ -448,7 +448,8 @@ function startSolo(language = state.lang) {
   if (!store.saveSolo(game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
   navigate(`/solo/${game.id}`);
   $("word")?.focus(); // Solo renders synchronously; focus now so typing right away is never lost
-  setTimeout(() => { if (document.activeElement?.id !== "word") $("word")?.focus(); }, 30);
+  // Retry only if focus was lost (e.g. to <body>), never pulling it away from a control the player moved to.
+  setTimeout(() => { const active = document.activeElement; if (!active || active === document.body) $("word")?.focus(); }, 30);
 }
 
 async function createFamily(language = state.lang) {

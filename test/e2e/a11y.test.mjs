@@ -400,3 +400,18 @@ test("word box: native spellcheck in the game's language, never auto-changes the
     await context.close();
   }
 });
+
+test("starting a Solo game never pulls focus back from a control the player moved to", async () => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto(server.url);
+  await page.waitForSelector("#startSolo");
+  // Start the game and move focus to the FR toggle in the same tick, before any delayed focus runs.
+  await page.evaluate(() => { document.getElementById("startSolo").click(); document.querySelector('[data-lang="fr"]').focus(); });
+  await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(() => document.activeElement?.dataset.lang), "fr", "focus stays where the player put it");
+  await page.keyboard.press("Space");
+  await page.waitForFunction(() => document.documentElement.lang === "fr");
+  assert.equal(await page.inputValue("#word"), "", "the keypress did not land in the word box");
+  await context.close();
+});
