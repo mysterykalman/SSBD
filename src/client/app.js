@@ -17,6 +17,7 @@ const state = {
   lang: store.language() || ((navigator.language || "en").toLowerCase().startsWith("fr") ? "fr" : "en"),
   player: store.player(),
   online: navigator.onLine !== false,
+  apiDown: false, // the Family-mode API is unreachable or not answering with JSON (Solo is unaffected)
   screen: "home",
   game: null, // normalized view of the open game
   // Reveal sequence (see "reveal sequence" below). While `reveal` is set, the board shows the
@@ -121,15 +122,53 @@ async function api(path, body) {
   } finally {
     clearTimeout(timer);
   }
-  let data = {};
-  try { data = await response.json(); } catch {}
+  /** @type {any} */
+  let data = null;
+  if (/json/i.test(response.headers.get("content-type") || "")) {
+    try { data = await response.json(); } catch {}
+  }
+  // No JSON at all (e.g. a host's HTML error page), or the server saying its database is down:
+  // Family mode is unavailable, which is different from an error in this one request.
+  if (!data || UNAVAILABLE_CODES.has(data.code)) {
+    setApiDown(true);
+    const error = new Error(t("errUNAVAILABLE"));
+    error.code = "UNAVAILABLE";
+    error.data = data || {};
+    throw error;
+  }
   if (!response.ok) {
     const error = new Error(data.error || t("errSERVER"));
     error.code = data.code || "SERVER";
     error.data = data;
     throw error;
   }
+  setApiDown(false);
   return data;
+}
+
+const UNAVAILABLE_CODES = new Set(["NO_DATABASE", "DB_UNAVAILABLE", "SCHEMA_MISSING"]);
+
+/** Ask the API whether Family mode can work right now (only when the device is online). */
+async function checkApi() {
+  if (!state.online) return;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch("/api/health", {cache: "no-store", signal: controller.signal});
+    const data = /json/i.test(response.headers.get("content-type") || "") ? await response.json() : null;
+    setApiDown(!(data && data.ok === true));
+  } catch {
+    // Offline is handled separately; online but unreachable means the API is down.
+    if (state.online) setApiDown(true);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function setApiDown(down) {
+  if (down === state.apiDown) return;
+  state.apiDown = down;
+  if (state.screen === "home") rerender();
 }
 
 function errorText(code, word) {
@@ -348,7 +387,7 @@ function renderHome() {
   state.game = null;
   stopPolling();
   renderChrome();
-  const familyDisabled = !state.online;
+  const familyDisabled = !state.online || state.apiDown;
   mount(
     h("section", {class: "hero"},
       h("h1", {}, t("heroTitle")),
@@ -363,9 +402,12 @@ function renderHome() {
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
         h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {cls: "other"})),
         h("h2", {id: "familyTitle"}, t("togetherTitle")),
-        familyDisabled
+        !state.online
           ? h("div", {class: "start-copy"}, h("p", {}, t("familyOffline")))
-          : h("div", {class: "start-copy"}, h("p", {}, t("togetherCopy1")), h("p", {}, t("togetherCopy2"))),
+          : state.apiDown
+            ? h("div", {class: "start-copy", id: "familyUnavailable"}, h("p", {}, t("familyUnavailable")),
+              h("button", {class: "btn ghost small", type: "button", id: "retryFamily", onclick: () => checkApi()}, t("retry")))
+            : h("div", {class: "start-copy"}, h("p", {}, t("togetherCopy1")), h("p", {}, t("togetherCopy2"))),
         h("div", {class: "row"},
           h("button", {class: "btn teal", type: "button", id: "createFamily", disabled: familyDisabled, onclick: () => ensurePlayer(createFamily)}, t("familyCreate")),
           h("button", {class: "btn ghost", type: "button", id: "joinFamily", disabled: familyDisabled, onclick: () => ensurePlayer(() => joinDialog(""))}, t("familyJoin"))))),
@@ -1313,6 +1355,7 @@ function field(id, label, attrs = {}) {
 function ensurePlayer(next) {
   // Family features need the internet, even for a player who already has a name.
   if (!state.online) return toast(t("familyOffline"), {kind: "error"});
+  if (state.apiDown) return toast(t("familyUnavailable"), {kind: "error"});
   if (state.player) return next();
   const d = dialog(t("nameTitle"), t("nameCopy"), field("nameInput", t("nameLabel"), {placeholder: t("namePlaceholder"), maxlength: "24", autocomplete: "nickname"}), {
     label: t("continue"),
@@ -1383,6 +1426,7 @@ function profileDialog() {
 function setOnline(online) {
   if (online === state.online) return;
   state.online = online;
+  if (online) checkApi();
   toast(online ? t("backOnline") : t("nowOffline"), {kind: online ? "success" : "info", key: "network"});
   rerender();
   // Family dialogs (name, join, recovery) need the server: close them rather than let a submit fail.
@@ -1427,6 +1471,7 @@ function boot() {
     toast(t("familyOffline"), {kind: "info", key: "network"});
   }
   route();
+  checkApi();
 
   registerServiceWorker();
 }

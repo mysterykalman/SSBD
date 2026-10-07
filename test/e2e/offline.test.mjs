@@ -1,8 +1,8 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
+import {mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
-import {join} from "node:path";
+import {dirname, join} from "node:path";
 import {botWord, continueReveal, launch, lockIn, lockInEnter, playDistinct, progressOf, revealShown, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
@@ -205,13 +205,17 @@ test("service worker update: new version waits for Reload, then switches over co
     const [oldCache] = await page.evaluate(() => caches.keys());
     const oldVersion = oldCache.slice("shell-".length);
     const newVersion = "0123456789".slice(0, oldVersion.length);
-    const built = await readFile("dist/server/index.js", "utf8");
-    assert.ok(built.includes(oldVersion));
-    const workerFile = join(dir, "index.js");
-    await writeFile(workerFile, built.split(oldVersion).join(newVersion));
+    // Copy the build with the version swapped in every file that carries it.
+    for (const file of await readdir("dist", {recursive: true})) {
+      const from = join("dist", file);
+      if ((await stat(from)).isDirectory()) continue;
+      await mkdir(dirname(join(dir, file)), {recursive: true});
+      await writeFile(join(dir, file), (await readFile(from, "utf8")).split(oldVersion).join(newVersion));
+    }
+    assert.ok((await readFile(join(dir, "sw.js"), "utf8")).includes(newVersion));
     await local.stop();
     local = null;
-    next = await startServer({port: Number(new URL(page.url()).port), workerFile});
+    next = await startServer({port: Number(new URL(page.url()).port), staticDir: dir});
 
     await page.reload();
     await page.waitForSelector(".toast-action", {timeout: 10000});

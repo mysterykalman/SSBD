@@ -1,18 +1,42 @@
 import {spawn} from "node:child_process";
 import {chromium} from "playwright";
+import pg from "pg";
+import {databaseFactory, migrate} from "../../scripts/postgres-local.mjs";
 
 export const SHOTS = process.env.SHOTS_DIR || null;
 
-/** Start the built worker on Node. `port` reuses an origin (same SW scope); `workerFile` serves a different build. */
-export async function startServer({port = 9000 + Math.floor(Math.random() * 900), workerFile, dbFile = ":memory:"} = {}) {
-  const env = workerFile ? {...process.env, WORKER_FILE: workerFile} : process.env;
-  const proc = spawn(process.execPath, ["scripts/dev-server.mjs", String(port), dbFile], {stdio: ["ignore", "pipe", "inherit"], env});
+let factory = null;
+/**
+ * Start the local server (static dist/ + vercel.json routing + the /api function) on a fresh,
+ * migrated PostgreSQL database. `port` reuses an origin (same SW scope); `staticDir` serves a
+ * different build; `beforeMigrate` runs SQL on an empty database before the migrations
+ * (an already-populated database); `database: false` runs with no database at all.
+ */
+export async function startServer({port = 9000 + Math.floor(Math.random() * 900), staticDir, database = true, beforeMigrate} = {}) {
+  const env = {...process.env};
+  delete env.POSTGRES_URL;
+  delete env.NO_DATABASE;
+  if (staticDir) env.STATIC_DIR = staticDir;
+  if (database) {
+    factory ??= databaseFactory();
+    const url = await (await factory).create({blank: Boolean(beforeMigrate)});
+    if (beforeMigrate) {
+      const client = new pg.Client({connectionString: url});
+      await client.connect();
+      try { await client.query(beforeMigrate); } finally { await client.end(); }
+      await migrate(url);
+    }
+    env.POSTGRES_URL = url;
+  } else {
+    env.NO_DATABASE = "1";
+  }
+  const proc = spawn(process.execPath, ["scripts/dev-server.mjs", String(port)], {stdio: ["ignore", "pipe", "inherit"], env});
   await new Promise((resolve, reject) => {
     proc.stdout.on("data", d => String(d).includes("Listening") && resolve());
     proc.on("exit", code => reject(new Error(`server exited ${code}`)));
   });
   const exited = new Promise(resolve => proc.on("exit", resolve));
-  return {url: `http://localhost:${port}`, port, stop: () => { proc.kill(); return exited; }};
+  return {url: `http://localhost:${port}`, port, databaseUrl: env.POSTGRES_URL || null, stop: () => { proc.kill(); return exited; }};
 }
 
 /**

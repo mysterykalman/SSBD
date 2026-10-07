@@ -1,28 +1,26 @@
 // Family-game API: one-letter words, notifications, rematch, and data
-// integrity for every critical transition (each checked against the D1 rows).
+// integrity for every critical transition (each checked against the stored rows).
 
-import {test, beforeEach} from "node:test";
+import {test, beforeEach, afterEach} from "node:test";
 import assert from "node:assert/strict";
-import {createD1} from "../scripts/d1-sqlite.mjs";
+import {handleApi, rematchIdFor} from "../src/server/api.js";
+import {caller, freshDatabase, withFaults} from "./support/db.mjs";
 
-let handleApi, rematchIdFor, env, db;
+let env, db;
 beforeEach(async () => {
-  ({handleApi, rematchIdFor} = await import(`../src/server/api.js?${Math.random()}`));
-  env = {DB: createD1(":memory:")};
-  db = env.DB.raw;
+  db = await freshDatabase();
+  env = {store: db.store};
 });
+afterEach(() => db.end());
 
-async function call(path, body) {
-  const res = await handleApi(new Request(`http://x${path}`, body ? {method: "POST", body: JSON.stringify(body), headers: {"content-type": "application/json"}} : {}), env);
-  return {status: res.status, ...(await res.json())};
-}
+const call = caller(handleApi, () => env);
 const player = name => call("/api/player", {display_name: name});
 const view = (gameId, playerId) => call(`/api/game?id=${gameId}&player_id=${playerId}`);
 const submitAs = (gameId, playerId, word, move) => call("/api/submit", {game_id: gameId, player_id: playerId, word, move});
 const notes = playerId => call(`/api/notifications?player_id=${playerId}`);
 const markRead = body => call("/api/notifications/read", body);
 const rematch = (playerId, gameId) => call("/api/games/rematch", {player_id: playerId, game_id: gameId});
-const count = (sql, ...args) => db.prepare(sql).get(...args).n;
+const count = (sql, ...args) => db.count(sql, ...args);
 
 async function activeFamily(language = "en") {
   const ana = await player("Ana"), ben = await player("Ben");
@@ -69,7 +67,7 @@ for (const language of ["en", "fr"]) {
     assert.equal((await submitAs(id, ana.id, "z", 4)).ok, true);
     const end = await submitAs(id, ben.id, "Z", 4);
     assert.equal(end.game.status, "MATCHED", "a one-letter match ends the game");
-    assert.equal(count("SELECT COUNT(*) AS n FROM submissions WHERE word = 's'"), 1);
+    assert.equal(await count("SELECT COUNT(*) AS n FROM submissions WHERE word = 's'"), 1);
   });
 }
 
@@ -109,8 +107,8 @@ test("notifications: shape, kinds, newest first, unread count, deterministic ids
   await submitAs(id, ana.id, "sun", 1);
   await submitAs(id, ben.id, "moon", 1);
   await Promise.all([view(id, ana.id), view(id, ben.id)]);
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ?", id), 4);
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE id = ?", `${id}:reveal-1:${ana.id}`), 1);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ?", id), 4);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE id = ?", `${id}:reveal-1:${ana.id}`), 1);
 });
 
 test("notifications: GAME_COMPLETE on a match, GAME_EXHAUSTED after 20 moves", async () => {
@@ -128,7 +126,7 @@ test("notifications: GAME_COMPLETE on a match, GAME_EXHAUSTED after 20 moves", a
   const n = await notes(e.ana.id);
   assert.equal(n.notifications[0].kind, "GAME_EXHAUSTED");
   assert.equal(n.notifications[0].game_id, e.id);
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ? AND kind = 'GAME_EXHAUSTED'", e.id), 2);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ? AND kind = 'GAME_EXHAUSTED'", e.id), 2);
 });
 
 test("notifications: legacy Solo (BOT) games never create or list any", async () => {
@@ -138,10 +136,10 @@ test("notifications: legacy Solo (BOT) games never create or list any", async ()
     const r = await submitAs(solo.id, ana.id, `qq${String.fromCharCode(96 + move)}zv`, move);
     if (r.game.status !== "ACTIVE") break;
   }
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ?", solo.id), 0);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ?", solo.id), 0);
   // Rows written for legacy Solo games by earlier releases stay hidden.
-  db.prepare("INSERT INTO notifications VALUES(?,?,?,?,?,?,?)").run(`${solo.id}:reveal-1:${ana.id}`, ana.id, solo.id, "READY_TO_REVEAL", "old", null, "2025-01-01");
-  db.prepare("INSERT INTO notifications VALUES(?,?,?,?,?,?,?)").run("orphan", ana.id, null, "INFO", "old", null, "2025-01-01");
+  (await db.run("INSERT INTO notifications VALUES(?,?,?,?,?,?,?)", `${solo.id}:reveal-1:${ana.id}`, ana.id, solo.id, "READY_TO_REVEAL", "old", null, "2025-01-01"));
+  (await db.run("INSERT INTO notifications VALUES(?,?,?,?,?,?,?)", "orphan", ana.id, null, "INFO", "old", null, "2025-01-01"));
   const n = await notes(ana.id);
   assert.deepEqual(n.notifications, []);
   assert.equal(n.unread, 0);
@@ -182,13 +180,12 @@ test("the dashboard never marks notifications read", async () => {
   const {ana} = await activeFamily();
   for (let i = 0; i < 3; i++) assert.equal((await call(`/api/dashboard?player_id=${ana.id}`)).notifications.length, 1);
   assert.equal((await notes(ana.id)).unread, 1);
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE read_at IS NOT NULL"), 0);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE read_at IS NOT NULL"), 0);
 });
 
 test("notifications: newest 50 only, unread counts them all; unknown players get 403", async () => {
   const {ana, id} = await activeFamily();
-  const insert = db.prepare("INSERT INTO notifications VALUES(?,?,?,?,?,?,?)");
-  for (let i = 0; i < 60; i++) insert.run(`${id}:turn-x${i}:${ana.id}`, ana.id, id, "YOUR_TURN", "m", null, `2027-01-01T00:00:${String(i).padStart(2, "0")}.000Z`);
+  for (let i = 0; i < 60; i++) await db.run("INSERT INTO notifications VALUES(?,?,?,?,?,?,?)", `${id}:turn-x${i}:${ana.id}`, ana.id, id, "YOUR_TURN", "m", null, `2027-01-01T00:00:${String(i).padStart(2, "0")}.000Z`);
   const n = await notes(ana.id);
   assert.equal(n.notifications.length, 50);
   assert.equal(n.notifications[0].id, `${id}:turn-x59:${ana.id}`);
@@ -218,12 +215,12 @@ test("rematch: same players, same slots and language, fresh round 1, other playe
   assert.equal(v.moves.length, 1);
   assert.deepEqual(v.moves[0], {...v.moves[0], number: 1, prompts: null, status: "OPEN", words: null, mine: null, otherLocked: false});
   assert.ok(!/\b(sun|moon|sky)\b/i.test(JSON.stringify(v)), "no words from the old game");
-  assert.equal(count("SELECT COUNT(*) AS n FROM submissions s JOIN rounds r ON r.id = s.round_id WHERE r.game_id = ?", r.id), 0);
-  assert.equal(db.prepare("SELECT rematch_of FROM games WHERE id = ?").get(r.id).rematch_of, m.id);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM submissions s JOIN rounds r ON r.id = s.round_id WHERE r.game_id = ?", r.id), 0);
+  assert.equal((await db.get("SELECT rematch_of FROM games WHERE id = ?", r.id)).rematch_of, m.id);
 
   const anaNotes = (await notes(m.ana.id)).notifications;
   assert.deepEqual(anaNotes[0], {...anaNotes[0], kind: "REMATCH", game_id: r.id, id: `${r.id}:rematch:${m.ana.id}`, opponent_name: "Ben", read_at: null});
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ?", r.id), 1, "only the other player is notified");
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ?", r.id), 1, "only the other player is notified");
 
   // The old game links to the rematch, for both players; nothing else about it changed.
   for (const p of [m.ana, m.ben]) {
@@ -246,10 +243,10 @@ test("rematch: idempotent for either player, for retries and for races", async (
   assert.equal(new Set(racing.map(r => r.join_code)).size, 1);
   const again = await rematch(m.ben.id, m.id);
   assert.deepEqual(again, {...racing[0], existing: true});
-  assert.equal(count("SELECT COUNT(*) AS n FROM games WHERE rematch_of = ?", m.id), 1);
-  assert.equal(count("SELECT COUNT(*) AS n FROM game_players WHERE game_id = ?", again.id), 2);
-  assert.equal(count("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?", again.id), 1);
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ?", again.id), 1);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM games WHERE rematch_of = ?", m.id), 1);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM game_players WHERE game_id = ?", again.id), 2);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?", again.id), 1);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ?", again.id), 1);
 });
 
 test("rematch: refused for unfinished, legacy Solo, unknown or non-member requests; works after exhaustion and chains", async () => {
@@ -263,11 +260,11 @@ test("rematch: refused for unfinished, legacy Solo, unknown or non-member reques
   assert.equal((await rematch(g.ana.id, "nope")).status, 404);
 
   const solo = await call("/api/games", {player_id: g.ana.id, solo: true});
-  db.prepare("UPDATE games SET status = 'MATCHED' WHERE id = ?").run(solo.id);
+  (await db.run("UPDATE games SET status = 'MATCHED' WHERE id = ?", solo.id));
   const s = await rematch(g.ana.id, solo.id);
   assert.equal(s.code, "NOT_FAMILY_GAME");
   assert.equal((await view(solo.id, g.ana.id)).game.rematchId, null);
-  assert.equal(count("SELECT COUNT(*) AS n FROM games"), 3, "refusals create nothing");
+  assert.equal(await count("SELECT COUNT(*) AS n FROM games"), 3, "refusals create nothing");
 
   for (let move = 1; move <= 20; move++) {
     await submitAs(g.id, g.ana.id, `aa${String.fromCharCode(96 + move)}`, move);
@@ -287,20 +284,20 @@ test("rematch: refused for unfinished, legacy Solo, unknown or non-member reques
 
 test("rematch of a COMPLETE game from an earlier release works and keeps the old rows", async () => {
   await call("/api/health");
-  db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
+  await db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
     INSERT INTO players VALUES('p2','Timer','TIM-2222','2025-01-01','2025-01-01');
     INSERT INTO games (id,join_code,status,round_number,created_at,updated_at) VALUES('g9','WXYZ-99','COMPLETE',1,'2025-01-01','2025-01-01');
     INSERT INTO game_players VALUES('g9','p2',1,'2025-01-01'); INSERT INTO game_players VALUES('g9','p1',2,'2025-01-01');
     INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES('r-uuid-9','g9',1,NULL,NULL,'COMPLETE','2025-01-01','2025-01-01');
     INSERT INTO submissions VALUES('r-uuid-9','p1','CAT','2025-01-01'); INSERT INTO submissions VALUES('r-uuid-9','p2','CAT','2025-01-01');`);
-  const before = JSON.stringify(db.prepare("SELECT * FROM games WHERE id = 'g9'").get());
+  const before = JSON.stringify((await db.get("SELECT * FROM games WHERE id = 'g9'")));
   const r = await rematch("p1", "g9");
   assert.equal(r.existing, false);
   const v = (await view(r.id, "p1")).game;
   assert.equal(v.you.side, "b", "slots are kept");
   assert.equal(v.language, "en");
-  assert.equal(JSON.stringify(db.prepare("SELECT * FROM games WHERE id = 'g9'").get()), before, "the old game row is untouched");
-  assert.equal(count("SELECT COUNT(*) AS n FROM submissions WHERE round_id = 'r-uuid-9'"), 2);
+  assert.equal(JSON.stringify((await db.get("SELECT * FROM games WHERE id = 'g9'"))), before, "the old game row is untouched");
+  assert.equal(await count("SELECT COUNT(*) AS n FROM submissions WHERE round_id = 'r-uuid-9'"), 2);
 });
 
 // ---------- explicit states and integrity ----------
@@ -334,53 +331,53 @@ test("create and join write exactly the expected rows", async () => {
   const ana = await player("Ana"), ben = await player("Ben");
   const created = await call("/api/games", {player_id: ana.id, language: "fr"});
   assert.equal(created.language, "fr");
-  assert.deepEqual({...db.prepare("SELECT status, round_number, language, rematch_of FROM games WHERE id = ?").get(created.id)}, {status: "WAITING", round_number: 1, language: "fr", rematch_of: null});
-  assert.equal(count("SELECT COUNT(*) AS n FROM game_players WHERE game_id = ?", created.id), 1);
-  assert.deepEqual(db.prepare("SELECT id, round_number, status, previous_a, previous_b FROM rounds WHERE game_id = ?").all(created.id).map(r => ({...r})), [{id: `${created.id}:1`, round_number: 1, status: "OPEN", previous_a: null, previous_b: null}]);
+  assert.deepEqual({...(await db.get("SELECT status, round_number, language, rematch_of FROM games WHERE id = ?", created.id))}, {status: "WAITING", round_number: 1, language: "fr", rematch_of: null});
+  assert.equal(await count("SELECT COUNT(*) AS n FROM game_players WHERE game_id = ?", created.id), 1);
+  assert.deepEqual((await db.all("SELECT id, round_number, status, previous_a, previous_b FROM rounds WHERE game_id = ?", created.id)).map(r => ({...r})), [{id: `${created.id}:1`, round_number: 1, status: "OPEN", previous_a: null, previous_b: null}]);
   assert.equal((await call("/api/games", {player_id: "nobody"})).code, "UNKNOWN_PLAYER");
 
   await Promise.all([1, 2].map(() => call("/api/games/join", {player_id: ben.id, join_code: created.join_code})));
-  assert.equal(db.prepare("SELECT status FROM games WHERE id = ?").get(created.id).status, "ACTIVE");
-  assert.deepEqual(db.prepare("SELECT player_id, slot FROM game_players WHERE game_id = ? ORDER BY slot").all(created.id).map(r => ({...r})), [{player_id: ana.id, slot: 1}, {player_id: ben.id, slot: 2}]);
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ? AND kind = 'PLAYER_JOINED'", created.id), 1);
+  assert.equal((await db.get("SELECT status FROM games WHERE id = ?", created.id)).status, "ACTIVE");
+  assert.deepEqual((await db.all("SELECT player_id, slot FROM game_players WHERE game_id = ? ORDER BY slot", created.id)).map(r => ({...r})), [{player_id: ana.id, slot: 1}, {player_id: ben.id, slot: 2}]);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ? AND kind = 'PLAYER_JOINED'", created.id), 1);
 });
 
 test("submit, reveal and next round: rows match the reported state after each step", async () => {
   const {ana, ben, id} = await activeFamily();
   const s1 = await submitAs(id, ana.id, "Sun", 1);
   assert.equal(s1.ok, true);
-  assert.equal(db.prepare("SELECT word FROM submissions WHERE round_id = ? AND player_id = ?").get(`${id}:1`, ana.id).word, "Sun");
-  assert.equal(db.prepare("SELECT status FROM rounds WHERE id = ?").get(`${id}:1`).status, "OPEN");
+  assert.equal((await db.get("SELECT word FROM submissions WHERE round_id = ? AND player_id = ?", `${id}:1`, ana.id)).word, "Sun");
+  assert.equal((await db.get("SELECT status FROM rounds WHERE id = ?", `${id}:1`)).status, "OPEN");
   const s2 = await submitAs(id, ben.id, "Moon", 1);
   assert.equal(s2.game.moves[0].status, "REVEALED");
-  const r1 = db.prepare("SELECT status, revealed_at FROM rounds WHERE id = ?").get(`${id}:1`);
+  const r1 = (await db.get("SELECT status, revealed_at FROM rounds WHERE id = ?", `${id}:1`));
   assert.equal(r1.status, "REVEALED");
   assert.equal(r1.revealed_at, s2.game.moves[0].revealedAt);
-  assert.deepEqual({...db.prepare("SELECT previous_a, previous_b, status FROM rounds WHERE id = ?").get(`${id}:2`)}, {previous_a: "Sun", previous_b: "Moon", status: "OPEN"});
-  assert.equal(db.prepare("SELECT round_number FROM games WHERE id = ?").get(id).round_number, 2);
+  assert.deepEqual({...(await db.get("SELECT previous_a, previous_b, status FROM rounds WHERE id = ?", `${id}:2`))}, {previous_a: "Sun", previous_b: "Moon", status: "OPEN"});
+  assert.equal((await db.get("SELECT round_number FROM games WHERE id = ?", id)).round_number, 2);
   assert.equal(s2.game.moves.length, 2);
 });
 
 test("a submit whose row cannot be confirmed never reports success", async () => {
   const {ana, id} = await activeFamily();
   // Simulate a write that is silently lost (e.g. a failed replica write) by dropping every submission insert.
-  const realPrepare = env.DB.prepare;
-  env.DB.prepare = sql => (/INSERT OR IGNORE INTO submissions/.test(sql) ? realPrepare("SELECT ?, ?, ?, ?") : realPrepare(sql));
+  env = {store: withFaults(db.store, sql => (/INSERT INTO submissions/.test(sql) ? {sql: "SELECT $1::text, $2::text, $3::text, $4::text WHERE false"} : null))};
   const r = await submitAs(id, ana.id, "sun", 1);
-  env.DB.prepare = realPrepare;
+  env = {store: db.store};
   assert.notEqual(r.ok, true);
   assert.equal(r.status, 503);
   assert.equal(r.code, "NOT_SAVED");
-  assert.equal(count("SELECT COUNT(*) AS n FROM submissions"), 0);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM submissions"), 0);
   assert.equal((await submitAs(id, ana.id, "sun", 1)).ok, true, "a retry succeeds once the database is healthy");
 });
 
 test("a failed YOUR_TURN notification does not fail a saved submission", async () => {
   const {ana, ben, id} = await activeFamily();
-  const realPrepare = env.DB.prepare;
-  env.DB.prepare = sql => (/INTO notifications/.test(sql) ? realPrepare("INSERT INTO no_such_table VALUES(1)") : realPrepare(sql));
-  const r = await submitAs(id, ana.id, "sun", 1);
-  env.DB.prepare = realPrepare;
+  env = {store: withFaults(db.store, sql => (/INTO notifications/.test(sql) ? new Error("notifications are down") : null))};
+  const original = console.error;
+  console.error = () => {};
+  const r = await submitAs(id, ana.id, "sun", 1).finally(() => { console.error = original; });
+  env = {store: db.store};
   assert.equal(r.ok, true);
   assert.equal(r.game.moves[0].mine, "sun");
   assert.equal((await submitAs(id, ben.id, "moon", 1)).game.moves[0].status, "REVEALED");
@@ -389,50 +386,55 @@ test("a failed YOUR_TURN notification does not fail a saved submission", async (
 test("a failed reveal batch changes nothing and is finished on the next read", async () => {
   const {ana, ben, id} = await activeFamily();
   await submitAs(id, ana.id, "sun", 1);
-  const realBatch = env.DB.batch;
-  // The reveal batch fails as a whole (D1 batches are transactions).
-  env.DB.batch = statements => (statements.some(s => /UPDATE rounds SET status/.test(s.sql)) ? Promise.reject(new Error("D1 down")) : realBatch(statements));
+  // The reveal transaction fails after it has already closed the round: all of it must roll back.
+  env = {store: withFaults(db.store, sql => (/INSERT INTO rounds .*ON CONFLICT DO NOTHING/s.test(sql) ? new Error("database down mid-reveal") : null))};
   const r = await submitAs(id, ben.id, "moon", 1).catch(e => ({thrown: e}));
-  env.DB.batch = realBatch;
+  env = {store: db.store};
   assert.ok(r.thrown || r.status >= 500, "the failure is reported, not hidden");
-  assert.equal(db.prepare("SELECT status FROM rounds WHERE id = ?").get(`${id}:1`).status, "OPEN", "the reveal rolled back as a whole");
-  assert.equal(count("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?", id), 1);
+  assert.equal((await db.get("SELECT status FROM rounds WHERE id = ?", `${id}:1`)).status, "OPEN", "the reveal rolled back as a whole");
+  assert.equal(await count("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?", id), 1);
   const v = (await view(id, ana.id)).game;
   assert.equal(v.moves[0].status, "REVEALED");
   assert.deepEqual(v.moves[1].prompts, ["sun", "moon"]);
-  assert.equal(count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ? AND kind = 'READY_TO_REVEAL'", id), 2);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ? AND kind = 'READY_TO_REVEAL'", id), 2);
 });
 
 test("match and exhaust: game and round rows agree, and the end is recorded once", async () => {
   const m = await matchedFamily();
-  assert.equal(db.prepare("SELECT status FROM games WHERE id = ?").get(m.id).status, "MATCHED");
-  assert.deepEqual(db.prepare("SELECT status FROM rounds WHERE game_id = ? ORDER BY round_number").all(m.id).map(r => r.status), ["REVEALED", "MATCHED"]);
+  assert.equal((await db.get("SELECT status FROM games WHERE id = ?", m.id)).status, "MATCHED");
+  assert.deepEqual((await db.all("SELECT status FROM rounds WHERE game_id = ? ORDER BY round_number", m.id)).map(r => r.status), ["REVEALED", "MATCHED"]);
   assert.equal((await submitAs(m.id, m.ana.id, "late", 3)).code, "GAME_OVER");
-  assert.equal(count("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?", m.id), 2);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?", m.id), 2);
 
   const e = await activeFamily();
   for (let move = 1; move <= 20; move++) {
     await submitAs(e.id, e.ana.id, `aa${String.fromCharCode(96 + move)}`, move);
     await submitAs(e.id, e.ben.id, `bb${String.fromCharCode(96 + move)}`, move);
   }
-  assert.equal(db.prepare("SELECT status, round_number FROM games WHERE id = ?").get(e.id).status, "EXHAUSTED");
-  assert.equal(count("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?", e.id), 20);
-  assert.equal(db.prepare("SELECT status FROM rounds WHERE id = ?").get(`${e.id}:20`).status, "EXHAUSTED");
+  assert.equal((await db.get("SELECT status, round_number FROM games WHERE id = ?", e.id)).status, "EXHAUSTED");
+  assert.equal(await count("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?", e.id), 20);
+  assert.equal((await db.get("SELECT status FROM rounds WHERE id = ?", `${e.id}:20`)).status, "EXHAUSTED");
   assert.equal((await submitAs(e.id, e.ana.id, "late", 21)).code, "GAME_OVER");
-  assert.equal(count("SELECT COUNT(*) AS n FROM submissions s JOIN rounds r ON r.id = s.round_id WHERE r.game_id = ?", e.id), 40);
+  assert.equal(await count("SELECT COUNT(*) AS n FROM submissions s JOIN rounds r ON r.id = s.round_id WHERE r.game_id = ?", e.id), 40);
 });
 
-test("schema change is additive: an existing database keeps its rows and gains rematch_of", async () => {
-  const file = createD1(":memory:");
-  file.raw.exec(`CREATE TABLE players (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, recovery_code TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL);
-    CREATE TABLE games (id TEXT PRIMARY KEY, join_code TEXT UNIQUE NOT NULL, status TEXT NOT NULL, round_number INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, language TEXT NOT NULL DEFAULT 'en');
-    INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
-    INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES('g1','ABCD-12','ACTIVE',3,'2025-01-01','2025-01-01','fr');`);
-  env = {DB: file};
-  db = file.raw;
-  await call("/api/health");
-  const cols = db.prepare("PRAGMA table_info(games)").all().map(c => c.name);
-  assert.deepEqual(cols, ["id", "join_code", "status", "round_number", "created_at", "updated_at", "language", "rematch_of"]);
-  assert.deepEqual({...db.prepare("SELECT * FROM games WHERE id = 'g1'").get()}, {id: "g1", join_code: "ABCD-12", status: "ACTIVE", round_number: 3, created_at: "2025-01-01", updated_at: "2025-01-01", language: "fr", rematch_of: null});
-  assert.equal(db.prepare("SELECT display_name FROM players WHERE id = 'p1'").get().display_name, "Old");
+test("the migration is additive: an existing database keeps its rows and gains the newer columns", async () => {
+  const old = await freshDatabase({blank: true});
+  try {
+    await old.exec(`CREATE TABLE players (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, recovery_code TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL);
+      CREATE TABLE games (id TEXT PRIMARY KEY, join_code TEXT UNIQUE NOT NULL, status TEXT NOT NULL, round_number INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, language TEXT NOT NULL DEFAULT 'en');
+      INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
+      INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES('g1','ABCD-12','ACTIVE',3,'2025-01-01','2025-01-01','fr');`);
+    await old.migrate();
+    await old.migrate(); // applying it twice is harmless
+    const cols = (await old.all("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'games' ORDER BY ordinal_position")).map(c => c.column_name);
+    assert.deepEqual(cols, ["id", "join_code", "status", "round_number", "created_at", "updated_at", "language", "rematch_of"]);
+    assert.deepEqual({...(await old.get("SELECT * FROM games WHERE id = 'g1'"))}, {id: "g1", join_code: "ABCD-12", status: "ACTIVE", round_number: 3, created_at: "2025-01-01", updated_at: "2025-01-01", language: "fr", rematch_of: null});
+    assert.equal((await old.get("SELECT display_name FROM players WHERE id = 'p1'")).display_name, "Old");
+    env = {store: old.store};
+    assert.equal((await call("/api/player/recover", {recovery_code: "old-1111"})).id, "p1");
+  } finally {
+    env = {store: db.store};
+    await old.end();
+  }
 });

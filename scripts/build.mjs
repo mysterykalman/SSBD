@@ -1,6 +1,6 @@
-// Builds dist/: a single-file Worker (dist/server/index.js) with the app
-// shell embedded, plus a static mirror of the shell in dist/ for hosts that
-// serve files directly.
+// Builds dist/: the static app that Vercel serves (index.html, hashed JS/CSS,
+// service worker, icon, manifest). The Family-mode API is the Vercel Function in
+// api/index.js, which Vercel builds from source; nothing here bundles server code.
 import {build} from "esbuild";
 import {createHash} from "node:crypto";
 import {mkdir, readFile, rm, writeFile} from "node:fs/promises";
@@ -31,37 +31,19 @@ const swSource = swTemplate
 if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEHOLDER%");
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
-const immutable = "public, max-age=31536000, immutable";
-const revalidate = "no-cache";
 const files = {
-  "/index.html": {body: html, type: "text/html; charset=utf-8", cache: revalidate},
-  [appName]: {body: appJs, type: "text/javascript; charset=utf-8", cache: immutable},
-  [cssName]: {body: css, type: "text/css; charset=utf-8", cache: immutable},
-  "/sw.js": {body: sw, type: "text/javascript; charset=utf-8", cache: "no-store"},
-  "/icon.svg": {body: icon, type: "image/svg+xml", cache: revalidate},
-  "/manifest.webmanifest": {body: manifest, type: "application/manifest+json", cache: revalidate}
+  "/index.html": html,
+  [appName]: appJs,
+  [cssName]: css,
+  "/sw.js": sw,
+  "/icon.svg": icon,
+  "/manifest.webmanifest": manifest
 };
-for (const file of Object.values(files)) file.etag = `"${hash(file.body)}"`;
 
 await rm(dist, {recursive: true, force: true});
-await build({
-  entryPoints: [src("server/worker.js")],
-  bundle: true,
-  format: "esm",
-  platform: "neutral",
-  target: "es2022",
-  outfile: join(dist, "server/index.js"),
-  plugins: [{
-    name: "assets",
-    setup(b) {
-      b.onResolve({filter: /^virtual:assets$/}, () => ({path: "assets", namespace: "virtual"}));
-      b.onLoad({filter: /.*/, namespace: "virtual"}, () => ({contents: `export const assets = ${JSON.stringify(files)};`, loader: "js"}));
-    }
-  }]
-});
-for (const [path, file] of Object.entries(files)) {
+for (const [path, body] of Object.entries(files)) {
   const out = join(dist, path);
   await mkdir(dirname(out), {recursive: true});
-  await writeFile(out, file.body);
+  await writeFile(out, body);
 }
-console.log(`Built version ${version}: dist/server/index.js + ${Object.keys(files).length} static files`);
+console.log(`Built version ${version}: ${Object.keys(files).length} static files in dist/`);

@@ -1,25 +1,25 @@
-// Production D1 databases may carry columns added by earlier releases. Every INSERT names its
-// columns, so extra columns never break play; and real database failures are reported as such
-// instead of being retried away and turned into a generic error.
+// Databases that already hold tables (for example with columns added by an earlier release):
+// every INSERT names its columns, so extra columns never break play, and the migration only
+// adds what is missing. Real database failures are reported as such instead of being retried
+// away and turned into a generic error. Runs against a real PostgreSQL.
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {createD1} from "../scripts/d1-sqlite.mjs";
+import {handleApi} from "../src/server/api.js";
+import {caller, freshDatabase} from "./support/db.mjs";
 
-/** A fresh API module per database (the schema setup is memoised per module, as in a Worker). */
-async function setup(sql) {
-  const {handleApi} = await import(`../src/server/api.js?${Math.random()}`);
-  const env = {DB: createD1(":memory:")};
-  if (sql) env.DB.raw.exec(sql);
-  const call = async (path, body) => {
-    const res = await handleApi(new Request(`http://x${path}`, body ? {method: "POST", body: JSON.stringify(body), headers: {"content-type": "application/json"}} : {}), env);
-    return {status: res.status, ...(await res.json())};
-  };
-  return {call, env};
+/** A database where `sql` ran first and the migrations second. */
+async function setup(sql, codes) {
+  const db = await freshDatabase({blank: true});
+  if (sql) await db.exec(sql);
+  await db.migrate();
+  const env = {store: db.store, codes};
+  return {call: caller(handleApi, () => env), env, db};
 }
 
-// Tables shaped like an older production database: same columns plus extras.
+// Tables shaped like an older database: same columns plus extras.
 const EXTRA_COLUMNS = `
   CREATE TABLE players (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, recovery_code TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL, avatar TEXT, pin TEXT DEFAULT NULL);
+  CREATE TABLE games (id TEXT PRIMARY KEY, join_code TEXT UNIQUE NOT NULL, status TEXT NOT NULL, round_number INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
   CREATE TABLE game_players (game_id TEXT NOT NULL, player_id TEXT NOT NULL, slot INTEGER NOT NULL, joined_at TEXT NOT NULL, colour TEXT, PRIMARY KEY(game_id, player_id), UNIQUE(game_id, slot));
   CREATE TABLE submissions (round_id TEXT NOT NULL, player_id TEXT NOT NULL, word TEXT NOT NULL, submitted_at TEXT NOT NULL, client TEXT, PRIMARY KEY(round_id, player_id));
   CREATE TABLE notifications (id TEXT PRIMARY KEY, player_id TEXT NOT NULL, game_id TEXT, kind TEXT NOT NULL, message TEXT NOT NULL, read_at TEXT, created_at TEXT NOT NULL, channel TEXT);`;
@@ -59,33 +59,50 @@ test("a real database failure is reported with its own code, not retried into a 
   } finally {
     console.error = original;
   }
-  // A join that fails for a reason other than a race is not mislabelled as "game full".
-  const join = await setup("CREATE TABLE game_players (game_id TEXT NOT NULL, player_id TEXT NOT NULL, slot INTEGER NOT NULL, joined_at TEXT NOT NULL, required_extra TEXT NOT NULL, PRIMARY KEY(game_id, player_id), UNIQUE(game_id, slot))");
+  // A create that fails for a reason other than a code collision is reported as such.
+  const join = await setup("CREATE TABLE games (id TEXT PRIMARY KEY, join_code TEXT UNIQUE NOT NULL, status TEXT NOT NULL, round_number INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL); CREATE TABLE game_players (game_id TEXT NOT NULL, player_id TEXT NOT NULL, slot INTEGER NOT NULL, joined_at TEXT NOT NULL, required_extra TEXT NOT NULL, PRIMARY KEY(game_id, player_id), UNIQUE(game_id, slot))");
   const host = await join.call("/api/player", {display_name: "Host"});
   console.error = () => {};
   try {
     const created = await join.call("/api/games", {player_id: host.id, solo: false});
     assert.equal(created.status, 500);
     assert.equal(created.code, "GAME_CREATE_FAILED");
+    assert.equal(await join.db.count("SELECT COUNT(*) AS n FROM games"), 0, "the failed create left nothing behind");
   } finally {
     console.error = original;
   }
 });
 
-test("recovery-code collisions are still retried with a new code", async () => {
-  const {call, env} = await setup();
-  await call("/api/health");
-  // Fill every SAM-xxxx code but one, so the server has to retry until it finds the free one.
-  const insert = env.DB.raw.prepare("INSERT INTO players (id,display_name,recovery_code,created_at,last_seen_at) VALUES(?,?,?,?,?)");
-  for (let n = 1000; n <= 9999; n++) if (n !== 4242) insert.run(`p${n}`, "Sam", `SAM-${n}`, "t", "t");
-  const originalRandom = Math.random;
-  const sequence = [0.1, 0.2, 0.3, (4242 - 1000) / 9000 + 1e-9];
-  Math.random = () => sequence.shift() ?? originalRandom();
-  try {
-    const player = await call("/api/player", {display_name: "Sam"});
-    assert.equal(player.status, 200);
-    assert.equal(player.recovery_code, "SAM-4242");
-  } finally {
-    Math.random = originalRandom;
-  }
+test("recovery-code collisions are retried with a new code", async () => {
+  const digits = [1001, 1002, 1003, 4242];
+  const {call, db} = await setup(null, {recoveryDigits: () => digits.shift() ?? 4242});
+  // Every SAM-xxxx code but one is taken, so the server has to retry until it finds the free one.
+  await db.exec("INSERT INTO players (id,display_name,recovery_code,created_at,last_seen_at) SELECT 'p' || n, 'Sam', 'SAM-' || n, 't', 't' FROM generate_series(1000, 9999) AS n WHERE n <> 4242");
+  const player = await call("/api/player", {display_name: "Sam"});
+  assert.equal(player.status, 200);
+  assert.equal(player.recovery_code, "SAM-4242");
+  assert.equal(digits.length, 0, "three collisions, then the free code");
+  // When every attempt collides, the request fails cleanly instead of looping.
+  const full = await setup(null, {recoveryDigits: () => 1000});
+  await full.db.exec("INSERT INTO players (id,display_name,recovery_code,created_at,last_seen_at) VALUES('x','Sam','SAM-1000','t','t')");
+  assert.equal((await full.call("/api/player", {display_name: "Sam"})).code, "PLAYER_CREATE_FAILED");
+});
+
+test("join-code collisions are retried with a new code (create and rematch)", async () => {
+  const codes = ["TAKE-11", "TAKE-11", "FREE-22", "TAKE-11", "FREE-33"];
+  const {call, db} = await setup(null, {joinCode: () => codes.shift() ?? "LAST-99"});
+  const ana = await call("/api/player", {display_name: "Ana"}), ben = await call("/api/player", {display_name: "Ben"});
+  const first = await call("/api/games", {player_id: ana.id, solo: false});
+  assert.equal(first.join_code, "TAKE-11");
+  const second = await call("/api/games", {player_id: ana.id, solo: false});
+  assert.equal(second.join_code, "FREE-22", "the taken code was skipped");
+  await call("/api/games/join", {player_id: ben.id, join_code: second.join_code});
+  await call("/api/submit", {game_id: second.id, player_id: ana.id, word: "tea", move: 1});
+  await call("/api/submit", {game_id: second.id, player_id: ben.id, word: "tea", move: 1});
+  const r = await call("/api/games/rematch", {player_id: ben.id, game_id: second.id});
+  assert.equal(r.status, 200);
+  assert.equal(r.join_code, "FREE-33");
+  assert.equal(r.existing, false);
+  assert.equal(await db.count("SELECT COUNT(*) AS n FROM games"), 3);
+  assert.equal(await db.count("SELECT COUNT(*) AS n FROM rounds"), 3, "no half-created game from the collided attempts");
 });

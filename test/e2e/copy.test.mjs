@@ -2,10 +2,6 @@
 // and inflected matches presented as normal wins in each player's own word.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {mkdtempSync, rmSync} from "node:fs";
-import {tmpdir} from "node:os";
-import {join} from "node:path";
-import {DatabaseSync} from "node:sqlite";
 import {botWord, launch, startServer} from "./helpers.mjs";
 
 // Emoji characters in copy. ★ (U+2605) and ✓ are drawn marks inside designed components (progress stones,
@@ -107,16 +103,13 @@ async function familyPair(url, {reducedMotion = "reduce"} = {}) {
   return {ana, ben, ctxA, ctxB};
 }
 
-test("Family: valid names go straight into create and join (also on a production-like database)", async () => {
-  // A database whose tables carry extra columns from an earlier release: this used to fail with
-  // "Oops! That didn't work" right after Continue, because inserts assumed the exact column count.
-  const dir = mkdtempSync(join(tmpdir(), "ssbd-prodlike-"));
-  const file = join(dir, "prod.sqlite");
-  const db = new DatabaseSync(file);
-  db.exec(`CREATE TABLE players (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, recovery_code TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL, avatar TEXT);
-    CREATE TABLE game_players (game_id TEXT NOT NULL, player_id TEXT NOT NULL, slot INTEGER NOT NULL, joined_at TEXT NOT NULL, colour TEXT, PRIMARY KEY(game_id, player_id), UNIQUE(game_id, slot));`);
-  db.close();
-  const prodLike = await startServer({dbFile: file});
+test("Family: valid names go straight into create and join (also on a database that already had tables)", async () => {
+  // A database whose tables carry extra columns from an earlier release: inserts name their
+  // columns, and the migration only adds what is missing, so name entry and play still work.
+  const prodLike = await startServer({beforeMigrate: `
+    CREATE TABLE players (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, recovery_code TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL, avatar TEXT);
+    CREATE TABLE games (id TEXT PRIMARY KEY, join_code TEXT UNIQUE NOT NULL, status TEXT NOT NULL, round_number INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+    CREATE TABLE game_players (game_id TEXT NOT NULL, player_id TEXT NOT NULL, slot INTEGER NOT NULL, joined_at TEXT NOT NULL, colour TEXT, PRIMARY KEY(game_id, player_id), UNIQUE(game_id, slot));`});
   try {
     for (const url of [server.url, prodLike.url]) {
       const {ana, ben, ctxA, ctxB} = await familyPair(url);
@@ -132,7 +125,6 @@ test("Family: valid names go straight into create and join (also on a production
     }
   } finally {
     await prodLike.stop();
-    rmSync(dir, {recursive: true, force: true});
   }
 });
 

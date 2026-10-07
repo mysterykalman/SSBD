@@ -68,7 +68,7 @@
  * @property {Move[]} moves
  */
 
-/** The minimum the rules need from a game (the server builds this from D1 rows). */
+/** The minimum the rules need from a game (the server builds this from database rows). */
 /** @typedef {{status: GameStatus, language?: string, moves: Array<Pick<Move, "words">>}} RulesGame */
 
 /**
@@ -96,7 +96,7 @@
  */
 
 /**
- * A family game (or a legacy D1 Solo game) as one player may see it: `GET /api/game`.
+ * A family game (or a legacy server-side Solo game) as one player may see it: `GET /api/game`.
  * @typedef {object} GameView
  * @property {"family" | "legacy-solo"} kind
  * @property {string} id
@@ -146,17 +146,15 @@
  */
 
 /**
- * The subset of the Cloudflare D1 API the server uses.
- * @typedef {object} D1Result
- * @property {any[]} [results]
- * @property {{changes?: number}} [meta]
- * @typedef {object} D1PreparedStatement
- * @property {(...args: unknown[]) => D1PreparedStatement} bind
- * @property {() => Promise<D1Result>} all
- * @property {() => Promise<D1Result>} run
- * @typedef {object} D1Database
- * @property {(sql: string) => D1PreparedStatement} prepare
- * @property {(statements: D1PreparedStatement[]) => Promise<D1Result[]>} batch
+ * Postgres access used by the server (src/server/db.js).
+ * @typedef {{rows: any[], rowCount: number | null}} QueryResult
+ * @typedef {object} Queryable
+ * @property {(sql: string, params?: unknown[]) => Promise<QueryResult>} query
+ * @typedef {object} Store
+ * @property {(sql: string, params?: unknown[]) => Promise<QueryResult>} query one statement, committed on its own
+ * @property {<T>(fn: (q: Queryable) => Promise<T>) => Promise<T>} tx BEGIN … COMMIT, ROLLBACK on any error
+ * @property {<T>(fn: (q: Queryable) => Promise<T>) => Promise<T>} snapshot read-only, one consistent view
+ * @property {() => Promise<void>} [end]
  */
 
 export {};

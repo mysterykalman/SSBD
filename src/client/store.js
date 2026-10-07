@@ -1,4 +1,4 @@
-// Device-local persistence. Solo games live only here; they never touch D1.
+// Device-local persistence. Solo games live only here; they never touch the server.
 // Everything is wrapped so a blocked or full storage never breaks play: the
 // in-memory copy keeps working and `healthy` reports whether saves stick.
 //

@@ -15,9 +15,10 @@ export default [
       "no-irregular-whitespace": ["error", {skipStrings: true, skipTemplates: true, skipRegExps: true}]
     }
   },
-  // Shared game logic runs in both the browser and the Worker.
+  // Shared game logic runs in both the browser and the Vercel Function.
   {files: ["src/shared/**/*.js"], languageOptions: {globals: {...globals.browser}}},
-  {files: ["src/server/**/*.js"], languageOptions: {globals: {...globals.serviceworker}}},
+  // The Family-mode API runs as a Vercel Function on Node.js.
+  {files: ["src/server/**/*.js", "api/**/*.js"], languageOptions: {globals: {...globals.node}}},
   {files: ["src/client/**/*.js"], languageOptions: {globals: {...globals.browser}}},
   {files: ["scripts/**/*.mjs", "test/**/*.mjs", "eslint.config.js"], languageOptions: {globals: {...globals.node}}},
   // Playwright page.evaluate callbacks run in the browser.

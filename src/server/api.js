@@ -1,16 +1,33 @@
 // @ts-check
-// Family-game API backed by D1. The schema is unchanged from earlier
-// releases so existing players, games and rounds keep working. Solo games
-// are played on the device and never call this API; Solo games created by
-// older releases (a "BOT" member in D1) are still playable here.
+// Family-game API backed by Postgres (Supabase in production). Request and
+// response shapes are unchanged from the D1 releases, and rows written by
+// them read back the same. Solo games are played on the device and never
+// call this API; Solo games created by older releases (a "BOT" member) are
+// still playable here.
+//
+// Concurrency and idempotency (Postgres runs requests truly in parallel):
+// * Every multi-statement write is one transaction (store.tx): all of it or none of it.
+// * Duplicate-safe writes use deterministic keys with ON CONFLICT DO NOTHING:
+//   one submission per player per round, round `${game}:${n}`, notification
+//   `${game}:${key}:${player}`, rematch id derived from the finished game's id.
+// * A submission is committed on its own, and only then is the game re-read
+//   (as one consistent snapshot). Whichever of two simultaneous submissions
+//   commits second therefore always sees both words and reveals. Never put
+//   "save + read + reveal" in one transaction: each would see only its own word.
+// * Reveal progress is gated on `UPDATE rounds … WHERE status = 'OPEN' RETURNING`:
+//   only the request that closes the round opens the next one and notifies.
+// * Joins lock the game row (SELECT … FOR UPDATE), so racing joiners take turns.
+// * Join and recovery code collisions use ON CONFLICT DO NOTHING RETURNING and
+//   retry with a new code, so a collision never aborts the transaction.
 
 import {chooseOpening, chooseResponse} from "../shared/bot.js";
 import {MAX_MOVES, checkWord, hashString, moveOutcome, seededRandom} from "../shared/rules.js";
 import {wordKey} from "../shared/words.js";
+import {isSchemaMissing, isUnavailable, isUniqueViolation} from "./db.js";
 
 /**
- * @typedef {import("../shared/types.js").D1Database} D1Database
- * @typedef {import("../shared/types.js").D1PreparedStatement} D1PreparedStatement
+ * @typedef {import("../shared/types.js").Store} Store
+ * @typedef {import("../shared/types.js").Queryable} Queryable
  * @typedef {import("../shared/types.js").GameView} GameView
  * @typedef {import("../shared/types.js").GameStatus} GameStatus
  * @typedef {import("../shared/types.js").Move} Move
@@ -23,6 +40,8 @@ import {wordKey} from "../shared/words.js";
  * @typedef {{player_id: string, slot: number, display_name: string | null}} MemberRow
  * @typedef {{id: string, number: number, prompts: [string, string] | null, status: MoveStatus, openedAt: string, revealedAt: string | null, words: {a: string, b: string} | null, submitted: Partial<Record<Side, Submission>>, botQuality: any}} LoadedMove
  * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, rules: {status: GameStatus, language: string, moves: LoadedMove[]}}} LoadedGame
+ * @typedef {{joinCode: () => string, recoveryDigits: () => number}} Codes
+ * @typedef {{store?: Store | null, codes?: Partial<Codes>}} ApiEnv
  */
 
 const BOT = "BOT";
@@ -33,6 +52,9 @@ const isPlayable = row => row.status !== "WAITING" && !FINISHED.has(row.status);
 /** Notification kinds the API creates (family games only). */
 export const NOTIFICATION_KINDS = ["YOUR_TURN", "READY_TO_REVEAL", "PLAYER_JOINED", "GAME_COMPLETE", "GAME_EXHAUSTED", "REMATCH"];
 const NOTIFICATION_LIMIT = 50;
+/** Tables the API needs; /api/health reports SCHEMA_MISSING until all exist. */
+export const TABLES = ["players", "games", "game_players", "rounds", "submissions", "notifications"];
+const CODE_ATTEMPTS = 5;
 
 /** @param {unknown} data @param {number} [status] */
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
@@ -42,67 +64,37 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 /** @param {number} status @param {string} code @param {string} error @param {object} [extra] */
 const fail = (status, code, error, extra = {}) => json({error, code, ...extra}, status);
 const uuid = () => crypto.randomUUID();
+/** @param {unknown} error */
+const reason = error => (error instanceof Error ? error.message : String(error));
 const now = () => new Date().toISOString();
-const joinCode = () => {
-  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  let out = "";
-  for (let i = 0; i < 4; i++) out += letters[Math.floor(Math.random() * letters.length)];
-  return out + "-" + Math.floor(10 + Math.random() * 90);
+/** @type {Codes} */
+const RANDOM_CODES = {
+  joinCode() {
+    const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    let out = "";
+    for (let i = 0; i < 4; i++) out += letters[Math.floor(Math.random() * letters.length)];
+    return out + "-" + Math.floor(10 + Math.random() * 90);
+  },
+  recoveryDigits: () => Math.floor(1000 + Math.random() * 9000)
 };
 
 /**
- * @param {D1Database} db
+ * @param {Queryable} q
  * @param {string} sql
  * @param {unknown[]} [args]
  * @returns {Promise<any[]>}
  */
-async function all(db, sql, args = []) {
-  return (await db.prepare(sql).bind(...args).all()).results || [];
+async function all(q, sql, args = []) {
+  return (await q.query(sql, args)).rows;
 }
 /**
- * @param {D1Database} db
+ * @param {Queryable} q
  * @param {string} sql
  * @param {unknown[]} [args]
  * @returns {Promise<any>}
  */
-async function first(db, sql, args = []) {
-  return (await all(db, sql, args))[0] || null;
-}
-
-/** SQLite/D1 UNIQUE (or primary key) constraint failure: safe to retry with a new random code. */
-function isUniqueViolation(error) {
-  return /UNIQUE constraint failed|PRIMARY KEY/i.test(String(error?.message || error));
-}
-
-/** @type {Promise<void> | null} */
-let ready = null;
-/**
- * Create missing tables and add missing columns. Additive only: never alters
- * or drops existing columns or data.
- * @param {D1Database} db
- */
-export function ensureSchema(db) {
-  ready ??= (async () => {
-    await db.batch([
-      db.prepare("CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, recovery_code TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL)"),
-      db.prepare("CREATE TABLE IF NOT EXISTS games (id TEXT PRIMARY KEY, join_code TEXT UNIQUE NOT NULL, status TEXT NOT NULL, round_number INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"),
-      db.prepare("CREATE TABLE IF NOT EXISTS game_players (game_id TEXT NOT NULL, player_id TEXT NOT NULL, slot INTEGER NOT NULL, joined_at TEXT NOT NULL, PRIMARY KEY(game_id, player_id), UNIQUE(game_id, slot))"),
-      db.prepare("CREATE TABLE IF NOT EXISTS rounds (id TEXT PRIMARY KEY, game_id TEXT NOT NULL, round_number INTEGER NOT NULL, previous_a TEXT, previous_b TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL, revealed_at TEXT, UNIQUE(game_id, round_number))"),
-      db.prepare("CREATE TABLE IF NOT EXISTS submissions (round_id TEXT NOT NULL, player_id TEXT NOT NULL, word TEXT NOT NULL, submitted_at TEXT NOT NULL, PRIMARY KEY(round_id, player_id))"),
-      db.prepare("CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, player_id TEXT NOT NULL, game_id TEXT, kind TEXT NOT NULL, message TEXT NOT NULL, read_at TEXT, created_at TEXT NOT NULL)")
-    ]).catch(() => {});
-    // Added columns; these fail harmlessly once present. rematch_of links a
-    // rematch to the finished game it was started from (nullable, additive).
-    for (const sql of [
-      "ALTER TABLE games ADD COLUMN language TEXT DEFAULT 'en'",
-      "ALTER TABLE rounds ADD COLUMN bot_quality TEXT DEFAULT NULL",
-      "ALTER TABLE rounds ADD COLUMN bot_reason TEXT DEFAULT NULL",
-      "ALTER TABLE games ADD COLUMN rematch_of TEXT"
-    ]) {
-      try { await db.prepare(sql).run(); } catch {}
-    }
-  })().catch(error => { ready = null; throw error; });
-  return ready;
+async function first(q, sql, args = []) {
+  return (await all(q, sql, args))[0] || null;
 }
 
 /**
@@ -122,18 +114,29 @@ export async function rematchIdFor(gameId) {
 }
 
 /**
- * Load everything about one game and shape it as a rules-style game.
- * @param {D1Database} db
+ * Load everything about one game and shape it as a rules-style game. All reads
+ * come from one snapshot, so a reveal committing halfway through can never
+ * produce a mixed view (rounds from before it, submissions from after it).
+ * @param {Store} db
  * @param {string} gameId
  * @returns {Promise<LoadedGame | null>}
  */
 async function loadGame(db, gameId) {
-  /** @type {GameRow | null} */
-  const game = await first(db, "SELECT * FROM games WHERE id = ?", [gameId]);
-  if (!game) return null;
-  const members = await all(db, "SELECT gp.player_id, gp.slot, p.display_name FROM game_players gp LEFT JOIN players p ON p.id = gp.player_id WHERE gp.game_id = ? ORDER BY gp.slot", [gameId]);
-  const rounds = await all(db, "SELECT * FROM rounds WHERE game_id = ? ORDER BY round_number", [gameId]);
-  const submissions = await all(db, "SELECT s.round_id, s.player_id, s.word, s.submitted_at FROM submissions s JOIN rounds r ON r.id = s.round_id WHERE r.game_id = ?", [gameId]);
+  if (!gameId) return null;
+  const raw = await db.snapshot(async q => {
+    /** @type {GameRow | null} */
+    const game = await first(q, "SELECT * FROM games WHERE id = $1", [gameId]);
+    if (!game) return null;
+    const members = await all(q, "SELECT gp.player_id, gp.slot, p.display_name FROM game_players gp LEFT JOIN players p ON p.id = gp.player_id WHERE gp.game_id = $1 ORDER BY gp.slot", [gameId]);
+    const rounds = await all(q, "SELECT * FROM rounds WHERE game_id = $1 ORDER BY round_number", [gameId]);
+    const submissions = await all(q, "SELECT s.round_id, s.player_id, s.word, s.submitted_at FROM submissions s JOIN rounds r ON r.id = s.round_id WHERE r.game_id = $1", [gameId]);
+    /** @type {{id: string} | null} */
+    let linked = null;
+    if (FINISHED.has(game.status)) linked = await first(q, "SELECT id FROM games WHERE id = $1 AND rematch_of = $2", [await rematchIdFor(game.id), game.id]);
+    return {game, members, rounds, submissions, linked};
+  });
+  if (!raw) return null;
+  const {game, members, rounds, submissions, linked} = raw;
   /** @type {Map<string, Side>} */
   const slotOf = new Map(members.map(m => [m.player_id, m.slot === 1 ? "a" : "b"]));
   /** @type {LoadedMove[]} */
@@ -159,15 +162,9 @@ async function loadGame(db, gameId) {
       botQuality: round.bot_quality || null
     };
   });
-  let rematchId = null;
-  if (FINISHED.has(game.status)) {
-    const candidate = await rematchIdFor(game.id);
-    const linked = await first(db, "SELECT id FROM games WHERE id = ? AND rematch_of = ?", [candidate, game.id]);
-    rematchId = linked ? linked.id : null;
-  }
   /** @type {GameStatus} */
   const status = game.status === "COMPLETE" ? "MATCHED" : game.status === "MATCHED" || game.status === "EXHAUSTED" ? game.status : "ACTIVE";
-  return {row: game, members, moves, slotOf, rematchId, rules: {status, language: game.language === "fr" ? "fr" : "en", moves}};
+  return {row: game, members, moves, slotOf, rematchId: linked ? linked.id : null, rules: {status, language: game.language === "fr" ? "fr" : "en", moves}};
 }
 
 /**
@@ -218,25 +215,28 @@ function viewFor(loaded, playerId) {
 
 /**
  * One notification row. The id is deterministic (`${gameId}:${key}:${playerId}`)
- * and inserted with INSERT OR IGNORE, so retries and races never duplicate it.
- * Only call this for family games.
- * @param {D1Database} db
+ * and the insert does nothing if it already exists, so retries and races never
+ * duplicate it. Only call this for family games.
+ * @param {Queryable} q
  * @param {string} playerId
  * @param {string} gameId
  * @param {NotificationKind} kind
  * @param {string} message
  * @param {string} key
  * @param {string} at
- * @returns {D1PreparedStatement}
  */
-const notify = (db, playerId, gameId, kind, message, key, at) =>
-  db.prepare("INSERT OR IGNORE INTO notifications (id,player_id,game_id,kind,message,read_at,created_at) VALUES(?,?,?,?,?,?,?)").bind(`${gameId}:${key}:${playerId}`, playerId, gameId, kind, message, null, at);
+const notify = (q, playerId, gameId, kind, message, key, at) =>
+  q.query("INSERT INTO notifications (id,player_id,game_id,kind,message,read_at,created_at) VALUES($1,$2,$3,$4,$5,NULL,$6) ON CONFLICT (id) DO NOTHING", [`${gameId}:${key}:${playerId}`, playerId, gameId, kind, message, at]);
 
 /**
- * Reveal the open round once every member has a word. Safe to run twice concurrently.
- * @param {D1Database} db
+ * Reveal the open round once every member has a word. Safe to run any number of
+ * times concurrently: closing the round (`… WHERE status = 'OPEN' RETURNING`) locks
+ * it, and only the transaction that actually closed it opens the next round,
+ * moves the game on and notifies. A second request waits for the first, finds the
+ * round already closed and changes nothing. All of it commits or none of it does.
+ * @param {Store} db
  * @param {LoadedGame} loaded
- * @returns {Promise<boolean>} whether a reveal was attempted
+ * @returns {Promise<boolean>} whether a reveal was attempted (the caller re-reads either way)
  */
 async function revealIfReady(db, loaded) {
   const {row, members, moves} = loaded;
@@ -246,27 +246,23 @@ async function revealIfReady(db, loaded) {
   const outcome = moveOutcome(move.number, a, b, row.language === "fr" ? "fr" : "en");
   // Notifications are for family games only; legacy Solo games never get any.
   const humans = isLegacySolo(loaded) ? [] : members;
-  const statements = [
-    db.prepare("UPDATE rounds SET status = ?, revealed_at = ? WHERE id = ? AND status = 'OPEN'").bind(outcome, at, move.id)
-  ];
-  if (outcome === "REVEALED") {
-    statements.push(
-      db.prepare("UPDATE games SET round_number = ?, status = 'ACTIVE', updated_at = ? WHERE id = ? AND round_number = ?").bind(move.number + 1, at, row.id, move.number),
-      db.prepare("INSERT OR IGNORE INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES(?,?,?,?,?,?,?,?)").bind(`${row.id}:${move.number + 1}`, row.id, move.number + 1, a, b, "OPEN", at, null),
-      ...humans.map(m => notify(db, m.player_id, row.id, "READY_TO_REVEAL", "New move ready! Find the next connection!", `reveal-${move.number}`, at))
-    );
-  } else {
-    statements.push(
-      db.prepare("UPDATE games SET status = ?, updated_at = ? WHERE id = ? AND status = 'ACTIVE'").bind(outcome, at, row.id),
-      ...humans.map(m => notify(db, m.player_id, row.id, outcome === "MATCHED" ? "GAME_COMPLETE" : "GAME_EXHAUSTED", outcome === "MATCHED" ? "You matched! Same thing!" : "20 moves used. Try a rematch!", `end`, at))
-    );
-  }
-  await db.batch(statements);
+  await db.tx(async q => {
+    const closed = await q.query("UPDATE rounds SET status = $1, revealed_at = $2 WHERE id = $3 AND status = 'OPEN' RETURNING id", [outcome, at, move.id]);
+    if (closed.rowCount !== 1) return; // another request revealed this move first
+    if (outcome === "REVEALED") {
+      await q.query("UPDATE games SET round_number = $1, status = 'ACTIVE', updated_at = $2 WHERE id = $3 AND round_number = $4", [move.number + 1, at, row.id, move.number]);
+      await q.query("INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES($1,$2,$3,$4,$5,'OPEN',$6,NULL) ON CONFLICT DO NOTHING", [`${row.id}:${move.number + 1}`, row.id, move.number + 1, a, b, at]);
+      for (const m of humans) await notify(q, m.player_id, row.id, "READY_TO_REVEAL", "New move ready! Find the next connection!", `reveal-${move.number}`, at);
+    } else {
+      await q.query("UPDATE games SET status = $1, updated_at = $2 WHERE id = $3 AND status = 'ACTIVE'", [outcome, at, row.id]);
+      for (const m of humans) await notify(q, m.player_id, row.id, outcome === "MATCHED" ? "GAME_COMPLETE" : "GAME_EXHAUSTED", outcome === "MATCHED" ? "You matched! Same thing!" : "20 moves used. Try a rematch!", "end", at);
+    }
+  });
   return true;
 }
 
 /**
- * Older Solo games stored in D1: the bot picks from the prompts and earlier words only.
+ * Older server-side Solo games: the bot picks from the prompts and earlier words only.
  * @param {LoadedGame} loaded
  */
 function legacyBotWord(loaded) {
@@ -281,11 +277,11 @@ function legacyBotWord(loaded) {
 }
 
 /**
- * Finish any work an earlier request left half-done (for example a worker that
- * stopped between storing a word and revealing): a legacy Solo bot that has not
- * played yet plays now, and a move with both words is revealed. Idempotent.
- * Returns the (re)loaded game.
- * @param {D1Database} db
+ * Finish any work an earlier request left half-done (for example a function
+ * that stopped between storing a word and revealing): a legacy Solo bot that
+ * has not played yet plays now, and a move with both words is revealed.
+ * Idempotent. Returns the (re)loaded game.
+ * @param {Store} db
  * @param {LoadedGame} loaded
  * @returns {Promise<LoadedGame>}
  */
@@ -297,10 +293,10 @@ async function settle(db, loaded) {
   if (botSide && !move.submitted[botSide] && Object.keys(move.submitted).length) {
     const pick = legacyBotWord(loaded);
     const at = now();
-    await db.batch([
-      db.prepare("INSERT OR IGNORE INTO submissions (round_id,player_id,word,submitted_at) VALUES(?,?,?,?)").bind(move.id, BOT, pick.word, at),
-      db.prepare("UPDATE rounds SET bot_quality = ?, bot_reason = NULL WHERE id = ? AND status = 'OPEN'").bind(pick.quality, move.id)
-    ]);
+    await db.tx(async q => {
+      await q.query("INSERT INTO submissions (round_id,player_id,word,submitted_at) VALUES($1,$2,$3,$4) ON CONFLICT (round_id, player_id) DO NOTHING", [move.id, BOT, pick.word, at]);
+      await q.query("UPDATE rounds SET bot_quality = $1, bot_reason = NULL WHERE id = $2 AND status = 'OPEN'", [pick.quality, move.id]);
+    });
     changed = true;
   }
   if (changed) loaded = await reload(db, loaded);
@@ -310,7 +306,7 @@ async function settle(db, loaded) {
 
 /**
  * Re-read a game that is known to exist (games are never deleted).
- * @param {D1Database} db
+ * @param {Store} db
  * @param {LoadedGame} loaded
  * @returns {Promise<LoadedGame>}
  */
@@ -333,7 +329,7 @@ const MESSAGES = {
 };
 
 /**
- * @param {D1Database} db
+ * @param {Store} db
  * @param {any} body
  */
 async function submit(db, body) {
@@ -360,18 +356,21 @@ async function submit(db, body) {
   const check = checkWord(loaded.rules, side, body.word);
   if (!check.ok) return fail(400, check.code, MESSAGES[check.code] || "That word can't be used.", {word: check.word});
 
+  // Step 1: store the word and commit it on its own (with a legacy Solo bot's word in the same
+  // transaction). One row per player per round: a retry or a racing second request does nothing.
   const at = now();
-  const statements = [db.prepare("INSERT OR IGNORE INTO submissions (round_id,player_id,word,submitted_at) VALUES(?,?,?,?)").bind(current.id, playerId, check.word, at)];
   const botSide = loaded.slotOf.get(BOT);
-  if (botSide && !current.submitted[botSide]) {
-    const pick = legacyBotWord(loaded);
-    statements.push(
-      db.prepare("INSERT OR IGNORE INTO submissions (round_id,player_id,word,submitted_at) VALUES(?,?,?,?)").bind(current.id, BOT, pick.word, at),
-      db.prepare("UPDATE rounds SET bot_quality = ?, bot_reason = NULL WHERE id = ?").bind(pick.quality, current.id)
-    );
-  }
-  await db.batch(statements);
+  const bot = botSide && !current.submitted[botSide] ? legacyBotWord(loaded) : null;
+  await db.tx(async q => {
+    await q.query("INSERT INTO submissions (round_id,player_id,word,submitted_at) VALUES($1,$2,$3,$4) ON CONFLICT (round_id, player_id) DO NOTHING", [current.id, playerId, check.word, at]);
+    if (bot) {
+      await q.query("INSERT INTO submissions (round_id,player_id,word,submitted_at) VALUES($1,$2,$3,$4) ON CONFLICT (round_id, player_id) DO NOTHING", [current.id, BOT, bot.word, at]);
+      await q.query("UPDATE rounds SET bot_quality = $1, bot_reason = NULL WHERE id = $2", [bot.quality, current.id]);
+    }
+  });
 
+  // Step 2, only after that commit: re-read. If the other player submitted at the same
+  // moment, whichever commit landed second sees both words here, so the move is revealed.
   // Never report success unless the stored row is confirmed.
   let fresh = await reload(db, loaded);
   const mine = fresh.moves.find(m => m.number === current.number)?.submitted[side];
@@ -381,20 +380,23 @@ async function submit(db, body) {
   else if (!isLegacySolo(fresh)) {
     const other = fresh.members.find(m => m.player_id !== playerId);
     // Best effort: the word is already saved, so a failed notification must not turn into an error.
-    if (other) await notify(db, other.player_id, loaded.row.id, "YOUR_TURN", "Your friend played. Your turn!", `turn-${current.number}`, at).run().catch(() => {});
+    if (other) await notify(db, other.player_id, loaded.row.id, "YOUR_TURN", "Your friend played. Your turn!", `turn-${current.number}`, at).catch(error => console.error("YOUR_TURN notification failed", reason(error)));
   }
   return json({ok: true, game: viewFor(fresh, playerId)});
 }
 
 /**
  * Start (or return) the rematch of a finished family game: same players in
- * the same slots, same language, a fresh round 1. Idempotent for both players.
- * @param {D1Database} db
+ * the same slots, same language, a fresh round 1. Idempotent for both players:
+ * the rematch id is derived from the finished game's id, so every request
+ * (both players, retries, races) aims at the same row and only one can create it.
+ * @param {Store} db
  * @param {any} body
+ * @param {Codes} codes
  */
-async function rematch(db, body) {
+async function rematch(db, body, codes) {
   const playerId = String(body.player_id || "");
-  const player = await first(db, "SELECT id, display_name FROM players WHERE id = ?", [playerId]);
+  const player = await first(db, "SELECT id, display_name FROM players WHERE id = $1", [playerId]);
   if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
   const loaded = await loadGame(db, String(body.game_id || ""));
   if (!loaded) return fail(404, "GAME_NOT_FOUND", "Game not found");
@@ -404,168 +406,224 @@ async function rematch(db, body) {
 
   const id = await rematchIdFor(loaded.row.id);
   /** @returns {Promise<{id: string, join_code: string} | null>} */
-  const existing = () => first(db, "SELECT id, join_code FROM games WHERE id = ?", [id]);
+  const existing = () => first(db, "SELECT id, join_code FROM games WHERE id = $1", [id]);
   const found = await existing();
   if (found) return json({id: found.id, join_code: found.join_code, existing: true});
 
   const created = now();
   const language = loaded.row.language === "fr" ? "fr" : "en";
   const others = loaded.members.filter(m => m.player_id !== playerId);
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const code = joinCode();
-    try {
-      await db.batch([
-        db.prepare("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language,rematch_of) VALUES(?,?,?,?,?,?,?,?)").bind(id, code, "ACTIVE", 1, created, created, language, loaded.row.id),
-        ...loaded.members.map(m => db.prepare("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES(?,?,?,?)").bind(id, m.player_id, m.slot, created)),
-        db.prepare("INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES(?,?,?,?,?,?,?,?)").bind(`${id}:1`, id, 1, null, null, "OPEN", created, null),
-        ...others.map(m => notify(db, m.player_id, id, "REMATCH", `${player.display_name} wants a rematch!`, "rematch", created))
-      ]);
-      return json({id, join_code: code, existing: false});
-    } catch {
-      // Lost a race with the other player (or a retry): the rematch exists now.
-      const raced = await existing();
-      if (raced) return json({id: raced.id, join_code: raced.join_code, existing: true});
+  try {
+    for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
+      const code = codes.joinCode();
+      const outcome = await db.tx(async q => {
+        // DO NOTHING on either key: a racing request already created this rematch (same id), or the code is taken.
+        // If the other request is still in flight, this insert waits for it to commit or roll back.
+        const inserted = await q.query("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language,rematch_of) VALUES($1,$2,'ACTIVE',1,$3,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING id", [id, code, created, language, loaded.row.id]);
+        if (inserted.rowCount !== 1) return (await first(q, "SELECT 1 AS ok FROM games WHERE id = $1", [id])) ? "exists" : "collision";
+        for (const m of loaded.members) await q.query("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES($1,$2,$3,$4)", [id, m.player_id, m.slot, created]);
+        await q.query("INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES($1,$2,1,NULL,NULL,'OPEN',$3,NULL)", [`${id}:1`, id, created]);
+        for (const m of others) await notify(q, m.player_id, id, "REMATCH", `${player.display_name} wants a rematch!`, "rematch", created);
+        return "created";
+      });
+      if (outcome === "created") return json({id, join_code: code, existing: false});
+      if (outcome === "exists") break;
     }
+  } catch (error) {
+    if (isUnavailable(error)) throw error;
+    console.error("rematch create failed", error);
   }
+  // Lost a race with the other player (or a retry): the rematch exists now.
+  const raced = await existing();
+  if (raced) return json({id: raced.id, join_code: raced.join_code, existing: true});
   return fail(500, "GAME_CREATE_FAILED", "Could not create a game right now. Please try again.");
 }
 
-/** Notifications for family games only: never for legacy Solo (BOT) games. */
-const FAMILY_NOTIFICATION = "n.player_id = ? AND n.game_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM game_players b WHERE b.game_id = n.game_id AND b.player_id = 'BOT')";
+/** Notifications for family games only: never for legacy Solo (BOT) games. `$1` is the player id. */
+const FAMILY_NOTIFICATION = "n.player_id = $1 AND n.game_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM game_players b WHERE b.game_id = n.game_id AND b.player_id = 'BOT')";
 
 /**
- * @param {D1Database} db
+ * @param {Store} db
  * @param {string} playerId
  * @returns {Promise<number>}
  */
 async function unreadCount(db, playerId) {
-  const row = await first(db, `SELECT COUNT(*) AS n FROM notifications n WHERE ${FAMILY_NOTIFICATION} AND n.read_at IS NULL`, [playerId]);
+  const row = await first(db, `SELECT COUNT(*)::int AS n FROM notifications n WHERE ${FAMILY_NOTIFICATION} AND n.read_at IS NULL`, [playerId]);
   return Number(row?.n || 0);
 }
 
 /**
- * @param {D1Database} db
+ * Newest first; `seq` (insertion order) breaks ties between equal timestamps.
+ * @param {Store} db
  * @param {string} playerId
  * @returns {Promise<import("../shared/types.js").Notification[]>}
  */
 async function listNotifications(db, playerId) {
   return all(db, `SELECT n.id, n.kind, n.game_id, n.created_at, n.read_at,
-    (SELECT p.display_name FROM game_players o JOIN players p ON p.id = o.player_id WHERE o.game_id = n.game_id AND o.player_id != n.player_id LIMIT 1) AS opponent_name
+    (SELECT p.display_name FROM game_players o JOIN players p ON p.id = o.player_id WHERE o.game_id = n.game_id AND o.player_id <> n.player_id LIMIT 1) AS opponent_name
     FROM notifications n WHERE ${FAMILY_NOTIFICATION}
-    ORDER BY n.created_at DESC, n.rowid DESC LIMIT ${NOTIFICATION_LIMIT}`, [playerId]);
+    ORDER BY n.created_at DESC, n.seq DESC LIMIT $2`, [playerId, NOTIFICATION_LIMIT]);
+}
+
+/**
+ * Whether the database is reachable and migrated.
+ * @param {Store} db
+ */
+async function health(db) {
+  try {
+    const row = await first(db, "SELECT COUNT(*)::int AS n FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename = ANY($1::text[])", [TABLES]);
+    if (Number(row?.n) !== TABLES.length) return fail(503, "SCHEMA_MISSING", "The database has not been set up yet.", {ok: false, db: true});
+    return json({ok: true, db: true});
+  } catch (error) {
+    console.error("health check failed", reason(error));
+    return fail(503, "DB_UNAVAILABLE", "The database is not reachable right now.", {ok: false, db: false});
+  }
+}
+
+/**
+ * Handle one /api/* request. Database outages and a missing schema come back as
+ * JSON 503s with their own codes, so the app can say "unavailable" instead of
+ * showing a generic error.
+ * @param {Request} request
+ * @param {ApiEnv} env
+ * @returns {Promise<Response>}
+ */
+export async function handleApi(request, env) {
+  const db = env.store;
+  if (!db) return fail(503, "NO_DATABASE", "Database is not configured", {ok: false, db: false});
+  try {
+    return await route(request, db, {...RANDOM_CODES, ...env.codes});
+  } catch (error) {
+    if (isUnavailable(error)) {
+      console.error("database unavailable", reason(error));
+      return fail(503, "DB_UNAVAILABLE", "The database is not reachable right now.");
+    }
+    if (isSchemaMissing(error)) {
+      console.error("database schema missing", reason(error));
+      return fail(503, "SCHEMA_MISSING", "The database has not been set up yet.");
+    }
+    throw error;
+  }
 }
 
 /**
  * @param {Request} request
- * @param {{DB?: D1Database}} env
+ * @param {Store} db
+ * @param {Codes} codes
  * @returns {Promise<Response>}
  */
-export async function handleApi(request, env) {
-  const db = env.DB;
-  if (!db) return fail(503, "NO_DATABASE", "Database is not configured");
-  await ensureSchema(db);
+async function route(request, db, codes) {
   const url = new URL(request.url);
   const path = url.pathname;
   /** @type {any} */
   let body = {};
-  if (request.method !== "GET") {
+  if (request.method !== "GET" && request.method !== "HEAD") {
     try { body = await request.json(); } catch {}
   }
 
-  if (path === "/api/health") return json({ok: true});
+  if (path === "/api/health") return health(db);
 
   if (path === "/api/player" && request.method === "POST") {
     const created = now(), playerId = uuid();
     const displayName = String(body.display_name || "").replace(/\s+/g, " ").trim().slice(0, 24) || "Player";
     const base = displayName.normalize("NFD").replace(/\p{M}/gu, "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10) || "PLAYER";
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const recoveryCode = base + "-" + Math.floor(1000 + Math.random() * 9000);
-      try {
-        await db.prepare("INSERT INTO players (id,display_name,recovery_code,created_at,last_seen_at) VALUES(?,?,?,?,?)").bind(playerId, displayName, recoveryCode, created, created).run();
-        return json({id: playerId, display_name: displayName, recovery_code: recoveryCode});
-      } catch (error) {
-        // Only a recovery-code collision is worth retrying; anything else is a real failure to report.
-        if (isUniqueViolation(error) && !(await first(db, "SELECT id FROM players WHERE id = ?", [playerId]))) continue;
-        console.error("player create failed", error);
-        return fail(500, "PLAYER_CREATE_FAILED", "Could not create a player right now. Please try again.");
+    try {
+      for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
+        const recoveryCode = base + "-" + codes.recoveryDigits();
+        // A recovery-code collision inserts nothing (no error), so just try another code.
+        const inserted = await db.query("INSERT INTO players (id,display_name,recovery_code,created_at,last_seen_at) VALUES($1,$2,$3,$4,$4) ON CONFLICT (recovery_code) DO NOTHING RETURNING id", [playerId, displayName, recoveryCode, created]);
+        if (inserted.rowCount === 1) return json({id: playerId, display_name: displayName, recovery_code: recoveryCode});
       }
+    } catch (error) {
+      if (isUnavailable(error) || isSchemaMissing(error)) throw error;
+      // Anything else is a real failure to report, not a collision to retry.
+      console.error("player create failed", error);
     }
     return fail(500, "PLAYER_CREATE_FAILED", "Could not create a player right now. Please try again.");
   }
 
   if (path === "/api/player/recover" && request.method === "POST") {
-    const found = await first(db, "SELECT id, display_name, recovery_code FROM players WHERE recovery_code = ?", [String(body.recovery_code || "").toUpperCase().trim()]);
+    const found = await first(db, "SELECT id, display_name, recovery_code FROM players WHERE recovery_code = $1", [String(body.recovery_code || "").toUpperCase().trim()]);
     return found ? json(found) : fail(404, "RECOVERY_NOT_FOUND", "Recovery code not found");
   }
 
   if (path === "/api/games" && request.method === "POST") {
-    const player = await first(db, "SELECT id FROM players WHERE id = ?", [String(body.player_id || "")]);
+    const player = await first(db, "SELECT id FROM players WHERE id = $1", [String(body.player_id || "")]);
     if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
     // Only an explicit `solo: true` creates a legacy Solo game, so a family game is never mislabelled.
     const created = now(), gameId = uuid(), solo = body.solo === true;
     const language = body.language === "fr" ? "fr" : "en";
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const code = joinCode();
-      try {
-        await db.batch([
-          db.prepare("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES(?,?,?,?,?,?,?)").bind(gameId, code, solo ? "ACTIVE" : "WAITING", 1, created, created, language),
-          db.prepare("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES(?,?,?,?)").bind(gameId, player.id, 1, created),
-          ...(solo ? [db.prepare("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES(?,?,?,?)").bind(gameId, BOT, 2, created)] : []),
-          db.prepare("INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES(?,?,?,?,?,?,?,?)").bind(`${gameId}:1`, gameId, 1, null, null, "OPEN", created, null)
-        ]);
-        return json({id: gameId, join_code: code, language});
-      } catch (error) {
-        // Only a join-code collision is worth retrying; anything else is a real failure to report.
-        if (isUniqueViolation(error)) continue;
-        console.error("game create failed", error);
-        return fail(500, "GAME_CREATE_FAILED", "Could not create a game right now. Please try again.");
+    try {
+      for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
+        const code = codes.joinCode();
+        const made = await db.tx(async q => {
+          // A join-code collision inserts nothing (no error, the transaction stays usable): try another code.
+          const inserted = await q.query("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES($1,$2,$3,1,$4,$4,$5) ON CONFLICT (join_code) DO NOTHING RETURNING id", [gameId, code, solo ? "ACTIVE" : "WAITING", created, language]);
+          if (inserted.rowCount !== 1) return false;
+          await q.query("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES($1,$2,1,$3)", [gameId, player.id, created]);
+          if (solo) await q.query("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES($1,$2,2,$3)", [gameId, BOT, created]);
+          await q.query("INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES($1,$2,1,NULL,NULL,'OPEN',$3,NULL)", [`${gameId}:1`, gameId, created]);
+          return true;
+        });
+        if (made) return json({id: gameId, join_code: code, language});
       }
+    } catch (error) {
+      if (isUnavailable(error) || isSchemaMissing(error)) throw error;
+      console.error("game create failed", error);
     }
     return fail(500, "GAME_CREATE_FAILED", "Could not create a game right now. Please try again.");
   }
 
   if (path === "/api/games/join" && request.method === "POST") {
     const playerId = String(body.player_id || "");
-    const player = await first(db, "SELECT id, display_name FROM players WHERE id = ?", [playerId]);
+    const player = await first(db, "SELECT id, display_name FROM players WHERE id = $1", [playerId]);
     if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
     const code = String(body.join_code || "").toUpperCase().replace(/\s+/g, "").trim();
-    const game = await first(db, "SELECT * FROM games WHERE join_code = ?", [code]);
-    if (!game) return fail(404, "GAME_NOT_FOUND", "We couldn't find a game with that code.");
-    const members = await all(db, "SELECT player_id, slot FROM game_players WHERE game_id = ?", [game.id]);
-    if (members.some(m => m.player_id === playerId)) return json({id: game.id, join_code: game.join_code});
-    if (members.length >= 2) return fail(409, "GAME_FULL", "That game already has two players.");
-    const joined = now();
+    /** @type {{status: "missing" | "member" | "full" | "joined", game?: GameRow}} */
+    let result;
     try {
-      await db.batch([
-        db.prepare("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES(?,?,?,?)").bind(game.id, playerId, 2, joined),
-        db.prepare("UPDATE games SET status = 'ACTIVE', updated_at = ? WHERE id = ? AND status = 'WAITING'").bind(joined, game.id),
-        ...members.map(m => notify(db, m.player_id, game.id, "PLAYER_JOINED", `${player.display_name} joined your game!`, "joined", joined))
-      ]);
+      result = await db.tx(async q => {
+        // Lock the game row: concurrent joins of one game take turns, and each sees the seats the previous one took.
+        /** @type {GameRow | null} */
+        const game = await first(q, "SELECT * FROM games WHERE join_code = $1 FOR UPDATE", [code]);
+        if (!game) return {status: "missing"};
+        const members = await all(q, "SELECT player_id, slot FROM game_players WHERE game_id = $1", [game.id]);
+        if (members.some(m => m.player_id === playerId)) return {status: "member", game};
+        if (members.length >= 2) return {status: "full"};
+        const joined = now();
+        await q.query("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES($1,$2,2,$3)", [game.id, playerId, joined]);
+        await q.query("UPDATE games SET status = 'ACTIVE', updated_at = $1 WHERE id = $2 AND status = 'WAITING'", [joined, game.id]);
+        for (const m of members) await notify(q, m.player_id, game.id, "PLAYER_JOINED", `${player.display_name} joined your game!`, "joined", joined);
+        return {status: "joined", game};
+      });
     } catch (error) {
+      if (isUnavailable(error) || isSchemaMissing(error)) throw error;
       if (!isUniqueViolation(error)) {
         console.error("game join failed", error);
         return fail(500, "GAME_JOIN_FAILED", "Could not join the game right now. Please try again.");
       }
-      // Lost a race: either this player's other request joined first (fine) or someone else did.
-      const member = await first(db, "SELECT 1 AS ok FROM game_players WHERE game_id = ? AND player_id = ?", [game.id, playerId]);
-      if (member) return json({id: game.id, join_code: game.join_code});
+      // Backstop (the row lock should make this unreachable): the seat was taken by this player's other request, or by someone else.
+      const member = await first(db, "SELECT g.id, g.join_code FROM games g JOIN game_players gp ON gp.game_id = g.id WHERE g.join_code = $1 AND gp.player_id = $2", [code, playerId]);
+      if (member) return json({id: member.id, join_code: member.join_code});
       return fail(409, "GAME_FULL", "That game already has two players.");
     }
-    return json({id: game.id, join_code: game.join_code});
+    if (result.status === "missing") return fail(404, "GAME_NOT_FOUND", "We couldn't find a game with that code.");
+    if (result.status === "full" || !result.game) return fail(409, "GAME_FULL", "That game already has two players.");
+    return json({id: result.game.id, join_code: result.game.join_code});
   }
 
   if (path === "/api/dashboard" && request.method === "GET") {
     const playerId = url.searchParams.get("player_id") || "";
-    const player = await first(db, "SELECT id, display_name FROM players WHERE id = ?", [playerId]);
+    const player = await first(db, "SELECT id, display_name FROM players WHERE id = $1", [playerId]);
     if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
-    await db.prepare("UPDATE players SET last_seen_at = ? WHERE id = ?").bind(now(), playerId).run();
+    await db.query("UPDATE players SET last_seen_at = $1 WHERE id = $2", [now(), playerId]);
     const games = await all(db, `SELECT g.id, g.join_code, g.status, g.round_number, g.created_at, g.updated_at, g.language,
       EXISTS(SELECT 1 FROM game_players b WHERE b.game_id = g.id AND b.player_id = 'BOT') AS bot,
-      (SELECT p2.display_name FROM game_players o JOIN players p2 ON p2.id = o.player_id WHERE o.game_id = g.id AND o.player_id != ? LIMIT 1) AS opponent_name,
-      EXISTS(SELECT 1 FROM rounds r JOIN submissions s ON s.round_id = r.id WHERE r.game_id = g.id AND r.round_number = g.round_number AND s.player_id = ?) AS locked
-      FROM games g JOIN game_players gp ON gp.game_id = g.id WHERE gp.player_id = ? ORDER BY g.updated_at DESC LIMIT 50`, [playerId, playerId, playerId]);
+      (SELECT p2.display_name FROM game_players o JOIN players p2 ON p2.id = o.player_id WHERE o.game_id = g.id AND o.player_id <> $1 LIMIT 1) AS opponent_name,
+      EXISTS(SELECT 1 FROM rounds r JOIN submissions s ON s.round_id = r.id WHERE r.game_id = g.id AND r.round_number = g.round_number AND s.player_id = $1) AS locked
+      FROM games g JOIN game_players gp ON gp.game_id = g.id WHERE gp.player_id = $1 ORDER BY g.updated_at DESC LIMIT 50`, [playerId]);
     // Unread family-game notifications, for older clients. Reading the dashboard never marks anything read.
-    const notes = await all(db, `SELECT n.id, n.game_id, n.kind, n.message, n.created_at FROM notifications n WHERE ${FAMILY_NOTIFICATION} AND n.read_at IS NULL ORDER BY n.created_at DESC, n.rowid DESC LIMIT 10`, [playerId]);
+    const notes = await all(db, `SELECT n.id, n.game_id, n.kind, n.message, n.created_at FROM notifications n WHERE ${FAMILY_NOTIFICATION} AND n.read_at IS NULL ORDER BY n.created_at DESC, n.seq DESC LIMIT 10`, [playerId]);
     return json({
       player,
       games: games.map(g => ({...g, bot: Boolean(g.bot), locked: Boolean(g.locked), status: g.status === "COMPLETE" ? "MATCHED" : g.status})),
@@ -576,27 +634,28 @@ export async function handleApi(request, env) {
 
   if (path === "/api/notifications" && request.method === "GET") {
     const playerId = url.searchParams.get("player_id") || "";
-    const player = await first(db, "SELECT id FROM players WHERE id = ?", [playerId]);
+    const player = await first(db, "SELECT id FROM players WHERE id = $1", [playerId]);
     if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
     return json({notifications: await listNotifications(db, playerId), unread: await unreadCount(db, playerId)});
   }
 
   if (path === "/api/notifications/read" && request.method === "POST") {
     const playerId = String(body.player_id || "");
-    const player = await first(db, "SELECT id FROM players WHERE id = ?", [playerId]);
+    const player = await first(db, "SELECT id FROM players WHERE id = $1", [playerId]);
     if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
     const at = now();
-    // Only the owner's rows, and the first read time is kept.
+    // Only the owner's rows, and the first read time is kept: a concurrent request waits for the
+    // row lock, then finds read_at already set and leaves it alone.
     if (body.all === true) {
-      await db.prepare("UPDATE notifications SET read_at = ? WHERE player_id = ? AND read_at IS NULL").bind(at, playerId).run();
+      await db.query("UPDATE notifications SET read_at = $1 WHERE player_id = $2 AND read_at IS NULL", [at, playerId]);
     } else if (Array.isArray(body.ids)) {
       const ids = [...new Set(body.ids.slice(0, 200).map(String))];
-      if (ids.length) await db.batch(ids.map(nid => db.prepare("UPDATE notifications SET read_at = ? WHERE id = ? AND player_id = ? AND read_at IS NULL").bind(at, nid, playerId)));
+      if (ids.length) await db.query("UPDATE notifications SET read_at = $1 WHERE player_id = $2 AND read_at IS NULL AND id = ANY($3::text[])", [at, playerId, ids]);
     }
     return json({ok: true, unread: await unreadCount(db, playerId)});
   }
 
-  if (path === "/api/games/rematch" && request.method === "POST") return rematch(db, body);
+  if (path === "/api/games/rematch" && request.method === "POST") return rematch(db, body, codes);
 
   if (path === "/api/game" && request.method === "GET") {
     const playerId = url.searchParams.get("player_id") || "";

@@ -14,7 +14,7 @@ The product should feel warm, bright, playful, and lightly 1980s-retro while rem
 - v21 added device-local Solo games, saved rounds/language, resume after reopening, an offline indicator, cached app-shell behavior, offline-only Solo gating, and some bot/history fixes.
 - The last full-audit attempt did not complete because the execution environment hit its usage limit. Treat v21 as the baseline, not as a fully verified release.
 - The browser/live-game/offline-refresh flow still needs end-to-end verification.
-- Offline Solo history is local to the device and does not sync to multiplayer/D1 data.
+- Offline Solo history is local to the device and does not sync to multiplayer data.
 - Existing D1 data must be preserved.
 
 ## Core game rules
@@ -194,9 +194,9 @@ verified.
 |---|---|
 | Tooling | `package.json`, `package-lock.json`, `eslint.config.js`, `jsconfig.json`, `.gitignore` |
 | Shared game logic | `src/shared/rules.js` (move state machine), `solo.js` (device-local Solo), `bot.js` (contextual bot), `words.js` (cleaning, keys, validation, speller), `types.js` (JSDoc types), `lexicon/{data,vocab,index}.js` |
-| Server | `src/server/api.js` (family games on D1), `worker.js` (Worker entry, embedded shell), `virtual-assets.d.ts` |
+| Server | `src/server/api.js` (family games), `db.js` (Postgres access); `api/index.js` (Vercel Function); `vercel.json`; `supabase/migrations/` |
 | Client | `src/client/index.html`, `styles.css`, `app.js`, `i18n.js`, `store.js`, `sw.js`, `diagnostics.js`, `manifest.webmanifest`, `icon.svg` |
-| Scripts | `scripts/build.mjs` (writes `dist/`), `dev-server.mjs` (runs the built worker on Node), `d1-sqlite.mjs` (D1 shim) |
+| Scripts | `scripts/build.mjs` (writes the static `dist/`), `dev-server.mjs` (mirrors Vercel locally), `postgres-local.mjs` (throwaway PostgreSQL), `smoke.mjs` (deployment check) |
 | Tests | `test/*.test.mjs` (unit and API integration), `test/e2e/*.test.mjs` (Playwright, Chromium) |
 | Docs | `README.md`, `docs/ACCEPTANCE.md`, this section, `reference/README.md` |
 
@@ -430,9 +430,9 @@ Never edit it by hand.
 ### Notifications
 - **What's covered.** In-app only, for family games: your turn, reveal ready,
   player joined, match, game complete, rematch.
-- **Storage and dedupe.** Read and unread state is kept in D1
-  (`notifications.read_at`). Ids are deterministic with INSERT OR IGNORE, so
-  retries, races and refreshes never duplicate.
+- **Storage and dedupe.** Read and unread state is kept in Postgres
+  (`notifications.read_at`). Ids are deterministic and inserted with
+  `ON CONFLICT DO NOTHING`, so retries, races and refreshes never duplicate.
 - **UI.** A bell with an unread count (not colour alone). The panel has loading,
   empty and error/retry states. Opening an item marks it read; "Mark all as
   read" is there too.
@@ -441,9 +441,10 @@ Never edit it by hand.
   runtime does not provide, so it was not faked.
 
 ### Family games and data
-- **Schema.** The D1 schema is unchanged except one additive column,
-  `games.rematch_of`. Existing rows load unchanged; old uppercase words, UUID
-  round ids and `COMPLETE` statuses are covered by tests.
+- **Schema.** `supabase/migrations/20261007150000_family_games.sql`: the same six
+  tables and columns as the D1 releases, plus `notifications.seq`. Rows shaped
+  like older releases (uppercase words, UUID round ids, `COMPLETE` statuses,
+  legacy `BOT` members) load unchanged and are covered by tests.
 - **Privacy.** The other side's word is never sent before both words are in, in
   `GET /api/game`, submit, dashboard, notifications or errors (a leak scan over
   4 moves checks this).
@@ -527,8 +528,8 @@ Root causes fixed during final verification (each with a regression test):
   assertions (8 old-flow assertions replaced, 47 added).
 
 ### Browser scenarios verified
-Every scenario below ran in Chromium against the built worker through
-`scripts/dev-server.mjs`.
+Every scenario below ran in Chromium against `scripts/dev-server.mjs` (static
+`dist/`, the `vercel.json` routes, `api/index.js`) on a real local PostgreSQL.
 
 - **Viewports:** 320×640, 390×844, 667×375 (landscape), 768×1024, 1280×800 and
   1280×860, in EN and FR, plus 200% text size.
@@ -564,11 +565,8 @@ Every scenario below ran in Chromium against the built worker through
   countdown, reveal, next turn and game over.
 
 ### Known limitations
-- **No release or deployment.** This environment cannot reach the hosting
-  platform behind `same-same-but-different.ekalman.chatgpt.site`, and its network
-  policy blocks that site, so nothing was deployed and the live site was not
-  compared. `dist/server/index.js` is a single-file Worker exporting `{fetch}`
-  that expects a D1 binding named `DB`.
+- **No release or deployment.** Nothing has been promoted to production. The
+  Supabase migration has not been applied from here (see "Backend" below).
 - **Browsers covered.** Verification ran in Chromium only. iOS Safari, Firefox,
   real touch devices and real screen readers are untested.
 - **Push notifications.** None (see above).
@@ -583,3 +581,51 @@ Every scenario below ran in Chromium against the built worker through
   mid-word. Nothing overlaps or scrolls sideways.
 - **Rejected third player.** A third player trying to join a full game still
   gets a browser console log of the expected 409.
+
+## Backend: Vercel Functions + Supabase Postgres (latest)
+
+The Cloudflare Worker and D1 were replaced. Nothing Cloudflare- or D1-specific remains
+(`worker.js`, the embedded-asset build, the D1 shim and the old `migrations/` are gone).
+
+- **Shape.** Vercel serves the static `dist/`. `vercel.json` rewrites `/api/*` to the
+  function in `api/index.js` (Node.js, region `cle1` next to Supabase `us-east-2`) and
+  deep links to `index.html`. The function calls the same `handleApi()` as before, so
+  every route, request body and response shape is unchanged. Solo never calls it.
+- **Database access.** `pg` with a small pool, from the server-side `POSTGRES_URL`
+  (Supabase's pooled, transaction-mode connection string). No named prepared
+  statements (the transaction pooler does not support them). TLS is required; the
+  optional `POSTGRES_CA_CERT` adds certificate verification. No Supabase API keys.
+- **Migration.** `supabase/migrations/20261007150000_family_games.sql`. Additive and
+  idempotent. RLS is enabled on all six tables with no policies, and all grants are
+  revoked from `anon` and `authenticated`, so Supabase's Data API cannot read or write
+  game data. The function connects as the owner. `game_players.player_id` and
+  `submissions.player_id` have no foreign key, because legacy Solo games use the
+  `BOT` sentinel.
+- **Concurrency (Postgres runs requests in parallel, D1 did not).**
+  - Every multi-statement write is one transaction (`store.tx`).
+  - Duplicate-safe inserts use deterministic keys and `ON CONFLICT DO NOTHING`
+    (submission per player per round, next round `${game}:${n}`, notification ids,
+    rematch id derived from the finished game).
+  - A submission is committed on its own; only then is the game re-read, as one
+    REPEATABLE READ snapshot. Whichever of two simultaneous submissions commits
+    second always sees both words. "Save + read + reveal" in one transaction would
+    lose reveals (each request would see only its own word); a mutation test
+    confirms the race tests catch exactly that.
+  - Reveal progress is gated on `UPDATE rounds … WHERE status = 'OPEN' RETURNING`;
+    only the request that closed the round opens the next one and notifies.
+  - Joins lock the game row (`FOR UPDATE`); `UNIQUE(game_id, slot)` is the backstop.
+  - Join-code and recovery-code collisions use `ON CONFLICT DO NOTHING RETURNING`
+    and retry with a new code, so a collision never aborts the transaction.
+  - Mark-read is one `UPDATE … WHERE read_at IS NULL`; the first read time is kept.
+- **Unavailable state.** If `/api/*` answers without JSON, or with `NO_DATABASE`,
+  `DB_UNAVAILABLE` or `SCHEMA_MISSING`, Play Together shows "Playing together is
+  taking a break right now. Solo still works." with a Try again button (EN/FR).
+  `/api/health` returns `{ok, db}` and reports a missing schema.
+- **Tests.** Unit, API and race tests run against a real local PostgreSQL 16 (one
+  throwaway cluster per test file, a fresh migrated database per test), or any
+  Postgres in `TEST_DATABASE_URL`. Race tests use two independent connection pools
+  (like two function instances) and check the database directly.
+- **Setup still needed (not done from here):** apply the migration to the
+  Supabase project; set `POSTGRES_URL` (pooled) for Preview and Production in Vercel;
+  then `npm run smoke -- <preview-url> --write`.
+

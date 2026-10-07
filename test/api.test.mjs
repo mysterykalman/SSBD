@@ -1,17 +1,17 @@
-import {test, beforeEach} from "node:test";
+// Family-game API against a real PostgreSQL (one fresh, migrated database per test).
+import {test, beforeEach, afterEach} from "node:test";
 import assert from "node:assert/strict";
-import {createD1} from "../scripts/d1-sqlite.mjs";
+import {handleApi} from "../src/server/api.js";
+import {caller, freshDatabase} from "./support/db.mjs";
 
-let handleApi, env;
+let env, db;
 beforeEach(async () => {
-  ({handleApi} = await import(`../src/server/api.js?${Math.random()}`));
-  env = {DB: createD1(":memory:")};
+  db = await freshDatabase();
+  env = {store: db.store};
 });
+afterEach(() => db.end());
 
-async function call(path, body) {
-  const res = await handleApi(new Request(`http://x${path}`, body ? {method: "POST", body: JSON.stringify(body), headers: {"content-type": "application/json"}} : {}), env);
-  return {status: res.status, ...(await res.json())};
-}
+const call = caller(handleApi, () => env);
 const player = async name => call("/api/player", {display_name: name});
 const view = (gameId, playerId) => call(`/api/game?id=${gameId}&player_id=${playerId}`);
 
@@ -83,7 +83,7 @@ test("concurrent final submissions reveal exactly once", async () => {
   const final = await view(created.id, ana.id);
   assert.equal(final.game.moves.length, 2);
   assert.deepEqual(final.game.moves[1].prompts, ["rain", "cloud"]);
-  const rounds = env.DB.raw.prepare("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?").get(created.id);
+  const rounds = (await db.get("SELECT COUNT(*)::int AS n FROM rounds WHERE game_id = ?", created.id));
   assert.equal(rounds.n, 2);
 });
 
@@ -137,9 +137,8 @@ test("legacy D1 Solo games still play, and the bot never sees the player's word"
 });
 
 test("existing rows from earlier releases (uppercase words, uuid round ids) still load", async () => {
-  const db = env.DB.raw;
   await call("/api/health");
-  db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
+  await db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
     INSERT INTO players VALUES('p2','Timer','TIM-2222','2025-01-01','2025-01-01');
     INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES('g1','ABCD-12','ACTIVE',2,'2025-01-01','2025-01-01','en');
     INSERT INTO game_players VALUES('g1','p1',1,'2025-01-01'); INSERT INTO game_players VALUES('g1','p2',2,'2025-01-01');
@@ -251,7 +250,7 @@ test("concurrent submissions by one player with different words: exactly one is 
     if (r.ok) assert.equal(r.game.moves[0].mine, locked);
     else assert.equal(r.code, "ALREADY_LOCKED");
   }
-  assert.equal(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM submissions").get().n, 1);
+  assert.equal((await db.get("SELECT COUNT(*)::int AS n FROM submissions")).n, 1);
 });
 
 test("concurrent final submissions that match end the game exactly once", async () => {
@@ -261,9 +260,8 @@ test("concurrent final submissions that match end the game exactly once", async 
   const final = (await view(created.id, ben.id)).game;
   assert.equal(final.status, "MATCHED");
   assert.equal(final.moves.length, 1);
-  const db = env.DB.raw;
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?").get(created.id).n, 1);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM notifications WHERE game_id = ? AND kind = 'GAME_COMPLETE'").get(created.id).n, 2);
+  assert.equal((await db.get("SELECT COUNT(*)::int AS n FROM rounds WHERE game_id = ?", created.id)).n, 1);
+  assert.equal((await db.get("SELECT COUNT(*)::int AS n FROM notifications WHERE game_id = ? AND kind = 'GAME_COMPLETE'", created.id)).n, 2);
 });
 
 test("join: idempotent (even concurrently), a full game is rejected, two racing joiners get one seat", async () => {
@@ -277,7 +275,7 @@ test("join: idempotent (even concurrently), a full game is rejected, two racing 
   const race = await Promise.all([second.ben, carl].map(p => call("/api/games/join", {player_id: p.id, join_code: second.created.join_code})));
   assert.equal(race.filter(r => r.id === second.created.id).length, 1);
   assert.equal(race.filter(r => r.code === "GAME_FULL").length, 1);
-  assert.equal(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM game_players WHERE game_id = ?").get(second.created.id).n, 2);
+  assert.equal((await db.get("SELECT COUNT(*)::int AS n FROM game_players WHERE game_id = ?", second.created.id)).n, 2);
 
   const solo = await call("/api/games", {player_id: ana.id, solo: true});
   assert.equal((await call("/api/games/join", {player_id: carl.id, join_code: solo.join_code})).code, "GAME_FULL", "legacy Solo games cannot be joined");
@@ -286,16 +284,15 @@ test("join: idempotent (even concurrently), a full game is rejected, two racing 
 
 test("a move left with both words but unrevealed (interrupted request) is revealed once on the next read", async () => {
   const {ana, ben, created} = await activeFamily();
-  const db = env.DB.raw;
-  db.prepare("INSERT INTO submissions VALUES(?,?,?,?)").run(`${created.id}:1`, ana.id, "Rain", "2026-01-01");
-  db.prepare("INSERT INTO submissions VALUES(?,?,?,?)").run(`${created.id}:1`, ben.id, "Cloud", "2026-01-01");
+  (await db.run("INSERT INTO submissions VALUES(?,?,?,?)", `${created.id}:1`, ana.id, "Rain", "2026-01-01"));
+  (await db.run("INSERT INTO submissions VALUES(?,?,?,?)", `${created.id}:1`, ben.id, "Cloud", "2026-01-01"));
   const [v1, v2] = await Promise.all([view(created.id, ana.id), view(created.id, ben.id)]);
   for (const v of [v1, v2]) {
     assert.equal(v.game.moves[0].status, "REVEALED");
     assert.deepEqual(v.game.moves[1].prompts, ["Rain", "Cloud"]);
   }
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM rounds WHERE game_id = ?").get(created.id).n, 2);
-  assert.equal(db.prepare("SELECT round_number FROM games WHERE id = ?").get(created.id).round_number, 2);
+  assert.equal((await db.get("SELECT COUNT(*)::int AS n FROM rounds WHERE game_id = ?", created.id)).n, 2);
+  assert.equal((await db.get("SELECT round_number FROM games WHERE id = ?", created.id)).round_number, 2);
   // A retry of the interrupted submission also succeeds.
   const retry = await submitAs(created.id, ana.id, "rain", 1);
   assert.equal(retry.ok, true);
@@ -304,9 +301,8 @@ test("a move left with both words but unrevealed (interrupted request) is reveal
 
 test("a retried submission finishes an interrupted reveal", async () => {
   const {ana, ben, created} = await activeFamily();
-  const db = env.DB.raw;
-  db.prepare("INSERT INTO submissions VALUES(?,?,?,?)").run(`${created.id}:1`, ana.id, "Rain", "2026-01-01");
-  db.prepare("INSERT INTO submissions VALUES(?,?,?,?)").run(`${created.id}:1`, ben.id, "Rain", "2026-01-01");
+  (await db.run("INSERT INTO submissions VALUES(?,?,?,?)", `${created.id}:1`, ana.id, "Rain", "2026-01-01"));
+  (await db.run("INSERT INTO submissions VALUES(?,?,?,?)", `${created.id}:1`, ben.id, "Rain", "2026-01-01"));
   const retry = await submitAs(created.id, ben.id, "rain", 1);
   assert.equal(retry.duplicate, true);
   assert.equal(retry.game.status, "MATCHED");
@@ -315,7 +311,7 @@ test("a retried submission finishes an interrupted reveal", async () => {
 test("a legacy Solo move missing the bot's word is completed on the next read, without the bot seeing the player's word", async () => {
   const ana = await player("Ana");
   const created = await call("/api/games", {player_id: ana.id, solo: true});
-  env.DB.raw.prepare("INSERT INTO submissions VALUES(?,?,?,?)").run(`${created.id}:1`, ana.id, "Sun", "2026-01-01");
+  (await db.run("INSERT INTO submissions VALUES(?,?,?,?)", `${created.id}:1`, ana.id, "Sun", "2026-01-01"));
   const v = (await view(created.id, ana.id)).game;
   assert.notEqual(v.moves[0].status, "OPEN");
   assert.equal(v.moves[0].words.a, "Sun");
@@ -349,9 +345,8 @@ test("legacy Solo games: the bot never repeats any word in the game across a who
 });
 
 test("rows from earlier releases: COMPLETE games and rounds read as MATCHED and refuse submissions", async () => {
-  const db = env.DB.raw;
   await call("/api/health");
-  db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
+  await db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
     INSERT INTO players VALUES('p2','Timer','TIM-2222','2025-01-01','2025-01-01');
     INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES('g9','WXYZ-99','COMPLETE',1,'2025-01-01','2025-01-01','en');
     INSERT INTO game_players VALUES('g9','p1',1,'2025-01-01'); INSERT INTO game_players VALUES('g9','p2',2,'2025-01-01');
