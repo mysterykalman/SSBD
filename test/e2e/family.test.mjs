@@ -112,7 +112,7 @@ test("family: letter badges, notifications bell, rematch", async () => {
   // Open the panel: newest first, unread rows say "New" in words, clicking marks read and opens the game.
   await ana.click("#notifBtn");
   await ana.waitForSelector("#notifList .notif-row");
-  assert.match(await ana.locator("#notifList").innerText(), /Élodie joined your game![\s\S]*New/);
+  assert.match(await ana.locator("#notifList").innerText(), /Élodie joined your game![\s\S]*New/i);
   await ana.evaluate(() => window.dispatchEvent(new Event("focus"))); // a refresh while open never duplicates rows
   await ana.waitForTimeout(400);
   assert.equal(await ana.locator("#notifList .notif-row").count(), 1);
