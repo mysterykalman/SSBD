@@ -480,7 +480,7 @@ test("offline: family create/join/invite and notifications are not offered; a fr
     assert.equal(await page.evaluate(() => document.querySelector("#dialog")?.open || false), false, `${label}: no join/name dialog`);
   };
   await assertNoFamily("home");
-  assert.match(await page.locator(".family-card").innerText(), /Family games need the internet/);
+  assert.match(await page.locator(".family-card").innerText(), /Playing together needs the internet\. Solo doesn’t\./);
 
   // Clicking the disabled buttons does nothing.
   await page.locator("#joinFamily").click({force: true}).catch(() => {});
@@ -546,6 +546,6 @@ test("going offline closes an open family join dialog instead of letting it fail
   await context.setOffline(true);
   await page.waitForFunction(() => !document.querySelector("#dialog").open);
   assert.equal(await page.isDisabled("#joinFamily"), true);
-  assert.match(await page.locator(".family-card").innerText(), /Family games need the internet/);
+  assert.match(await page.locator(".family-card").innerText(), /Playing together needs the internet\. Solo doesn’t\./);
   await context.close();
 });

@@ -372,15 +372,19 @@ main:focus { outline: none; }
 
 /* ---------- celebration ---------- */
 .confetti { position: fixed; inset: 0; z-index: 30; pointer-events: none; overflow: hidden; }
-.confetti i { position: absolute; top: -20px; width: 12px; height: 18px; border: 2px solid var(--ink); border-radius: 3px; animation: fall 1.4s ease-in forwards; }
-.confetti i:nth-child(3n) { border-radius: 50%; width: 14px; height: 14px; }
-.confetti i:nth-child(4n) { width: 8px; height: 22px; }
+.confetti i { position: absolute; top: -28px; width: 12px; height: 16px; border: 2px solid var(--ink); border-radius: 3px; transform: scale(var(--scale, 1)); animation: fall var(--dur, 1.8s) cubic-bezier(.3, .55, .55, 1) both; }
+.confetti i.dot { width: 13px; height: 13px; border-radius: 50%; }
+.confetti i.strip { width: 7px; height: 24px; border-radius: 4px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pop { from { transform: scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes flip { from { transform: rotateX(90deg); } to { transform: none; } }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes fall { to { transform: translate(var(--drift, 0), 105vh) rotate(540deg); } }
+@keyframes fall {
+  0% { transform: translate(0, 0) rotate(0) scale(var(--scale, 1)); opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translate(var(--drift, 0), 108vh) rotate(var(--spin, 540deg)) scale(var(--scale, 1)); opacity: .85; }
+}
 @keyframes bounce { 0% { transform: scale(.4) rotate(-12deg); opacity: 0; } 70% { transform: scale(1.08) rotate(4deg); opacity: 1; } 100% { transform: none; } }
 @keyframes wiggle { 0% { transform: scale(.9); } 60% { transform: scale(1.05) rotate(2deg); } 100% { } }
 @keyframes stonePop { 0% { transform: scale(.6); } 60% { transform: scale(1.45); } 100% { transform: scale(1.18); } }
