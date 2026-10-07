@@ -267,6 +267,38 @@ Never edit it by hand.
   Continue leads to the ending. Focus lands on the ending heading, not on Play
   again, so a doubled Enter can't skip it.
 
+### Gary from Accounting (Solo opponent)
+- **What he is.** Gary is the Solo opponent's presentation layer
+  (`src/client/gary.js`). The word engine (`src/shared/bot.js`) still chooses
+  every word, deterministically and independently of the player.
+- **Presentation only.** Gary's lines never touch game state, storage of games,
+  scoring or the network. Tests check this: `gary.js` imports nothing from
+  `shared/`, `store.js` or the API, and the saved game holds no Gary data.
+- **Identity.**
+  - "GARY'S WORD" in the reveal; "GARY" on trail chips.
+  - An SVG badge in the mode chip and game list, drawn in the app's own palette:
+    ink outlines, peach, coral nose, grape tie.
+  - Never "bot", "online", "joined", or "typing…".
+  - Family games never show Gary.
+- **Intro.** "MEET YOUR RIVAL / Gary from Accounting / Hi. I'm Gary. I do words
+  now. Apparently. / sigh 😑 / Fine, Gary. Let's play." It shows once, on the
+  first Solo game (`localStorage.ssbd_gary_met`). Reopen it via the profile badge
+  → "Meet Gary again".
+- **Typing.** His word is typed in letter by letter: 50–90 ms each, capped near
+  0.9 s. The chip is pre-sized so nothing shifts. Screen readers get the whole
+  word at once, and there is a single announcement after the reveal completes.
+  Reduced motion shows everything at once.
+- **Remarks.** On about 30% of ordinary reveals Gary adds a short remark, before
+  or after his word, drawn from the resigned, competitive, dramatic and minimal
+  pools. Recent lines are not repeated (per game, session storage).
+- **Special moments.**
+  - A match: "..." then "well that's inconvenient" or "fine. you win this one 😑"
+    (70%).
+  - Rare one-offs around move 10 and near move 20.
+  - Solo game over: "finally", then after a beat "...same time tomorrow?".
+- **French.** Dry and simple; "Je fais des mots maintenant. Apparemment." keeps
+  the odd phrasing.
+
 ### UI changes
 - **History.** Newest first, with a separate "Now playing" row for the open
   round. It shows only your own locked word; the other side stays "?". Each row
