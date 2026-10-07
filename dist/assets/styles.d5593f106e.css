@@ -478,3 +478,10 @@ main:focus { outline: none; }
   .pill-long { display: none; }
   .pill-short { display: inline; }
 }
+/* Phones with the bell showing: keep the header on one line. */
+@media (max-width: 400px) {
+  .topbar:has(.bell:not([hidden])) .brand-top { font-size: min(1.22rem, 4.7vw); text-shadow: 2px 2px 0 var(--sun); }
+  .topbar:has(.bell:not([hidden])) .brand-bottom { font-size: min(.66rem, 2.7vw); letter-spacing: .08em; }
+  .topbar:has(.bell:not([hidden])) .top-actions { gap: 5px; flex-wrap: nowrap; }
+  .topbar:has(.bell:not([hidden])) .lang-switch button { min-width: 44px; padding: 0 6px; }
+}

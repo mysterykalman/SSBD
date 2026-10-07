@@ -101,6 +101,10 @@ test("family: letter badges, notifications bell, rematch", async () => {
   await elo.waitForSelector("#word");
   assert.equal((await elo.locator("#profileBtn").innerText()).trim(), "É", "accented initial");
   assert.equal((await elo.locator(".mode-chip .badge").innerText()).trim(), "A");
+  // Phone header with the bell stays on one line and never scrolls sideways.
+  const [bell, profile] = [await elo.locator("#notifBtn").boundingBox(), await elo.locator("#profileBtn").boundingBox()];
+  assert.ok(Math.abs(bell.y - profile.y) < 4 && profile.x + profile.width <= 360, "bell and profile badge share the header row");
+  assert.ok(await elo.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 
   // Ana's polling sees the join and the bell shows a number (not just a colour).
   await ana.waitForSelector("#word", {timeout: 10000});
