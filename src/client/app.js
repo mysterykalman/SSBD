@@ -17,7 +17,10 @@ const state = {
   online: navigator.onLine !== false,
   screen: "home",
   game: null, // normalized view of the open game
-  freshReveal: 0,
+  // Reveal sequence (see "reveal sequence" below). While `reveal` is set, the board shows the
+  // game as it was before that reveal; `justContinued` marks the move the player just continued from.
+  reveal: null,
+  justContinued: 0,
   busy: false,
   dashboard: null,
   dismissedSuggestion: null,
@@ -193,6 +196,7 @@ function navigate(path, replace = false) {
 
 async function route() {
   stopPolling();
+  closeReveal();
   const path = location.pathname;
   let match;
   if ((match = path.match(/^\/solo\/([\w-]+)$/))) {
@@ -215,16 +219,14 @@ async function route() {
 }
 
 function openView(view) {
-  const previous = state.game;
-  if (!previous || previous.id !== view.id) state.freshReveal = 0;
+  if (state.game?.id !== view.id) { closeReveal(); state.justContinued = 0; }
   state.game = view;
   state.screen = "game";
-  const last = [...view.moves].reverse().find(m => m.words);
-  const seen = store.seen(view.id);
-  if (last && last.number > seen) {
-    // Only animate reveals that happened while this player was watching or since their last visit.
-    state.freshReveal = last.number;
-    store.markSeen(view.id, last.number);
+  // A reveal the player hasn't seen yet (just played, or happened since their last visit) starts
+  // the reveal sequence; the board keeps showing the pre-reveal turn until they press Keep playing.
+  if (!state.reveal) {
+    const last = latestRevealed(view);
+    if (last && last.number > store.seen(view.id)) startReveal(view, last);
   }
   renderGame();
   schedulePoll();
@@ -460,20 +462,23 @@ async function createFamily(language = state.lang) {
 
 // ---------- game screen ----------
 function renderGame() {
-  const view = state.game;
+  // The board renders what the player is meant to see now: during a reveal, the turn as it was before it.
+  const view = boardView(state.game);
   const keep = captureInput();
   renderChrome();
   const move = view.moves[view.moves.length - 1];
   const finished = view.status === "MATCHED" || view.status === "EXHAUSTED";
-  const revealed = [...view.moves].reverse().find(m => m.words);
-  const fresh = revealed && revealed.number === state.freshReveal;
+  const revealed = latestRevealed(view);
+  // The turn the player just continued into gets its one-time pop/celebration; re-renders don't repeat it.
+  const fresh = Boolean(revealed && !state.reveal && revealed.number === state.justContinued);
+  state.justContinued = 0;
   const solo = isSoloLike(view);
+  $("app").dataset.phase = state.reveal ? state.reveal.phase : finished ? "gameOver" : "playing";
 
   // Mode lives next to the back button; the board starts with the progress trail.
   const board = h("section", {class: `card board ${finished ? "finished" : ""}`, "aria-labelledby": "boardTitle"},
     progressTrail(view, move, finished, revealed, fresh),
     languageNote(view),
-    fresh ? revealBanner(view, revealed) : null,
     finished ? endPanel(view, revealed, fresh) : playPanel(view, move));
 
   mount(
@@ -530,7 +535,7 @@ function languageNote(view) {
     h("strong", {}, t("langNoteTitle", {game})), " ",
     solo ? null : [t("langNoteFamily"), " "],
     t("langNoteCopy", {game, ui}), " ",
-    h("button", {class: "btn small ghost", type: "button", lang: state.lang, onclick: () => (solo ? startSolo(state.lang) : ensurePlayer(() => createFamily(state.lang)))}, t("langNewGame", {ui})));
+    h("button", {class: "btn small ghost", type: "button", lang: state.lang, disabled: !solo && !state.online, onclick: () => (solo ? startSolo(state.lang) : ensurePlayer(() => createFamily(state.lang)))}, t("langNewGame", {ui})));
 }
 
 // "← Games": the arrow is decoration, so screen readers only hear the word (text still comes from t("back")).
@@ -543,23 +548,124 @@ function wordChip(word, label, cls = "") {
   return h("span", {class: `chip ${cls}`}, label ? h("small", {}, label) : null, h("span", {class: "chip-word", lang: state.game?.language}, word));
 }
 
-function revealBanner(view, move) {
-  const matched = move.status === "MATCHED";
-  // Different words are never a failure: they are new words for the trail.
-  const outcome = matched ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice");
-  // Spoken once through the persistent live region; the banner itself is not a live
-  // region (it is rebuilt on every render and would be announced twice or not at all).
+function latestRevealed(view) {
+  return [...view.moves].reverse().find(m => m.words) || null;
+}
+
+// ---------- reveal sequence ----------
+// SUBMIT → COUNTDOWN → REVEAL → CONTINUE → NEXT TURN, in one modal (#revealModal).
+// Phases (shown on #app[data-phase]): "playing" → "countdown" → "revealing" → "ready" → "playing"/"gameOver".
+// The new pair already exists in the game state (and storage), but the board, word trail and
+// progress keep rendering boardView(): the turn as it was before the reveal (currentPair), while
+// the modal shows the revealed move (pendingNextPair). Only finishReveal() promotes it.
+
+/** The game as the board should show it: during a pending reveal, the revealed move is still the open turn. */
+function boardView(view) {
+  const pending = state.reveal;
+  if (!pending || pending.gameId !== view.id) return view;
+  const index = view.moves.findIndex(m => m.number === pending.number);
+  if (index < 0) return view;
+  const move = view.moves[index];
+  const frozen = {...move, words: null, status: "OPEN", revealedAt: null, mine: move.words[view.youSide], otherLocked: true};
+  return {...view, status: "ACTIVE", moves: [...view.moves.slice(0, index), frozen]};
+}
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const COUNT_MS = 380, STEP_MS = 190;
+
+function startReveal(view, move) {
+  closeReveal();
+  const token = Symbol("reveal");
+  state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token};
+  const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
+  const dlg = h("dialog", {id: "revealModal", class: `reveal-modal ${move.status === "MATCHED" ? "match" : ""}`, "aria-labelledby": "revealHeading",
+    oncancel: event => { event.preventDefault(); if (state.reveal?.phase === "ready") finishReveal(); }},
+    h("div", {class: "rv-body"},
+      h("p", {class: "rv-kicker", id: "revealHeading"}, t("revealTitle")),
+      h("div", {class: "rv-count", id: "revealCount", "aria-hidden": "true"}),
+      h("div", {class: "rv-result", id: "revealResult", hidden: true},
+        h("div", {class: "rv-words"},
+          revealWord(t("revealYourWord"), move.words[view.youSide], "you"),
+          h("span", {class: "op rv-step", "aria-hidden": "true"}, move.status === "MATCHED" ? "=" : "+"),
+          revealWord(isSoloLike(view) ? t("revealBotWord") : t("revealTheirWord", {name: otherLabel(view)}), move.words[view.otherSide], "other")),
+        h("p", {class: "rv-outcome rv-step"}, move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")),
+        move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, t("revealLoose")) : null,
+        ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(move)))));
+  document.body.append(dlg);
+  dlg.showModal();
+  runReveal(view, move, ended, token);
+}
+
+/** "Next move starts with A + B", keeping "A + B" together on one line when it fits. */
+function nextStartsText(move) {
+  const pair = `${move.words.a.toUpperCase()} + ${move.words.b.toUpperCase()}`;
+  const [before, after = ""] = t("revealNextStarts", {a: "\u0000", b: ""}).split(/\u0000\s*\+\s*/);
+  return [before, h("span", {class: "rv-pair"}, pair), after];
+}
+
+function revealWord(label, word, cls) {
+  return h("div", {class: `rv-word ${cls} rv-step`},
+    h("small", {}, label),
+    h("span", {class: "chip-word", lang: state.game?.language}, word));
+}
+
+function setRevealPhase(phase) {
+  if (!state.reveal) return;
+  state.reveal.phase = phase;
+  $("app").dataset.phase = phase;
+}
+
+async function runReveal(view, move, ended, token) {
+  const alive = () => state.reveal?.token === token && $("revealModal")?.open;
+  const count = $("revealCount"), result = $("revealResult");
+  const motion = !reducedMotion();
+  if (motion) {
+    for (const label of ["3", "2", "1", t("sameTime")]) {
+      count.textContent = label;
+      count.classList.toggle("words", label.length > 1);
+      count.classList.remove("bump");
+      void count.offsetWidth;
+      count.classList.add("bump");
+      await sleep(COUNT_MS);
+      if (!alive()) return;
+    }
+  }
+  count.hidden = true;
+  result.hidden = false;
+  setRevealPhase("revealing");
   announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: move.words[view.youSide].toUpperCase()}),
-    t("revealSaid", {name: sideLabel(view, view.otherSide), word: move.words[view.otherSide].toUpperCase()}), outcome].join(" "), `reveal:${view.id}:${move.number}`);
-  return h("div", {class: `reveal ${matched ? "match" : ""} ${reducedMotion() ? "" : "animate"}`},
-    h("p", {class: "reveal-title"}, t("revealTitle")),
-    h("div", {class: "reveal-words"},
-      wordChip(move.words.a, sideLabel(view, "a"), `flip ${view.youSide === "a" ? "you" : "other"}`),
-      h("span", {class: "join"},
-        h("span", {class: "op", "aria-hidden": "true"}, matched ? "=" : "+"),
-        wordChip(move.words.b, sideLabel(view, "b"), `flip delay ${view.youSide === "b" ? "you" : "other"}`))),
-    h("p", {class: "reveal-copy"}, outcome),
-    move.botQuality === "loose" && !matched ? h("p", {class: "reveal-note"}, t("revealLoose")) : null);
+    t("revealSaid", {name: sideLabel(view, view.otherSide), word: move.words[view.otherSide].toUpperCase()}),
+    move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].join(" "), `reveal:${view.id}:${move.number}`);
+  for (const step of result.querySelectorAll(".rv-step")) {
+    step.classList.add("show");
+    if (motion) { await sleep(STEP_MS); if (!alive()) return; }
+  }
+  const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : t("keepPlaying"));
+  result.append(button);
+  setRevealPhase("ready");
+  button.focus();
+}
+
+/** Keep playing: the revealed pair becomes the active turn (exactly once), and the modal goes away. */
+function finishReveal() {
+  const pending = state.reveal;
+  if (!pending || pending.phase !== "ready") return;
+  store.markSeen(pending.gameId, pending.number);
+  closeReveal();
+  if (state.screen !== "game" || state.game?.id !== pending.gameId) return;
+  state.justContinued = pending.number;
+  // A newer reveal that arrived meanwhile (family games) gets its own sequence next.
+  const last = latestRevealed(state.game);
+  if (last && last.number > store.seen(state.game.id)) { state.justContinued = 0; startReveal(state.game, last); }
+  renderGame();
+  if (!state.reveal) focusAfterMove();
+}
+
+/** Drop any open reveal without marking it seen (leaving the game, switching games). */
+function closeReveal() {
+  state.reveal = null;
+  const dlg = $("revealModal");
+  if (dlg) { if (dlg.open) dlg.close(); dlg.remove(); }
 }
 
 function playPanel(view, move) {
@@ -590,14 +696,15 @@ function playPanel(view, move) {
       h("h2", {}, t("shareTitle")),
       h("p", {}, t("shareCopy")),
       h("p", {class: "code", id: "joinCode"}, view.joinCode),
-      h("button", {class: "btn teal", type: "button", onclick: async () => {
+      h("button", {class: "btn teal", type: "button", disabled: !state.online, onclick: async () => {
         try { await navigator.clipboard.writeText(link); toast(t("copied"), {kind: "success"}); } catch { toast(link, {timeout: 10000}); }
       }}, t("copyLink"))));
     return panel;
   }
 
   if (locked) {
-    panel.append(h("p", {class: "notice pending", role: "status"}, t("youLocked", {word: move.mine.toUpperCase(), name: otherName})));
+    // Solo never "waits" for anyone: the bot already has its word.
+    panel.append(h("p", {class: "notice pending", role: "status"}, solo ? t("lockedIn", {word: move.mine.toUpperCase()}) : t("youLocked", {word: move.mine.toUpperCase(), name: otherName})));
     return panel;
   }
 
@@ -633,7 +740,7 @@ function endPanel(view, last, fresh) {
     h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
     h("p", {}, matched ? t("winCopy", {word: last.words.a.toUpperCase(), n: last.number}) : t("gameOverCopy")),
     h("div", {class: "row center end-actions"},
-      h("button", {class: "btn big", type: "button", id: "newGameBtn", onclick: event => {
+      h("button", {class: "btn big", type: "button", id: "newGameBtn", disabled: !solo && !state.online && !view.rematchId, onclick: event => {
         // A held or doubled Enter from the last word must not skip the game-over screen.
         if (event.detail === 0 && performance.now() - shownAt < 800) return;
         playAgain(view, event.currentTarget);
@@ -860,7 +967,7 @@ async function submitWord(source = "direct") {
     if (!store.saveSolo(result.game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
     input.value = "";
     openView(soloView(result.game));
-    focusAfterMove();
+    if (!state.reveal) focusAfterMove();
     return;
   }
 
@@ -874,7 +981,7 @@ async function submitWord(source = "direct") {
     input.value = "";
     state.busy = false;
     openView(serverView(data.game));
-    focusAfterMove();
+    if (!state.reveal) focusAfterMove();
   } catch (error) {
     trace("result", {...info, path: "api", ok: false, code: error.code || null});
     state.busy = false;
@@ -888,19 +995,18 @@ async function submitWord(source = "direct") {
 
 function focusAfterMove() {
   const input = $("word");
-  // Keep the keyboard up on touch devices; the reveal never blocks typing.
-  const target = input || $("newGameBtn");
+  // Next turn: keep the keyboard up. Game over: land on the heading, not on "Play again",
+  // so a doubled Enter can't skip the ending.
+  const end = $("app").querySelector(".end .board-title");
+  if (end) end.setAttribute("tabindex", "-1");
+  const target = input || end || $("newGameBtn");
   target?.focus({preventScroll: true});
   // Only scroll when the next control is off screen, so big screens don't jump around.
   const box = target?.getBoundingClientRect();
   const behavior = reducedMotion() ? "auto" : "smooth";
   if (!box || box.top < 0 || box.bottom > window.innerHeight) {
     $("app").querySelector(".board")?.scrollIntoView({block: "start", behavior});
-    return;
   }
-  // Short (landscape) screens: if the reveal is cut off at the top, bring it back when it still fits with the input.
-  const reveal = $("app").querySelector(".reveal")?.getBoundingClientRect();
-  if (reveal && reveal.top < 0 && box.bottom - reveal.top + 16 <= window.innerHeight) window.scrollBy({top: reveal.top - 8, behavior});
 }
 
 function celebrate() {
@@ -1085,8 +1191,9 @@ function field(id, label, attrs = {}) {
 }
 
 function ensurePlayer(next) {
-  if (state.player) return next();
+  // Family features need the internet, even for a player who already has a name.
   if (!state.online) return toast(t("familyOffline"), {kind: "error"});
+  if (state.player) return next();
   const d = dialog(t("nameTitle"), t("nameCopy"), field("nameInput", t("nameLabel"), {placeholder: t("namePlaceholder"), maxlength: "24", autocomplete: "nickname"}), {
     label: t("continue"),
     submit: async () => {

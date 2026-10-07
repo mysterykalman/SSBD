@@ -236,7 +236,7 @@ main:focus { outline: none; }
 }
 .prompt .join .tile { background: var(--pink); transform: rotate(1.2deg); }
 .op { flex: none; color: var(--coral-dark); font-size: 1.6rem; font-weight: 900; line-height: 1; }
-.prompt .op, .reveal .op { display: grid; place-items: center; width: 1.6em; height: 1.6em; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); color: var(--coral-dark); font-size: 1.35rem; }
+.prompt .op, .rv-words .op { display: grid; place-items: center; width: 1.6em; height: 1.6em; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); color: var(--coral-dark); font-size: 1.35rem; }
 .word-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; max-width: 560px; margin: 22px auto 0; text-align: left; }
 .word-input, .text-input {
   width: 100%; min-height: 58px; padding: 12px 16px;
@@ -260,17 +260,6 @@ main:focus { outline: none; }
 .code { display: inline-block; margin: 10px 0; padding: 4px 16px; border: 3px solid var(--ink); border-radius: 14px; background: var(--paper); box-shadow: 0 4px 0 var(--ink); font-size: clamp(1.5rem, 7vw, 2.2rem); font-weight: 900; letter-spacing: .1em; overflow-wrap: anywhere; }
 
 /* reveal: a sticker on top, then the two words side by side */
-.reveal { position: relative; margin: 30px auto 0; padding: 0 14px 12px; max-width: 620px; border: 3px solid var(--ink); border-radius: var(--radius); background: var(--sun-soft); }
-.reveal.match { background: var(--mint); }
-.reveal-title { position: relative; display: block; width: fit-content; max-width: calc(100% - 8px); margin: calc(-.65em - 9px) auto 10px; transform: rotate(-3deg); padding: 3px 16px; text-align: center; border: 3px solid var(--ink); border-radius: 999px; background: var(--grape); box-shadow: 0 3px 0 var(--ink); color: #fff; font-size: .9rem; font-weight: 900; line-height: 1.3; letter-spacing: .12em; text-transform: uppercase; overflow-wrap: anywhere; }
-.reveal.match .reveal-title { background: var(--teal-dark); }
-.reveal-words { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 12px; margin: 4px 0 8px; }
-.reveal-copy { font-weight: 800; line-height: 1.35; text-wrap: balance; }
-.reveal-note { margin-top: 2px; color: var(--muted); font-size: .92rem; }
-.reveal.animate { animation: pop .35s cubic-bezier(.2, 1.4, .4, 1) both; }
-.reveal.animate .flip { animation: flip .45s ease-out both; }
-.reveal.animate .flip.delay { animation-delay: .08s; }
-.reveal.animate + .play .tile, .reveal.animate ~ .play .tile { animation: wiggle .5s ease-out .15s both; }
 
 /* chips used by reveal + trail */
 .chip { display: inline-flex; flex-direction: column; align-items: center; min-width: 0; max-width: 100%; overflow-wrap: anywhere; padding: 5px 11px; border: 2px solid var(--ink); border-radius: 12px; background: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: .02em; line-height: 1.15; text-align: center; }
@@ -281,8 +270,6 @@ main:focus { outline: none; }
 .chip.plain { background: var(--peach); }
 .chip.mystery { border-style: dashed; background: var(--paper); }
 .chip.mystery .chip-word { min-width: 1.4em; }
-.reveal .chip { padding: 7px 16px; font-size: clamp(1.1rem, 4.5vw, 1.6rem); box-shadow: 0 4px 0 var(--ink); }
-.reveal .chip small { font-size: .7rem; }
 
 /* end of game */
 .end { padding: 10px 0 4px; }
@@ -433,8 +420,6 @@ main:focus { outline: none; }
   .tile { padding: 10px 16px; }
   .trail-eq .chip { font-size: .86rem; padding: 4px 9px; }
   .trail-eq .op { font-size: 1rem; }
-  .reveal { padding: 22px 10px 10px; }
-  .reveal .chip { padding: 6px 12px; }
 }
 @media (max-width: 360px) {
   .brand-top { font-size: min(1.22rem, 6.1vw); text-shadow: 2px 2px 0 var(--sun); }
@@ -442,10 +427,9 @@ main:focus { outline: none; }
   .card { padding: 16px 14px; }
   .trail-row { padding: 8px; gap: 8px; }
   .trail-eq .chip { letter-spacing: 0; font-size: .82rem; }
-  .prompt, .prompt .join, .reveal-words, .reveal .join { gap: 8px; }
+  .prompt, .prompt .join { gap: 8px; }
   .tile { padding: 8px 12px; font-size: 1.3rem; letter-spacing: .02em; }
-  .prompt .op, .reveal .op { width: 1.6em; height: 1.6em; font-size: 1.1rem; border-width: 2px; }
-  .reveal .chip { padding: 5px 10px; font-size: 1.05rem; }
+  .prompt .op, .rv-words .op { width: 1.6em; height: 1.6em; font-size: 1.1rem; border-width: 2px; }
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .topbar { padding-top: max(8px, env(safe-area-inset-top)); }
@@ -457,9 +441,6 @@ main:focus { outline: none; }
   .instruction { margin-top: 4px; font-size: .98rem; }
   .prompt { margin: 12px 0 6px; }
   .tile { padding: 6px 16px; font-size: 1.45rem; }
-  .reveal { margin-top: 24px; padding: 18px 12px 8px; }
-  .reveal .chip { font-size: 1.15rem; padding: 4px 12px; }
-  .reveal-words { margin-bottom: 4px; }
   .word-form { margin-top: 14px; }
   .end-icon { width: 64px; height: 64px; font-size: 2rem; margin-top: 6px; }
 }
@@ -484,4 +465,40 @@ main:focus { outline: none; }
   .topbar:has(.bell:not([hidden])) .brand-bottom { font-size: min(.66rem, 2.7vw); letter-spacing: .08em; }
   .topbar:has(.bell:not([hidden])) .top-actions { gap: 5px; flex-wrap: nowrap; }
   .topbar:has(.bell:not([hidden])) .lang-switch button { min-width: 44px; padding: 0 6px; }
+}
+
+/* ---------- reveal modal: countdown → reveal → Keep playing (one surface) ---------- */
+.reveal-modal { width: min(560px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: 0; border: 3px solid var(--ink); border-radius: var(--radius); background: var(--sun-soft, #fff0c9); color: var(--ink); box-shadow: 0 8px 0 var(--ink); }
+.reveal-modal.match { background: var(--mint); }
+.reveal-modal::backdrop { background: rgba(43, 27, 61, .6); }
+.rv-body { display: grid; justify-items: center; gap: 12px; padding: 22px 18px 24px; text-align: center; }
+.rv-kicker { padding: 3px 16px; border: 3px solid var(--ink); border-radius: 999px; background: var(--grape); box-shadow: 0 3px 0 var(--ink); color: #fff; font-size: .9rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; transform: rotate(-3deg); }
+.reveal-modal.match .rv-kicker { background: var(--teal-dark); }
+.rv-count { display: grid; place-items: center; min-height: 2.4em; color: var(--coral-dark); font-size: clamp(3.5rem, 18vw, 6rem); font-weight: 900; line-height: 1; text-shadow: 4px 4px 0 var(--sun); }
+.rv-count.words { font-size: clamp(2rem, 9vw, 3rem); text-transform: uppercase; }
+.rv-count.bump { animation: countBump .38s cubic-bezier(.2, 1.6, .4, 1) both; }
+.rv-result { display: grid; justify-items: center; gap: 10px; width: 100%; }
+.rv-result[hidden], .rv-count[hidden] { display: none; }
+.rv-pair { display: inline-block; max-width: 100%; }
+.rv-words { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 14px; max-width: 100%; }
+.rv-word { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; max-width: 100%; padding: 8px 18px; border: 3px solid var(--ink); border-radius: 16px; background: #fff; box-shadow: 0 4px 0 var(--ink); font-weight: 900; text-transform: uppercase; }
+.rv-word.you { background: #ffe5df; }
+.rv-word.other { background: #dff3f1; }
+.rv-word small { font-size: .72rem; letter-spacing: .1em; color: var(--muted); font-weight: 800; }
+.rv-word .chip-word { font-size: clamp(1.4rem, 6vw, 2.1rem); line-height: 1.1; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
+.rv-outcome { font-weight: 800; font-size: 1.1rem; line-height: 1.35; text-wrap: balance; }
+.rv-note { color: var(--muted); font-size: .95rem; }
+.rv-next { padding: 8px 14px; border: 2px dashed var(--ink); border-radius: 14px; background: var(--paper); font-weight: 800; overflow-wrap: anywhere; }
+.rv-continue { margin-top: 4px; }
+.rv-step { opacity: 0; transform: translateY(10px) scale(.9); }
+.rv-step.show { opacity: 1; transform: none; transition: opacity .22s ease-out, transform .28s cubic-bezier(.2, 1.5, .4, 1); }
+.rv-continue { animation: pop .3s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes countBump { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: none; } }
+@media (orientation: landscape) and (max-height: 500px) {
+  .rv-body { gap: 8px; padding: 14px 14px 16px; }
+  .rv-count { min-height: 1.6em; font-size: 3.5rem; }
+  .rv-word .chip-word { font-size: 1.3rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-step, .rv-step.show { opacity: 1; transform: none; transition: none; }
 }

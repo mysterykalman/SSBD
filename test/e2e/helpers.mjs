@@ -34,7 +34,7 @@ export async function botWord(page) {
  * A no-op when the app shows the reveal inline: if neither #revealModal nor #revealContinue shows up
  * within a short grace period, it returns straight away (so long games stay fast).
  */
-export async function continueReveal(page, {timeout = 3000, grace = 300} = {}) {
+export async function continueReveal(page, {timeout = 8000, grace = 300} = {}) {
   const present = () => page.locator("#revealModal, #revealContinue").count();
   const graceEnd = Date.now() + grace;
   while (!(await present())) {
