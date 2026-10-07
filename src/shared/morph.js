@@ -89,7 +89,11 @@ function enLemmas(word, base) {
   // Plurals and 3rd person: cars, boxes, babies, wolves, knives.
   if (word.endsWith("ies") && word.length > 4) add(word.slice(0, -3) + "y");
   if (word.endsWith("ves") && word.length > 4) { add(word.slice(0, -3) + "f"); add(word.slice(0, -3) + "fe"); }
-  if (word.endsWith("es") && word.length > 3) add(word.slice(0, -2));
+  if (word.endsWith("es") && word.length > 3) {
+    const stem = word.slice(0, -2);
+    // After s, x, z, ch, sh, English plurals add -es ("bosses", "foxes", "lunches"): drop it even for unknown words.
+    if (base.has(stem) || (/(ss|x|z|ch|sh)$/.test(stem) && !base.has(word))) out.add(stem);
+  }
   if (word.endsWith("s") && !/(ss|us|is)$/.test(word) && word.length > 2) {
     const stem = word.slice(0, -1);
     // Unknown words still lose a plural s ("zorbles" → "zorble") unless the s is part of the word.

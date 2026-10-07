@@ -73,3 +73,24 @@ test("duplicates use the same rule: a side can't replay a variant of its own wor
   assert.equal(checkWord(game, "a", "vehicle").ok, true, "a synonym is a new word");
   assert.equal(checkWord(game, "a", "trees").ok, true, "the other side's word (or its variant) is fine");
 });
+
+test("adversarial words: inflections match, look-alikes and derivations don't", () => {
+  const same = [
+    ["news", "news"], ["glasses", "glasses"], ["boss", "bosses"], ["class", "classes"], ["dress", "dresses"], ["bus", "buses"],
+    ["s", "s"], ["s", "S"], [" s ", "s"], ["runner", "runners"], ["better", "good"], ["best", "good"], ["better", "best"],
+    ["left", "left"], ["saw", "see"], ["saw", "saws"], ["found", "find"], ["fox", "foxes"], ["lunch", "lunches"]
+  ];
+  const different = [
+    ["news", "new"], // "news" is its own word, not the plural of "new"
+    ["glasses", "glass"], // spectacles: kept as its own word (see handoff limits)
+    ["boss", "bos"], ["class", "clas"], ["dress", "dres"], ["bus", "bu"], // a final s that belongs to the word
+    ["s", "ss"], ["s", "is"], ["s", "us"],
+    ["runner", "run"], ["runner", "running"], // derivation: a runner is a person, not a form of "run"
+    ["better", "bet"], ["best", "bes"],
+    ["left", "leave"], ["left", "right"], // "left" is read as the direction, not the past of "leave"
+    ["saws", "see"], // "saws" can only be the tool
+    ["found", "foundation"], ["found", "fund"]
+  ];
+  for (const [a, b] of same) assert.ok(sameUnderlyingWord(a, b, "en"), `${a} / ${b} should match`);
+  for (const [a, b] of different) assert.ok(!sameUnderlyingWord(a, b, "en"), `${a} / ${b} should NOT match`);
+});

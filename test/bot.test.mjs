@@ -33,25 +33,63 @@ test("the brief's examples: answers connect BOTH words; one-sided answers are re
   }
 });
 
-test("hard minimum: every strong pick relates to each prompt on its own", () => {
-  const lex = getLexicon("en");
-  const ids = [...lex.concepts.keys()];
-  const random = seededRandom(99);
-  let strong = 0;
-  for (let i = 0; i < 400; i++) {
-    const a = lex.concepts.get(ids[Math.floor(random() * ids.length)]).label, b = lex.concepts.get(ids[Math.floor(random() * ids.length)]).label;
-    if (a === b) continue;
-    const {ranked} = rankCandidates({prompts: [a, b]});
-    const pick = chooseResponse({prompts: [a, b], rng: random});
-    const row = ranked.find(r => r.word === pick.word);
-    if (pick.quality === "strong") {
-      strong++;
-      assert.ok(row.a >= BOT_TUNING.minPerSide && row.b >= BOT_TUNING.minPerSide, `${a}+${b} -> ${pick.word} (${row.a}/${row.b})`);
-    } else {
-      assert.ok(!ranked.some(r => r.passes), `${a}+${b}: fell back although a two-sided word existed`);
+test("invariant: every pick relates to BOTH prompts on its own (strong or fallback), in English and French", () => {
+  for (const language of ["en", "fr"]) {
+    const lex = getLexicon(language);
+    const ids = [...lex.concepts.keys()];
+    const random = seededRandom(99);
+    const tiers = {};
+    for (let i = 0; i < 1500; i++) {
+      const a = lex.concepts.get(ids[Math.floor(random() * ids.length)]).label, b = lex.concepts.get(ids[Math.floor(random() * ids.length)]).label;
+      if (a === b) continue;
+      const {ranked} = rankCandidates({prompts: [a, b], language});
+      const pick = chooseResponse({prompts: [a, b], language, rng: random});
+      const row = ranked.find(r => r.word === pick.word);
+      tiers[row.tier] = (tiers[row.tier] || 0) + 1;
+      const sideA = Math.max(row.a, row.pathsA > 0 ? 0.01 : 0), sideB = Math.max(row.b, row.pathsB > 0 ? 0.01 : 0);
+      assert.ok(sideA > 0 && sideB > 0, `${a}+${b} -> ${pick.word} is one-sided (${row.a}/${row.b}, paths ${row.pathsA}/${row.pathsB})`);
+      if (pick.quality === "strong") assert.ok(row.a >= BOT_TUNING.minPerSide && row.b >= BOT_TUNING.minPerSide, `${a}+${b} -> ${pick.word}`);
+      // Tiers are tried in order: a fallback is only used when every better tier is empty.
+      for (let better = 1; better < (row.tier || 4); better++) assert.ok(!ranked.some(r => r.tier === better), `${a}+${b}: skipped tier ${better}`);
+      if (row.tier === 2) assert.ok(row.weakest >= BOT_TUNING.relaxedBalance * Math.max(row.a, row.b), "tier 2 is balanced");
+      if (row.tier === 3 || row.tier === 0) {
+        const lo = Math.min(row.pathsA, row.pathsB), hi = Math.max(row.pathsA, row.pathsB);
+        assert.ok(lo >= BOT_TUNING.lastBalance * hi, `${a}+${b} -> ${pick.word}: paths ${row.pathsA}/${row.pathsB} not balanced`);
+      }
     }
+    assert.ok(tiers[1] > 300, `${language}: strong picks ${tiers[1]}`);
   }
-  assert.ok(strong > 100, `strong picks: ${strong}`);
+});
+
+test("a strong link to one word never carries a missing link to the other", () => {
+  // SOCKS + EYE: FACE is strongly tied to EYE only; COLD + HAIR: SNOW is strongly tied to COLD only.
+  for (const [prompts, oneSided] of [[["socks", "eye"], "face"], [["cold", "hair"], "snow"]]) {
+    const row = rankCandidates({prompts}).ranked.find(r => r.word === oneSided);
+    assert.ok(row && !row.passes && row.tier !== 2, `${oneSided} must not qualify for ${prompts}`);
+    for (let seed = 1; seed <= 200; seed++) assert.notEqual(chooseResponse({prompts, rng: seededRandom(seed)}).word, oneSided);
+  }
+});
+
+test("no pair-specific logic: the bot code names no test words, and PAIR/SLED win for unrelated-to-the-tests pairs too", async () => {
+  const {readFile} = await import("node:fs/promises");
+  const code = (await readFile(new URL("../src/shared/bot.js", import.meta.url), "utf8")).replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const word of ["socks", "eye", "winter", "snowman", "hand", "glove", "pair", "sled", "scarf", "mitten", "fabric", "hair", "cold"]) {
+    assert.doesNotMatch(code, new RegExp(`["'\`]${word}["'\`]`), `bot.js special-cases "${word}"`);
+  }
+  const top = prompts => rankCandidates({prompts}).ranked.filter(r => r.tier === 1).slice(0, 3).map(r => r.word);
+  assert.ok(top(["boots", "glasses"]).includes("pair"));
+  assert.ok(top(["shoe", "ear"]).includes("pair"));
+  assert.ok(top(["hill", "snow"]).includes("sled"));
+});
+
+test("unknown prompts: base forms and confident spelling fixes are tried before giving up", () => {
+  const typo = rankCandidates({prompts: ["freind", "dog"]});
+  assert.ok(typo.knownA, "a confident spelling fix resolves the prompt");
+  const plural = rankCandidates({prompts: ["mittens", "snowmen"]});
+  assert.ok(plural.knownA && plural.knownB);
+  const nonsense = chooseResponse({prompts: ["zorblax", "dog"], rng: seededRandom(1)});
+  assert.equal(nonsense.quality, "loose", "nothing can relate to a word the game doesn't know");
+  assert.ok(nonsense.word);
 });
 
 test("weighted choice happens only among the best few, roughly 55/30/15", () => {

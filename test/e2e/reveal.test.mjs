@@ -353,7 +353,8 @@ test("an inflected match (Gary's word, pluralised) wins: original words shown, p
   await page.waitForSelector("#app .end.win");
   assert.match(await page.locator("#app .end").innerText(), /close enough! Same same on move 1/i);
   assert.equal(await page.locator("#app #prompt, #word").count(), 0, "no new playable pair");
-  const game = Object.values(JSON.parse(await page.evaluate(() => localStorage.getItem("ssbd.store"))).solo)[0];
+  // The game on screen (earlier tries may have left other games in storage).
+  const game = await page.evaluate(() => JSON.parse(localStorage.getItem("ssbd.store")).solo[location.pathname.split("/").pop()]);
   assert.equal(game.status, "MATCHED");
   assert.equal(game.moves.length, 1, "the trail did not advance");
   assert.deepEqual(game.moves[0].words, {a: plural.toUpperCase(), b: bot});

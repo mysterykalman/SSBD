@@ -5,7 +5,7 @@
 
 import {getLexicon} from "./lexicon/index.js";
 import {lemmaKeys} from "./morph.js";
-import {wordKey} from "./words.js";
+import {createSpeller, wordKey} from "./words.js";
 
 /**
  * @typedef {import("./types.js").BotPick} BotPick
@@ -52,7 +52,20 @@ export const BOT_TUNING = {
   /** Concept seen N rounds ago → extra score penalty (1 round ago is rejected outright). */
   recency: [[2, 2, 0.25], [3, 5, 0.12], [6, 8, 0.05]],
   /** Penalty for answering with a piece of a prompt word, or a word containing one. */
-  containedPenalty: 0.25
+  containedPenalty: 0.25,
+  /**
+   * Bounded fallback tiers, used only when no candidate clears minPerSide. Both prompts must
+   * still relate on their own in every tier; one strong side never carries a weak one.
+   *  tier 2: both sides ≥ relaxedPerSide and the weaker side ≥ relaxedBalance × the stronger.
+   *  tier 3: broadened search over two- and three-step paths; at least minPaths independent
+   *          paths from EACH prompt, and the weaker count ≥ pathBalance × the stronger.
+   */
+  relaxedPerSide: 0.25,
+  relaxedBalance: 0.5,
+  minPaths: 2,
+  pathBalance: 0.4,
+  /** Last resort for two known prompts: paths from both, weaker count ≥ this share of the stronger. */
+  lastBalance: 0.3
 };
 
 /**
@@ -82,6 +95,42 @@ function sideRelation(lex, promptIds, candidate) {
   return best;
 }
 
+/**
+ * Independent paths from one prompt to a candidate, not passing through the other prompt or
+ * the candidate itself: a shared neighbour counts 2 (prompt → x → candidate), a neighbour of a
+ * neighbour counts 1 (prompt → x → y → candidate). Used only by the broadened fallback tier.
+ */
+function pathCount(lex, promptIds, candidate, avoid) {
+  let best = 0;
+  for (const promptId of promptIds) {
+    const prompt = lex.concepts.get(promptId);
+    if (!prompt || prompt.id === candidate.id) continue;
+    let paths = 0;
+    for (const x of prompt.near) {
+      if (avoid.has(x) || x === candidate.id) continue;
+      if (candidate.near.has(x)) { paths += 2; continue; }
+      const middle = lex.concepts.get(x);
+      for (const y of candidate.near) if (y !== x && !avoid.has(y) && middle.near.has(y)) { paths += 1; break; }
+    }
+    best = Math.max(best, paths);
+  }
+  return best;
+}
+
+/** Concept ids for a typed word: as typed, then its base forms ("running" → run), then a confident spelling fix. */
+const spellerCache = new Map();
+function resolvePrompt(lex, word, language) {
+  const direct = lex.resolveAll(word);
+  if (direct.length) return direct;
+  for (const key of lemmaKeys(word, language)) {
+    const ids = lex.resolveAll(key);
+    if (ids.length) return ids;
+  }
+  if (!spellerCache.has(language)) spellerCache.set(language, createSpeller(lex.words));
+  const fixed = spellerCache.get(language).suggest(word);
+  return fixed ? lex.resolveAll(fixed) : [];
+}
+
 /** Concept ids seen in recent rounds → how many rounds ago (1 = the round just revealed). */
 function recentConcepts(lex, history) {
   const ago = new Map();
@@ -106,7 +155,7 @@ function cachedLemmas(label, language) {
 export function rankCandidates({prompts, language = "en", excludeKeys = new Set(), history = [], tuning = BOT_TUNING}) {
   const lex = getLexicon(language);
   const list = (Array.isArray(prompts) ? prompts : []).slice(0, 2).map(p => String(p ?? ""));
-  const [idsA = [], idsB = []] = list.map(p => lex.resolveAll(p));
+  const [idsA = [], idsB = []] = list.map(p => resolvePrompt(lex, p, language));
   const promptIds = new Set([...idsA, ...idsB]);
   const promptKeys = new Set(list.map(wordKey).filter(Boolean));
   // Never answer with a word already in the game, or a grammatical variant of one (or of a prompt).
@@ -122,7 +171,8 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
     const roundsAgo = ago.get(candidate.id);
     if (roundsAgo === 1) continue; // the concept the trail just left: no orbiting back
     const a = sideRelation(lex, idsA, candidate), b = sideRelation(lex, idsB, candidate);
-    if (a.strength + b.strength <= 0) continue;
+    const pathsA = pathCount(lex, idsA, candidate, promptIds), pathsB = pathCount(lex, idsB, candidate, promptIds);
+    if (a.strength + b.strength <= 0 && pathsA + pathsB <= 0) continue;
     const weakest = Math.min(a.strength, b.strength), average = (a.strength + b.strength) / 2;
     const familiarity = Math.min(1, candidate.links.size / 10);
     const human = ((a.human + b.human) / 2) * (0.75 + 0.25 * familiarity);
@@ -133,8 +183,12 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
     const contained = [...promptKeys].some(key => key.length >= 3 && candidate.key.length >= 3 && (key.includes(candidate.key) || candidate.key.includes(key)));
     const score = weakest * w.weakest + human * w.human + average * w.average + obvious * w.obvious + Math.max(0, novelty) * w.novelty
       - (recency ? recency[2] : 0) - (contained ? tuning.containedPenalty : 0);
-    ranked.push({word: candidate.label, id: candidate.id, a: a.strength, b: b.strength, weakest, average, human, obvious, novelty, score,
-      passes: a.strength >= tuning.minPerSide && b.strength >= tuning.minPerSide});
+    const passes = a.strength >= tuning.minPerSide && b.strength >= tuning.minPerSide;
+    const relaxed = weakest >= tuning.relaxedPerSide && weakest >= tuning.relaxedBalance * Math.max(a.strength, b.strength);
+    const minPaths = Math.min(pathsA, pathsB), maxPaths = Math.max(pathsA, pathsB);
+    const broadened = minPaths >= tuning.minPaths && minPaths >= tuning.pathBalance * maxPaths;
+    ranked.push({word: candidate.label, id: candidate.id, a: a.strength, b: b.strength, pathsA, pathsB, weakest, average, human, obvious, novelty, score,
+      passes, tier: passes ? 1 : relaxed ? 2 : broadened ? 3 : 0});
   }
   ranked.sort((x, y) => y.score - x.score || x.word.localeCompare(y.word));
   return {ranked, knownA: idsA.length > 0, knownB: idsB.length > 0};
@@ -172,24 +226,36 @@ export function chooseOpening({language = "en", excludeKeys = new Set(), rng = M
 }
 
 /**
- * Choose exactly one word for these exact two prompts.
- * 1. Score candidates (rankCandidates). 2. Keep only those that relate to BOTH prompts at least
- * BOT_TUNING.minPerSide each — a strong link to one word never makes up for a missing link to the
- * other. 3. Pick among the best few with weights 55/30/15.
- * Only when the data has no two-sided word at all does the bot fall back to the best partial
- * bridge (quality "loose"); if one prompt is unknown, to the word closest to the known one.
+ * Choose exactly one word for these exact two prompts. The answer must relate to BOTH prompts on
+ * its own; this is an invariant, not a preference.
+ *  tier 1 (strong): both sides ≥ minPerSide. Weighted pick (55/30/15) among the best few.
+ *  tier 2 (relaxed, quality "loose"): both sides ≥ relaxedPerSide and balanced.
+ *  tier 3 (broadened, "loose"): enough independent two/three-step paths from each prompt, balanced.
+ *  then: the candidate with the most balanced paths from both prompts (both > 0).
+ * A one-sided word is never returned for two known prompts. The single exception is a prompt
+ * that means nothing to the game's vocabulary (nonsense, one letter): no relationship to it can
+ * exist, so the bot answers from the known prompt. Gary still sends exactly one word.
  * @param {{prompts: [string, string] | string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], rng?: () => number, tuning?: typeof BOT_TUNING}} options
  * @returns {BotPick}
  */
 export function chooseResponse({prompts, language = "en", excludeKeys = new Set(), history = [], rng = Math.random, tuning = BOT_TUNING}) {
-  const {ranked} = rankCandidates({prompts, language, excludeKeys, history, tuning});
-  const strong = ranked.filter(item => item.passes);
+  const {ranked, knownA, knownB} = rankCandidates({prompts, language, excludeKeys, history, tuning});
+  const tier = n => ranked.filter(item => item.tier === n);
+  const strong = tier(1);
   if (strong.length) return {word: pickFromShortlist(strong, rng, tuning).word, quality: "strong"};
-  if (ranked.length) {
-    // Fallback: best bridge first (the weaker side as strong as possible), then overall score.
-    const bridges = ranked.slice().sort((x, y) => y.weakest - x.weakest || y.score - x.score);
-    const best = bridges[0].weakest > 0 ? bridges.filter(item => item.weakest > 0).map(item => ({...item, score: item.weakest + item.score / 10})) : ranked;
-    return {word: pickFromShortlist(best, rng, tuning).word, quality: "loose"};
+  const relaxed = tier(2);
+  if (relaxed.length) return {word: pickFromShortlist(relaxed, rng, tuning).word, quality: "loose"};
+  const byPaths = items => items.map(item => ({...item, score: Math.min(item.pathsA, item.pathsB) + item.score / 10})).sort((x, y) => y.score - x.score);
+  const broadened = tier(3);
+  if (broadened.length) return {word: pickFromShortlist(byPaths(broadened), rng, tuning).word, quality: "loose"};
+  if (knownA && knownB) {
+    const twoSided = ranked.filter(item => item.pathsA > 0 && item.pathsB > 0 && Math.min(item.pathsA, item.pathsB) >= tuning.lastBalance * Math.max(item.pathsA, item.pathsB));
+    if (twoSided.length) return {word: pickFromShortlist(byPaths(twoSided), rng, tuning).word, quality: "loose"};
+  }
+  // Only reachable when a prompt is unknown to the vocabulary (or the graph has no route at all).
+  if (ranked.length && (!knownA || !knownB)) {
+    const known = ranked.slice().sort((x, y) => Math.max(y.a, y.b) - Math.max(x.a, x.b) || y.score - x.score);
+    return {word: pickFromShortlist(known.map(item => ({...item, score: Math.max(item.a, item.b)})), rng, tuning).word, quality: "loose"};
   }
   const list = (Array.isArray(prompts) ? prompts : []).map(p => wordKey(String(p ?? ""))).filter(Boolean);
   return {...chooseOpening({language, excludeKeys: new Set([...excludeKeys, ...list]), rng}), quality: "loose"};

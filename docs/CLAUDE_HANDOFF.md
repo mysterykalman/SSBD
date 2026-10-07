@@ -256,7 +256,11 @@ Never edit it by hand.
   - Irregular verbs not in the table aren't recognised.
   - Ambiguous forms resolve generously: "leaves" matches both "leaf" and
     "leave".
-  - Plural-only nouns ("glasses" the spectacles) never match their singular.
+  - Plural-only nouns ("glasses" the spectacles, "news") never match their
+    singular.
+  - Ambiguous irregulars are read one way. "Left" is the direction (it never
+    matches "leave"). "Saw" matches "see", but "saws" is only the tool.
+  - Derivations never match ("runner" ≠ "run").
   - French verb conjugation is only covered for regular -er verbs.
 
 ### How the bot chooses (`src/shared/bot.js`)
@@ -282,9 +286,27 @@ Never edit it by hand.
   - Answers built on a prompt word ("snow" for "snowman"): −0.25.
 - **Choosing.** A weighted pick among the best few (55/30/15, all within 85% of
   the top score), so it stays coherent but isn't predictable.
-- **Fallback.** Only when the data holds no two-sided word does the bot pick the
-  best partial bridge (labelled "loose"). Each turn it still sends exactly one
-  word.
+- **Both words, always.** Relating to both prompts is an invariant, not a
+  preference. When nothing reaches tier 1, the bot moves down a bounded ladder,
+  and every tier still requires a real relationship to each prompt on its own:
+  - **Tier 2:** both sides ≥ 0.25, with the weaker side at least half the
+    stronger.
+  - **Tier 3:** a broadened search over two- and three-step paths in the word
+    graph. It needs at least 2 independent paths from each prompt (none through
+    the other prompt), with the weaker count at least 40% of the stronger.
+  - **Last resort:** the most balanced two-sided candidate (weaker paths at least
+    30% of the stronger).
+
+  Fallback picks are labelled "loose" ("Gary stretched a little"). On 3,000
+  random pairs per language, no pick was one-sided.
+- **The single exception.** If a prompt means nothing to the game's vocabulary
+  (nonsense such as "zorblax", or a lone letter), no relationship to it can
+  exist, so the bot answers from the known prompt. The bot first tries base forms
+  ("snowmen") and confident spelling fixes ("freind" → friend).
+- **No special cases.** There is no pair-specific logic anywhere. PAIR (socks +
+  eye, boots + glasses, shoe + ear) and SLED (winter + snowman, hill + snow) come
+  out of the general scoring over the curated links. A test also checks that
+  `bot.js` names none of these words.
 - **Tuning.** All weights live in `BOT_TUNING`, so a future difficulty setting
   can adjust them.
 - **Examples:**
