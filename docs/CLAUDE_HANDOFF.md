@@ -287,18 +287,28 @@ Never edit it by hand.
 - **Choosing.** A weighted pick among the best few (55/30/15, all within 85% of
   the top score), so it stays coherent but isn't predictable.
 - **Both words, always.** Relating to both prompts is an invariant, not a
-  preference. When nothing reaches tier 1, the bot moves down a bounded ladder,
-  and every tier still requires a real relationship to each prompt on its own:
-  - **Tier 2:** both sides ≥ 0.25, with the weaker side at least half the
+  preference. When nothing reaches tier 1, the bot moves down a bounded ladder.
+  Every tier requires a relationship to each prompt on its own, and no tier
+  accepts a "lopsided" candidate: one that is direct to one word (≥ 0.8) but
+  under 0.45 for the other, which is the FACE-for-SOCKS + EYE pattern.
+  - **Tier 2:** both sides ≥ 0.25 (a shared neighbour or better), with the
+    weaker side at least half the stronger.
+  - **Tier 3:** both sides ≥ 0.25, with the weaker side at least 45% of the
     stronger.
-  - **Tier 3:** a broadened search over two- and three-step paths in the word
-    graph. It needs at least 2 independent paths from each prompt (none through
-    the other prompt), with the weaker count at least 40% of the stronger.
-  - **Last resort:** the most balanced two-sided candidate (weaker paths at least
-    30% of the stronger).
+  - **Tier 4:** both sides at least share a category, the weaker side at least
+    25% of the stronger, and no direct side.
+  - **Tier 5:** balanced two- and three-step paths from each prompt (none
+    through the other prompt).
 
-  Fallback picks are labelled "loose" ("Gary stretched a little"). On 3,000
-  random pairs per language, no pick was one-sided.
+  Fallback picks are labelled "loose" ("Gary stretched a little").
+- **Measured on 3,000 random pairs per language:**
+  - Tier 1 handles 28%, tier 2 62%, tiers 3–4 7%.
+  - Zero lopsided picks.
+  - About 2.5% of random pairs have no meaningful two-sided word anywhere in the
+    curated data (KING + CRY, BATTERY + CREAM). There Gary uses the balanced
+    tier-5 bridge, the only option that keeps both the "one word per round" and
+    "never one-sided" rules. A test checks that this only happens when tiers 1–4
+    are empty. Adding curated links is what shrinks it further.
 - **The single exception.** If a prompt means nothing to the game's vocabulary
   (nonsense such as "zorblax", or a lone letter), no relationship to it can
   exist, so the bot answers from the known prompt. The bot first tries base forms

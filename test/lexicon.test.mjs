@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {CONCEPTS, PHRASES, TAGS} from "../src/shared/lexicon/data.js";
 import {EXTRA_WORDS} from "../src/shared/lexicon/vocab.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
-import {chooseOpening, chooseResponse, wordForms} from "../src/shared/bot.js";
+import {chooseOpening, chooseResponse, wordForms, rankCandidates} from "../src/shared/bot.js";
 import {createSpeller, validateWord, wordKey} from "../src/shared/words.js";
 
 // Local seeded RNG so these tests do not depend on rules.js.
@@ -291,7 +291,7 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     const lex = getLexicon(lang);
     const all = [...lex.concepts.values()];
     const records = [];
-    const judge = (prompts, used, word) => {
+    const judge = (prompts, used, word, source) => {
       const [a, b] = prompts.map(p => lex.resolve(p));
       const c = lex.resolve(word);
       assert.ok(c, `${lang}: ${word} is a lexicon word`);
@@ -301,7 +301,10 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
         if (x.id === a || x.id === b || isUsed(used, x.key)) continue;
         if (judgeSide(lex, a, x.id) === 3 && judgeSide(lex, b, x.id) === 3) { strongPossible = true; break; }
       }
-      records.push({prompts, word, sa, sb, strongPossible});
+      // Was a meaningful two-sided word available at all (bot tiers 1-4)?
+      const ranked = rankCandidates({prompts, language: lang, excludeKeys: used}).ranked;
+      const bridgeable = ranked.some(r => r.tier >= 1 && r.tier <= 4);
+      records.push({prompts, word, sa, sb, strongPossible, source, bridgeable});
     };
     // Realistic games: the "player" answers with a word related to one or both prompts.
     for (let g = 0; g < 60; g++) {
@@ -315,7 +318,7 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
         const prompts = [player, bot];
         const next = chooseResponse({prompts, language: lang, excludeKeys: new Set(used), rng: botRng}).word;
         assert.ok(!isUsed(used, wordKey(next)), `${lang}: reused ${next}`);
-        judge(prompts, used, next);
+        judge(prompts, used, next, "game");
         const ids = prompts.map(p => lex.resolve(p));
         const pool = all.filter(x => !isUsed(used, x.key) && ids.some(id => lex.concepts.get(id).near.has(x.id)));
         const both = pool.filter(x => ids.every(id => lex.concepts.get(id).near.has(x.id)));
@@ -329,7 +332,7 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     for (let i = 0; i < 300; i++) {
       const a = all[Math.floor(random() * all.length)], b = all[Math.floor(random() * all.length)];
       if (a.id === b.id) continue;
-      judge([a.label, b.label], new Set([a.key, b.key]), chooseResponse({prompts: [a.label, b.label], language: lang, rng: rng(i + 1)}).word);
+      judge([a.label, b.label], new Set([a.key, b.key]), chooseResponse({prompts: [a.label, b.label], language: lang, rng: rng(i + 1)}).word, "random");
     }
     const possible = records.filter(r => r.strongPossible);
     const strong = possible.filter(r => r.sa === 3 && r.sb === 3);
@@ -339,7 +342,13 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     t.diagnostic(`${lang} weakest: ${weakest.map(r => `${r.prompts.join(" + ")} -> ${r.word} [${r.sa},${r.sb}]`).join("; ")}`);
     assert.ok(possible.length >= 100, `${lang}: only ${possible.length} pairs had a strong answer`);
     assert.ok(strong.length / possible.length >= 0.85, `${lang}: strong for ${strong.length}/${possible.length}`);
-    assert.deepEqual(unrelated.map(r => `${r.prompts.join("+")}->${r.word}`), [], `${lang}: picks unrelated to both prompts`);
+    // Every pick relates meaningfully (link, shared neighbour or category) to BOTH prompts whenever the
+    // data allows it. A weak, balanced last-resort pick is only allowed when no meaningful two-sided word
+    // exists (the bot never falls back to a one-sided word instead), and it stays rare.
+    const gaps = records.filter(r => Math.min(r.sa, r.sb) === 0);
+    for (const r of gaps) assert.ok(!r.bridgeable, `${lang}: ${r.prompts.join("+")} -> ${r.word} although a two-sided word existed`);
+    assert.ok(gaps.length <= records.length * 0.04, `${lang}: ${gaps.length}/${records.length} unbridgeable picks`);
+    t.diagnostic(`${lang}: unbridgeable random pairs ${gaps.length} (${unrelated.length} unrelated to both)`);
     // Whenever a direct-both word existed, the bot never settled for a one-sided word.
     for (const r of possible) assert.ok(Math.min(r.sa, r.sb) >= 2, `${lang}: ${r.prompts.join("+")} -> ${r.word}`);
   }

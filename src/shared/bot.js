@@ -62,10 +62,16 @@ export const BOT_TUNING = {
    */
   relaxedPerSide: 0.25,
   relaxedBalance: 0.5,
+  /** tier 3: both sides still ≥ relaxedPerSide, a little less balanced (two shared-neighbour links). */
+  wideBalance: 0.45,
+  /** tier 4: both sides at least share a category (≥ categoryPerSide), balanced, and no side is a
+   *  direct link (< directStrength), so a strong side can't carry a category-only side. */
+  categoryPerSide: 0.1,
+  categoryBalance: 0.25,
+  directStrength: 0.8,
+  /** tier 5 (last resort): independent two/three-step paths from both prompts, balanced. */
   minPaths: 2,
-  pathBalance: 0.4,
-  /** Last resort for two known prompts: paths from both, weaker count ≥ this share of the stronger. */
-  lastBalance: 0.3
+  pathBalance: 0.4
 };
 
 /**
@@ -183,12 +189,19 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
     const contained = [...promptKeys].some(key => key.length >= 3 && candidate.key.length >= 3 && (key.includes(candidate.key) || candidate.key.includes(key)));
     const score = weakest * w.weakest + human * w.human + average * w.average + obvious * w.obvious + Math.max(0, novelty) * w.novelty
       - (recency ? recency[2] : 0) - (contained ? tuning.containedPenalty : 0);
+    // Tiers (see BOT_TUNING): every tier needs a relationship to EACH prompt, and a strong side never
+    // carries a weak one (strong to one word + one shared neighbour of the other is never enough).
+    const strongest = Math.max(a.strength, b.strength);
     const passes = a.strength >= tuning.minPerSide && b.strength >= tuning.minPerSide;
-    const relaxed = weakest >= tuning.relaxedPerSide && weakest >= tuning.relaxedBalance * Math.max(a.strength, b.strength);
+    // Lopsided (the FACE-for-SOCKS+EYE pattern): direct to one word, under the bar for the other. Never eligible.
+    const lopsided = strongest >= tuning.directStrength && weakest < tuning.minPerSide;
+    const relaxed = weakest >= tuning.relaxedPerSide && weakest >= tuning.relaxedBalance * strongest;
+    const wide = weakest >= tuning.relaxedPerSide && weakest >= tuning.wideBalance * strongest;
+    const category = weakest >= tuning.categoryPerSide && weakest >= tuning.categoryBalance * strongest && strongest < tuning.directStrength;
     const minPaths = Math.min(pathsA, pathsB), maxPaths = Math.max(pathsA, pathsB);
-    const broadened = minPaths >= tuning.minPaths && minPaths >= tuning.pathBalance * maxPaths;
+    const paths = minPaths >= tuning.minPaths && minPaths >= tuning.pathBalance * maxPaths;
     ranked.push({word: candidate.label, id: candidate.id, a: a.strength, b: b.strength, pathsA, pathsB, weakest, average, human, obvious, novelty, score,
-      passes, tier: passes ? 1 : relaxed ? 2 : broadened ? 3 : 0});
+      passes, lopsided, tier: passes ? 1 : lopsided ? 0 : relaxed ? 2 : wide ? 3 : category ? 4 : paths ? 5 : 0});
   }
   ranked.sort((x, y) => y.score - x.score || x.word.localeCompare(y.word));
   return {ranked, knownA: idsA.length > 0, knownB: idsB.length > 0};
@@ -243,20 +256,22 @@ export function chooseResponse({prompts, language = "en", excludeKeys = new Set(
   const tier = n => ranked.filter(item => item.tier === n);
   const strong = tier(1);
   if (strong.length) return {word: pickFromShortlist(strong, rng, tuning).word, quality: "strong"};
-  const relaxed = tier(2);
-  if (relaxed.length) return {word: pickFromShortlist(relaxed, rng, tuning).word, quality: "loose"};
-  const byPaths = items => items.map(item => ({...item, score: Math.min(item.pathsA, item.pathsB) + item.score / 10})).sort((x, y) => y.score - x.score);
-  const broadened = tier(3);
-  if (broadened.length) return {word: pickFromShortlist(byPaths(broadened), rng, tuning).word, quality: "loose"};
-  if (knownA && knownB) {
-    const twoSided = ranked.filter(item => item.pathsA > 0 && item.pathsB > 0 && Math.min(item.pathsA, item.pathsB) >= tuning.lastBalance * Math.max(item.pathsA, item.pathsB));
-    if (twoSided.length) return {word: pickFromShortlist(byPaths(twoSided), rng, tuning).word, quality: "loose"};
+  // Fallback tiers, in order; ranked by the weaker side first, then paths, then the usual score.
+  const byWeakest = items => items.map(item => ({...item, score: item.weakest * 10 + Math.min(item.pathsA, item.pathsB) / 10 + item.score / 100})).sort((x, y) => y.score - x.score);
+  for (const n of [2, 3, 4]) {
+    const items = tier(n);
+    if (items.length) return {word: pickFromShortlist(n === 2 ? items : byWeakest(items), rng, tuning).word, quality: "loose"};
   }
-  // Only reachable when a prompt is unknown to the vocabulary (or the graph has no route at all).
+  const byPaths = items => items.map(item => ({...item, score: Math.min(item.pathsA, item.pathsB) + item.score / 10})).sort((x, y) => y.score - x.score);
+  const viaPaths = tier(5);
+  if (viaPaths.length && knownA && knownB) return {word: pickFromShortlist(byPaths(viaPaths), rng, tuning).word, quality: "loose"};
+  // Only reachable when a prompt is unknown to the vocabulary: nothing can relate to it.
   if (ranked.length && (!knownA || !knownB)) {
     const known = ranked.slice().sort((x, y) => Math.max(y.a, y.b) - Math.max(x.a, x.b) || y.score - x.score);
     return {word: pickFromShortlist(known.map(item => ({...item, score: Math.max(item.a, item.b)})), rng, tuning).word, quality: "loose"};
   }
+  const balanced = ranked.filter(item => !item.lopsided && item.pathsA > 0 && item.pathsB > 0);
+  if (balanced.length) return {word: pickFromShortlist(byPaths(balanced), rng, tuning).word, quality: "loose"};
   const list = (Array.isArray(prompts) ? prompts : []).map(p => wordKey(String(p ?? ""))).filter(Boolean);
   return {...chooseOpening({language, excludeKeys: new Set([...excludeKeys, ...list]), rng}), quality: "loose"};
 }

@@ -50,12 +50,17 @@ test("invariant: every pick relates to BOTH prompts on its own (strong or fallba
       assert.ok(sideA > 0 && sideB > 0, `${a}+${b} -> ${pick.word} is one-sided (${row.a}/${row.b}, paths ${row.pathsA}/${row.pathsB})`);
       if (pick.quality === "strong") assert.ok(row.a >= BOT_TUNING.minPerSide && row.b >= BOT_TUNING.minPerSide, `${a}+${b} -> ${pick.word}`);
       // Tiers are tried in order: a fallback is only used when every better tier is empty.
-      for (let better = 1; better < (row.tier || 4); better++) assert.ok(!ranked.some(r => r.tier === better), `${a}+${b}: skipped tier ${better}`);
-      if (row.tier === 2) assert.ok(row.weakest >= BOT_TUNING.relaxedBalance * Math.max(row.a, row.b), "tier 2 is balanced");
-      if (row.tier === 3 || row.tier === 0) {
+      for (let better = 1; better < (row.tier || 6); better++) assert.ok(!ranked.some(r => r.tier === better), `${a}+${b}: skipped tier ${better}`);
+      const strongest = Math.max(row.a, row.b);
+      if (row.tier === 2) assert.ok(row.weakest >= BOT_TUNING.relaxedPerSide && row.weakest >= BOT_TUNING.relaxedBalance * strongest, "tier 2 is balanced");
+      if (row.tier === 3) assert.ok(row.weakest >= BOT_TUNING.relaxedPerSide && row.weakest >= BOT_TUNING.wideBalance * strongest, "tier 3 is balanced");
+      if (row.tier === 4) assert.ok(row.weakest >= BOT_TUNING.categoryPerSide && row.weakest >= BOT_TUNING.categoryBalance * strongest && strongest < BOT_TUNING.directStrength, "tier 4 is balanced");
+      if (row.tier === 5) {
         const lo = Math.min(row.pathsA, row.pathsB), hi = Math.max(row.pathsA, row.pathsB);
-        assert.ok(lo >= BOT_TUNING.lastBalance * hi, `${a}+${b} -> ${pick.word}: paths ${row.pathsA}/${row.pathsB} not balanced`);
+        assert.ok(lo >= BOT_TUNING.minPaths && lo >= BOT_TUNING.pathBalance * hi, `${a}+${b} -> ${pick.word}: paths ${row.pathsA}/${row.pathsB} not balanced`);
       }
+      // Never the FACE pattern: strong to one word, barely touching the other.
+      assert.ok(!(strongest >= 0.8 && row.weakest > 0 && row.weakest < 0.45 && row.tier !== 0), `${a}+${b} -> ${pick.word} (${row.a}/${row.b})`);
     }
     assert.ok(tiers[1] > 300, `${language}: strong picks ${tiers[1]}`);
   }
