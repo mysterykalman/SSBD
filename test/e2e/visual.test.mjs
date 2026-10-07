@@ -145,7 +145,8 @@ test("visual: the game-over screen (20 moves) is tidy, lit up and offers the thr
     assert.equal(await page.locator(".stone.lit").count(), 20);
     assert.equal(await page.getAttribute("[role=progressbar]", "aria-valuenow"), "20");
     assert.match(await page.locator(".progress").innerText(), /All 20 moves played!/);
-    assert.equal(await page.locator(".sleepy").count(), 1, "the sleepy token rests on the game-over screen");
+    assert.equal(await page.locator(".gary-end").count(), 1, "sleepy Gary rests on the Solo game-over screen");
+    assert.match(await page.locator("#garyBye").innerText(), /finally[\s\S]*same time tomorrow\?/);
     await check(page, `game over ${viewport.width}`);
     if (SHOTS) await page.screenshot({path: `${SHOTS}/visual-gameover-${viewport.width}.png`, fullPage: true});
     // View history scrolls to and focuses the trail.

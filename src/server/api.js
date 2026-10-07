@@ -22,7 +22,7 @@ import {wordKey} from "../shared/words.js";
  * @typedef {{id: string, join_code: string, status: string, round_number: number, created_at: string, updated_at: string, language?: string | null, rematch_of?: string | null}} GameRow
  * @typedef {{player_id: string, slot: number, display_name: string | null}} MemberRow
  * @typedef {{id: string, number: number, prompts: [string, string] | null, status: MoveStatus, openedAt: string, revealedAt: string | null, words: {a: string, b: string} | null, submitted: Partial<Record<Side, Submission>>, botQuality: any}} LoadedMove
- * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, rules: {status: GameStatus, moves: LoadedMove[]}}} LoadedGame
+ * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, rules: {status: GameStatus, language: string, moves: LoadedMove[]}}} LoadedGame
  */
 
 const BOT = "BOT";
@@ -162,7 +162,7 @@ async function loadGame(db, gameId) {
   }
   /** @type {GameStatus} */
   const status = game.status === "COMPLETE" ? "MATCHED" : game.status === "MATCHED" || game.status === "EXHAUSTED" ? game.status : "ACTIVE";
-  return {row: game, members, moves, slotOf, rematchId, rules: {status, moves}};
+  return {row: game, members, moves, slotOf, rematchId, rules: {status, language: game.language === "fr" ? "fr" : "en", moves}};
 }
 
 /**
@@ -238,7 +238,7 @@ async function revealIfReady(db, loaded) {
   const move = moves[moves.length - 1];
   if (!isPlayable(row) || !move || move.status !== "OPEN" || !move.submitted.a || !move.submitted.b) return false;
   const a = move.submitted.a.word, b = move.submitted.b.word, at = now();
-  const outcome = moveOutcome(move.number, a, b);
+  const outcome = moveOutcome(move.number, a, b, row.language === "fr" ? "fr" : "en");
   // Notifications are for family games only; legacy Solo games never get any.
   const humans = isLegacySolo(loaded) ? [] : members;
   const statements = [
@@ -271,7 +271,7 @@ function legacyBotWord(loaded) {
   const rng = seededRandom(hashString(`${loaded.row.id}:${move.number}`));
   const language = loaded.row.language === "fr" ? "fr" : "en";
   return move.prompts
-    ? chooseResponse({prompts: move.prompts, language, excludeKeys, rng})
+    ? chooseResponse({prompts: move.prompts, language, excludeKeys, rng, history: loaded.moves.flatMap(m => (m.words ? [[m.words.a, m.words.b]] : []))})
     : chooseOpening({language, excludeKeys, rng});
 }
 

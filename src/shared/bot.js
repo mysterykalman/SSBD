@@ -4,6 +4,7 @@
 // choosing for.
 
 import {getLexicon} from "./lexicon/index.js";
+import {lemmaKeys} from "./morph.js";
 import {wordKey} from "./words.js";
 
 /**
@@ -11,8 +12,6 @@ import {wordKey} from "./words.js";
  * @typedef {import("./types.js").Language} Language
  */
 
-const TOP_CHOICES = 6;
-const TEMPERATURE = 2.2;
 
 /**
  * Singular/plural spellings a word key might also be written as (en + fr).
@@ -38,55 +37,121 @@ function isExcluded(key, excludeKeys) {
 }
 
 /**
- * How a candidate relates to one prompt (which may stand for several concepts,
- * e.g. both halves of "firetruck").
- * level 2: direct link or common phrase/compound ("snow" + "ball");
- * level 1: shares at least two neighbours (a clear shared concept);
- * level 0: at most a faint hint (one shared neighbour or a common tag).
+ * Tuning for the bot's answer (one place, so a future difficulty setting can adjust it).
+ * Objective: "what single word would an ordinary person most likely think of after seeing
+ * these exact two words?" — an answer that meets the player, not one that impresses them.
  */
-function relation(lex, promptIds, candidate) {
-  let best = {score: 0, level: 0, shared: 0};
+export const BOT_TUNING = {
+  /** Each prompt must independently relate at least this strongly (0..1), or the candidate is rejected. */
+  minPerSide: 0.45,
+  weights: {weakest: 0.40, human: 0.30, average: 0.15, obvious: 0.10, novelty: 0.05},
+  /** Weighted pick among the best few (after quality filtering). */
+  pick: [0.55, 0.30, 0.15],
+  /** Only candidates within this share of the best score make the shortlist. */
+  shortlistRatio: 0.85,
+  /** Concept seen N rounds ago → extra score penalty (1 round ago is rejected outright). */
+  recency: [[2, 2, 0.25], [3, 5, 0.12], [6, 8, 0.05]],
+  /** Penalty for answering with a piece of a prompt word, or a word containing one. */
+  containedPenalty: 0.25
+};
+
+/**
+ * How strongly a candidate relates to one prompt (which may stand for several concepts,
+ * e.g. both halves of "firetruck"), and how likely a person is to think of it from that prompt.
+ *  strength 1.0 phrase + link, .95 common phrase/compound ("snow" + "ball"), .9 the prompt's own
+ *  list names it, .8 the candidate's list names the prompt, .55/.45/.25 three/two/one shared
+ *  neighbours, .1 only a common tag.
+ */
+function sideRelation(lex, promptIds, candidate) {
+  let best = {strength: 0, human: 0};
   for (const promptId of promptIds) {
     const prompt = lex.concepts.get(promptId);
     if (!prompt || prompt.id === candidate.id) continue;
-    const link = prompt.links.has(candidate.id), phrase = prompt.phrases.has(candidate.id);
+    const phrase = prompt.phrases.has(candidate.id), link = prompt.links.has(candidate.id);
+    const outRank = prompt.out.get(candidate.id), named = outRank !== undefined, namedBack = candidate.out.has(prompt.id);
     let shared = 0;
     for (const neighbour of candidate.near) if (prompt.near.has(neighbour)) shared++;
-    const commonTags = candidate.tags.filter(tag => prompt.tags.includes(tag)).length;
-    const base = phrase && link ? 8 : phrase ? 7.5 : link ? 6 : 0;
-    const score = base + Math.min(3, shared * 0.75) + Math.min(1, commonTags * 0.5);
-    const level = base > 0 ? 2 : shared >= 2 ? 1 : 0;
-    if (level > best.level || (level === best.level && score > best.score)) best = {score, level, shared};
+    const commonTag = candidate.tags.some(tag => prompt.tags.includes(tag));
+    const strength = phrase && link ? 1 : phrase ? 0.95 : named ? 0.9 : namedBack ? 0.8
+      : shared >= 3 ? 0.55 : shared === 2 ? 0.45 : shared === 1 ? 0.25 : commonTag ? 0.1 : 0;
+    // Words a curator listed first for this prompt are what people say first.
+    const human = named ? Math.max(0.6, 1 - outRank * 0.04) : phrase ? 0.85 : namedBack ? 0.65
+      : shared >= 3 ? 0.35 : shared === 2 ? 0.25 : shared === 1 ? 0.1 : 0;
+    if (strength > best.strength || (strength === best.strength && human > best.human)) best = {strength, human};
   }
   return best;
 }
 
-/**
- * Rank how well a candidate connects the two prompts:
- * 4: direct link or phrase on both sides;
- * 3: direct on one side, a clear shared concept on the other;
- * 2: several shared neighbours on both sides (a clear shared concept);
- * 1: one-sided (direct on one side only), the last resort;
- * 0.5: two thin shared concepts; 0: only faint hints.
- */
-function tierOf(a, b) {
-  const hi = Math.max(a.level, b.level), lo = Math.min(a.level, b.level);
-  if (hi === 2) return lo === 2 ? 4 : lo === 1 ? 3 : 1;
-  if (lo === 1) return Math.min(a.shared, b.shared) >= 3 ? 2 : 0.5;
-  return 0;
+/** Concept ids seen in recent rounds → how many rounds ago (1 = the round just revealed). */
+function recentConcepts(lex, history) {
+  const ago = new Map();
+  history.slice().reverse().forEach((round, i) => {
+    for (const word of round) for (const id of lex.resolveAll(word)) if (!ago.has(id)) ago.set(id, i + 1);
+  });
+  return ago;
 }
 
-function weightedPick(items, rng) {
-  if (items.length === 1) return items[0];
-  const top = items[0].score;
-  const weights = items.map(item => Math.exp((item.score - top) / TEMPERATURE));
-  const total = weights.reduce((sum, w) => sum + w, 0);
-  let roll = rng() * total;
-  for (let i = 0; i < items.length; i++) {
-    roll -= weights[i];
-    if (roll <= 0) return items[i];
+const lemmaCache = new Map();
+function cachedLemmas(label, language) {
+  const key = `${language}:${label}`;
+  if (!lemmaCache.has(key)) lemmaCache.set(key, lemmaKeys(label, language));
+  return lemmaCache.get(key);
+}
+
+/**
+ * Score every candidate for these exact prompts. Returns all candidates (best first) with their
+ * parts, so callers and tests can see why a word won or was rejected.
+ * @param {{prompts: string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], tuning?: typeof BOT_TUNING}} options
+ */
+export function rankCandidates({prompts, language = "en", excludeKeys = new Set(), history = [], tuning = BOT_TUNING}) {
+  const lex = getLexicon(language);
+  const list = (Array.isArray(prompts) ? prompts : []).slice(0, 2).map(p => String(p ?? ""));
+  const [idsA = [], idsB = []] = list.map(p => lex.resolveAll(p));
+  const promptIds = new Set([...idsA, ...idsB]);
+  const promptKeys = new Set(list.map(wordKey).filter(Boolean));
+  // Never answer with a word already in the game, or a grammatical variant of one (or of a prompt).
+  const blocked = new Set();
+  for (const word of [...list, ...excludeKeys]) for (const key of lemmaKeys(word, language)) blocked.add(key);
+  const ago = recentConcepts(lex, history);
+  const w = tuning.weights;
+  const ranked = [];
+  for (const candidate of lex.concepts.values()) {
+    if (promptIds.has(candidate.id)) continue;
+    if (isExcluded(candidate.key, promptKeys) || isExcluded(candidate.key, excludeKeys)) continue;
+    if ([...cachedLemmas(candidate.label, language)].some(key => blocked.has(key))) continue;
+    const roundsAgo = ago.get(candidate.id);
+    if (roundsAgo === 1) continue; // the concept the trail just left: no orbiting back
+    const a = sideRelation(lex, idsA, candidate), b = sideRelation(lex, idsB, candidate);
+    if (a.strength + b.strength <= 0) continue;
+    const weakest = Math.min(a.strength, b.strength), average = (a.strength + b.strength) / 2;
+    const familiarity = Math.min(1, candidate.links.size / 10);
+    const human = ((a.human + b.human) / 2) * (0.75 + 0.25 * familiarity);
+    const obvious = Math.max(0, (candidate.label.includes(" ") ? 0.65 : 1) - (candidate.label.length > 9 ? 0.2 : 0));
+    const recency = tuning.recency.find(([from, to]) => roundsAgo !== undefined && roundsAgo >= from && roundsAgo <= to);
+    const novelty = recency ? 1 - recency[2] * 4 : 1;
+    // A piece of a prompt word ("snow" for "snowman") or a word built on one is a lazy answer.
+    const contained = [...promptKeys].some(key => key.length >= 3 && candidate.key.length >= 3 && (key.includes(candidate.key) || candidate.key.includes(key)));
+    const score = weakest * w.weakest + human * w.human + average * w.average + obvious * w.obvious + Math.max(0, novelty) * w.novelty
+      - (recency ? recency[2] : 0) - (contained ? tuning.containedPenalty : 0);
+    ranked.push({word: candidate.label, id: candidate.id, a: a.strength, b: b.strength, weakest, average, human, obvious, novelty, score,
+      passes: a.strength >= tuning.minPerSide && b.strength >= tuning.minPerSide});
   }
-  return items[items.length - 1];
+  ranked.sort((x, y) => y.score - x.score || x.word.localeCompare(y.word));
+  return {ranked, knownA: idsA.length > 0, knownB: idsB.length > 0};
+}
+
+/** Weighted pick among the best few: top 55%, second 30%, third 15% (renormalised if fewer). */
+function pickFromShortlist(items, rng, tuning) {
+  const top = items[0].score;
+  const shortlist = items.filter(item => item.score >= top * tuning.shortlistRatio).slice(0, tuning.pick.length);
+  const weights = tuning.pick.slice(0, shortlist.length);
+  const total = weights.reduce((sum, x) => sum + x, 0);
+  let roll = rng() * total;
+  for (let i = 0; i < shortlist.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return shortlist[i];
+  }
+  return shortlist[shortlist.length - 1];
 }
 
 /** First move: no prompts yet, so pick a friendly, well-connected word at random. */
@@ -107,40 +172,25 @@ export function chooseOpening({language = "en", excludeKeys = new Set(), rng = M
 }
 
 /**
- * Choose exactly one word that connects both prompts.
- * Candidates are ranked by tier first (see tierOf), so a one-sided word is only
- * used when no two-sided word is left, then by score with some seeded
- * randomness among the best few.
- * quality: "strong" when the word relates clearly to both prompts,
- *          "loose" when it only relates to one of them (or neither was known).
- * @param {{prompts: [string, string] | string[], language?: Language, excludeKeys?: Set<string>, rng?: () => number}} options
+ * Choose exactly one word for these exact two prompts.
+ * 1. Score candidates (rankCandidates). 2. Keep only those that relate to BOTH prompts at least
+ * BOT_TUNING.minPerSide each — a strong link to one word never makes up for a missing link to the
+ * other. 3. Pick among the best few with weights 55/30/15.
+ * Only when the data has no two-sided word at all does the bot fall back to the best partial
+ * bridge (quality "loose"); if one prompt is unknown, to the word closest to the known one.
+ * @param {{prompts: [string, string] | string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], rng?: () => number, tuning?: typeof BOT_TUNING}} options
  * @returns {BotPick}
  */
-export function chooseResponse({prompts, language = "en", excludeKeys = new Set(), rng = Math.random}) {
-  const lex = getLexicon(language);
-  const list = (Array.isArray(prompts) ? prompts : []).slice(0, 2).map(p => String(p ?? ""));
-  const [idsA = [], idsB = []] = list.map(p => lex.resolveAll(p));
-  const promptIds = new Set([...idsA, ...idsB]);
-  const promptKeys = new Set(list.map(wordKey).filter(Boolean));
-  const oneSided = !idsA.length || !idsB.length;
-  const scored = [];
-  if (promptIds.size) {
-    for (const candidate of lex.concepts.values()) {
-      if (promptIds.has(candidate.id)) continue;
-      if (isExcluded(candidate.key, promptKeys) || isExcluded(candidate.key, excludeKeys)) continue;
-      const a = relation(lex, idsA, candidate), b = relation(lex, idsB, candidate);
-      if (a.score + b.score <= 0) continue;
-      const tier = tierOf(a, b);
-      // With one prompt unknown, rank by closeness to the known prompt alone.
-      const score = oneSided ? a.score + b.score : a.score + b.score - Math.abs(a.score - b.score) * 0.25;
-      scored.push({word: candidate.label, score, tier});
-    }
+export function chooseResponse({prompts, language = "en", excludeKeys = new Set(), history = [], rng = Math.random, tuning = BOT_TUNING}) {
+  const {ranked} = rankCandidates({prompts, language, excludeKeys, history, tuning});
+  const strong = ranked.filter(item => item.passes);
+  if (strong.length) return {word: pickFromShortlist(strong, rng, tuning).word, quality: "strong"};
+  if (ranked.length) {
+    // Fallback: best bridge first (the weaker side as strong as possible), then overall score.
+    const bridges = ranked.slice().sort((x, y) => y.weakest - x.weakest || y.score - x.score);
+    const best = bridges[0].weakest > 0 ? bridges.filter(item => item.weakest > 0).map(item => ({...item, score: item.weakest + item.score / 10})) : ranked;
+    return {word: pickFromShortlist(best, rng, tuning).word, quality: "loose"};
   }
-  if (scored.length) {
-    const top = Math.max(...scored.map(item => item.tier));
-    const shortlist = scored.filter(item => item.tier === top).sort((x, y) => y.score - x.score).slice(0, TOP_CHOICES);
-    const pick = weightedPick(shortlist, rng);
-    return {word: pick.word, quality: pick.tier >= 3 ? "strong" : "loose"};
-  }
-  return {...chooseOpening({language, excludeKeys: new Set([...excludeKeys, ...promptKeys]), rng}), quality: "loose"};
+  const list = (Array.isArray(prompts) ? prompts : []).map(p => wordKey(String(p ?? ""))).filter(Boolean);
+  return {...chooseOpening({language, excludeKeys: new Set([...excludeKeys, ...list]), rng}), quality: "loose"};
 }

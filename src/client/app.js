@@ -6,6 +6,7 @@ import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js"
 import {publicMove, startSoloGame, submitSoloWord} from "../shared/solo.js";
 import {getLexicon} from "../shared/lexicon/index.js";
 import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
+import {matchKind} from "../shared/morph.js";
 import {trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
@@ -598,12 +599,18 @@ function startReveal(view, move) {
           h("span", {class: "op rv-step", "aria-hidden": "true"}, move.status === "MATCHED" ? "=" : "+"),
           solo ? garyRevealWord() : revealWord(t("revealTheirWord", {name: otherLabel(view)}), move.words[view.otherSide], "other")),
         reaction ? h("p", {class: "gary-line", id: "garyLine", hidden: true}, h("span", {class: "gary-says"})) : null,
-        h("p", {class: "rv-outcome rv-step"}, move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")),
+        h("p", {class: "rv-outcome rv-step"}, move.status === "MATCHED" ? matchCopy(view, move) : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")),
         move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, t("revealLoose")) : null,
         ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(move)))));
   document.body.append(dlg);
   dlg.showModal();
   runReveal(view, move, ended, token);
+}
+
+/** A match on the same underlying word: say so playfully when the spellings differ (CAR/CARS, RUN/RAN). */
+function matchCopy(view, move) {
+  const kind = matchKind(move.words.a, move.words.b, view.language);
+  return kind === "plural" ? t("revealMatchPlural") : kind === "variant" ? t("revealMatchVariant") : t("revealMatch");
 }
 
 /** "Next move starts with A + B", keeping "A + B" together on one line when it fits. */
@@ -683,7 +690,7 @@ async function runReveal(view, move, ended, token) {
   announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: move.words[view.youSide].toUpperCase()}),
     t("revealSaid", {name: sideLabel(view, view.otherSide), word: move.words[view.otherSide].toUpperCase()}),
     remark ? t("revealSaid", {name: t("garyName"), word: remark}) : "",
-    move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
+    move.status === "MATCHED" ? matchCopy(view, move) : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : t("keepPlaying"));
   result.append(button);
   setRevealPhase("ready");
@@ -782,7 +789,11 @@ function endPanel(view, last, fresh) {
       ? h("div", {class: "end-icon", "aria-hidden": "true"}, "🎉")
       : solo ? garyGoodbye(fresh && !reducedMotion()) : sleepyToken(fresh && !reducedMotion()),
     h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
-    h("p", {}, matched ? t("winCopy", {word: last.words.a.toUpperCase(), n: last.number}) : t("gameOverCopy")),
+    h("p", {}, matched
+      ? (matchKind(last.words.a, last.words.b, view.language) === "exact"
+        ? t("winCopy", {word: last.words.a.toUpperCase(), n: last.number})
+        : t("winCopyVariant", {a: last.words.a.toUpperCase(), b: last.words.b.toUpperCase(), n: last.number}))
+      : t("gameOverCopy")),
     h("div", {class: "row center end-actions"},
       h("button", {class: "btn big", type: "button", id: "newGameBtn", disabled: !solo && !state.online && !view.rematchId, onclick: event => {
         // A held or doubled Enter from the last word must not skip the game-over screen.

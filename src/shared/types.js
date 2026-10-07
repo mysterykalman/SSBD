@@ -69,7 +69,7 @@
  */
 
 /** The minimum the rules need from a game (the server builds this from D1 rows). */
-/** @typedef {{status: GameStatus, moves: Array<Pick<Move, "words">>}} RulesGame */
+/** @typedef {{status: GameStatus, language?: string, moves: Array<Pick<Move, "words">>}} RulesGame */
 
 /**
  * A stored family-game submission (one row of `submissions`).

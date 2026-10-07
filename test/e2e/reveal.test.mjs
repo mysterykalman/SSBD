@@ -326,3 +326,36 @@ test("long words: the revealed pair stays together and the modal never overflows
     await context.close();
   }
 });
+
+test("an inflected match (Gary's word, pluralised) wins: original words shown, playful copy, no next round", async () => {
+  const {sameUnderlyingWord, matchKind} = await import("../../src/shared/morph.js");
+  const context = await browser.newContext({reducedMotion: "reduce"});
+  const page = await context.newPage();
+  // Start games until Gary's opening word takes a plain plural s (most do).
+  let bot, plural;
+  for (let tries = 0; tries < 15 && !plural; tries++) {
+    await page.goto(server.url);
+    await page.click("#startSolo");
+    await page.waitForSelector("#word");
+    bot = await botWord(page);
+    const candidate = `${bot}s`;
+    if (!/[sxy]$/.test(bot) && !bot.includes(" ") && sameUnderlyingWord(candidate, bot) && matchKind(candidate, bot) === "plural") plural = candidate;
+  }
+  assert.ok(plural, "found an opening word with a plain plural");
+  await submit(page, plural.toUpperCase());
+  await page.waitForSelector("#revealContinue");
+  const modal = await page.locator("#revealModal").innerText();
+  assert.match(modal, new RegExp(plural, "i"), "the player's word is shown as typed");
+  assert.match(modal, new RegExp(`GARY.S WORD\\s+${bot}`, "i"), "Gary's word as he typed it");
+  assert.match(modal, /Plural schmural\. Same same!/);
+  assert.equal(await page.locator("#revealNext").count(), 0, "no 'next move starts with' for a match");
+  await page.click("#revealContinue");
+  await page.waitForSelector("#app .end.win");
+  assert.match(await page.locator("#app .end").innerText(), /close enough! Same same on move 1/i);
+  assert.equal(await page.locator("#app #prompt, #word").count(), 0, "no new playable pair");
+  const game = Object.values(JSON.parse(await page.evaluate(() => localStorage.getItem("ssbd.store"))).solo)[0];
+  assert.equal(game.status, "MATCHED");
+  assert.equal(game.moves.length, 1, "the trail did not advance");
+  assert.deepEqual(game.moves[0].words, {a: plural.toUpperCase(), b: bot});
+  await context.close();
+});

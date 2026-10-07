@@ -10,6 +10,7 @@
 // The game status mirrors the last move: ACTIVE while a move is OPEN,
 // otherwise MATCHED or EXHAUSTED.
 
+import {lemmaKeys, sameUnderlyingWord} from "./morph.js";
 import {validateWord, wordKey} from "./words.js";
 
 /**
@@ -33,14 +34,16 @@ export const FINISHED = new Set(["MATCHED", "EXHAUSTED"]);
 
 /**
  * The status a move gets when it is revealed with these two words.
+ * Same underlying word (identical, or an ordinary inflection: CAR/CARS, RUN/RAN) is a match
+ * and ends the game; synonyms and related words are different and the game goes on.
  * @param {number} number
  * @param {string} wordA
  * @param {string} wordB
+ * @param {string} [language]
  * @returns {Exclude<MoveStatus, "OPEN">}
  */
-export function moveOutcome(number, wordA, wordB) {
-  const key = wordKey(wordA);
-  if (key && key === wordKey(wordB)) return "MATCHED";
+export function moveOutcome(number, wordA, wordB, language = "en") {
+  if (sameUnderlyingWord(wordA, wordB, language)) return "MATCHED";
   return number >= MAX_MOVES ? "EXHAUSTED" : "REVEALED";
 }
 
@@ -119,9 +122,13 @@ export function checkWord(game, side, raw) {
   if (isFinished(game)) return {ok: false, code: "GAME_OVER"};
   const valid = validateWord(raw);
   if (!valid.ok) return valid;
-  const own = game.moves.flatMap(m => (m.words ? [wordKey(m.words[side])] : []));
-  if (own.length && own[own.length - 1] === valid.key) return {ok: false, code: "SAME_AS_LAST", word: valid.word};
-  if (own.includes(valid.key)) return {ok: false, code: "ALREADY_USED", word: valid.word};
+  // The same underlying word counts as a repeat too ("car" then "cars").
+  const language = game.language || "en";
+  const forms = lemmaKeys(valid.word, language);
+  const own = game.moves.flatMap(m => (m.words ? [lemmaKeys(m.words[side], language)] : []));
+  const overlaps = set => [...set].some(key => forms.has(key));
+  if (own.length && overlaps(own[own.length - 1])) return {ok: false, code: "SAME_AS_LAST", word: valid.word};
+  if (own.some(overlaps)) return {ok: false, code: "ALREADY_USED", word: valid.word};
   return valid;
 }
 
@@ -139,7 +146,7 @@ export function revealMove(game, words, now = new Date().toISOString()) {
   if (!move || move.status !== "OPEN") throw new Error("Move is not open");
   const a = words?.a, b = words?.b;
   if (!a || !b || !wordKey(a) || !wordKey(b)) throw new Error("Both words are needed to reveal a move");
-  const status = moveOutcome(move.number, a, b);
+  const status = moveOutcome(move.number, a, b, game.language);
   /** @type {Move} */
   const closed = {...move, words: {a, b}, status, revealedAt: now};
   const moves = [...game.moves.slice(0, -1), closed];

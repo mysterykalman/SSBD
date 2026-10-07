@@ -180,6 +180,9 @@ export const CONCEPTS = [
   ["head","head","tête",["body"],["hat","hair","face","brain","body"]],
 
   // Clothes
+  ["fabric","fabric","tissu",["clothes"],["clothes","wool","soft","shirt","dress","scarf","mitten","glove","sock"]],
+  ["pair","pair","paire",["clothes"],["sock","shoe","glove","mitten","boots","eye","ear","glasses"]],
+  ["cap","cap","casquette",["clothes"],["hat","head","hair","sun","clothes"]],
   ["clothes","clothes","vêtements",["clothes"],["shirt","dress","shoe","sock","hat","coat","pajamas","pants"]],
   ["shoe","shoe","chaussure",["clothes"],["foot","sock","boots","walk","run"]],
   ["sock","sock","chaussette",["clothes"],["shoe","foot","warm"]],

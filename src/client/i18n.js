@@ -144,6 +144,9 @@ const EN = {
   keepPlaying: "Keep playing",
   revealSeeEnd: "Continue",
   lockedIn: "You locked in {word}! 🔒",
+  revealMatchPlural: "Plural schmural. Same same!",
+  revealMatchVariant: "Close enough. Same same!",
+  winCopyVariant: "{a} and {b}: close enough! Same same on move {n}. 🎉",
   // Gary from Accounting (Solo opponent). Short, dry, simple. See src/client/gary.js.
   garyName: "Gary",
   garyTitle: "Gary from Accounting",
@@ -361,6 +364,9 @@ const FR = {
   keepPlaying: "On continue",
   revealSeeEnd: "Continuer",
   lockedIn: "Tu as verrouillé {word} ! 🔒",
+  revealMatchPlural: "Pluriel, singulier… pareil pareil !",
+  revealMatchVariant: "Presque pareil, ça compte ! Pareil pareil !",
+  winCopyVariant: "{a} et {b} : ça compte ! Pareil pareil au coup {n}. 🎉",
   // Gary de la comptabilité (adversaire solo). Court, sec, simple.
   garyName: "Gary",
   garyTitle: "Gary de la comptabilité",

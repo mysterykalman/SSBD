@@ -20,11 +20,14 @@ function buildLexicon(lang) {
   const labelIndex = lang === "fr" ? 2 : 1;
   const concepts = new Map();
   for (const [id, en, fr, tags] of CONCEPTS) {
-    concepts.set(id, {id, label: lang === "fr" ? fr : en, key: wordKey(lang === "fr" ? fr : en), tags, links: new Set(), phrases: new Set(), near: new Set()});
+    concepts.set(id, {id, label: lang === "fr" ? fr : en, key: wordKey(lang === "fr" ? fr : en), tags, links: new Set(), phrases: new Set(), near: new Set(), out: new Map()});
   }
   // Links are undirected.
   for (const row of CONCEPTS) {
     const [id, , , , links] = row;
+    // `out` keeps the curator's own ordered list for this concept: the words a person is most
+    // likely to think of first when they see it (used as the bot's "human likelihood").
+    /** @type {string[]} */ (links).forEach((other, rank) => { if (concepts.has(other) && other !== id) concepts.get(id).out.set(other, rank); });
     for (const other of links) {
       if (!concepts.has(other) || other === id) continue;
       concepts.get(id).links.add(other);

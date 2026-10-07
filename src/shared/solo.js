@@ -27,7 +27,7 @@ function lockBotWord(game) {
   const rng = moveRandom(game, move.number);
   const excludeKeys = usedKeys(game);
   const pick = move.prompts
-    ? chooseResponse({prompts: move.prompts, language: game.language, excludeKeys, rng})
+    ? chooseResponse({prompts: move.prompts, language: game.language, excludeKeys, rng, history: game.moves.flatMap(m => (m.words ? [[m.words.a, m.words.b]] : []))})
     : chooseOpening({language: game.language, excludeKeys, rng});
   const {hidden: _previous, ...rest} = move;
   /** @type {Move} */
