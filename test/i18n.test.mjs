@@ -93,3 +93,28 @@ test("one-letter words are welcome: no copy asks for two letters", () => {
   assert.doesNotMatch(STRINGS.en.errTOO_SHORT, /two letters/i);
   assert.doesNotMatch(STRINGS.fr.errTOO_SHORT, /deux lettres/i);
 });
+
+test("no emoji anywhere in interface copy (either language)", () => {
+  const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{26FF}\u{2705}\u{270B}\u{2728}\u{274C}\u{2764}]/u;
+  for (const lang of ["en", "fr"]) {
+    for (const [key, value] of Object.entries(STRINGS[lang])) assert.doesNotMatch(value, emoji, `${lang}.${key}: ${value}`);
+  }
+});
+
+test("homepage copy", () => {
+  const en = STRINGS.en;
+  assert.equal(en.heroTitle, "Try to read each other’s minds.");
+  assert.equal(en.heroCopy, "No pressure. Just your entire friendship.");
+  assert.deepEqual([en.soloTitle, en.soloCopy1, en.soloCopy2, en.soloCopy3, en.soloStart, en.soloOfflineNote],
+    ["Play Solo", "We heard you had no friends.", "So we lured Gary from Accounting over with the promise of cake.", "There is no cake.", "Play Gary", "Plays offline too. Fancy."]);
+  assert.deepEqual([en.togetherTitle, en.togetherCopy1, en.togetherCopy2, en.familyCreate, en.familyJoin],
+    ["Play Together", "Choose someone who claims to know you well.", "Time to investigate.", "Start a game", "Join a game"]);
+  assert.deepEqual([en.gamesTitle, en.gamesEmpty1, en.gamesEmpty2], ["Your games", "Nothing here yet.", "Suspiciously peaceful."]);
+  for (const key of ["heroTitle", "heroCopy", "soloCopy1", "soloCopy2", "soloCopy3", "soloOfflineNote", "soloStart", "togetherTitle", "togetherCopy1", "togetherCopy2", "familyCreate", "familyJoin", "gamesEmpty1", "gamesEmpty2"]) {
+    assert.ok(STRINGS.fr[key] && STRINGS.fr[key] !== en[key], `fr.${key} is translated`);
+  }
+  // No technical "works without internet" phrasing, and no special copy for inflected matches.
+  for (const lang of ["en", "fr"]) {
+    assert.doesNotMatch(Object.values(STRINGS[lang]).join(" "), /without internet|sans internet|close enough|schmural|ça compte/i);
+  }
+});

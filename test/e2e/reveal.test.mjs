@@ -327,7 +327,7 @@ test("long words: the revealed pair stays together and the modal never overflows
   }
 });
 
-test("an inflected match (Gary's word, pluralised) wins: original words shown, playful copy, no next round", async () => {
+test("an inflected match (Gary's word, pluralised) looks exactly like a normal win, in the player's own word; no next round", async () => {
   const {sameUnderlyingWord, matchKind} = await import("../../src/shared/morph.js");
   const context = await browser.newContext({reducedMotion: "reduce"});
   const page = await context.newPage();
@@ -345,18 +345,24 @@ test("an inflected match (Gary's word, pluralised) wins: original words shown, p
   await submit(page, plural.toUpperCase());
   await page.waitForSelector("#revealContinue");
   const modal = await page.locator("#revealModal").innerText();
-  assert.match(modal, new RegExp(plural, "i"), "the player's word is shown as typed");
-  assert.match(modal, new RegExp(`GARY.S WORD\\s+${bot}`, "i"), "Gary's word as he typed it");
-  assert.match(modal, /Plural schmural\. Same same!/);
+  // Both sides read as the player's own word: the inflection rule is invisible.
+  assert.deepEqual((await page.locator("#revealModal .rv-word .chip-word .typed, #revealModal .rv-word.you .chip-word").allTextContents()).map(w => w.trim().toUpperCase()), [plural.toUpperCase(), plural.toUpperCase()]);
+  assert.match(modal, new RegExp(`GARY.S WORD\\s+${plural}`, "i"), "Gary's side shows the player's form");
+  assert.match(modal, /SAME WORD! You win!/, "the standard exact-match copy");
+  assert.doesNotMatch(modal, /close enough|plural|schmural|tense|variant|same idea/i);
   assert.equal(await page.locator("#revealNext").count(), 0, "no 'next move starts with' for a match");
   await page.click("#revealContinue");
   await page.waitForSelector("#app .end.win");
-  assert.match(await page.locator("#app .end").innerText(), /close enough! Same same on move 1/i);
+  const end = await page.locator("#app .end").innerText();
+  assert.match(end, new RegExp(`You both said ${plural} on move 1\\.`, "i"), "standard win copy, in the player's word");
+  assert.doesNotMatch(end, /close enough|plural|schmural|tense|variant|same idea/i);
+  const trailRow = await page.locator("#app .trail-row.match").innerText();
+  assert.equal((trailRow.match(new RegExp(`\\b${plural}\\b`, "gi")) || []).length, 2, "the trail shows the player's word on both sides");
   assert.equal(await page.locator("#app #prompt, #word").count(), 0, "no new playable pair");
   // The game on screen (earlier tries may have left other games in storage).
   const game = await page.evaluate(() => JSON.parse(localStorage.getItem("ssbd.store")).solo[location.pathname.split("/").pop()]);
   assert.equal(game.status, "MATCHED");
   assert.equal(game.moves.length, 1, "the trail did not advance");
-  assert.deepEqual(game.moves[0].words, {a: plural.toUpperCase(), b: bot});
+  assert.deepEqual(game.moves[0].words, {a: plural.toUpperCase(), b: bot}, "stored submissions keep the words exactly as typed");
   await context.close();
 });

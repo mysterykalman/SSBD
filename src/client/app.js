@@ -6,7 +6,6 @@ import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js"
 import {publicMove, startSoloGame, submitSoloWord} from "../shared/solo.js";
 import {getLexicon} from "../shared/lexicon/index.js";
 import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
-import {matchKind} from "../shared/morph.js";
 import {trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
@@ -351,19 +350,21 @@ function renderHome() {
   const familyDisabled = !state.online;
   mount(
     h("section", {class: "hero"},
-      h("p", {class: "kicker"}, t("heroKicker")),
       h("h1", {}, t("heroTitle")),
       h("p", {class: "lede"}, t("heroCopy"))),
     h("div", {class: "start-grid"},
       h("section", {class: "card start solo-card", "aria-labelledby": "soloTitle"},
         h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {bot: true})),
         h("h2", {id: "soloTitle"}, t("soloTitle")),
-        h("p", {}, t("soloCopy")),
-        h("button", {class: "btn big", type: "button", id: "startSolo", onclick: () => startSolo()}, t("soloStart"))),
+        h("div", {class: "start-copy"}, h("p", {}, t("soloCopy1")), h("p", {}, t("soloCopy2")), h("p", {}, t("soloCopy3"))),
+        h("button", {class: "btn big", type: "button", id: "startSolo", onclick: () => startSolo()}, t("soloStart")),
+        h("p", {class: "start-note"}, t("soloOfflineNote"))),
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
         h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {cls: "other"})),
-        h("h2", {id: "familyTitle"}, t("familyTitle")),
-        h("p", {}, familyDisabled ? t("familyOffline") : t("familyCopy")),
+        h("h2", {id: "familyTitle"}, t("togetherTitle")),
+        familyDisabled
+          ? h("div", {class: "start-copy"}, h("p", {}, t("familyOffline")))
+          : h("div", {class: "start-copy"}, h("p", {}, t("togetherCopy1")), h("p", {}, t("togetherCopy2"))),
         h("div", {class: "row"},
           h("button", {class: "btn teal", type: "button", id: "createFamily", disabled: familyDisabled, onclick: () => ensurePlayer(createFamily)}, t("familyCreate")),
           h("button", {class: "btn ghost", type: "button", id: "joinFamily", disabled: familyDisabled, onclick: () => ensurePlayer(() => joinDialog(""))}, t("familyJoin"))))),
@@ -404,7 +405,7 @@ function gameListItems() {
     });
   }
   items.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  if (!items.length) return [h("li", {class: "empty"}, t("gamesEmpty"))];
+  if (!items.length) return [h("li", {class: "empty"}, h("span", {class: "empty-line"}, t("gamesEmpty1")), h("span", {class: "empty-line muted"}, t("gamesEmpty2")))];
   return items.map(item => {
     const finished = item.status === "MATCHED" || item.status === "EXHAUSTED";
     const status = item.status === "MATCHED" ? t("statusMatched")
@@ -518,7 +519,7 @@ function progressTrail(view, move, finished, revealed, fresh) {
     let cls, mark;
     if (finished) {
       cls = n < current ? "done lit" : n === current ? "final lit" : "lit spare";
-      mark = n === current ? (view.status === "MATCHED" ? "🏆" : "★") : n < current ? "✓" : "★";
+      mark = n === current ? "★" : n < current ? "✓" : "★";
     } else if (n < current) { cls = "done"; mark = "✓"; }
     else if (n === current) { cls = `now ${pop ? "pop" : ""}`; mark = String(n); }
     else { cls = "todo"; mark = ""; }
@@ -595,11 +596,11 @@ function startReveal(view, move) {
       h("div", {class: "rv-count", id: "revealCount", "aria-hidden": "true"}),
       h("div", {class: "rv-result", id: "revealResult", hidden: true},
         h("div", {class: "rv-words"},
-          revealWord(t("revealYourWord"), move.words[view.youSide], "you"),
+          revealWord(t("revealYourWord"), shownWords(view, move)[view.youSide], "you"),
           h("span", {class: "op rv-step", "aria-hidden": "true"}, move.status === "MATCHED" ? "=" : "+"),
-          solo ? garyRevealWord() : revealWord(t("revealTheirWord", {name: otherLabel(view)}), move.words[view.otherSide], "other")),
+          solo ? garyRevealWord() : revealWord(t("revealTheirWord", {name: otherLabel(view)}), shownWords(view, move)[view.otherSide], "other")),
         reaction ? h("p", {class: "gary-line", id: "garyLine", hidden: true}, h("span", {class: "gary-says"})) : null,
-        h("p", {class: "rv-outcome rv-step"}, move.status === "MATCHED" ? matchCopy(view, move) : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")),
+        h("p", {class: "rv-outcome rv-step"}, move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")),
         move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, t("revealLoose")) : null,
         ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(move)))));
   document.body.append(dlg);
@@ -607,11 +608,17 @@ function startReveal(view, move) {
   runReveal(view, move, ended, token);
 }
 
-/** A match on the same underlying word: say so playfully when the spellings differ (CAR/CARS, RUN/RAN). */
-function matchCopy(view, move) {
-  const kind = matchKind(move.words.a, move.words.b, view.language);
-  return kind === "plural" ? t("revealMatchPlural") : kind === "variant" ? t("revealMatchVariant") : t("revealMatch");
+/**
+ * The two words as THIS player sees them. On a match, both sides show the player's own word:
+ * inflections (VEGETABLE / VEGETABLES, RUN / RAN) are an invisible rule, so every match looks like an
+ * exact one. Display only; the stored submissions keep the words exactly as typed.
+ */
+function shownWords(view, move) {
+  if (move.status !== "MATCHED" || !move.words) return move.words;
+  const mine = move.words[view.youSide];
+  return {a: mine, b: mine};
 }
+
 
 /** "Next move starts with A + B", keeping "A + B" together on one line when it fits. */
 function nextStartsText(move) {
@@ -680,17 +687,18 @@ async function runReveal(view, move, ended, token) {
       // Gary begrudgingly types his (already chosen) word, sometimes with a remark before or after.
       if (reaction?.when === "before") { remark = await garySays(reaction.keys, {reduced: !motion, alive}); if (motion) await sleep(350); }
       if (!alive()) return;
-      await typeInto(step.querySelector(".chip-word"), move.words[view.otherSide], {reduced: !motion, alive});
+      await typeInto(step.querySelector(".chip-word"), shownWords(view, move)[view.otherSide], {reduced: !motion, alive});
       if (!alive()) return;
       if (reaction?.when === "after") { if (motion) await sleep(350); remark = await garySays(reaction.keys, {reduced: !motion, alive}); }
     }
     if (motion) { await sleep(STEP_MS); if (!alive()) return; }
   }
   // One announcement, once everything (including Gary's word and remark) is complete.
-  announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: move.words[view.youSide].toUpperCase()}),
-    t("revealSaid", {name: sideLabel(view, view.otherSide), word: move.words[view.otherSide].toUpperCase()}),
+  const said = shownWords(view, move);
+  announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: said[view.youSide].toUpperCase()}),
+    t("revealSaid", {name: sideLabel(view, view.otherSide), word: said[view.otherSide].toUpperCase()}),
     remark ? t("revealSaid", {name: t("garyName"), word: remark}) : "",
-    move.status === "MATCHED" ? matchCopy(view, move) : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
+    move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : t("keepPlaying"));
   result.append(button);
   setRevealPhase("ready");
@@ -786,13 +794,11 @@ function endPanel(view, last, fresh) {
   const shownAt = performance.now();
   return h("div", {class: `end ${matched ? "win" : "over"}`},
     matched
-      ? h("div", {class: "end-icon", "aria-hidden": "true"}, "🎉")
+      ? h("div", {class: "end-icon win-burst", "aria-hidden": "true"}, h("span", {class: "burst-star"}, "★"))
       : solo ? garyGoodbye(fresh && !reducedMotion()) : sleepyToken(fresh && !reducedMotion()),
     h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
     h("p", {}, matched
-      ? (matchKind(last.words.a, last.words.b, view.language) === "exact"
-        ? t("winCopy", {word: last.words.a.toUpperCase(), n: last.number})
-        : t("winCopyVariant", {a: last.words.a.toUpperCase(), b: last.words.b.toUpperCase(), n: last.number}))
+      ? t("winCopy", {word: last.words[view.youSide].toUpperCase(), n: last.number})
       : t("gameOverCopy")),
     h("div", {class: "row center end-actions"},
       h("button", {class: "btn big", type: "button", id: "newGameBtn", disabled: !solo && !state.online && !view.rematchId, onclick: event => {
@@ -928,10 +934,10 @@ function trail(view) {
             h("span", {class: "trail-out"},
               h("span", {class: "join"},
                 h("span", {class: "arrow", "aria-hidden": "true"}, "→"),
-                wordChip(m.words.a, sideLabel(view, "a"), view.youSide === "a" ? "you" : "other")),
+                wordChip(shownWords(view, m).a, sideLabel(view, "a"), view.youSide === "a" ? "you" : "other")),
               h("span", {class: "join"},
                 h("span", {class: "op", "aria-hidden": "true"}, m.status === "MATCHED" ? "=" : "+"),
-                wordChip(m.words.b, sideLabel(view, "b"), view.youSide === "b" ? "you" : "other")),
+                wordChip(shownWords(view, m).b, sideLabel(view, "b"), view.youSide === "b" ? "you" : "other")),
               m.status === "MATCHED" ? h("span", {class: "match-badge"}, t("matchBadge")) : null)),
           ending ? null : h("p", {class: "trail-next"}, h("span", {"aria-hidden": "true"}, "↑ "), t("nextPrompt")));
       }))

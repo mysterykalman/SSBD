@@ -414,6 +414,19 @@ Never edit it by hand.
 - **Layout.** Connectors are in normal flow and glued to the next word. Overlap
   checks run at 4 viewports and at doubled text size.
 
+### Copy and presentation updates (latest)
+- **Homepage.** The copy is now a quick premise ("Try to read each other's minds. No pressure. Just your entire friendship.").
+  - **Play Solo** gets the cake joke, a "Play Gary" button and "Plays offline too. Fancy.".
+  - **Play Together** gets "Time to investigate." and the buttons "Start a game" and "Join a game".
+  - **Your games** shows "Nothing here yet. Suspiciously peaceful." when empty.
+  - All of it is in English and French.
+- **No emoji in interface copy.** That includes Gary's lines. Visual personality comes from the illustration, colour and badges. The ✓ and ★ marks inside the progress stones and the win badge are drawn marks in designed components, not emoji in copy.
+- **Inflected matches look like exact wins.** Each player sees their own typed word on both sides of the reveal, the win screen and the trail, so VEGETABLES/VEGETABLE never reveals a difference. The stored submissions keep the words exactly as typed, and the matching rule is unchanged.
+- **Family name entry: root cause.** The server inserted rows by position (`INSERT INTO players VALUES(?,?,?,?,?)`). Against a production table that carries an extra column from an earlier release, every insert failed. The error was then swallowed by a retry loop meant for recovery-code collisions and returned as an untranslated code, so the player saw the generic "Oops! That didn't work."
+  - Every INSERT now names its columns.
+  - Only real collisions are retried, and real errors are logged.
+  - Player create, game create and join failures each have their own friendly message, and a join failure is no longer mislabelled as "game full".
+
 ### Notifications
 - **What's covered.** In-app only, for family games: your turn, reveal ready,
   player joined, match, game complete, rematch.

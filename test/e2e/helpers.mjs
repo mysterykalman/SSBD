@@ -4,9 +4,9 @@ import {chromium} from "playwright";
 export const SHOTS = process.env.SHOTS_DIR || null;
 
 /** Start the built worker on Node. `port` reuses an origin (same SW scope); `workerFile` serves a different build. */
-export async function startServer({port = 9000 + Math.floor(Math.random() * 900), workerFile} = {}) {
+export async function startServer({port = 9000 + Math.floor(Math.random() * 900), workerFile, dbFile = ":memory:"} = {}) {
   const env = workerFile ? {...process.env, WORKER_FILE: workerFile} : process.env;
-  const proc = spawn(process.execPath, ["scripts/dev-server.mjs", String(port), ":memory:"], {stdio: ["ignore", "pipe", "inherit"], env});
+  const proc = spawn(process.execPath, ["scripts/dev-server.mjs", String(port), dbFile], {stdio: ["ignore", "pipe", "inherit"], env});
   await new Promise((resolve, reject) => {
     proc.stdout.on("data", d => String(d).includes("Listening") && resolve());
     proc.on("exit", code => reject(new Error(`server exited ${code}`)));

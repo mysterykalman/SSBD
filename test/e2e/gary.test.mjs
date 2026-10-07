@@ -51,7 +51,7 @@ test("first Solo game introduces Gary once; the intro can be reopened from the p
 });
 
 test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word; game state carries no Gary data", async () => {
-  const context = await browser.newContext({garyRandomValue: 0.1}); // pins a remark: "sigh 😑" before his word
+  const context = await browser.newContext({garyRandomValue: 0.1}); // pins a remark: "sigh" before his word
   const page = await context.newPage();
   await page.goto(server.url);
   await page.click("#startSolo");

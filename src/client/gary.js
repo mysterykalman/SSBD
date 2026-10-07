@@ -10,7 +10,7 @@ export const GARY = {
   name: "garyName",
   title: "garyTitle",
   intro: {kicker: "garyMeet", lines: ["garyIntro1", "garyIntro2", "garyIntro3"], aside: "garyIntroSigh", cta: "garyIntroCta"},
-  // Each reaction is typed either before Gary's word ("sigh 😑" … STORY) or after it (STORY … "I object").
+  // Each reaction is typed either before Gary's word ("sigh" … STORY) or after it (STORY … "I object").
   reactions: {
     resigned: [["garySigh", "before"], ["garyFine", "before"], ["garyApparently", "before"], ["garyThisAgain", "before"], ["garyOkayThen", "before"], ["garyThere", "after"]],
     competitive: [["garyObject", "after"], ["garyRude", "after"], ["garyWasGoingTo", "after"], ["garyAnnoyinglyGood", "after"], ["garyPleased", "after"]],

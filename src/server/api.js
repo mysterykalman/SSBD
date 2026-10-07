@@ -69,6 +69,11 @@ async function first(db, sql, args = []) {
   return (await all(db, sql, args))[0] || null;
 }
 
+/** SQLite/D1 UNIQUE (or primary key) constraint failure: safe to retry with a new random code. */
+function isUniqueViolation(error) {
+  return /UNIQUE constraint failed|PRIMARY KEY/i.test(String(error?.message || error));
+}
+
 /** @type {Promise<void> | null} */
 let ready = null;
 /**
@@ -225,7 +230,7 @@ function viewFor(loaded, playerId) {
  * @returns {D1PreparedStatement}
  */
 const notify = (db, playerId, gameId, kind, message, key, at) =>
-  db.prepare("INSERT OR IGNORE INTO notifications VALUES(?,?,?,?,?,?,?)").bind(`${gameId}:${key}:${playerId}`, playerId, gameId, kind, message, null, at);
+  db.prepare("INSERT OR IGNORE INTO notifications (id,player_id,game_id,kind,message,read_at,created_at) VALUES(?,?,?,?,?,?,?)").bind(`${gameId}:${key}:${playerId}`, playerId, gameId, kind, message, null, at);
 
 /**
  * Reveal the open round once every member has a word. Safe to run twice concurrently.
@@ -293,7 +298,7 @@ async function settle(db, loaded) {
     const pick = legacyBotWord(loaded);
     const at = now();
     await db.batch([
-      db.prepare("INSERT OR IGNORE INTO submissions VALUES(?,?,?,?)").bind(move.id, BOT, pick.word, at),
+      db.prepare("INSERT OR IGNORE INTO submissions (round_id,player_id,word,submitted_at) VALUES(?,?,?,?)").bind(move.id, BOT, pick.word, at),
       db.prepare("UPDATE rounds SET bot_quality = ?, bot_reason = NULL WHERE id = ? AND status = 'OPEN'").bind(pick.quality, move.id)
     ]);
     changed = true;
@@ -356,12 +361,12 @@ async function submit(db, body) {
   if (!check.ok) return fail(400, check.code, MESSAGES[check.code] || "That word can't be used.", {word: check.word});
 
   const at = now();
-  const statements = [db.prepare("INSERT OR IGNORE INTO submissions VALUES(?,?,?,?)").bind(current.id, playerId, check.word, at)];
+  const statements = [db.prepare("INSERT OR IGNORE INTO submissions (round_id,player_id,word,submitted_at) VALUES(?,?,?,?)").bind(current.id, playerId, check.word, at)];
   const botSide = loaded.slotOf.get(BOT);
   if (botSide && !current.submitted[botSide]) {
     const pick = legacyBotWord(loaded);
     statements.push(
-      db.prepare("INSERT OR IGNORE INTO submissions VALUES(?,?,?,?)").bind(current.id, BOT, pick.word, at),
+      db.prepare("INSERT OR IGNORE INTO submissions (round_id,player_id,word,submitted_at) VALUES(?,?,?,?)").bind(current.id, BOT, pick.word, at),
       db.prepare("UPDATE rounds SET bot_quality = ?, bot_reason = NULL WHERE id = ?").bind(pick.quality, current.id)
     );
   }
@@ -411,7 +416,7 @@ async function rematch(db, body) {
     try {
       await db.batch([
         db.prepare("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language,rematch_of) VALUES(?,?,?,?,?,?,?,?)").bind(id, code, "ACTIVE", 1, created, created, language, loaded.row.id),
-        ...loaded.members.map(m => db.prepare("INSERT INTO game_players VALUES(?,?,?,?)").bind(id, m.player_id, m.slot, created)),
+        ...loaded.members.map(m => db.prepare("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES(?,?,?,?)").bind(id, m.player_id, m.slot, created)),
         db.prepare("INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES(?,?,?,?,?,?,?,?)").bind(`${id}:1`, id, 1, null, null, "OPEN", created, null),
         ...others.map(m => notify(db, m.player_id, id, "REMATCH", `${player.display_name} wants a rematch!`, "rematch", created))
       ]);
@@ -476,9 +481,14 @@ export async function handleApi(request, env) {
     for (let attempt = 0; attempt < 5; attempt++) {
       const recoveryCode = base + "-" + Math.floor(1000 + Math.random() * 9000);
       try {
-        await db.prepare("INSERT INTO players VALUES(?,?,?,?,?)").bind(playerId, displayName, recoveryCode, created, created).run();
+        await db.prepare("INSERT INTO players (id,display_name,recovery_code,created_at,last_seen_at) VALUES(?,?,?,?,?)").bind(playerId, displayName, recoveryCode, created, created).run();
         return json({id: playerId, display_name: displayName, recovery_code: recoveryCode});
-      } catch {}
+      } catch (error) {
+        // Only a recovery-code collision is worth retrying; anything else is a real failure to report.
+        if (isUniqueViolation(error) && !(await first(db, "SELECT id FROM players WHERE id = ?", [playerId]))) continue;
+        console.error("player create failed", error);
+        return fail(500, "PLAYER_CREATE_FAILED", "Could not create a player right now. Please try again.");
+      }
     }
     return fail(500, "PLAYER_CREATE_FAILED", "Could not create a player right now. Please try again.");
   }
@@ -499,12 +509,17 @@ export async function handleApi(request, env) {
       try {
         await db.batch([
           db.prepare("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES(?,?,?,?,?,?,?)").bind(gameId, code, solo ? "ACTIVE" : "WAITING", 1, created, created, language),
-          db.prepare("INSERT INTO game_players VALUES(?,?,?,?)").bind(gameId, player.id, 1, created),
-          ...(solo ? [db.prepare("INSERT INTO game_players VALUES(?,?,?,?)").bind(gameId, BOT, 2, created)] : []),
+          db.prepare("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES(?,?,?,?)").bind(gameId, player.id, 1, created),
+          ...(solo ? [db.prepare("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES(?,?,?,?)").bind(gameId, BOT, 2, created)] : []),
           db.prepare("INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES(?,?,?,?,?,?,?,?)").bind(`${gameId}:1`, gameId, 1, null, null, "OPEN", created, null)
         ]);
         return json({id: gameId, join_code: code, language});
-      } catch {}
+      } catch (error) {
+        // Only a join-code collision is worth retrying; anything else is a real failure to report.
+        if (isUniqueViolation(error)) continue;
+        console.error("game create failed", error);
+        return fail(500, "GAME_CREATE_FAILED", "Could not create a game right now. Please try again.");
+      }
     }
     return fail(500, "GAME_CREATE_FAILED", "Could not create a game right now. Please try again.");
   }
@@ -522,11 +537,15 @@ export async function handleApi(request, env) {
     const joined = now();
     try {
       await db.batch([
-        db.prepare("INSERT INTO game_players VALUES(?,?,?,?)").bind(game.id, playerId, 2, joined),
+        db.prepare("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES(?,?,?,?)").bind(game.id, playerId, 2, joined),
         db.prepare("UPDATE games SET status = 'ACTIVE', updated_at = ? WHERE id = ? AND status = 'WAITING'").bind(joined, game.id),
         ...members.map(m => notify(db, m.player_id, game.id, "PLAYER_JOINED", `${player.display_name} joined your game!`, "joined", joined))
       ]);
-    } catch {
+    } catch (error) {
+      if (!isUniqueViolation(error)) {
+        console.error("game join failed", error);
+        return fail(500, "GAME_JOIN_FAILED", "Could not join the game right now. Please try again.");
+      }
       // Lost a race: either this player's other request joined first (fine) or someone else did.
       const member = await first(db, "SELECT 1 AS ok FROM game_players WHERE game_id = ? AND player_id = ?", [game.id, playerId]);
       if (member) return json({id: game.id, join_code: game.join_code});
