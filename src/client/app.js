@@ -599,7 +599,7 @@ function startReveal(view, move) {
 /** "Next move starts with A + B", keeping "A + B" together on one line when it fits. */
 function nextStartsText(move) {
   const pair = `${move.words.a.toUpperCase()} + ${move.words.b.toUpperCase()}`;
-  const [before, after = ""] = t("revealNextStarts", {a: "\u0000", b: ""}).split(/\u0000\s*\+\s*/);
+  const [before, after = ""] = t("revealNextStarts", {a: "@@A@@", b: "@@B@@"}).split(/@@A@@\s*\+\s*@@B@@/);
   return [before, h("span", {class: "rv-pair"}, pair), after];
 }
 
