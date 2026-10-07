@@ -29,7 +29,7 @@ chicken nest wing feather tail paw bone honey leaf seed carrot juice tea soup pi
 king queen pet animal candle library read write`.split(/\s+/);
 
 test("concept data is well formed", () => {
-  assert.ok(CONCEPTS.length >= 450 && CONCEPTS.length <= 600, `${CONCEPTS.length} concepts`);
+  assert.ok(CONCEPTS.length >= 450 && CONCEPTS.length <= 650, `${CONCEPTS.length} concepts`);
   const ids = new Set();
   for (const row of CONCEPTS) {
     assert.equal(row.length, 5, JSON.stringify(row));
@@ -381,9 +381,9 @@ test("one-letter and unknown prompts never crash and still give one valid word",
   assert.ok(chooseResponse({prompts: [], rng: rng(1)}).word);
 });
 
-test("chooseResponse returns exactly one word, deterministic per rng, varied across seeds", () => {
+test("chooseResponse returns exactly one word, deterministic per rng, stable per pair, varied across pairs", () => {
   const pairs = [["sun", "moon"], ["rain", "garden"], ["pizza", "party"], ["dragon", "castle"], ["snow", "winter"], ["cat", "milk"]];
-  let distinct = 0;
+  const answers = new Set();
   for (const lang of ["en", "fr"]) {
     const lex = getLexicon(lang);
     for (const [a, b] of pairs) {
@@ -398,10 +398,12 @@ test("chooseResponse returns exactly one word, deterministic per rng, varied acr
         assert.deepEqual(chooseResponse({prompts, language: lang, rng: rng(seed)}), pick, "same rng, same word");
         words.add(pick.word);
       }
-      distinct += words.size;
+      // Gary aims for the semantic centre: the same pair gets the same (or a near-tied) answer.
+      assert.ok(words.size <= 2, `${a}+${b}: ${[...words]}`);
+      for (const word of words) answers.add(word);
     }
   }
-  assert.ok(distinct >= pairs.length * 2 * 2.5, `only ${distinct} distinct answers`);
+  assert.ok(answers.size >= pairs.length * 2 - 1, `variety comes from the prompts: only ${answers.size} answers`);
 });
 
 test("speller never suggests for one- or two-letter input and stays non-blocking", () => {

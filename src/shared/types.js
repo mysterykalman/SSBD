@@ -34,7 +34,7 @@
 /** @typedef {{a: string, b: string}} Reveal */
 
 /** The Solo bot's word, locked when the move opens and before the player types. */
-/** @typedef {{b: string, quality: BotQuality}} HiddenWord */
+/** @typedef {{b: string, quality: BotQuality, decision?: object}} HiddenWord */
 
 /** @typedef {"opening" | "strong" | "loose"} BotQuality */
 
@@ -51,6 +51,7 @@
  * @property {string | null} revealedAt ISO time
  * @property {HiddenWord} [hidden] Solo only, open move only: the bot's locked word
  * @property {BotQuality | null} [botQuality] Solo/legacy only, after reveal
+ * @property {object} [garyDecision] Solo, developer diagnostics only: how Gary chose his word (bot.js GaryDecision)
  */
 
 /**

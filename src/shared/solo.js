@@ -16,6 +16,16 @@ import {wordKey} from "./words.js";
  * @typedef {WordError | {ok: false, code: "BOT_NOT_READY"}} SoloSubmitError
  */
 
+let explainDecisions = false;
+/**
+ * Developer diagnostics: keep Gary's full decision (predicted human answers, every candidate's
+ * score, the reason) with each move. Off by default; the app turns it on in development mode.
+ * @param {boolean} on
+ */
+export function setGaryDiagnostics(on) {
+  explainDecisions = Boolean(on);
+}
+
 /**
  * Lock the bot's word for the open move, from the prompts and revealed words only.
  * @param {GameState} game
@@ -26,12 +36,18 @@ function lockBotWord(game) {
   const move = currentMove(game);
   const rng = moveRandom(game, move.number);
   const excludeKeys = usedKeys(game);
+  // The recent trail goes in too: Gary reads its emerging theme (it informs, never dominates).
+  const history = game.moves.flatMap(m => (m.words ? [[m.words.a, m.words.b]] : []));
+  /** @type {import("./types.js").BotPick & {decision?: any}} */
   const pick = move.prompts
-    ? chooseResponse({prompts: move.prompts, language: game.language, excludeKeys, rng, history: game.moves.flatMap(m => (m.words ? [[m.words.a, m.words.b]] : []))})
+    ? chooseResponse({prompts: move.prompts, language: game.language, excludeKeys, rng, history, explain: explainDecisions})
     : chooseOpening({language: game.language, excludeKeys, rng});
+  if (explainDecisions && !pick.decision) {
+    pick.decision = {pair: null, language: game.language, trail: [], predicted: [], candidates: [], selected: pick.word, quality: pick.quality, reason: "opening move: no words on the table yet, so a friendly, well-known word at random"};
+  }
   const {hidden: _previous, ...rest} = move;
   /** @type {Move} */
-  const locked = {...rest, hidden: {b: pick.word, quality: /** @type {BotQuality} */ (pick.quality)}};
+  const locked = {...rest, hidden: {b: pick.word, quality: /** @type {BotQuality} */ (pick.quality), ...(pick.decision ? {decision: pick.decision} : {})}};
   return {...game, moves: [...game.moves.slice(0, -1), locked]};
 }
 
@@ -67,7 +83,7 @@ export function submitSoloWord(game, raw, now = new Date().toISOString()) {
   const closed = next.moves.find(m => m.number === move.number);
   if (!closed) return {ok: false, code: "BOT_NOT_READY"};
   /** @type {Move} */
-  const revealed = {...closed, botQuality: quality};
+  const revealed = {...closed, botQuality: quality, ...(move.hidden?.decision ? {garyDecision: move.hidden.decision} : {})};
   delete revealed.hidden;
   next = {...next, moves: next.moves.map(m => (m.number === move.number ? revealed : m))};
   next = lockBotWord(next);

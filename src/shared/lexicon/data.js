@@ -124,10 +124,10 @@ export const CONCEPTS = [
   ["book","book","livre",["book","school"],["read","story","library","school","write","teacher"]],
 
   // School
-  ["school","school","école",["school"],["teacher","book","pencil","class","student","read","write","library","backpack","homework","friend"]],
-  ["teacher","teacher","maîtresse",["school","job"],["school","class","student","book","read","write"]],
+  ["school","school","école",["school"],["teacher","class","student","book","pencil","learn","read","write","library","backpack","homework","friend"]],
+  ["teacher","teacher","maîtresse",["school","job"],["school","class","student","lesson","learn","book","read","write"]],
   ["student","student","élève",["school"],["school","teacher","class","homework","backpack"]],
-  ["class","class","classe",["school"],["school","teacher","student","desk"]],
+  ["class","class","classe",["school"],["school","teacher","student","lesson","learn","desk"]],
   ["pencil","pencil","crayon",["school","art"],["write","draw","paper","eraser","school","pen","color"]],
   ["pen","pen","stylo",["school"],["write","pencil","paper","letter"]],
   ["paper","paper","papier",["school","art"],["pencil","write","draw","book","letter","scissors"]],
@@ -146,8 +146,8 @@ export const CONCEPTS = [
   ["mom","mom","maman",["family"],["dad","family","baby","love","hug","home"]],
   ["dad","dad","papa",["family"],["mom","family","baby","love","hug","home"]],
   ["baby","baby","bébé",["family"],["mom","dad","cry","small","family","cute"]],
-  ["brother","brother","frère",["family"],["sister","family","mom","dad","play"]],
-  ["sister","sister","sœur",["family"],["brother","family","mom","dad","play"]],
+  ["brother","brother","frère",["family"],["sister","family","mom","dad","play","kid","child"]],
+  ["sister","sister","sœur",["family"],["brother","family","mom","dad","play","kid","child"]],
   ["grandma","grandma","mamie",["family"],["grandpa","family","cookie","hug","old"]],
   ["grandpa","grandpa","papi",["family"],["grandma","family","story","old","beard"]],
   ["home","home","maison",["home","family"],["family","door","window","kitchen","bed","roof","garden","key","cozy"]],
@@ -296,7 +296,7 @@ export const CONCEPTS = [
 
   // Games, sports, toys
   ["game","game","jeu",["game"],["play","win","toy","fun","team","puzzle","ball","board_game","video_game"]],
-  ["play","play","jouer",["game","toy"],["game","toy","friend","fun","park","ball"]],
+  ["play","play","jouer",["game","toy"],["game","toy","friend","kid","fun","pretend","child","park","ball"]],
   ["toy","toy","jouet",["toy"],["play","game","teddy_bear","doll","ball","puzzle","robot"]],
   ["ball","ball","ballon",["sport","toy"],["soccer","throw","catch","play","basketball","round","dog"]],
   ["soccer","soccer","foot",["sport"],["ball","goal","team","win","field","player"]],
@@ -661,6 +661,23 @@ export const CONCEPTS = [
   ["sunscreen","sunscreen","crème solaire",["hot","body"],["sun","beach","cream","summer","hot","swimsuit"]],
   ["treehouse","treehouse","cabane",["home","nature","adventure"],["tree","home","play","hide","wood","garden"]],
   ["spaceship","spaceship","vaisseau spatial",["space","transport"],["space","ship","rocket","alien","astronaut","star","planet"]],
+  // Family, people and learning (convergence words people actually say)
+  ["wife","wife","femme",["family"],["husband","wedding","family","love","ring","mom","home"]],
+  ["husband","husband","mari",["family"],["wife","wedding","family","love","ring","dad"]],
+  ["relative","relative","proche",["family"],["family","aunt","uncle","cousin","grandma","grandpa"]],
+  ["parent","parent","parent",["family"],["mom","dad","child","family","baby","home"]],
+  ["child","child","enfant",["family"],["play","kid","baby","school","toy","family","parent","small","fun"]],
+  ["kid","kid","gamin",["family","game"],["child","play","toy","school","fun","park","game"]],
+  ["son","son","fils",["family"],["daughter","dad","mom","family","child","baby"]],
+  ["daughter","daughter","fille",["family"],["son","mom","dad","family","child","baby"]],
+  ["aunt","aunt","tante",["family"],["uncle","cousin","family","relative","mom"]],
+  ["uncle","uncle","oncle",["family"],["aunt","cousin","family","relative","dad"]],
+  ["cousin","cousin","cousin",["family"],["aunt","uncle","family","relative","play","friend"]],
+  ["pretend","pretend","faire semblant",["game","story"],["play","game","costume","story","doll","magic"]],
+  ["education","education","éducation",["school"],["school","learn","teacher","class","student","book"]],
+  ["learn","learn","apprendre",["school"],["school","teacher","read","book","class","student","lesson","brain"]],
+  ["lesson","lesson","leçon",["school"],["class","teacher","school","learn","homework","student"]],
+  ["fog","fog","brouillard",["weather"],["weather","cloud","grey","morning","wet"]],
 ];
 
 // Common phrases and compounds, per language: [conceptId, conceptId, phrase].
@@ -734,3 +751,39 @@ export const PHRASES = {
     blanket+picnic: couverture de pique-nique | dinner+christmas: dîner de noël | sweater+christmas: pull de noël | cake+fruit: gâteau aux fruits
   `)
 };
+
+// "Is a kind of": [category, weight, members]. When both words on the table are kinds of the
+// same thing (DOG + CAT, APPLE + BANANA), the category is the answer most people give, so it is
+// the strongest convergence signal the bot has. Broad categories (animal, food) weigh less than
+// specific ones (pet, fruit), because people name the closest shared category first.
+export const CATEGORIES = [
+  ["family", 1, ["mom", "dad", "baby", "brother", "sister", "grandma", "grandpa", "wife", "husband", "son", "daughter", "aunt", "uncle", "cousin", "parent", "child", "relative"]],
+  ["relative", 0.7, ["aunt", "uncle", "cousin", "grandma", "grandpa", "brother", "sister", "wife", "husband", "son", "daughter"]],
+  ["parent", 0.9, ["mom", "dad"]],
+  ["pet", 1, ["dog", "cat", "puppy", "kitten", "hamster", "rabbit", "fish", "goldfish", "parrot", "mouse", "turtle"]],
+  ["animal", 0.8, ["dog", "cat", "horse", "cow", "pig", "sheep", "chicken", "duck", "lion", "tiger", "elephant", "monkey", "bear", "frog", "rabbit", "mouse", "fox", "wolf", "giraffe", "zebra", "panda", "kangaroo", "cheetah", "squirrel", "camel", "crocodile", "goat", "snake", "owl", "bird", "fish", "whale", "dolphin", "shark", "penguin", "turtle", "hamster", "bee", "spider"]],
+  ["bird", 0.9, ["owl", "parrot", "eagle", "penguin", "duck", "chicken"]],
+  ["insect", 0.9, ["bee", "ant", "butterfly", "ladybug", "caterpillar", "dragonfly", "firefly"]],
+  ["farm", 0.8, ["cow", "pig", "sheep", "chicken", "horse", "goat", "duck", "tractor", "barn", "hay", "farmer"]],
+  ["weather", 1, ["rain", "snow", "wind", "storm", "sun", "cloud", "fog", "thunder", "lightning", "rainbow", "snowflake"]],
+  ["season", 1, ["summer", "winter", "spring", "autumn"]],
+  ["fruit", 1, ["apple", "banana", "orange", "strawberry", "grape", "lemon", "cherry", "pear", "watermelon", "pineapple"]],
+  ["vegetable", 1, ["carrot", "tomato", "potato", "corn", "pumpkin"]],
+  ["dessert", 0.9, ["cake", "cookie", "ice_cream", "chocolate", "pie", "donut", "cupcake", "pancake"]],
+  ["food", 0.7, ["pizza", "burger", "pasta", "sandwich", "soup", "bread", "cheese", "fries", "salad", "egg", "apple", "banana", "carrot"]],
+  ["drink", 1, ["water", "juice", "milk", "tea", "coffee", "lemonade", "hot_chocolate"]],
+  ["color", 1, ["red", "blue", "green", "yellow", "purple", "pink", "white", "black", "brown", "orange", "grey"]],
+  ["shape", 1, ["circle", "square", "triangle", "star", "heart"]],
+  ["music", 0.9, ["guitar", "piano", "drum", "violin", "trumpet", "flute", "song", "concert", "band"]],
+  ["sport", 1, ["soccer", "basketball", "tennis", "swim", "ski", "skate", "surf", "race"]],
+  ["clothes", 1, ["shirt", "pants", "dress", "sock", "shoe", "hat", "coat", "scarf", "jacket", "sweater", "pajamas", "mitten", "glove", "boots", "swimsuit"]],
+  ["holiday", 0.8, ["christmas", "halloween", "easter", "valentine"]],
+  ["school", 0.8, ["teacher", "student", "class", "homework", "lesson", "pencil", "notebook", "backpack"]],
+  ["education", 0.75, ["school", "teacher", "student", "class", "lesson", "learn", "homework", "library"]],
+  ["toy", 0.9, ["doll", "teddy_bear", "ball", "puzzle", "blocks", "kite", "robot"]],
+  ["game", 0.8, ["board_game", "video_game", "hide_and_seek", "puzzle", "soccer", "tennis"]],
+  ["body", 0.8, ["hand", "foot", "arm", "leg", "head", "eye", "ear", "nose", "mouth", "finger", "tooth", "hair"]],
+  ["space", 0.8, ["moon", "star", "planet", "sun", "earth", "rocket", "astronaut", "alien"]],
+  ["ocean", 0.8, ["whale", "dolphin", "shark", "octopus", "crab", "jellyfish", "starfish", "seahorse", "fish", "wave"]],
+  ["kitchen", 0.7, ["oven", "fridge", "plate", "spoon", "fork", "cup", "bowl", "pot"]]
+];

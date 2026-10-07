@@ -3,10 +3,10 @@
 // Family games use the API in src/server/api.js.
 
 import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js";
-import {publicMove, startSoloGame, submitSoloWord} from "../shared/solo.js";
+import {publicMove, setGaryDiagnostics, startSoloGame, submitSoloWord} from "../shared/solo.js";
 import {getLexicon} from "../shared/lexicon/index.js";
 import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
-import {trace} from "./diagnostics.js";
+import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
 import {GARY, garyRandom, hasMetGary, markMetGary, pickReaction, recentLines, rememberLines, typeInto} from "./gary.js";
@@ -538,9 +538,45 @@ function renderGame() {
         view.waitingForPlayer && !solo ? null : otherBadge(view, "small"),
         h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")})))),
     board,
-    trail(view));
+    trail(view),
+    garyDebugPanel(view));
   restoreInput(keep);
   if (fresh && revealed.status === "MATCHED") celebrate();
+}
+
+/**
+ * Developer mode only: how Gary chose his most recently revealed word (never shown to players,
+ * never before the reveal). Plain English on purpose: it is a tool, not part of the game.
+ */
+function garyDebugPanel(view) {
+  if (!garyDiagnosticsEnabled() || view.kind !== "solo") return null;
+  const move = [...view.moves].reverse().find(m => m.words && m.garyDecision);
+  const d = move?.garyDecision;
+  const pct = p => `${Math.round(p * 100)}%`;
+  const cell = (tag, text, attrs = {}) => h(tag, attrs, String(text));
+  const body = !d
+    ? [h("p", {}, "No decision recorded yet (diagnostics were off when this move was locked, or nothing has been revealed).")]
+    : [
+      h("dl", {},
+        cell("dt", "Current pair"), cell("dd", d.pair ? d.pair.map(w => w.toUpperCase()).join(" + ") : "(opening move)"),
+        cell("dt", "Trail theme from"), cell("dd", d.trail?.length ? d.trail.join(", ") : "(no trail yet)"),
+        cell("dt", "Selected word"), cell("dd", String(d.selected).toUpperCase(), {class: "gd-selected"}),
+        cell("dt", "Reason selected"), cell("dd", d.reason)),
+      d.predicted?.length ? h("table", {class: "gd-predicted"},
+        h("caption", {}, "Predicted human answers"),
+        h("thead", {}, h("tr", {}, cell("th", "word"), cell("th", "p"), cell("th", "why"))),
+        h("tbody", {}, ...d.predicted.map(x => h("tr", {}, cell("td", x.word), cell("td", pct(x.p)), cell("td", x.why)))))
+        : h("p", {class: "gd-predicted"}, d.pair ? "Predicted human answers: none (a word on the table means nothing to Gary's vocabulary)." : "Predicted human answers: none (opening move)."),
+      d.candidates?.length ? h("table", {class: "gd-candidates"},
+        h("caption", {}, `Gary's candidate words (score = ${d.weights.human} human + ${d.weights.fit} fit + ${d.weights.centre} centre + ${d.weights.personality} personality − penalty)`),
+        h("thead", {}, h("tr", {}, ...["word", "score", "human", "fit", "centre", "personality", "penalty", "sides", "tier"].map(x => cell("th", x)))),
+        h("tbody", {}, ...d.candidates.map(c => h("tr", {class: c.word === d.selected ? "gd-pick" : ""},
+          cell("td", c.word), cell("td", c.total.toFixed(3)), cell("td", c.human.toFixed(2)), cell("td", c.fit.toFixed(2)), cell("td", c.centre.toFixed(2)),
+          cell("td", c.personality.toFixed(2)), cell("td", c.penalty.toFixed(2)), cell("td", c.sides.join(" / ") + (c.sideways ? " (sideways)" : "")), cell("td", c.tier)))))
+        : h("p", {class: "gd-candidates"}, "Gary's candidate words: none scored (opening move: a friendly word at random).")
+    ];
+  return h("details", {class: "card gary-debug", id: "garyDebug", lang: "en", open: true},
+    h("summary", {}, `Gary's decision${move ? ` · move ${move.number}` : ""} (developer diagnostics)`), ...body);
 }
 
 /**
@@ -1112,6 +1148,7 @@ async function submitWord(source = "direct") {
     trace("result", {...info, path: "local", ok: result.ok, code: result.ok ? null : result.code});
     if (!result.ok) return rejectWord(result.code, result.word, info);
     if (!store.saveSolo(result.game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
+    logGaryDecision(result.move.garyDecision);
     input.value = "";
     openView(soloView(result.game));
     if (!state.reveal) focusAfterMove();
@@ -1436,6 +1473,8 @@ function setOnline(online) {
 }
 
 function boot() {
+  // Development mode only: record how Gary chooses each word (see garyDebugPanel).
+  setGaryDiagnostics(garyDiagnosticsEnabled());
   for (const button of document.querySelectorAll("[data-lang]")) {
     button.addEventListener("click", () => {
       // Only the interface changes. An open game keeps its own word language

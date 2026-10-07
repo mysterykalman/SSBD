@@ -77,13 +77,13 @@ test("Solo reaches the 20-move limit with a valid end state", () => {
   assert.equal(currentMove(game).hidden, undefined);
 });
 
-test("bot choices vary between new games", () => {
+test("openings vary between new games; a response to the same pair is stable (Gary aims, he doesn't roll dice)", () => {
   const openings = new Set();
   for (let seed = 1; seed <= 30; seed++) openings.add(currentMove(startSoloGame({id: `v${seed}`, seed})).hidden.b);
   assert.ok(openings.size >= 15, `only ${openings.size} distinct openings`);
   const responses = new Set();
   for (let seed = 1; seed <= 30; seed++) responses.add(chooseResponse({prompts: ["sun", "moon"], rng: seededRandom(seed)}).word);
-  assert.ok(responses.size >= 3, `only ${[...responses].join(",")}`);
+  assert.ok(responses.size <= 2, `sun + moon gave ${[...responses].join(",")}`);
 });
 
 test("bot responses relate to both prompts", () => {
@@ -150,7 +150,8 @@ test("each bot word comes from the exact current prompts, one word per move", ()
         assert.ok(hidden.split(" ").length <= 3, hidden);
         if (move.prompts) {
           // Recomputing from this move's prompts and the revealed words gives the same word.
-          const again = chooseResponse({prompts: move.prompts, language, excludeKeys: usedKeys(game), rng: moveRandom(game, move.number)});
+          const history = game.moves.flatMap(m => (m.words ? [[m.words.a, m.words.b]] : []));
+          const again = chooseResponse({prompts: move.prompts, language, excludeKeys: usedKeys(game), history, rng: moveRandom(game, move.number)});
           assert.equal(again.word, hidden, `move ${move.number}`);
         }
         let r = {ok: false};

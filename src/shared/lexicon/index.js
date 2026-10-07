@@ -1,6 +1,6 @@
 // Turns the curated concept list into a per-language lookup graph.
 
-import {CONCEPTS, PHRASES} from "./data.js";
+import {CATEGORIES, CONCEPTS, PHRASES} from "./data.js";
 import {EXTRA_WORDS} from "./vocab.js";
 import {wordKey} from "../words.js";
 
@@ -20,7 +20,7 @@ function buildLexicon(lang) {
   const labelIndex = lang === "fr" ? 2 : 1;
   const concepts = new Map();
   for (const [id, en, fr, tags] of CONCEPTS) {
-    concepts.set(id, {id, label: lang === "fr" ? fr : en, key: wordKey(lang === "fr" ? fr : en), tags, links: new Set(), phrases: new Set(), near: new Set(), out: new Map()});
+    concepts.set(id, {id, label: lang === "fr" ? fr : en, key: wordKey(lang === "fr" ? fr : en), tags, links: new Set(), phrases: new Set(), near: new Set(), out: new Map(), kinds: new Map(), members: new Set()});
   }
   // Links are undirected.
   for (const row of CONCEPTS) {
@@ -40,6 +40,19 @@ function buildLexicon(lang) {
     if (!concepts.has(a) || !concepts.has(b) || a === b) continue;
     concepts.get(a).phrases.add(b);
     concepts.get(b).phrases.add(a);
+  }
+  // "Is a kind of": `kinds` maps a concept to the categories it belongs to (with their weight),
+  // `members` lists a category's members. Category and member also count as linked.
+  for (const row of CATEGORIES) {
+    const [category, weight, members] = /** @type {[string, number, string[]]} */ (row);
+    if (!concepts.has(category)) continue;
+    for (const member of members) {
+      if (!concepts.has(member) || member === category) continue;
+      concepts.get(member).kinds.set(category, weight);
+      concepts.get(category).members.add(member);
+      concepts.get(member).links.add(category);
+      concepts.get(category).links.add(member);
+    }
   }
   // "near" = linked or phrase partner: used to count shared neighbours.
   for (const concept of concepts.values()) concept.near = new Set([...concept.links, ...concept.phrases]);

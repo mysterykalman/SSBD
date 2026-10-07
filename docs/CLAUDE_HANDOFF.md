@@ -629,3 +629,46 @@ The Cloudflare Worker and D1 were replaced. Nothing Cloudflare- or D1-specific r
   Supabase project; set `POSTGRES_URL` (pooled) for Preview and Production in Vercel;
   then `npm run smoke -- <preview-url> --write`.
 
+
+## Gary plays to converge (latest)
+
+Gary's objective is semantic convergence: predict what the human will type for the two words on
+the table and pick the word most likely to make both players say the same thing, now or on the
+next move. "Relates to both words" is only the entry ticket.
+
+- **Two separate models** (`src/shared/bot.js`):
+  - *Candidates*: words that relate to both prompts (the existing tiers and the both-sides
+    invariant are unchanged).
+  - *Predicted human answers*: a probability list built differently: both words must bring the
+    answer to mind (geometric mean of first-thought strengths, from the curated, ordered link
+    lists), a category both words belong to is the strongest signal, everyday words beat rare
+    ones, sideways swaps are halved, the trail theme nudges by up to 25%.
+- **Ranking** (`BOT_TUNING.weights`): 50% similarity to the predicted human answers, 30% fit to
+  both words (weaker side counts most), 15% semantic centre (balance between the two words plus
+  the theme of the last three rounds of the trail), 5% personality (random, so it only ever breaks
+  near-ties). The top-ranked candidate wins; no more 55/30/15 lottery.
+- **Sideways swaps** (SISTER → BROTHER, DOG + CAT → MOUSE: another member of the same category
+  that the other word doesn't suggest) count for less in both models. A category both words share
+  is never sideways.
+- **Lexicon**: an explicit "is a kind of" table (`CATEGORIES` in `lexicon/data.js`, e.g. family,
+  pet, weather, fruit, colour, season, clothes; broad ones like animal/food weigh less), plus
+  missing everyday words (wife, husband, relative, parent, child, kid, son, daughter, aunt, uncle,
+  cousin, pretend, education, learn, lesson, fog).
+- **Before → after** (200 seeds each): WIFE+BROTHER family/mom/sister → FAMILY; DOG+CAT
+  tail/paw/fur → PET (animal ~20%); RAIN+SNOW boots/storm/cloud → WEATHER; SCHOOL+TEACHER
+  book/read/class → EDUCATION (class next); SISTER+PLAY brother 100% → KID; BED+TIRED → SLEEP,
+  APPLE+BANANA → FRUIT (already right, now deterministic).
+- **Diagnostics (developer mode, required)**: `chooseResponse({…, explain: true})` returns the
+  full decision: current pair, trail words, predicted human answers (with probabilities and why),
+  the top candidates with every score part, the selected word and the reason. In the app, Solo
+  records it per move when developer mode is on (localhost, `?debug=gary`, or
+  `localStorage.ssbd_debug_gary = "1"`), shows a "Gary's decision" panel under the trail for the
+  latest *revealed* move (never before the reveal), logs a collapsed console group per decision,
+  and keeps `window.__garyDecisions`. Players and automated browsers never see it unless they opt
+  in, and nothing extra is stored otherwise. Diagnostics never change Gary's word (tested).
+- **Tests**: `test/convergence.test.mjs` checks the selection over 200 seeds, the predicted human
+  answers and the ranking itself for WIFE+BROTHER, DOG+CAT, RAIN+SNOW, APPLE+BANANA, BED+TIRED,
+  SCHOOL+TEACHER (tangential words like PLAY, TAIL, BOOTS, BOOK must rank well below the centre),
+  SISTER+PLAY, sideways swaps, French, the bounded influence of the trail, the diagnostics shape
+  (every score equals its documented weighted sum) and Solo recording. `test/e2e/gary-debug.test.mjs`
+  checks the panel and that players never see it.

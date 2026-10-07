@@ -19,7 +19,7 @@ test("the brief's examples: answers connect BOTH words; one-sided answers are re
   const cases = [
     [["winter", "snowman"], ["scarf", "cold", "sled"], ["snow"]],
     [["snow", "scarf"], ["mitten", "winter", "cold"], []],
-    [["fabric", "mitten"], ["glove", "wool", "scarf"], []],
+    [["fabric", "mitten"], ["glove", "wool", "scarf", "clothes"], []],
     [["socks", "eye"], ["pair"], ["face"]],
     [["cold", "hair"], ["hat"], ["snow"]],
     [["hand", "glove"], ["finger", "mitten"], ["leather"]]
@@ -97,17 +97,21 @@ test("unknown prompts: base forms and confident spelling fixes are tried before 
   assert.ok(nonsense.word);
 });
 
-test("weighted choice happens only among the best few, roughly 55/30/15", () => {
-  const prompts = ["sun", "moon"];
-  const {ranked} = rankCandidates({prompts});
-  const strong = ranked.filter(r => r.passes);
-  const top3 = strong.slice(0, 3).map(r => r.word);
-  const seen = picks(prompts, 3000);
-  for (const word of seen.keys()) assert.ok(top3.includes(word), `${word} outside the shortlist ${top3}`);
-  const share = word => (seen.get(word) || 0) / 3000;
-  assert.ok(Math.abs(share(top3[0]) - 0.55) < 0.05, `top ${share(top3[0])}`);
-  assert.ok(Math.abs(share(top3[1]) - 0.30) < 0.05, `second ${share(top3[1])}`);
-  assert.ok(Math.abs(share(top3[2]) - 0.15) < 0.05, `third ${share(top3[2])}`);
+test("the best-ranked candidate wins; personality (5%) only separates near-ties", () => {
+  assert.deepEqual(BOT_TUNING.weights, {human: 0.50, fit: 0.30, centre: 0.15, personality: 0.05});
+  assert.equal(Object.values(BOT_TUNING.weights).reduce((sum, x) => sum + x, 0).toFixed(10), (1).toFixed(10));
+  for (const prompts of [["sun", "moon"], ["hand", "glove"], ["bed", "tired"]]) {
+    for (let seed = 1; seed <= 50; seed++) {
+      const random = seededRandom(seed);
+      const {ranked} = rankCandidates({prompts, rng: seededRandom(seed)});
+      assert.equal(chooseResponse({prompts, rng: random}).word, ranked.find(r => r.tier === 1).word, `${prompts} seed ${seed}`);
+    }
+    // Without the 5% whim, the top two are at least as far apart as the whim can move them, or tied.
+    const base = rankCandidates({prompts}).ranked.filter(r => r.tier === 1);
+    const gap = base[0].score - base[1].score;
+    const seen = new Set(Array.from({length: 50}, (_, s) => chooseResponse({prompts, rng: seededRandom(s + 1)}).word));
+    if (gap > BOT_TUNING.weights.personality) assert.deepEqual([...seen], [base[0].word], `${prompts}: a clear winner always wins`);
+  }
 });
 
 test("loop prevention: last round's concepts are rejected, recent ones penalised, used words and their variants never reused", () => {

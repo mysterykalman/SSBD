@@ -555,3 +555,15 @@ main:focus { outline: none; }
   .gary-end .end-art .gary-art { animation: none; }
 }
 .win-burst .burst-star { color: var(--coral-dark); font-size: 1.1em; text-shadow: 2px 2px 0 var(--paper); }
+
+/* Developer diagnostics: Gary's decision (development mode only, never shown to players). */
+.gary-debug { font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; border-style: dashed; overflow-x: auto; }
+.gary-debug summary { cursor: pointer; font-weight: 700; }
+.gary-debug dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 10px 0; }
+.gary-debug dt { font-weight: 700; }
+.gary-debug dd { margin: 0; overflow-wrap: anywhere; }
+.gary-debug .gd-selected { font-weight: 700; }
+.gary-debug table { border-collapse: collapse; margin: 10px 0; width: 100%; }
+.gary-debug caption { text-align: left; font-weight: 700; padding-bottom: 4px; }
+.gary-debug th, .gary-debug td { border: 1px solid var(--line); padding: 2px 6px; text-align: left; white-space: nowrap; }
+.gary-debug tr.gd-pick td { background: var(--sun-soft); font-weight: 700; }
