@@ -120,15 +120,19 @@ test("diagnostics: the decision shows the pair, predicted answers, every candida
   const w = decision.weights;
   for (const c of decision.candidates) {
     // The score is exactly the documented weighted sum of its parts.
-    const total = w.human * c.human + w.fit * c.fit + w.centre * c.centre + w.personality * c.personality - c.penalty;
+    const total = w.human * c.human + w.fit * c.fit + w.centre * c.centre + w.personality * c.personality - c.penalty - c.supportPenalty;
     assert.ok(Math.abs(total - c.total) < 0.003, `${c.word}: ${total} vs ${c.total}`);
     assert.equal(c.sides.length, 2);
   }
   // Contenders (within the human margin of the likeliest answer) come first, each group by score.
-  for (let i = 1; i < decision.candidates.length; i++) {
-    const [x, y] = [decision.candidates[i - 1], decision.candidates[i]];
+  // Contenders (within the human margin of the likeliest answer) come first, each group by score;
+  // words that can't win (rejected as one-sided or lazy) are listed after, with the reason.
+  const winnable = decision.candidates.filter(c => c.viable);
+  for (let i = 1; i < winnable.length; i++) {
+    const [x, y] = [winnable[i - 1], winnable[i]];
     assert.ok(x.contender > y.contender || (x.contender === y.contender && x.total >= y.total), `${x.word} before ${y.word}`);
   }
+  for (const c of decision.candidates.filter(c => !c.viable)) assert.ok(c.rejected, `${c.word} says why it can't win`);
   assert.ok(decision.candidates[0].contender);
   assert.match(decision.beat, /^FAMILY (beat|was the only word)/);
   assert.match(decision.reason, /human answer/);

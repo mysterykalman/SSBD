@@ -69,6 +69,21 @@ export const BOT_TUNING = {
    * and personality only choose among contenders, so they can never overturn a clear human lead.
    */
   humanMargin: 0.1,
+  /**
+   * Both words must matter. Per-word support (0..1, from the current pair only, never the trail):
+   *  weakSideSupport >= strong      no penalty
+   *  acceptable .. strong           a small penalty (only decides near-ties)
+   *  oneSided .. acceptable         a meaningful penalty
+   *  < oneSided                     near-zero: one word is functionally irrelevant. Not allowed to win,
+   *                                 unless it leads human likelihood by `oneSidedLead` and no candidate
+   *                                 with better support is reasonably human-likely (`reasonableHuman`).
+   *  imbalance > imbalanceMax with weakSideSupport < imbalanceWeak: an extra strongly-one-sided penalty.
+   * A lazy decomposition (BOX for SANDBOX, BED for BEDTIME) is rejected outright unless the OTHER word
+   * supports it independently (>= lazyOtherSupport). Set `supportRules: false` for the previous model.
+   */
+  supportRules: true,
+  support: {strong: 0.40, acceptable: 0.25, oneSided: 0.15, smallPenalty: 0.02, weakPenalty: 0.12,
+    imbalanceMax: 0.60, imbalanceWeak: 0.20, imbalancePenalty: 0.15, oneSidedLead: 0.30, reasonableHuman: 0.50, lazyOtherSupport: 0.25},
   /** First-thought strength at which the other word stops holding a candidate answer back (generate-and-check). */
   plausible: 0.3,
   /** How many predicted human answers to keep (probabilities are renormalised over these). */
@@ -127,6 +142,37 @@ function sideRelation(lex, promptIds, candidate) {
     const human = category !== undefined ? 0.95 * category : named ? Math.max(0.6, 1 - outRank * 0.04) : phrase ? 0.85 : namedBack ? 0.65
       : member ? 0.5 : shared >= 3 ? 0.35 : shared === 2 ? 0.25 : shared === 1 ? 0.1 : 0;
     if (strength > best.strength || (strength === best.strength && human > best.human)) best = {strength, human};
+  }
+  return best;
+}
+
+/**
+ * Per-word support: how meaningfully one current word, on its own, connects to a candidate (0..1).
+ *  1.00 the candidate is the word's category (DOG → PET) or a phrase + link
+ *  .90  a common phrase ("snow" + "ball")    .90–.60 the word's own first-thought list names it (by rank)
+ *  .75  the candidate is a kind of the word   .65 the candidate's list names the word
+ *  .40  three shared neighbours               .25 two shared neighbours (weak but recognizable)
+ *  .10  one shared neighbour (technically explainable only)   .05 only a common tag   0 nothing
+ * Computed from the current word only: the trail never raises it. An unknown word supports nothing.
+ */
+function wordSupport(lex, promptIds, candidate) {
+  let best = 0;
+  for (const promptId of promptIds) {
+    const prompt = lex.concepts.get(promptId);
+    if (!prompt || prompt.id === candidate.id) continue;
+    let value;
+    const rank = prompt.out.get(candidate.id);
+    if (prompt.kinds.has(candidate.id) || (prompt.phrases.has(candidate.id) && prompt.links.has(candidate.id))) value = 1;
+    else if (prompt.phrases.has(candidate.id)) value = 0.9;
+    else if (rank !== undefined) value = Math.max(0.6, 0.9 - rank * 0.03);
+    else if (candidate.kinds.has(prompt.id)) value = 0.75;
+    else if (candidate.out.has(prompt.id) || prompt.links.has(candidate.id)) value = 0.65;
+    else {
+      let shared = 0;
+      for (const neighbour of candidate.near) if (prompt.near.has(neighbour)) shared++;
+      value = shared >= 3 ? 0.4 : shared === 2 ? 0.25 : shared === 1 ? 0.1 : candidate.tags.some(tag => prompt.tags.includes(tag)) ? 0.05 : 0;
+    }
+    best = Math.max(best, value);
   }
   return best;
 }
@@ -353,6 +399,10 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
   const {theme, words: themeWords} = trailTheme(lex, history, tuning);
   const predicted = predictHumanAnswers(lex, idsA, idsB, theme, allowed, tuning);
   const predictedConcepts = predicted.map(h => ({concept: lex.concepts.get(h.id), p: h.p}));
+  // The same prediction without the trail: what the trail adds is reported separately, and the
+  // trail-free numbers decide whether a one-sided word could ever win (the trail can't rescue it).
+  const plain = predictHumanAnswers(lex, idsA, idsB, () => 0, allowed, tuning).map(h => ({concept: lex.concepts.get(h.id), p: h.p}));
+  const humanFrom = (list, candidate, sideways) => list.reduce((sum, h) => sum + h.p * (h.concept.id === candidate.id ? 1 : tuning.nextTurn * similarity(candidate, h.concept)), 0) * (sideways ? 0.6 : 1);
   const w = tuning.weights;
   const ranked = [];
   for (const candidate of lex.concepts.values()) {
@@ -366,7 +416,11 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
     //    A sideways swap (MOUSE for DOG + CAT: one more of the same kind, not what they share)
     //    keeps the game going without bringing the players closer, so it counts for less.
     const sideways = isSideways(lex, idsA, idsB, candidate);
-    const humanRaw = predictedConcepts.reduce((sum, h) => sum + h.p * (h.concept.id === candidate.id ? 1 : tuning.nextTurn * similarity(candidate, h.concept)), 0) * (sideways ? 0.6 : 1);
+    const humanRaw = humanFrom(predictedConcepts, candidate, sideways);
+    const humanPlainRaw = humanFrom(plain, candidate, sideways);
+    // Per-word support from the current pair only (see wordSupport).
+    const supportA = wordSupport(lex, idsA, candidate), supportB = wordSupport(lex, idsB, candidate);
+    const weakSide = Math.min(supportA, supportB), imbalance = Math.abs(supportA - supportB);
     // Convergence distance: expected word-graph hops from this word to the human's answer.
     const after = predictedConcepts.reduce((sum, h) => sum + h.p * hops(lex, candidate.id, h.concept.id), 0);
     // 2. Fit to both current words (the weaker side counts most).
@@ -378,7 +432,19 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
     const recency = tuning.recency.find(([from, to]) => roundsAgo !== undefined && roundsAgo >= from && roundsAgo <= to);
     // A piece of a prompt word ("snow" for "snowman") or a word built on one is a lazy answer.
     const contained = [...promptKeys].some(key => key.length >= 3 && candidate.key.length >= 3 && (key.includes(candidate.key) || candidate.key.includes(key)));
-    const penalty = (recency ? recency[2] : 0) + (contained ? tuning.containedPenalty : 0);
+    // Lazy decomposition: the candidate is a piece (substring, token, prefix, suffix) of one current
+    // word (BOX in SANDBOX). It is only acceptable when the OTHER word supports it on its own.
+    const [keyA, keyB] = list.map(wordKey);
+    const pieceOf = key => Boolean(key) && key.length > candidate.key.length && candidate.key.length >= 2 && key.includes(candidate.key);
+    const lazyFrom = pieceOf(keyA) ? "a" : pieceOf(keyB) ? "b" : null;
+    // When the other word is itself the rest of that compound (SAND + SANDBOX → BOX), its "support"
+    // only comes through the compound, so the candidate is a pure leftover and never counts as supported.
+    const otherKey = lazyFrom === "a" ? keyB : keyA, compoundKey = lazyFrom === "a" ? keyA : keyB;
+    const leftover = Boolean(lazyFrom) && Boolean(otherKey) && otherKey.length >= 2 && compoundKey.includes(otherKey);
+    const lazyOther = !lazyFrom ? 1 : leftover ? 0 : lazyFrom === "a" ? supportB : supportA;
+    const lazyReject = tuning.supportRules && Boolean(lazyFrom) && lazyOther < tuning.support.lazyOtherSupport;
+    const lazyPenalty = contained ? tuning.containedPenalty : 0;
+    const penalty = (recency ? recency[2] : 0) + lazyPenalty;
     // Tiers (see BOT_TUNING): every tier needs a relationship to EACH prompt, and a strong side never
     // carries a weak one (strong to one word + one shared neighbour of the other is never enough).
     const passes = a.strength >= tuning.minPerSide && b.strength >= tuning.minPerSide;
@@ -390,7 +456,8 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
     const minPaths = Math.min(pathsA, pathsB), maxPaths = Math.max(pathsA, pathsB);
     const paths = minPaths >= tuning.minPaths && minPaths >= tuning.pathBalance * maxPaths;
     ranked.push({word: candidate.label, id: candidate.id, a: a.strength, b: b.strength, pathsA, pathsB, weakest, average,
-      humanRaw, human: 0, fit, centre, balance, theme: onTheme, sideways, after, personality: 0, penalty, score: 0, contender: false,
+      humanRaw, humanPlainRaw, human: 0, humanPlain: 0, fit, centre, balance, theme: onTheme, sideways, after, personality: 0, penalty, score: 0, contender: false,
+      supportA, supportB, weakSide, imbalance, lazyFrom, lazyOther, lazyReject, lazyPenalty, supportPenalty: 0, trail: 0, viable: true, rejectedBecause: "",
       passes, lopsided, tier: passes ? 1 : lopsided ? 0 : relaxed ? 2 : wide ? 3 : category ? 4 : paths ? 5 : 0});
   }
   // Before Gary moves, the players are as far apart as the two words on the table (their last words).
@@ -400,19 +467,61 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
   const stateKey = [language, ...list.map(wordKey), "|", ...history.map(round => round.map(wordKey).join("+")), "|", ...[...excludeKeys].sort()].join(" ");
   // Likely-human-answer is relative: the candidate closest to the predicted answers scores 1.
   const bestHuman = ranked.reduce((max, item) => Math.max(max, item.humanRaw), 0) || 1;
+  const bestPlain = ranked.reduce((max, item) => Math.max(max, item.humanPlainRaw), 0) || 1;
+  const sup = tuning.support;
   for (const item of ranked) {
     item.human = item.humanRaw / bestHuman;
+    item.humanPlain = item.humanPlainRaw / bestPlain;
     // Personality only ever separates near-ties: 5% of the total at most, fixed by the state.
     item.personality = hashString(`${stateKey}|${item.id}`) / 4294967296;
-    item.score = w.human * item.human + w.fit * item.fit + w.centre * item.centre + w.personality * item.personality - item.penalty;
+    // Both words must matter: a tie-quality penalty for weak support on one side (never enough on its
+    // own to beat a clearly more human answer; see the contender rule below).
+    if (tuning.supportRules) {
+      item.supportPenalty = item.weakSide >= sup.strong ? 0 : item.weakSide >= sup.acceptable ? sup.smallPenalty : sup.weakPenalty;
+      if (item.imbalance > sup.imbalanceMax && item.weakSide < sup.imbalanceWeak) item.supportPenalty += sup.imbalancePenalty;
+    }
+    item.score = w.human * item.human + w.fit * item.fit + w.centre * item.centre + w.personality * item.personality - item.penalty - item.supportPenalty;
+    // What the trail added: its pull on the human prediction and its share of the semantic centre.
+    item.trail = w.human * (item.human - item.humanPlain) + w.centre * 0.45 * item.theme;
   }
-  // Contenders: within humanMargin of the most human-likely candidate of the same tier, counting the
-  // game's own penalties (a lazy piece-of-a-prompt answer is not a contender just for being likely).
-  const effectiveHuman = item => item.human - item.penalty / w.human;
-  const bestByTier = new Map();
-  for (const item of ranked) bestByTier.set(item.tier, Math.max(bestByTier.get(item.tier) ?? -Infinity, effectiveHuman(item)));
-  for (const item of ranked) item.contender = effectiveHuman(item) >= bestByTier.get(item.tier) - tuning.humanMargin;
-  ranked.sort((x, y) => Number(y.contender) - Number(x.contender) || y.score - x.score || x.word.localeCompare(y.word));
+  // Viability (current pair only; the trail and personality play no part). A lazy decomposition the
+  // other word doesn't support can't win. A near-zero one-sided word can't win either, unless it leads
+  // the trail-free human likelihood by a wide margin and nothing better supported is reasonably likely.
+  const tiers = new Map();
+  for (const item of ranked) (tiers.get(item.tier) || tiers.set(item.tier, []).get(item.tier)).push(item);
+  for (const group of tiers.values()) {
+    for (const item of group) {
+      if (!tuning.supportRules) continue;
+      if (item.lazyReject) {
+        item.viable = false;
+        item.rejectedBecause = `lazy: a piece of ${list[item.lazyFrom === "a" ? 0 : 1].toUpperCase()}, and ${list[item.lazyFrom === "a" ? 1 : 0].toUpperCase()} supports it only ${item.lazyOther.toFixed(2)}`;
+        continue;
+      }
+      if (item.weakSide >= sup.oneSided) continue;
+      const others = group.filter(x => x !== item && !x.lazyReject);
+      const lead = item.humanPlain - Math.max(0, ...others.map(x => x.humanPlain));
+      const betterSupported = others.some(x => x.weakSide > item.weakSide && x.weakSide >= sup.oneSided && x.humanPlain >= sup.reasonableHuman);
+      if (lead >= sup.oneSidedLead && !betterSupported) continue; // the documented exception
+      item.viable = false;
+      const [weakName, strongName] = item.supportA <= item.supportB ? [list[0], list[1]] : [list[1], list[0]];
+      item.rejectedBecause = `one-sided: ${weakName.toUpperCase()} support only ${Math.min(item.supportA, item.supportB).toFixed(2)} vs ${strongName.toUpperCase()} ${Math.max(item.supportA, item.supportB).toFixed(2)}`;
+    }
+    // Contenders: viable, and within humanMargin of the most human-likely viable candidate of the tier
+    // (counting the game's own lazy/recency penalties, never the support penalties: support only ever
+    // breaks near-ties, it never overturns a clearly more human answer).
+    const effectiveHuman = item => item.human - item.penalty / w.human;
+    const viable = group.filter(item => item.viable);
+    const best = Math.max(-Infinity, ...viable.map(effectiveHuman));
+    for (const item of group) item.contender = item.viable && effectiveHuman(item) >= best - tuning.humanMargin;
+  }
+  // Order: contenders by score; then other viable words by score; then words that can't win. When a
+  // tier has nothing viable at all (every word is one-sided), the best-supported weak side goes first,
+  // then the most independent two-step paths to the weaker word, ignoring trail and personality:
+  // Gary must answer something, and it should touch both words as much as the data allows.
+  ranked.sort((x, y) => Number(y.contender) - Number(x.contender) || Number(y.viable) - Number(x.viable) || Number(x.lazyReject) - Number(y.lazyReject)
+    || (x.viable ? y.score - x.score : y.weakSide - x.weakSide || (y.supportA + y.supportB) - (x.supportA + x.supportB) || y.humanPlain - x.humanPlain
+      || Math.min(y.pathsA, y.pathsB) - Math.min(x.pathsA, x.pathsB))
+    || x.word.localeCompare(y.word));
   return {ranked, predicted, themeWords, before, knownA: idsA.length > 0, knownB: idsB.length > 0};
 }
 
@@ -434,8 +543,9 @@ export function chooseOpening({language = "en", excludeKeys = new Set(), rng = M
 }
 
 /**
- * @typedef {{word: string, total: number, human: number, fit: number, centre: number, personality: number, penalty: number, sides: [number, number], sideways: boolean, after: number, contender: boolean, tier: number}} ScoredCandidate
- * @typedef {{pair: [string, string], language: Language, trail: string[], predicted: {word: string, p: number, why: string}[], candidates: ScoredCandidate[], selected: string, reason: string, beat: string, distance: {before: number, after: number}, quality: import("./types.js").BotQuality, weights: typeof BOT_TUNING.weights}} GaryDecision
+ * @typedef {{word: string, total: number, human: number, fit: number, centre: number, personality: number, penalty: number, sides: [number, number], sideways: boolean, after: number, contender: boolean, tier: number,
+ *   supportA: number, supportB: number, weakSide: number, imbalance: number, trail: number, personalityPart: number, lazyPenalty: number, supportPenalty: number, viable: boolean, rejected: string}} ScoredCandidate
+ * @typedef {{pair: [string, string], language: Language, trail: string[], predicted: {word: string, p: number, why: string}[], candidates: ScoredCandidate[], selected: string, reason: string, beat: string, explanations: string[], distance: {before: number, after: number}, quality: import("./types.js").BotQuality, weights: typeof BOT_TUNING.weights}} GaryDecision
  */
 
 const round3 = x => Math.round(x * 1000) / 1000;
@@ -455,7 +565,8 @@ export function beatLine(first, second, weights) {
     ["dual-word fit", weights.fit * (first.fit - second.fit)],
     ["semantic centre", weights.centre * (first.centre - second.centre)],
     ["personality", weights.personality * (first.personality - second.personality)],
-    ["penalties", second.penalty - first.penalty]
+    ["penalties", second.penalty - first.penalty],
+    ["weak-side support", second.supportPenalty - first.supportPenalty]
   ];
   const margin = first.score - second.score;
   const fmt = v => `${v >= 0 ? "+" : "-"}${Math.abs(v).toFixed(3)}`;
@@ -464,6 +575,33 @@ export function beatLine(first, second, weights) {
   const ahead = pros.map(([name, v]) => `${name} ${fmt(v)}`).join(" and ") || "a tie broken by name";
   if (!cons.length) return `${A} beat ${B} by ${fmt(margin)}: ahead on ${ahead}`;
   return `${A} beat ${B} by ${fmt(margin)} because ${ahead} outweighed ${B}'s ${cons.map(([name, v]) => `${name} advantage ${Math.abs(v).toFixed(3)}`).join(" and ")}`;
+}
+
+/**
+ * Plain-English notes on the support rules for the diagnostics: likely words that could not win (and
+ * why), and whether weak-side support settled a near-tie between #1 and #2.
+ */
+function supportExplanations(ranked, pick, runnerUp, pair) {
+  const notes = [];
+  const [wordA, wordB] = pair.map(word => word.toUpperCase());
+  const notable = ranked.filter(item => item !== pick && !item.viable && (item.human >= 0.5 || item.score >= pick.score)).slice(0, 4);
+  for (const item of notable) {
+    const name = item.word.toUpperCase();
+    if (item.lazyReject) {
+      const [from, other] = item.lazyFrom === "a" ? [wordA, wordB] : [wordB, wordA];
+      notes.push(`${name} was rejected as a lazy decomposition of ${from} because ${other} independently supported ${name} at only ${item.lazyOther.toFixed(2)}${item.lazyOther === 0 ? ` (${from} = ${other} + ${name})` : ""}.`);
+    } else {
+      const [weak, strong, weakValue, strongValue] = item.supportA <= item.supportB ? [wordA, wordB, item.supportA, item.supportB] : [wordB, wordA, item.supportB, item.supportA];
+      notes.push(strongValue < 0.15
+        ? `${name} was rejected because neither word really supports it (${wordA} ${item.supportA.toFixed(2)}, ${wordB} ${item.supportB.toFixed(2)}).`
+        : `${name} was rejected because ${weak} support was only ${weakValue.toFixed(2)} despite ${strong} support of ${strongValue.toFixed(2)}.`);
+    }
+  }
+  if (runnerUp && runnerUp.contender && Math.abs(pick.human - runnerUp.human) <= 0.1 && pick.weakSide > runnerUp.weakSide + 0.05) {
+    notes.push(`${pick.word.toUpperCase()} beat ${runnerUp.word.toUpperCase()} because their human likelihood was within ${Math.abs(pick.human - runnerUp.human).toFixed(2)}, but ${pick.word.toUpperCase()} had stronger weak-side support: ${pick.weakSide.toFixed(2)} vs ${runnerUp.weakSide.toFixed(2)}.`);
+  }
+  if (!pick.viable) notes.push(`No candidate connected both words: ${pick.word.toUpperCase()} was the best-supported option (weak side ${pick.weakSide.toFixed(2)}).`);
+  return notes;
 }
 
 /** Why this word won, in a sentence (for the developer diagnostics). */
@@ -505,10 +643,21 @@ export function chooseResponse({prompts, language = "en", excludeKeys = new Set(
   /** @type {{pick: any, runnerUp: any, rivals: number, quality: import("./types.js").BotQuality, note: string} | null} */
   let choice = null;
   const from = (pool, quality, note) => ({pick: pool[0], runnerUp: pool[1] || null, rivals: pool.filter(r => r.contender).length - 1, quality, note});
-  const strong = tier(1);
-  if (strong.length) choice = from(strong, "strong", "");
-  for (const n of [2, 3, 4]) if (!choice && tier(n).length) choice = from(tier(n), "loose", `fallback tier ${n}: no word links both strongly`);
-  if (!choice && tier(5).length && knownA && knownB) choice = from(tier(5), "loose", "fallback tier 5: linked through two-step paths");
+  // First pass: the best tier that has a word allowed to win (viable: not lazy, not one-sided).
+  // Second pass, only if no tier has one: the original tier order (the best-supported weak bridge).
+  const notes = {1: "", 2: "fallback tier 2: no word links both strongly", 3: "fallback tier 3: no word links both strongly", 4: "fallback tier 4: no word links both strongly", 5: "fallback tier 5: linked through two-step paths"};
+  for (const n of [1, 2, 3, 4, 5]) {
+    if (choice || (n === 5 && !(knownA && knownB))) continue;
+    const pool = tier(n);
+    if (pool.some(item => item.viable)) choice = from(pool, n === 1 ? "strong" : "loose", notes[n]);
+  }
+  // A lazy decomposition never wins, not even as a last resort, while any other word is left in any tier.
+  const anyNotLazy = ranked.some(item => item.tier >= 1 && item.tier <= (knownA && knownB ? 5 : 4) && !item.lazyReject);
+  const usable = pool => (anyNotLazy ? pool.filter(item => !item.lazyReject) : pool);
+  const strong = usable(tier(1));
+  if (!choice && strong.length) choice = from(strong, "strong", "");
+  for (const n of [2, 3, 4]) if (!choice && usable(tier(n)).length) choice = from(usable(tier(n)), "loose", notes[n]);
+  if (!choice && usable(tier(5)).length && knownA && knownB) choice = from(usable(tier(5)), "loose", notes[5]);
   // Only reachable when a prompt is unknown to the vocabulary: nothing can relate to it.
   if (!choice && ranked.length && (!knownA || !knownB)) {
     const known = ranked.slice().sort((x, y) => Math.max(y.a, y.b) - Math.max(x.a, x.b) || y.score - x.score);
@@ -533,15 +682,18 @@ export function chooseResponse({prompts, language = "en", excludeKeys = new Set(
     language,
     trail: themeWords,
     predicted: predicted.map(h => ({word: h.word, p: round3(h.p), why: h.why})),
-    candidates: ranked.filter(item => item.tier > 0).slice(0, 12).map(item => ({
+    candidates: [...new Set([...ranked.filter(item => item.tier > 0).slice(0, 12), ...ranked.filter(item => !item.viable && (item.human >= 0.5 || item.score >= choice.pick.score)).slice(0, 4)])].map(item => ({
       word: item.word, total: round3(item.score), human: round3(item.human), fit: round3(item.fit), centre: round3(item.centre),
-      personality: round3(item.personality), penalty: round3(item.penalty), sides: [round3(item.a), round3(item.b)], sideways: item.sideways, after: round3(item.after), contender: item.contender, tier: item.tier
+      personality: round3(item.personality), penalty: round3(item.penalty), sides: [round3(item.a), round3(item.b)], sideways: item.sideways, after: round3(item.after), contender: item.contender, tier: item.tier,
+      supportA: round3(item.supportA), supportB: round3(item.supportB), weakSide: round3(item.weakSide), imbalance: round3(item.imbalance), trail: round3(item.trail),
+      personalityPart: round3(tuning.weights.personality * item.personality), lazyPenalty: round3(item.lazyPenalty), supportPenalty: round3(item.supportPenalty), viable: item.viable, rejected: item.rejectedBecause
     })),
     selected: choice.pick.word,
     reason: explain(choice.pick, predicted, lex, choice.note),
     beat: choice.runnerUp && !choice.runnerUp.contender
       ? `${choice.pick.word.toUpperCase()} was the only word within ${tuning.humanMargin} of the most likely human answer; next best ${choice.runnerUp.word.toUpperCase()} trailed on human-likelihood by ${(choice.pick.human - choice.runnerUp.human).toFixed(3)}`
       : beatLine(choice.pick, choice.runnerUp, tuning.weights),
+    explanations: supportExplanations(ranked, choice.pick, choice.runnerUp, pair),
     distance: {before: round3(before), after: round3(choice.pick.after)},
     quality: choice.quality,
     weights: tuning.weights

@@ -1002,6 +1002,8 @@ function activeRow(view) {
   const pair = view.youSide === "a" ? [yours, hidden()] : [hidden(), yours];
   return h("div", {class: "trail-now", id: "trailNow"},
     h("p", {class: "now-label"}, h("span", {class: "now-dot", "aria-hidden": "true"}), t("nowPlaying")),
+    // Only these two words matter; the rows below are history (once there are two words to match).
+    move.prompts ? h("div", {class: "now-hint", id: "nowHint"}, h("p", {class: "now-hint-main"}, t("nowHint")), h("p", {class: "now-hint-sub"}, t("nowHintSub"))) : null,
     h("div", {class: "trail-row-inner"},
       h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, move.number), h("span", {class: "sr-only"}, t("moveOf", {n: move.number, max: view.maxMoves}))),
       h("div", {class: "trail-eq"},
@@ -1022,8 +1024,9 @@ function trail(view) {
       h("h2", {id: "trailTitle"}, t("trailTitle")),
       h("p", {class: "trail-meta"}, h("strong", {}, header), h("span", {class: "trail-when"}, h("span", {"aria-hidden": "true"}, "· "), when(view.createdAt)))),
     now,
+    now && rows.length ? h("p", {class: "history-label"}, t("trailEarlier")) : null,
     rows.length
-      ? h("ol", {class: "trail-list", reversed: true}, rows.map(m => {
+      ? h("ol", {class: "trail-list", reversed: true}, rows.map((m, index) => {
         const ending = m.status === "MATCHED" || m.status === "EXHAUSTED";
         return h("li", {class: `trail-row ${m.status === "MATCHED" ? "match" : ""}`, "data-move": m.number},
           h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, m.number), h("span", {class: "sr-only"}, t("moveOf", {n: m.number, max: view.maxMoves}))),
@@ -1039,7 +1042,8 @@ function trail(view) {
                 h("span", {class: "op", "aria-hidden": "true"}, m.status === "MATCHED" ? "=" : "+"),
                 wordChip(shownWords(view, m).b, sideLabel(view, "b"), view.youSide === "b" ? "you" : "other")),
               m.status === "MATCHED" ? h("span", {class: "match-badge"}, t("matchBadge")) : null)),
-          ending ? null : h("p", {class: "trail-next"}, h("span", {"aria-hidden": "true"}, "↑ "), t("nextPrompt")));
+          // Only the newest finished row points up at the words being played now; older rows are just history.
+          ending || index > 0 ? null : h("p", {class: "trail-next"}, h("span", {"aria-hidden": "true"}, "↑ "), t("nextPrompt")));
       }))
       : h("p", {class: "empty"}, t("trailEmpty")));
 }

@@ -678,6 +678,8 @@ export const CONCEPTS = [
   ["learn","learn","apprendre",["school"],["school","teacher","read","book","class","student","lesson","brain"]],
   ["lesson","lesson","leçon",["school"],["class","teacher","school","learn","homework","student"]],
   ["fog","fog","brouillard",["weather"],["weather","cloud","grey","morning","wet"]],
+  ["lobster","lobster","homard",["animal","ocean"],["crab","sea","ocean","red","fish","boat","shell","restaurant"]],
+  ["jog","jog","jogging",["sport"],["run","park","walk","race","fast","shoe","morning","sport"]],
 ];
 
 // Common phrases and compounds, per language: [conceptId, conceptId, phrase].
@@ -784,6 +786,6 @@ export const CATEGORIES = [
   ["game", 0.8, ["board_game", "video_game", "hide_and_seek", "puzzle", "soccer", "tennis"]],
   ["body", 0.8, ["hand", "foot", "arm", "leg", "head", "eye", "ear", "nose", "mouth", "finger", "tooth", "hair"]],
   ["space", 0.8, ["moon", "star", "planet", "sun", "earth", "rocket", "astronaut", "alien"]],
-  ["ocean", 0.8, ["whale", "dolphin", "shark", "octopus", "crab", "jellyfish", "starfish", "seahorse", "fish", "wave"]],
+  ["ocean", 0.8, ["whale", "dolphin", "shark", "octopus", "crab", "lobster", "jellyfish", "starfish", "seahorse", "fish", "wave"]],
   ["kitchen", 0.7, ["oven", "fridge", "plate", "spoon", "fork", "cup", "bowl", "pot"]]
 ];

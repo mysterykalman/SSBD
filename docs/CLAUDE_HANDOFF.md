@@ -743,3 +743,41 @@ semantic relationship?". The validation found the first convergence model still 
   like GAME for SISTER + PLAY are a strong first thought of one word that plausibly fits the other),
   and the POMME + TERRE phrase test now checks VER's phrase strength in the ranking instead of
   forcing it to be picked (ARBRE is POMME's stronger first thought).
+
+## Both words must matter (latest)
+
+Playtesting found answers carried by one word only (JOGGING + SEA → TURTLE, LOBSTER + SAND → CASTLE,
+CATCH + CASTLE → SANDBOX, SAND + SANDBOX → BOX). Causes: JOGGING and LOBSTER were not in the
+vocabulary (Gary answered from the known word alone); CATCH + CASTLE has no word linked to both, so
+the trail decided among one-shared-neighbour bridges; BOX was only penalised, not rejected.
+
+The human-first model, contender rule, convergence distance, trail, personality and diagnostics are
+unchanged. Added (`src/shared/bot.js`, `BOT_TUNING.support`; `supportRules: false` = previous model):
+- **Per-word support** `supportA` / `supportB` (0..1, from the current pair only; the trail never
+  changes it), `weakSideSupport = min`, `supportImbalance = |A − B|`.
+- **Weak-side rules:** ≥ 0.40 no penalty; 0.25–0.40 a small tie-break penalty; 0.15–0.25 a
+  meaningful penalty; < 0.15 not allowed to win, unless it leads the trail-free human likelihood by
+  0.30 and nothing better supported is reasonably human-likely. Imbalance > 0.60 with weak side
+  < 0.20 adds a strong one-sided penalty. Support penalties never affect who is a contender, so they
+  only break near-ties; a clearly more human answer still wins.
+- **Lazy decomposition:** a candidate that is a piece of a current word (BOX in SANDBOX) is rejected
+  unless the other word supports it on its own (≥ 0.25). When the other word is the rest of the
+  compound (SAND + SANDBOX), its support doesn't count. Lazy words never win, even as a last resort.
+- **Fallback:** when no word in the data connects both words, Gary picks the best-supported weak
+  bridge (weak side, then total support, then two-step paths), ignoring trail and personality.
+- **Vocabulary:** lobster, jog (JOGGING resolves to it).
+- **Diagnostics** per candidate: human likelihood, word A / B support, weak side, imbalance,
+  centre, trail +, personality +, lazy −, support −, final, contender, and why a word couldn't win;
+  plain-English notes ("BOX was rejected as a lazy decomposition of SANDBOX because SAND
+  independently supported BOX at only 0.00 (SANDBOX = SAND + BOX).").
+- **Tests:** `test/one-sided.test.mjs` (support from the pair only, human-first, weak-side, trail,
+  lazy, determinism, same-turn convergence vs the previous model, no overcorrection).
+- **Known limit:** the curated graph (~615 concepts) often has no word linking two unrelated
+  words; then Gary can only offer a weak bridge, and unknown words still get answered from the
+  known word. More curated links and vocabulary shrink both.
+
+### Current turn in the Word Trail
+The NOW PLAYING row now says "Match these two words!" / "Old rows are just your history." (FR:
+"Trouve un mot pour ces deux-là !" / "Les lignes du dessous, c’est juste ton histoire."), its two
+words are the biggest in the trail, finished rows sit quietly under "Earlier moves", and only the
+newest finished row keeps "↑ Next round's words". Test: `test/e2e/trail-now.test.mjs`.
