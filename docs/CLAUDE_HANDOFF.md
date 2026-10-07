@@ -208,26 +208,92 @@ Never edit it by hand.
   are the only things on screen.
 - **Revealing.** Each side locks one word. Both words are revealed together and
   become, in slot order, the exact prompt pair for the next move.
-- **Ending.** Same word means a match and the game ends; matching ignores case,
-  accents, spaces, hyphens and apostrophes. Move 20 without a match ends in a
+- **Ending.** The same underlying word is a match and ends the game at once,
+  with no next round. That covers the identical word (ignoring case, accents,
+  spaces, hyphens and apostrophes) and ordinary grammatical inflections: CAR/CARS,
+  CHILD/CHILDREN, MOUSE/MICE, RUN/RUNNING/RAN, WRITE/WRITTEN, WALK/WALKED,
+  BIG/BIGGER. Synonyms, related words and derivations are different answers, and
+  the game continues with them as the next pair: CAR/VEHICLE, COUCH/SOFA, RUN/JOG,
+  BAKE/BAKER, HAPPY/HAPPINESS, SNOW/SNOWMAN. Move 20 without a match ends in a
   friendly "Game over!".
-- **Player duplicates.** A side may not reuse its own words: `SAME_AS_LAST`,
-  `ALREADY_USED`. The other side's words are allowed.
-- **Bot duplicates.** The bot never reuses any game word, including plural and
-  singular forms.
+- **Showing the words.** The reveal always shows both words exactly as typed. An
+  inflected match gets playful copy: "Plural schmural. Same same!" or "Close
+  enough. Same same!".
+- **Player duplicates.** A side may not reuse its own words, including their
+  inflections ("car" then "cars"): `SAME_AS_LAST`, `ALREADY_USED`. The other
+  side's words are allowed.
+- **Bot duplicates.** The bot never reuses any game word, or any inflection of
+  one.
 - **Bot independence.** The bot locks its word when a move opens, before the
   player types. It submits exactly one word per round and is deterministic per
   game (a refresh never re-rolls it).
-- **Bot scoring.** It ranks candidates by connection to both prompts: direct
-  links and common phrases first (186 EN, 124 FR phrases across 594 curated
-  concepts), one-sided words only as a last resort. Openings vary between games
-  and skip spooky words.
+
 - **Validation.** Blank, punctuation-only, digits and symbols are refused, as
   are words over 24 letters and phrases over 3 words. **One-letter words are
   allowed.** A word is never silently changed.
 - **Speller.** Native spellcheck is on. A "Did you mean?" suggestion appears only
   for typical slips (swapped, missing, doubled or sound-alike letter) and never
   replaces the player's word.
+
+### How "same underlying word" is decided (`src/shared/morph.js`)
+- **Deterministic, no AI judgement.** Each answer maps to a small set of possible
+  base forms; two answers match when the sets overlap. The same input always gets
+  the same ruling.
+- **How the base forms are built:**
+  - irregular tables (children → child, mice → mouse, ran → run, written → write,
+    better → good; French yeux → œil)
+  - suffix rules (-s/-es/-ies/-ves plurals, -ing, -ed; French plurals,
+    feminine forms and regular -er verbs)
+- **Guards against over-matching:**
+  - A suffix rule fires only when the result is a known word (lexicon plus
+    spelling vocabulary), so "baker" never becomes "bake" and "evening" never
+    becomes "even".
+  - Comparatives (-er/-est) apply only to a curated adjective list.
+  - A short exception list keeps words like *glasses*, *building* and *morning*
+    as words of their own.
+- **Known limits:**
+  - Words outside the vocabulary only lose a plural "s".
+  - Irregular verbs not in the table aren't recognised.
+  - Ambiguous forms resolve generously: "leaves" matches both "leaf" and
+    "leave".
+  - Plural-only nouns ("glasses" the spectacles) never match their singular.
+  - French verb conjugation is only covered for regular -er verbs.
+
+### How the bot chooses (`src/shared/bot.js`)
+- **Goal.** The word an ordinary person, including a child, would most likely
+  think of after seeing these exact two words.
+- **Per-side scoring.** `rankCandidates` scores every candidate against each
+  prompt separately:
+  - a common phrase or compound: 0.95 to 1.0
+  - named in the prompt's own curated list: 0.9
+  - the candidate's list names the prompt: 0.8
+  - three or two shared neighbours: 0.55 or 0.45
+  - one shared neighbour: 0.25
+  - a common tag only: 0.1
+- **Hard rule.** Both prompts must independently reach
+  `BOT_TUNING.minPerSide` (0.45), or the candidate is rejected. A strong link to
+  one word never makes up for a missing link to the other.
+- **Ranking:** 0.40 × weakest side, 0.30 × human likelihood (curated
+  first-associations and familiarity), 0.15 × average, 0.10 × obviousness,
+  0.05 × novelty.
+- **Penalties:**
+  - Recency, by concept: last round is rejected; two rounds ago −0.25; 3–5
+    rounds −0.12; 6–8 rounds −0.05.
+  - Answers built on a prompt word ("snow" for "snowman"): −0.25.
+- **Choosing.** A weighted pick among the best few (55/30/15, all within 85% of
+  the top score), so it stays coherent but isn't predictable.
+- **Fallback.** Only when the data holds no two-sided word does the bot pick the
+  best partial bridge (labelled "loose"). Each turn it still sends exactly one
+  word.
+- **Tuning.** All weights live in `BOT_TUNING`, so a future difficulty setting
+  can adjust them.
+- **Examples:**
+  - WINTER + SNOWMAN → scarf, cold or sled
+  - SNOW + SCARF → winter, cold or mitten
+  - FABRIC + MITTEN → scarf, wool or glove
+  - SOCKS + EYE → pair (never "face")
+  - COLD + HAIR → hat (never "snow")
+  - HAND + GLOVE → finger or mitten
 
 ### The "s" bug: root cause and fix
 - **Cause 1:** `validateWord` in `src/shared/words.js` rejected any word shorter
