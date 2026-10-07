@@ -364,7 +364,9 @@ function rerender() {
 
 function mount(...nodes) {
   const app = $("app");
-  app.replaceChildren(...nodes);
+  // Optional sections (e.g. the developer-only Gary panel) are passed as null/false when absent;
+  // replaceChildren would turn those into the visible text "null"/"false", so they are skipped.
+  app.replaceChildren(...nodes.flat(Infinity).filter(node => node != null && node !== false && node !== ""));
 }
 
 function renderLoading() {
