@@ -124,7 +124,13 @@ test("diagnostics: the decision shows the pair, predicted answers, every candida
     assert.ok(Math.abs(total - c.total) < 0.003, `${c.word}: ${total} vs ${c.total}`);
     assert.equal(c.sides.length, 2);
   }
-  for (let i = 1; i < decision.candidates.length; i++) assert.ok(decision.candidates[i - 1].total >= decision.candidates[i].total);
+  // Contenders (within the human margin of the likeliest answer) come first, each group by score.
+  for (let i = 1; i < decision.candidates.length; i++) {
+    const [x, y] = [decision.candidates[i - 1], decision.candidates[i]];
+    assert.ok(x.contender > y.contender || (x.contender === y.contender && x.total >= y.total), `${x.word} before ${y.word}`);
+  }
+  assert.ok(decision.candidates[0].contender);
+  assert.match(decision.beat, /^FAMILY (beat|was the only word)/);
   assert.match(decision.reason, /human answer/);
   assert.match(decision.reason, /fits both words/);
   // Without explain, nothing extra is returned (stored games stay small).

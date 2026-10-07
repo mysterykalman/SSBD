@@ -257,8 +257,10 @@ test("a common phrase counts as a strong link for that side", () => {
     const pick = chooseResponse({prompts: ["snow", "dog"], rng: rng(seed)});
     assert.deepEqual(pick, {word: "ball", quality: "strong"});
   }
-  // "pomme" + "terre": "ver" (ver de terre, a worm in an apple).
-  assert.equal(chooseResponse({prompts: ["pomme", "terre"], language: "fr", rng: rng(1)}).word, "ver");
+  // "pomme" + "terre": "ver" (ver de terre, a worm in an apple) is a strong, eligible answer through
+  // its phrase. (Gary may still prefer ARBRE: apple → tree is the more likely human first thought.)
+  const ver = rankCandidates({prompts: ["pomme", "terre"], language: "fr"}).ranked.find(r => r.word === "ver");
+  assert.ok(ver && ver.tier === 1 && ver.b >= 0.95, JSON.stringify(ver));
   // Exclusions still win over phrases, including plural forms.
   const pick = chooseResponse({prompts: ["snow", "dog"], excludeKeys: new Set(["balls"]), rng: rng(1)});
   assert.notEqual(pick.word, "ball");
@@ -341,7 +343,10 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     t.diagnostic(`${lang}: ${records.length} picks; strong where possible ${strong.length}/${possible.length}; unrelated to both ${unrelated.length}`);
     t.diagnostic(`${lang} weakest: ${weakest.map(r => `${r.prompts.join(" + ")} -> ${r.word} [${r.sa},${r.sb}]`).join("; ")}`);
     assert.ok(possible.length >= 100, `${lang}: only ${possible.length} pairs had a strong answer`);
-    assert.ok(strong.length / possible.length >= 0.85, `${lang}: strong for ${strong.length}/${possible.length}`);
+    // Gary aims for the player's most likely answer, which is often a strong first thought of one word
+    // that plausibly fits the other (GAME for SISTER + PLAY), not always a word linked directly to both.
+    // So "directly linked to both" is a sanity floor here, not the goal; relating to both is required below.
+    assert.ok(strong.length / possible.length >= 0.75, `${lang}: strong for ${strong.length}/${possible.length}`);
     // Every pick relates meaningfully (link, shared neighbour or category) to BOTH prompts whenever the
     // data allows it. A weak, balanced last-resort pick is only allowed when no meaningful two-sided word
     // exists (the bot never falls back to a one-sided word instead), and it stays rare.

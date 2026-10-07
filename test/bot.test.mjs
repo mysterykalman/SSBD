@@ -98,7 +98,7 @@ test("unknown prompts: base forms and confident spelling fixes are tried before 
 });
 
 test("the best-ranked candidate wins; personality (5%) only separates near-ties", () => {
-  assert.deepEqual(BOT_TUNING.weights, {human: 0.50, fit: 0.30, centre: 0.15, personality: 0.05});
+  assert.deepEqual(BOT_TUNING.weights, {human: 0.70, fit: 0.15, centre: 0.10, personality: 0.05});
   assert.equal(Object.values(BOT_TUNING.weights).reduce((sum, x) => sum + x, 0).toFixed(10), (1).toFixed(10));
   for (const prompts of [["sun", "moon"], ["hand", "glove"], ["bed", "tired"]]) {
     for (let seed = 1; seed <= 50; seed++) {

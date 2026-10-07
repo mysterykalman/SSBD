@@ -6,6 +6,7 @@
 import {getLexicon} from "./lexicon/index.js";
 import {lemmaKeys} from "./morph.js";
 import {createSpeller, wordKey} from "./words.js";
+import {hashString} from "./rules.js";
 
 /**
  * @typedef {import("./types.js").BotPick} BotPick
@@ -44,14 +45,32 @@ function isExcluded(key, excludeKeys) {
  */
 export const BOT_TUNING = {
   /**
-   * Ranking weights (sum to 1):
+   * Ranking weights (sum to 1). The objective is "what will the player most likely type?", so the
+   * human term leads; fit and centre are tie-breakers that must not overturn a clear human-likelihood
+   * lead (they started at 30% / 15% and did: KID beat GAME for SISTER + PLAY on structure alone).
    *  human        similarity to the predicted human answers (probability-weighted)
    *  fit          semantic fit to both current words (the weaker side counts most)
    *  centre       convergence toward the semantic centre: balanced between the two words, and
    *               on the theme the recent trail is building (history informs, never dominates)
-   *  personality  Gary's whim: only ever breaks near-ties
+   *  personality  Gary's whim: only ever breaks near-ties. Derived from the game state itself (the
+   *               words on the table, the trail, the words used), so the same state always gets the
+   *               same word, while a different context can tip a different near-tie.
    */
-  weights: {human: 0.50, fit: 0.30, centre: 0.15, personality: 0.05},
+  weights: {human: 0.70, fit: 0.15, centre: 0.10, personality: 0.05},
+  /**
+   * Likely-human-answer = P(the human types exactly this word now) + nextTurn × closeness to the
+   * other predicted answers (a near miss still sets up a match on the following move, but it is
+   * worth much less than meeting now).
+   */
+  nextTurn: 0.4,
+  /**
+   * Human first, as a rule rather than a weight: only candidates whose likely-human-answer score is
+   * within this margin of the best one (after the game's own penalties) are contenders. Fit, centre
+   * and personality only choose among contenders, so they can never overturn a clear human lead.
+   */
+  humanMargin: 0.1,
+  /** First-thought strength at which the other word stops holding a candidate answer back (generate-and-check). */
+  plausible: 0.3,
   /** How many predicted human answers to keep (probabilities are renormalised over these). */
   predictions: 8,
   /** Trail rounds that shape the theme, newest first, and their weights. */
@@ -133,6 +152,19 @@ function firstThought(lex, promptId, h) {
   return 0;
 }
 const thoughtFrom = (lex, ids, h) => ids.reduce((best, id) => Math.max(best, firstThought(lex, id, h)), 0);
+/**
+ * How people answer: they think of a strong first association of EITHER word, then keep it if it
+ * is at least plausible for the other (`plausible` is the strength at which the other side no
+ * longer holds it back). A word the other side doesn't suggest at all scores 0. This does not
+ * reward balance for its own sake: GAME for SISTER + PLAY counts as PLAY's first thought that a
+ * sister plausibly fits, not as a weak "average" of the two.
+ */
+function generateAndCheck(fA, fB, tuning) {
+  const strong = Math.max(fA, fB), weak = Math.min(fA, fB);
+  if (weak <= 0) return 0;
+  return strong * Math.sqrt(Math.min(1, weak / tuning.plausible));
+}
+
 /** The weight of a category both prompts belong to (DOG + CAT → PET), or 0. */
 function sharedCategory(lex, idsA, idsB, h) {
   const weightFor = ids => ids.reduce((best, id) => Math.max(best, lex.concepts.get(id)?.kinds.get(h.id) ?? 0), 0);
@@ -172,6 +204,26 @@ function similarity(x, y) {
   return 0;
 }
 
+/** Word-graph distance (links, phrases and categories), capped: 0 same word, 1 linked, 2 one word apart… */
+const MAX_HOPS = 4;
+const hopCache = new Map();
+export function hops(lex, from, to) {
+  if (from === to) return 0;
+  const key = `${lex.language}:${from}`;
+  let dist = hopCache.get(key);
+  if (!dist) {
+    dist = new Map([[from, 0]]);
+    let frontier = [from];
+    for (let d = 1; d < MAX_HOPS && frontier.length; d++) {
+      const next = [];
+      for (const id of frontier) for (const n of lex.concepts.get(id)?.near || []) if (!dist.has(n)) { dist.set(n, d); next.push(n); }
+      frontier = next;
+    }
+    hopCache.set(key, dist);
+  }
+  return dist.get(to) ?? MAX_HOPS;
+}
+
 /** Everyday words (well connected, one short word) are what people actually type. */
 function commonness(concept) {
   return (0.55 + 0.45 * Math.min(1, concept.links.size / 10)) * (concept.label.includes(" ") ? 0.75 : 1) * (concept.label.length > 10 ? 0.85 : 1);
@@ -208,7 +260,7 @@ function predictHumanAnswers(lex, idsA, idsB, theme, allowed, tuning) {
   for (const h of lex.concepts.values()) {
     if (!allowed(h)) continue;
     const fA = thoughtFrom(lex, idsA, h), fB = thoughtFrom(lex, idsB, h);
-    let joint = idsA.length && idsB.length ? Math.sqrt(fA * fB) : 0.5 * Math.max(fA, fB);
+    let joint = idsA.length && idsB.length ? generateAndCheck(fA, fB, tuning) : 0.5 * Math.max(fA, fB);
     // A sideways swap for one prompt (SISTER → BROTHER, APPLE → ORANGE: the same kind of thing)
     // is not a connection; people rarely give one unless the other word suggests it too.
     const lateral = isSideways(lex, idsA, idsB, h);
@@ -282,9 +334,9 @@ function cachedLemmas(label, language) {
  * Score every candidate for these exact prompts. Returns all candidates (best first) with every
  * part of their score, the predicted human answers and the trail theme, so callers, tests and
  * the developer diagnostics can see exactly why a word won or was rejected.
- * @param {{prompts: string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], tuning?: typeof BOT_TUNING, rng?: () => number}} options
+ * @param {{prompts: string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], tuning?: typeof BOT_TUNING}} options
  */
-export function rankCandidates({prompts, language = "en", excludeKeys = new Set(), history = [], tuning = BOT_TUNING, rng}) {
+export function rankCandidates({prompts, language = "en", excludeKeys = new Set(), history = [], tuning = BOT_TUNING}) {
   const lex = getLexicon(language);
   const list = (Array.isArray(prompts) ? prompts : []).slice(0, 2).map(p => String(p ?? ""));
   const [idsA = [], idsB = []] = list.map(p => resolvePrompt(lex, p, language));
@@ -314,7 +366,9 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
     //    A sideways swap (MOUSE for DOG + CAT: one more of the same kind, not what they share)
     //    keeps the game going without bringing the players closer, so it counts for less.
     const sideways = isSideways(lex, idsA, idsB, candidate);
-    const humanRaw = predictedConcepts.reduce((sum, h) => sum + h.p * similarity(candidate, h.concept), 0) * (sideways ? 0.6 : 1);
+    const humanRaw = predictedConcepts.reduce((sum, h) => sum + h.p * (h.concept.id === candidate.id ? 1 : tuning.nextTurn * similarity(candidate, h.concept)), 0) * (sideways ? 0.6 : 1);
+    // Convergence distance: expected word-graph hops from this word to the human's answer.
+    const after = predictedConcepts.reduce((sum, h) => sum + h.p * hops(lex, candidate.id, h.concept.id), 0);
     // 2. Fit to both current words (the weaker side counts most).
     const fit = 0.6 * weakest + 0.4 * average;
     // 3. Semantic centre: balanced between the two words, and on the trail's emerging theme.
@@ -336,19 +390,30 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
     const minPaths = Math.min(pathsA, pathsB), maxPaths = Math.max(pathsA, pathsB);
     const paths = minPaths >= tuning.minPaths && minPaths >= tuning.pathBalance * maxPaths;
     ranked.push({word: candidate.label, id: candidate.id, a: a.strength, b: b.strength, pathsA, pathsB, weakest, average,
-      humanRaw, human: 0, fit, centre, balance, theme: onTheme, sideways, personality: 0, penalty, score: 0,
+      humanRaw, human: 0, fit, centre, balance, theme: onTheme, sideways, after, personality: 0, penalty, score: 0, contender: false,
       passes, lopsided, tier: passes ? 1 : lopsided ? 0 : relaxed ? 2 : wide ? 3 : category ? 4 : paths ? 5 : 0});
   }
+  // Before Gary moves, the players are as far apart as the two words on the table (their last words).
+  let before = MAX_HOPS;
+  for (const a of idsA) for (const b of idsB) before = Math.min(before, hops(lex, a, b));
+  // Everything Gary may look at, as one key: the same complete state always gives the same whims.
+  const stateKey = [language, ...list.map(wordKey), "|", ...history.map(round => round.map(wordKey).join("+")), "|", ...[...excludeKeys].sort()].join(" ");
   // Likely-human-answer is relative: the candidate closest to the predicted answers scores 1.
   const bestHuman = ranked.reduce((max, item) => Math.max(max, item.humanRaw), 0) || 1;
   for (const item of ranked) {
     item.human = item.humanRaw / bestHuman;
-    // Personality only ever separates near-ties: 5% of the total at most.
-    item.personality = rng ? rng() : 0.5;
+    // Personality only ever separates near-ties: 5% of the total at most, fixed by the state.
+    item.personality = hashString(`${stateKey}|${item.id}`) / 4294967296;
     item.score = w.human * item.human + w.fit * item.fit + w.centre * item.centre + w.personality * item.personality - item.penalty;
   }
-  ranked.sort((x, y) => y.score - x.score || x.word.localeCompare(y.word));
-  return {ranked, predicted, themeWords, knownA: idsA.length > 0, knownB: idsB.length > 0};
+  // Contenders: within humanMargin of the most human-likely candidate of the same tier, counting the
+  // game's own penalties (a lazy piece-of-a-prompt answer is not a contender just for being likely).
+  const effectiveHuman = item => item.human - item.penalty / w.human;
+  const bestByTier = new Map();
+  for (const item of ranked) bestByTier.set(item.tier, Math.max(bestByTier.get(item.tier) ?? -Infinity, effectiveHuman(item)));
+  for (const item of ranked) item.contender = effectiveHuman(item) >= bestByTier.get(item.tier) - tuning.humanMargin;
+  ranked.sort((x, y) => Number(y.contender) - Number(x.contender) || y.score - x.score || x.word.localeCompare(y.word));
+  return {ranked, predicted, themeWords, before, knownA: idsA.length > 0, knownB: idsB.length > 0};
 }
 
 /** First move: no prompts yet, so pick a friendly, well-connected word at random. */
@@ -369,11 +434,37 @@ export function chooseOpening({language = "en", excludeKeys = new Set(), rng = M
 }
 
 /**
- * @typedef {{word: string, total: number, human: number, fit: number, centre: number, personality: number, penalty: number, sides: [number, number], sideways: boolean, tier: number}} ScoredCandidate
- * @typedef {{pair: [string, string], language: Language, trail: string[], predicted: {word: string, p: number, why: string}[], candidates: ScoredCandidate[], selected: string, reason: string, quality: import("./types.js").BotQuality, weights: typeof BOT_TUNING.weights}} GaryDecision
+ * @typedef {{word: string, total: number, human: number, fit: number, centre: number, personality: number, penalty: number, sides: [number, number], sideways: boolean, after: number, contender: boolean, tier: number}} ScoredCandidate
+ * @typedef {{pair: [string, string], language: Language, trail: string[], predicted: {word: string, p: number, why: string}[], candidates: ScoredCandidate[], selected: string, reason: string, beat: string, distance: {before: number, after: number}, quality: import("./types.js").BotQuality, weights: typeof BOT_TUNING.weights}} GaryDecision
  */
 
 const round3 = x => Math.round(x * 1000) / 1000;
+
+/**
+ * Why candidate #1 beat candidate #2, term by term (weighted, so the numbers add up to the margin).
+ * e.g. "GAME beat FAMILY by +0.041 because human-likelihood +0.035 and personality +0.022
+ * outweighed FAMILY's dual-word fit advantage 0.015".
+ */
+export function beatLine(first, second, weights) {
+  const A = first.word.toUpperCase();
+  if (!second) return `${A} had no eligible rival`;
+  const B = second.word.toUpperCase();
+  /** @type {[string, number][]} */
+  const terms = [
+    ["human-likelihood", weights.human * (first.human - second.human)],
+    ["dual-word fit", weights.fit * (first.fit - second.fit)],
+    ["semantic centre", weights.centre * (first.centre - second.centre)],
+    ["personality", weights.personality * (first.personality - second.personality)],
+    ["penalties", second.penalty - first.penalty]
+  ];
+  const margin = first.score - second.score;
+  const fmt = v => `${v >= 0 ? "+" : "-"}${Math.abs(v).toFixed(3)}`;
+  const pros = terms.filter(([, v]) => v > 0.0005).sort((x, y) => y[1] - x[1]);
+  const cons = terms.filter(([, v]) => v < -0.0005).sort((x, y) => x[1] - y[1]);
+  const ahead = pros.map(([name, v]) => `${name} ${fmt(v)}`).join(" and ") || "a tie broken by name";
+  if (!cons.length) return `${A} beat ${B} by ${fmt(margin)}: ahead on ${ahead}`;
+  return `${A} beat ${B} by ${fmt(margin)} because ${ahead} outweighed ${B}'s ${cons.map(([name, v]) => `${name} advantage ${Math.abs(v).toFixed(3)}`).join(" and ")}`;
+}
 
 /** Why this word won, in a sentence (for the developer diagnostics). */
 function explain(pick, predicted, lex, tierNote) {
@@ -406,23 +497,26 @@ function explain(pick, predicted, lex, tierNote) {
  * @returns {BotPick & {decision?: GaryDecision}}
  */
 export function chooseResponse({prompts, language = "en", excludeKeys = new Set(), history = [], rng = Math.random, tuning = BOT_TUNING, explain: wantExplain = false}) {
-  const {ranked, predicted, themeWords, knownA, knownB} = rankCandidates({prompts, language, excludeKeys, history, tuning, rng});
+  // rng is only used for an opening or last-resort word; a decision about words on the table is a
+  // pure function of the game state.
+  const {ranked, predicted, themeWords, before, knownA, knownB} = rankCandidates({prompts, language, excludeKeys, history, tuning});
   const lex = getLexicon(language);
   const tier = n => ranked.filter(item => item.tier === n);
-  /** @type {{pick: any, quality: import("./types.js").BotQuality, note: string} | null} */
+  /** @type {{pick: any, runnerUp: any, rivals: number, quality: import("./types.js").BotQuality, note: string} | null} */
   let choice = null;
+  const from = (pool, quality, note) => ({pick: pool[0], runnerUp: pool[1] || null, rivals: pool.filter(r => r.contender).length - 1, quality, note});
   const strong = tier(1);
-  if (strong.length) choice = {pick: strong[0], quality: "strong", note: ""};
-  for (const n of [2, 3, 4]) if (!choice && tier(n).length) choice = {pick: tier(n)[0], quality: "loose", note: `fallback tier ${n}: no word links both strongly`};
-  if (!choice && tier(5).length && knownA && knownB) choice = {pick: tier(5)[0], quality: "loose", note: "fallback tier 5: linked through two-step paths"};
+  if (strong.length) choice = from(strong, "strong", "");
+  for (const n of [2, 3, 4]) if (!choice && tier(n).length) choice = from(tier(n), "loose", `fallback tier ${n}: no word links both strongly`);
+  if (!choice && tier(5).length && knownA && knownB) choice = from(tier(5), "loose", "fallback tier 5: linked through two-step paths");
   // Only reachable when a prompt is unknown to the vocabulary: nothing can relate to it.
   if (!choice && ranked.length && (!knownA || !knownB)) {
     const known = ranked.slice().sort((x, y) => Math.max(y.a, y.b) - Math.max(x.a, x.b) || y.score - x.score);
-    choice = {pick: known[0], quality: "loose", note: "one prompt is unknown to the game; answered from the other"};
+    choice = from(known, "loose", "one prompt is unknown to the game; answered from the other");
   }
   if (!choice) {
     const balanced = ranked.filter(item => !item.lopsided && item.pathsA > 0 && item.pathsB > 0);
-    if (balanced.length) choice = {pick: balanced[0], quality: "loose", note: "last resort: balanced paths"};
+    if (balanced.length) choice = from(balanced, "loose", "last resort: balanced paths");
   }
   if (!choice) {
     const list = (Array.isArray(prompts) ? prompts : []).map(p => wordKey(String(p ?? ""))).filter(Boolean);
@@ -441,10 +535,14 @@ export function chooseResponse({prompts, language = "en", excludeKeys = new Set(
     predicted: predicted.map(h => ({word: h.word, p: round3(h.p), why: h.why})),
     candidates: ranked.filter(item => item.tier > 0).slice(0, 12).map(item => ({
       word: item.word, total: round3(item.score), human: round3(item.human), fit: round3(item.fit), centre: round3(item.centre),
-      personality: round3(item.personality), penalty: round3(item.penalty), sides: [round3(item.a), round3(item.b)], sideways: item.sideways, tier: item.tier
+      personality: round3(item.personality), penalty: round3(item.penalty), sides: [round3(item.a), round3(item.b)], sideways: item.sideways, after: round3(item.after), contender: item.contender, tier: item.tier
     })),
     selected: choice.pick.word,
     reason: explain(choice.pick, predicted, lex, choice.note),
+    beat: choice.runnerUp && !choice.runnerUp.contender
+      ? `${choice.pick.word.toUpperCase()} was the only word within ${tuning.humanMargin} of the most likely human answer; next best ${choice.runnerUp.word.toUpperCase()} trailed on human-likelihood by ${(choice.pick.human - choice.runnerUp.human).toFixed(3)}`
+      : beatLine(choice.pick, choice.runnerUp, tuning.weights),
+    distance: {before: round3(before), after: round3(choice.pick.after)},
     quality: choice.quality,
     weights: tuning.weights
   };

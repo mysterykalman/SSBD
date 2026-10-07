@@ -703,3 +703,43 @@ Now (`src/client/sw.js`, `registerServiceWorker` in `src/client/app.js`):
   open older tab's Reload; the worker never caching `/api/*` and Family mode using the live API.
   Putting cache-first navigation back makes the fresh-visit test fail.
 
+
+## Convergence validation pass (latest)
+
+Objective restated: "what is the player most likely to type?", not "which word forms the cleanest
+semantic relationship?". The validation found the first convergence model still leaned structural:
+
+- **SISTER + PLAY → KID 100% was structural.** Breakdown (old model): KID human 1.00 / fit 0.90
+  (sister 0.90, play 0.90) / centre 0.55; GAME human 0.80 / fit 0.54 (sister 0.45, play 0.90) /
+  centre 0.28; no trail, no penalties, no sideways flags. Two causes:
+  1. The human model used a geometric mean of the two first-thought strengths, which itself rewards
+     balance. Replaced by *generate-and-check*: a strong first thought of either word, kept if the
+     other word finds it at least plausible (`plausible: 0.3`); zero if the other word doesn't
+     suggest it at all.
+  2. The human term counted every *related* predicted answer at 45% of an exact match, so a word
+     sitting near several predictions beat the likeliest one. Now an exact match counts fully and
+     closeness counts at `nextTurn: 0.4` × similarity.
+  With those, GAME has the highest human likelihood (0.26 vs KID 0.13) but still lost on fit +
+  centre, so structure is now strictly secondary: weights human 0.70 / fit 0.15 / centre 0.10 /
+  personality 0.05, and only candidates within `humanMargin: 0.1` of the likeliest answer (after the
+  game's own penalties) can win. Result: GAME (FAMILY next, near-tie).
+- **Variability source.** Personality drew a fresh random number per game (the game's hidden seed),
+  so identical visible states could flip near-ties (PET/ANIMAL, FAMILY/RELATIVE). Personality is
+  now a hash of the complete state (language, pair, trail, used words). Same state → same word.
+- **Convergence distance.** Each candidate carries `after`: expected word-graph hops (links,
+  phrases, categories; capped at 4) from the word to the predicted human answer. `before` is the
+  distance between the two words on the table. Shown in the diagnostics.
+- **Diagnostics** add "Why #1 beat #2" (weighted per-term differences, e.g. "GAME beat FAMILY by
+  +0.041 because human-likelihood +0.035 and personality +0.024 outweighed FAMILY's dual-word fit
+  advantage 0.015 and semantic centre advantage 0.003"), the convergence distance, and a contender
+  mark per candidate.
+- **Tests** (`test/convergence-validation.test.mjs`, general samples, no hand-picked expectations):
+  fixed-state determinism (17 states × 200 seeds), contextual variation (200 simulated trails per
+  pair), convergence distance (Gary within 0.25 hops of the best eligible move on 100% of ~170
+  sampled turns; a structure-only policy fails the same bar), human first (structure never overturns
+  a human-likelihood lead above 0.1).
+- **Older tests changed** because they encoded the structural objective: the "directly linked to
+  both" share in the lexicon quality test is now a 75% sanity floor (it was 85%; human-first picks
+  like GAME for SISTER + PLAY are a strong first thought of one word that plausibly fits the other),
+  and the POMME + TERRE phrase test now checks VER's phrase strength in the ranking instead of
+  forcing it to be picked (ARBRE is POMME's stronger first thought).

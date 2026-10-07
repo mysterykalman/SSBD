@@ -61,6 +61,8 @@ export function logGaryDecision(decision) {
     if (decision.predicted?.length) console.table(decision.predicted);
     if (decision.candidates?.length) console.table(decision.candidates.map(c => ({...c, sides: c.sides.join(" / ")})));
     console.log("Selected:", decision.selected, "| Reason:", decision.reason);
+    if (decision.beat) console.log("Why #1 beat #2:", decision.beat);
+    if (decision.distance) console.log(`Convergence distance: ${decision.distance.before} → ${decision.distance.after} expected hops`);
     console.groupEnd();
   } catch {}
 }
