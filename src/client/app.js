@@ -9,6 +9,7 @@ import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
 import {trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
+import {GARY, garyArt, garyRandom, hasMetGary, markMetGary, pickReaction, recentLines, rememberLines, typeInto} from "./gary.js";
 
 const store = createStore();
 const state = {
@@ -170,7 +171,8 @@ function serverView(game) {
 }
 
 const isSoloLike = view => view.kind === "solo" || view.kind === "legacy-solo";
-const otherLabel = view => (isSoloLike(view) ? t("bot") : view.otherName || t("friend"));
+// The Solo opponent is always Gary; family opponents keep their own names.
+const otherLabel = view => (isSoloLike(view) ? t("garyName") : view.otherName || t("friend"));
 const sideLabel = (view, side) => (side === view.youSide ? t("you") : otherLabel(view));
 
 // ---------- player badges ----------
@@ -184,7 +186,8 @@ function initialOf(name) {
 }
 /** Decorative badge; the name is always written next to it, so it is hidden from screen readers. */
 function badge(name, {bot = false, cls = ""} = {}) {
-  return h("span", {class: `badge ${bot ? "bot" : ""} ${cls}`, "aria-hidden": "true"}, bot ? t("botInitial") : initialOf(name));
+  if (bot) return h("span", {class: `badge gary ${cls}`, "aria-hidden": "true"}, garyArt("meh", "badge-art"));
+  return h("span", {class: `badge ${cls}`, "aria-hidden": "true"}, initialOf(name));
 }
 const otherBadge = (view, cls) => badge(view.otherName, {bot: isSoloLike(view), cls});
 
@@ -448,6 +451,7 @@ function startSolo(language = state.lang) {
   if (!store.saveSolo(game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
   navigate(`/solo/${game.id}`);
   $("word")?.focus(); // Solo renders synchronously; focus now so typing right away is never lost
+  if (!hasMetGary()) showGaryIntro({onDone: () => $("word")?.focus()});
   // Retry only if focus was lost (e.g. to <body>), never pulling it away from a control the player moved to.
   setTimeout(() => { const active = document.activeElement; if (!active || active === document.body) $("word")?.focus(); }, 30);
 }
@@ -577,7 +581,11 @@ const COUNT_MS = 380, STEP_MS = 190;
 function startReveal(view, move) {
   closeReveal();
   const token = Symbol("reveal");
-  state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token};
+  const solo = isSoloLike(view);
+  // Gary's occasional remark: flavour only, decided here and never fed back into the game.
+  const reaction = solo ? pickReaction({status: move.status, move: move.number, recent: recentLines(view.id), random: garyRandom}) : null;
+  if (reaction) rememberLines(view.id, reaction.keys);
+  state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token, reaction};
   const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
   const dlg = h("dialog", {id: "revealModal", class: `reveal-modal ${move.status === "MATCHED" ? "match" : ""}`, "aria-labelledby": "revealHeading",
     oncancel: event => { event.preventDefault(); if (state.reveal?.phase === "ready") finishReveal(); }},
@@ -588,7 +596,8 @@ function startReveal(view, move) {
         h("div", {class: "rv-words"},
           revealWord(t("revealYourWord"), move.words[view.youSide], "you"),
           h("span", {class: "op rv-step", "aria-hidden": "true"}, move.status === "MATCHED" ? "=" : "+"),
-          revealWord(isSoloLike(view) ? t("revealBotWord") : t("revealTheirWord", {name: otherLabel(view)}), move.words[view.otherSide], "other")),
+          solo ? garyRevealWord() : revealWord(t("revealTheirWord", {name: otherLabel(view)}), move.words[view.otherSide], "other")),
+        reaction ? h("p", {class: "gary-line", id: "garyLine", hidden: true}, h("span", {class: "gary-says"})) : null,
         h("p", {class: "rv-outcome rv-step"}, move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")),
         move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, t("revealLoose")) : null,
         ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(move)))));
@@ -602,6 +611,28 @@ function nextStartsText(move) {
   const pair = `${move.words.a.toUpperCase()} + ${move.words.b.toUpperCase()}`;
   const [before, after = ""] = t("revealNextStarts", {a: "@@A@@", b: "@@B@@"}).split(/@@A@@\s*\+\s*@@B@@/);
   return [before, h("span", {class: "rv-pair"}, pair), after];
+}
+
+/** Gary's chip starts empty; his word is typed in once the reveal begins (see runReveal). */
+function garyRevealWord() {
+  return h("div", {class: "rv-word other gary rv-step", "data-gary": "word"},
+    h("small", {}, garyArt("meh", "tiny"), t("revealBotWord")),
+    h("span", {class: "chip-word", id: "garyWord", lang: state.game?.language}));
+}
+
+/** Type Gary's line (one or more short phrases with a beat between them). */
+async function garySays(keys, {reduced, alive}) {
+  const line = $("garyLine");
+  if (!line) return "";
+  const target = line.querySelector(".gary-says");
+  const phrases = keys.map(key => t(key));
+  line.hidden = false;
+  if (reduced) { await typeInto(target, phrases.join(" "), {reduced: true}); return phrases.join(" "); }
+  for (let i = 0; i < phrases.length; i++) {
+    if (i) { await sleep(450); if (!alive()) break; }
+    await typeInto(target, phrases[i], {alive, maxTotal: 700});
+  }
+  return phrases.join(" ");
 }
 
 function revealWord(label, word, cls) {
@@ -634,13 +665,25 @@ async function runReveal(view, move, ended, token) {
   count.hidden = true;
   result.hidden = false;
   setRevealPhase("revealing");
-  announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: move.words[view.youSide].toUpperCase()}),
-    t("revealSaid", {name: sideLabel(view, view.otherSide), word: move.words[view.otherSide].toUpperCase()}),
-    move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].join(" "), `reveal:${view.id}:${move.number}`);
+  const reaction = state.reveal?.reaction;
+  let remark = "";
   for (const step of result.querySelectorAll(".rv-step")) {
     step.classList.add("show");
+    if (step.dataset.gary === "word") {
+      // Gary begrudgingly types his (already chosen) word, sometimes with a remark before or after.
+      if (reaction?.when === "before") { remark = await garySays(reaction.keys, {reduced: !motion, alive}); if (motion) await sleep(350); }
+      if (!alive()) return;
+      await typeInto(step.querySelector(".chip-word"), move.words[view.otherSide], {reduced: !motion, alive});
+      if (!alive()) return;
+      if (reaction?.when === "after") { if (motion) await sleep(350); remark = await garySays(reaction.keys, {reduced: !motion, alive}); }
+    }
     if (motion) { await sleep(STEP_MS); if (!alive()) return; }
   }
+  // One announcement, once everything (including Gary's word and remark) is complete.
+  announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: move.words[view.youSide].toUpperCase()}),
+    t("revealSaid", {name: sideLabel(view, view.otherSide), word: move.words[view.otherSide].toUpperCase()}),
+    remark ? t("revealSaid", {name: t("garyName"), word: remark}) : "",
+    move.status === "MATCHED" ? t("revealMatch") : move.status === "EXHAUSTED" ? t("gameOverAww") : t("revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : t("keepPlaying"));
   result.append(button);
   setRevealPhase("ready");
@@ -737,7 +780,7 @@ function endPanel(view, last, fresh) {
   return h("div", {class: `end ${matched ? "win" : "over"}`},
     matched
       ? h("div", {class: "end-icon", "aria-hidden": "true"}, "🎉")
-      : sleepyToken(fresh && !reducedMotion()),
+      : solo ? garyGoodbye(fresh && !reducedMotion()) : sleepyToken(fresh && !reducedMotion()),
     h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
     h("p", {}, matched ? t("winCopy", {word: last.words.a.toUpperCase(), n: last.number}) : t("gameOverCopy")),
     h("div", {class: "row center end-actions"},
@@ -748,6 +791,49 @@ function endPanel(view, last, fresh) {
       }}, solo ? t("playAgain") : t("rematch")),
       h("button", {class: "btn ghost", type: "button", id: "homeBtn", onclick: () => navigate("/")}, t("returnHome")),
       h("button", {class: "btn ghost", type: "button", id: "historyBtn", onclick: viewHistory}, t("viewHistory"))));
+}
+
+/** Solo game over: Gary says "finally", then, after a beat, "...same time tomorrow?". */
+function garyGoodbye(animate) {
+  const [first, second] = GARY.special.gameOver.map(key => t(key));
+  const one = h("span", {class: "bye-line", "aria-hidden": "true"});
+  const two = h("span", {class: "bye-line later", "aria-hidden": "true"});
+  const block = h("div", {class: `gary-end ${animate ? "animate" : ""}`},
+    garyArt("sleepy", "end-art"),
+    h("p", {class: "gary-bye", id: "garyBye"}, one, two, h("span", {class: "sr-only"}, `${t("garyName")}: ${first} ${second}`)));
+  if (!animate) {
+    one.textContent = first;
+    two.textContent = second;
+  } else {
+    typeInto(one, first, {maxTotal: 500}).then(() => sleep(1100)).then(() => {
+      if (two.isConnected) typeInto(two, second, {maxTotal: 900});
+    });
+  }
+  return block;
+}
+
+/** First Solo game: a short "Meet your rival" moment. Shown once; can be reopened from the profile badge. */
+function showGaryIntro({onDone} = {}) {
+  $("garyIntro")?.remove();
+  const done = () => {
+    markMetGary();
+    const dlg = $("garyIntro");
+    if (dlg) { if (dlg.open) dlg.close(); dlg.remove(); }
+    onDone?.();
+  };
+  const dlg = h("dialog", {id: "garyIntro", class: `gary-intro ${reducedMotion() ? "" : "animate"}`, "aria-labelledby": "garyIntroTitle", "aria-describedby": "garyIntroSays",
+    oncancel: event => { event.preventDefault(); done(); }},
+    h("div", {class: "gi-body"},
+      h("p", {class: "rv-kicker"}, t(GARY.intro.kicker)),
+      garyArt("meh", "intro-art"),
+      h("h2", {class: "gi-title", id: "garyIntroTitle"}, t(GARY.title)),
+      h("div", {class: "gi-says", id: "garyIntroSays"},
+        ...GARY.intro.lines.map((key, i) => h("p", {class: "gi-line", style: `--i:${i}`}, t(key))),
+        h("p", {class: "gi-aside", style: `--i:${GARY.intro.lines.length}`}, t(GARY.intro.aside))),
+      h("button", {class: "btn big", type: "button", id: "garyIntroGo", onclick: done}, t(GARY.intro.cta))));
+  document.body.append(dlg);
+  dlg.showModal();
+  $("garyIntroGo").focus();
 }
 
 /** A round sleepy token: it droops and yawns once, then rests. Purely decorative. */
@@ -1250,13 +1336,14 @@ function joinDialog(prefill) {
 }
 
 function profileDialog() {
+  const meetGary = h("button", {class: "link", type: "button", id: "meetGaryAgain", onclick: () => { $("dialog")?.close(); showGaryIntro(); }}, t("garyMeetAgain"));
   if (!state.player) {
-    dialog(t("solo"), t("profileSolo"), null, {cancelLabel: t("close"), extra: h("button", {class: "link", type: "button", onclick: () => recoveryDialog(null)}, t("haveRecovery"))});
+    dialog(t("solo"), t("profileSolo"), null, {cancelLabel: t("close"), extra: [h("button", {class: "link", type: "button", onclick: () => recoveryDialog(null)}, t("haveRecovery")), meetGary]});
     return;
   }
   dialog(t("profileTitle", {name: state.player.display_name}), t("profileCopy"),
     h("div", {}, h("p", {class: "code"}, state.player.recovery_code || "—"), h("p", {class: "muted"}, t("profileSolo"))),
-    {cancelLabel: t("close")});
+    {cancelLabel: t("close"), extra: meetGary});
 }
 
 // ---------- boot ----------

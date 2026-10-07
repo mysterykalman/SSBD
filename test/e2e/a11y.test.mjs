@@ -182,7 +182,7 @@ test("keyboard-only Solo: Tab to start, type, Enter, focus returns to the word b
   const said = await page.locator("#srAnnounce").textContent();
   assert.match(said, /Reveal!/);
   assert.match(said, new RegExp(`You: ${mine}`, "i"));
-  assert.match(said, new RegExp(`Bot: ${bot}`, "i"));
+  assert.match(said, new RegExp(`Gary: ${bot}`, "i"));
   assert.equal(await page.getAttribute("#srAnnounce", "aria-live"), "polite");
   assert.equal(await page.locator("#revealModal[aria-live], #revealModal[role=status], #revealModal [aria-live], #revealModal [role=status], #revealModal [role=alert]").count(), 0,
     "reveal modal is not a second live region");

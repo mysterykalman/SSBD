@@ -78,7 +78,7 @@ test("When the reveal modal is open, the pending next pair is not rendered in th
   // Reveal, in the same modal.
   await page.waitForSelector("#revealContinue");
   const modal = await page.locator("#revealModal").innerText();
-  assert.match(modal, /YOUR WORD[\s\S]*BOT WORD/i);
+  assert.match(modal, /YOUR WORD[\s\S]*GARY.S WORD/i);
   assert.match(modal, new RegExp(`${mine}[\\s\\S]*${bot}`, "i"));
   assert.match(modal, new RegExp(`Next move starts with ${mine} \\+ ${bot}`, "i"));
   assert.match(await page.locator("#revealContinue").innerText(), /Keep playing/);
@@ -147,7 +147,7 @@ test("one-letter word, refresh during the reveal, Escape and FR copy", async () 
   await page.keyboard.press("Escape"); // ignored until the reveal is ready
   await page.waitForSelector("#revealContinue");
   assert.equal(await page.locator("#revealModal[open]").count(), 1);
-  assert.match(await page.locator("#revealModal").innerText(), /TON MOT[\s\S]*MOT DU ROBOT/i);
+  assert.match(await page.locator("#revealModal").innerText(), /TON MOT[\s\S]*MOT DE GARY/i);
   assert.match(await page.locator("#revealModal").innerText(), /Le prochain coup commence avec/);
   assert.match(await page.locator("#revealContinue").innerText(), /On continue/);
   await page.keyboard.press("Escape"); // when ready, Escape continues like the button

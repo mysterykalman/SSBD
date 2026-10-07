@@ -15,8 +15,24 @@ export async function startServer({port = 9000 + Math.floor(Math.random() * 900)
   return {url: `http://localhost:${port}`, port, stop: () => { proc.kill(); return exited; }};
 }
 
+/**
+ * Launch Chromium. New contexts have already "met Gary" (the one-time Solo intro is skipped) and
+ * Gary never makes a remark, so flows stay deterministic. Opt back in per context with
+ * `browser.newContext({meetGary: true})` (show the intro) or `{garyRandom: () => number}` source
+ * via `{garyRandomValue: 0.1}` (a fixed value for Gary's presentation randomness).
+ */
 export async function launch() {
-  return chromium.launch({executablePath: process.env.CHROMIUM_PATH || undefined});
+  const browser = await chromium.launch({executablePath: process.env.CHROMIUM_PATH || undefined});
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async ({meetGary = false, garyRandomValue = 0.99, ...options} = {}) => {
+    const context = await newContext(options);
+    await context.addInitScript(([met, value]) => {
+      if (!met) { try { localStorage.setItem("ssbd_gary_met", "1"); } catch {} }
+      if (value !== null) window.__garyRandom = () => value;
+    }, [meetGary, garyRandomValue]);
+    return context;
+  };
+  return browser;
 }
 
 /** The bot's locked word for the open Solo move, read from device storage (test-only peek). */

@@ -31,8 +31,8 @@ test("fresh Solo: blank start, one input, simultaneous reveal, next prompt equal
   assert.match(reveal, new RegExp(mine, "i"));
   assert.match(reveal, new RegExp(bot, "i"));
   assert.match(reveal, /YOUR WORD/i);
-  assert.match(reveal, /BOT WORD/i);
-  assert.match(reveal, new RegExp(`YOUR WORD[\\s\\S]*${mine}[\\s\\S]*BOT WORD[\\s\\S]*${bot}`, "i"), "your word first, then the bot's");
+  assert.match(reveal, /GARY.S WORD/i);
+  assert.match(reveal, new RegExp(`YOUR WORD[\\s\\S]*${mine}[\\s\\S]*GARY.S WORD[\\s\\S]*${bot}`, "i"), "your word first, then the bot's");
   assert.equal(await page.locator("#prompt").count(), 0, "board stays on move 1 until Keep playing");
   assert.match(await page.locator("#moveLabel").innerText(), /Move 1 of 20/);
   assert.ok(await continueReveal(page), "Keep playing closes the reveal");
