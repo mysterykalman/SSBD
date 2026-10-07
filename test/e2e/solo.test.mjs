@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, lockIn, startServer} from "./helpers.mjs";
+import {botWord, continueReveal, launch, lockIn, revealShown, startServer} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -19,20 +19,24 @@ test("fresh Solo: blank start, one input, simultaneous reveal, next prompt equal
   assert.equal(await page.inputValue("#word"), "");
   assert.equal(await page.locator("#prompt").count(), 0, "no prompt words on move 1");
   assert.equal(await page.locator(".trail-row").count(), 0, "no fabricated history");
-  assert.equal(await page.locator(".reveal").count(), 0);
+  assert.equal(await page.locator("#revealModal").count(), 0);
   const board = await page.locator(".board").innerText();
   assert.doesNotMatch(board, MULTIPLAYER_TEXT);
   assert.match(await page.locator("#moveLabel").innerText(), /Move 1 of 20/);
 
   const bot = await botWord(page);
   const mine = bot.toLowerCase() === "giraffe" ? "penguin" : "giraffe";
-  await lockIn(page, mine);
-  await page.waitForSelector(".reveal");
-  const reveal = await page.locator(".reveal").innerText();
+  await lockIn(page, mine, {reveal: false});
+  const reveal = await revealShown(page);
   assert.match(reveal, new RegExp(mine, "i"));
   assert.match(reveal, new RegExp(bot, "i"));
-  assert.match(reveal, /YOU/i);
-  assert.match(reveal, /BOT/i);
+  assert.match(reveal, /YOUR WORD/i);
+  assert.match(reveal, /BOT WORD/i);
+  assert.match(reveal, new RegExp(`YOUR WORD[\\s\\S]*${mine}[\\s\\S]*BOT WORD[\\s\\S]*${bot}`, "i"), "your word first, then the bot's");
+  assert.equal(await page.locator("#prompt").count(), 0, "board stays on move 1 until Keep playing");
+  assert.match(await page.locator("#moveLabel").innerText(), /Move 1 of 20/);
+  assert.ok(await continueReveal(page), "Keep playing closes the reveal");
+  assert.equal(await page.locator("#revealModal").count(), 0);
   const tiles = await page.locator("#prompt .tile").allInnerTexts();
   assert.deepEqual(tiles.map(s => s.toLowerCase()), [mine, bot.toLowerCase()]);
   assert.equal(await page.inputValue("#word"), "", "input is reset for the new move");

@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {continueReveal, launch, startServer} from "./helpers.mjs";
+import {continueReveal, launch, revealShown, startServer} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -13,7 +13,7 @@ async function named(context, name) {
 }
 
 test("family game: create, join, private words, simultaneous reveal, next prompt", async () => {
-  const ctxA = await browser.newContext(), ctxB = await browser.newContext({viewport: {width: 375, height: 740}});
+  const ctxA = await browser.newContext({reducedMotion: "reduce"}), ctxB = await browser.newContext({viewport: {width: 375, height: 740}, reducedMotion: "reduce"});
   const ana = await named(ctxA, "Ana"), ben = await named(ctxB, "Ben");
 
   await ana.click("#createFamily");
@@ -49,13 +49,20 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
 
   await ben.fill("#word", "Planet");
   await ben.click("#lockBtn");
-  await ben.waitForSelector(".trail-row");
-  await continueReveal(ben);
+  // Each player gets the reveal in the modal, their own word first; the board waits for Keep playing.
+  const benReveal = await revealShown(ben);
+  assert.match(benReveal, /YOUR WORD[\s\S]*PLANET[\s\S]*ANA'S WORD[\s\S]*ROCKET/i);
+  assert.equal(await ben.locator("#prompt").count(), 0, "Ben's board stays on move 1 under the modal");
+  assert.ok(await continueReveal(ben));
   await ben.waitForSelector("#prompt");
   assert.deepEqual((await ben.locator("#prompt .tile").allInnerTexts()).map(w => w.toLowerCase()), ["rocket", "planet"]);
-  assert.match(await ben.locator(".reveal").innerText(), /ANA[\s\S]*ROCKET[\s\S]*YOU[\s\S]*PLANET/i);
+  assert.match(await ben.locator(".trail-row").first().innerText(), /ROCKET[\s\S]*PLANET/i);
 
-  await ana.waitForSelector("#prompt", {timeout: 10000});
+  const anaReveal = await revealShown(ana);
+  assert.match(anaReveal, /YOUR WORD[\s\S]*ROCKET[\s\S]*BEN'S WORD[\s\S]*PLANET/i);
+  assert.equal(await ana.locator("#prompt").count(), 0, "Ana's board stays on move 1 under the modal");
+  assert.ok(await continueReveal(ana));
+  await ana.waitForSelector("#prompt");
   assert.deepEqual((await ana.locator("#prompt .tile").allInnerTexts()).map(w => w.toLowerCase()), ["rocket", "planet"], "same stable order for both players");
   assert.match(await ana.locator(".trail-row").first().innerText(), /ROCKET[\s\S]*PLANET/i);
 
@@ -67,8 +74,12 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
   await ana.waitForSelector(".notice.pending");
   await ben.fill("#word", "Space");
   await ben.click("#lockBtn");
-  await ben.waitForSelector(".end.win");
-  await ana.waitForSelector(".end.win", {timeout: 10000});
+  for (const page of [ben, ana]) {
+    assert.match(await revealShown(page), /SAME WORD/);
+    assert.equal(await page.locator("#app .end").count(), 0, "game over waits for the reveal to be dismissed");
+    assert.ok(await continueReveal(page));
+    await page.waitForSelector(".end.win");
+  }
   await ctxA.close();
   await ctxB.close();
 });

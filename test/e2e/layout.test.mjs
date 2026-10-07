@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {SHOTS, botWord, launch, lockIn, noHorizontalScroll, startServer} from "./helpers.mjs";
+import {SHOTS, botWord, launch, lockIn, noHorizontalScroll, revealShown, startServer} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -101,9 +101,15 @@ test("keyboard: start and play Solo with the keyboard only, focus is visible", a
   await page.waitForFunction(() => document.activeElement?.id === "word", null, {timeout: 2000});
   await page.keyboard.type("lighthouse");
   await page.keyboard.press("Enter");
+  // The reveal modal takes focus on "Keep playing"; Enter continues, with a visible focus ring.
+  await revealShown(page);
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "revealContinue");
+  assert.notEqual(await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle), "none", "focus ring visible on Keep playing");
+  await page.keyboard.press("Enter");
+  await page.waitForSelector("#revealModal", {state: "detached"});
   await page.waitForSelector(".trail-row");
-  const active = await page.evaluate(() => document.activeElement?.id);
-  assert.ok(active === "word" || active === "newGameBtn", `focus after move: ${active}`);
+  const active = await page.evaluate(() => document.activeElement?.id || (document.activeElement?.matches(".end .board-title") ? "end-title" : document.activeElement?.tagName));
+  assert.ok(active === "word" || active === "end-title", `focus after move: ${active}`);
   assert.equal(await page.getAttribute(".stones", "role"), "progressbar");
   assert.ok(await page.getAttribute('[data-lang="en"]', "aria-pressed"));
   await context.close();
@@ -117,11 +123,30 @@ test("reveal and win animations never block input and respect reduced motion", a
     await page.click("#startSolo");
     await page.waitForSelector("#word");
     const bot = await botWord(page);
-    await lockIn(page, bot.toLowerCase() === "giraffe" ? "penguin" : "giraffe");
-    await page.waitForSelector(".reveal");
-    assert.equal(await page.locator(".reveal.animate").count(), reducedMotion === "reduce" ? 0 : 1, `reveal animation with ${reducedMotion}`);
-    // The input is usable straight away, even mid-animation.
-    await page.fill("#word", "zebra");
+    await lockIn(page, bot.toLowerCase() === "giraffe" ? "penguin" : "giraffe", {reveal: false});
+    const started = Date.now();
+    await page.waitForSelector("#revealModal[open]");
+    if (reducedMotion === "reduce") {
+      // No countdown and no reveal animation: the result and the button are there straight away.
+      assert.equal(await page.locator("#revealCount").isVisible(), false, "no countdown with reduced motion");
+      await page.locator("#revealContinue").waitFor({state: "visible", timeout: 1000});
+      assert.ok(Date.now() - started < 1000, "reveal shown within 1s with reduced motion");
+      const moving = await page.evaluate(() => [...document.querySelectorAll("#revealModal *")]
+        .filter(el => { const s = getComputedStyle(el); return parseFloat(s.transitionDuration) > 0.01 || (s.animationName !== "none" && parseFloat(s.animationDuration) > 0.01); })
+        .map(el => el.className));
+      assert.deepEqual(moving, [], "no reveal animation with reduced motion");
+    } else {
+      assert.equal(await page.locator("#revealCount").isVisible(), true, "countdown plays with motion");
+    }
+    // The modal intentionally holds the board until "Keep playing", which is focused and takes the click as soon as it appears.
+    await page.locator("#revealContinue").waitFor({state: "visible"});
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "revealContinue", "Keep playing is focused");
+    await page.locator("#revealContinue").click({trial: true, timeout: 500});
+    await page.click("#revealContinue", {timeout: 500});
+    await page.waitForSelector("#revealModal", {state: "detached"});
+    // The input is focused and usable straight away after continuing.
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "word", "focus returns to the word box");
+    await page.keyboard.type("zebra");
     assert.equal(await page.inputValue("#word"), "zebra");
     // Win: type the bot's word; confetti never intercepts clicks and is gone quickly.
     await lockIn(page, await botWord(page));

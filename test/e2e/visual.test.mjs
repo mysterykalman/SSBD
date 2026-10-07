@@ -3,7 +3,7 @@
 // long, accented and one-letter words, and again with the text size doubled.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {SHOTS, botWord, continueReveal, launch, lockIn, noHorizontalScroll, playDistinct, startServer} from "./helpers.mjs";
+import {SHOTS, botWord, continueReveal, launch, lockIn, noHorizontalScroll, playDistinct, revealShown, startServer} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -23,8 +23,8 @@ const WORDS = {
 /** Pairwise overlaps inside each row/box, and anything past the left/right edge of the viewport. */
 async function layoutProblems(page) {
   return page.evaluate(() => {
-    const ITEMS = ".chip, .tile, .arrow, .op, .move-badge, .match-badge, .start-label, .trail-next, .now-label, .stone, .reveal-title, .badge, .btn, button, .move-count, .progress-sub, .code";
-    const GROUPS = ".trail-row, .trail-now, .reveal, #prompt, .progress, .end, .game-nav, .topbar, .word-form, .game-item, .notif-row, dialog[open]";
+    const ITEMS = ".chip, .tile, .arrow, .op, .move-badge, .match-badge, .start-label, .trail-next, .now-label, .stone, .rv-kicker, .rv-word, .rv-outcome, .rv-next, .badge, .btn, button, .move-count, .progress-sub, .code";
+    const GROUPS = ".trail-row, .trail-now, #prompt, .progress, .end, .game-nav, .topbar, .word-form, .game-item, .notif-row, dialog[open]";
     const problems = [];
     const shown = el => {
       const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
@@ -68,16 +68,37 @@ async function check(page, where) {
   assert.deepEqual(await layoutProblems(page), [], `${where}: overlapping or clipped items`);
 }
 
-/** Play `words` in order (skipping any the bot has locked, so the game never ends by a match). */
-async function playWords(page, words) {
+/** The open reveal modal: its words, connector, next-move line, kicker and button fit the screen and don't overlap. */
+async function checkReveal(page, where, word) {
+  const text = await revealShown(page);
+  assert.ok(text.toLowerCase().includes(word.toLowerCase()), `${where}: the modal shows the word played`);
+  const box = await page.evaluate(() => {
+    const dlg = document.querySelector("dialog#revealModal[open]");
+    const r = dlg && dlg.getBoundingClientRect();
+    const parts = ["rv-kicker", "rv-word", "op", "rv-outcome", "rv-continue"].filter(c => !dlg?.querySelector(`.${c}`));
+    return r && {left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: document.documentElement.clientWidth, vh: innerHeight, missing: parts};
+  });
+  assert.ok(box, `${where}: reveal modal open`);
+  assert.deepEqual(box.missing, [], `${where}: reveal modal parts`);
+  assert.ok(box.left >= -1 && box.right <= box.vw + 1 && box.top >= -1 && box.bottom <= box.vh + 1, `${where}: reveal modal inside the viewport ${JSON.stringify(box)}`);
+  await check(page, `${where} (reveal modal)`);
+}
+
+/**
+ * Play `words` in order (skipping any the bot has locked, so the game never ends by a match).
+ * With `where`, each reveal modal is checked for overlaps before "Keep playing", and the board after it.
+ */
+async function playWords(page, words, where = null) {
   for (const word of words) {
     if (await page.locator(".end").count()) break;
     const bot = (await botWord(page) || "").toLowerCase();
     if (bot === word.toLowerCase()) continue;
     const before = await page.locator(".trail-row").count();
-    await lockIn(page, word);
+    await lockIn(page, word, {reveal: false});
+    if (where) await checkReveal(page, `${where} "${word}"`, word);
+    assert.ok(await continueReveal(page), `reveal modal for "${word}" dismissed`);
     await page.waitForFunction(n => document.querySelectorAll(".trail-row").length > n || document.querySelector(".end"), before);
-    await continueReveal(page);
+    if (where) await check(page, `${where} board after "${word}"`);
   }
 }
 
@@ -97,7 +118,7 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
       const context = await browser.newContext({viewport, locale: lang === "fr" ? "fr-CA" : "en-US", reducedMotion: "reduce"});
       const page = await soloGame(context, lang);
       await check(page, `${name} ${lang} move 1`);
-      await playWords(page, WORDS[lang]);
+      await playWords(page, WORDS[lang], `${name} ${lang}`);
       await page.waitForSelector(".trail-now, .end");
       await check(page, `${name} ${lang} after long/accented/one-letter words`);
       if (SHOTS) await page.screenshot({path: `${SHOTS}/visual-${name}-${lang}.png`, fullPage: true});

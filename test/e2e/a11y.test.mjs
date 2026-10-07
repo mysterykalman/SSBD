@@ -3,7 +3,7 @@
 // (names, labels, ids, ARIA references, live regions, focus, dialogs, lang, contrast).
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, continueReveal, launch, startServer} from "./helpers.mjs";
+import {botWord, continueReveal, launch, revealShown, startServer} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -168,19 +168,32 @@ test("keyboard-only Solo: Tab to start, type, Enter, focus returns to the word b
   const mine = bot.toLowerCase() === "lighthouse" ? "volcano" : "lighthouse";
   await page.keyboard.type(mine);
   await page.keyboard.press("Enter");
-  await page.waitForSelector(".trail-row");
-  await continueReveal(page);
-  await page.waitForFunction(() => document.activeElement?.id === "word" || document.activeElement?.id === "newGameBtn");
 
-  // One announcement, from the persistent live region; the banner itself is not live.
+  // Reduced motion: no countdown, the reveal modal shows the result straight away.
+  const started = Date.now();
+  await page.waitForSelector("#revealModal[open]");
+  await revealShown(page);
+  assert.ok(Date.now() - started < 1000, "reduced motion: no countdown before the result");
+  assert.equal(await page.locator("#revealCount").isVisible(), false, "reduced motion: countdown hidden");
+  assert.equal(await page.isVisible("#revealContinue"), true);
+
+  // One announcement, from the persistent live region; the modal itself is not live.
   await page.waitForFunction(() => document.getElementById("srAnnounce")?.textContent.length > 0);
   const said = await page.locator("#srAnnounce").textContent();
   assert.match(said, /Reveal!/);
   assert.match(said, new RegExp(`You: ${mine}`, "i"));
   assert.match(said, new RegExp(`Bot: ${bot}`, "i"));
   assert.equal(await page.getAttribute("#srAnnounce", "aria-live"), "polite");
-  assert.equal(await page.locator(".reveal[aria-live], .reveal[role]").count(), 0, "reveal banner is not a second live region");
-  assert.equal(await page.locator(".reveal.animate").count(), 0, "reduced motion: no reveal animation");
+  assert.equal(await page.locator("#revealModal[aria-live], #revealModal[role=status], #revealModal [aria-live], #revealModal [role=status], #revealModal [role=alert]").count(), 0,
+    "reveal modal is not a second live region");
+  // The modal is labelled, the audit passes with it open, and "Keep playing" has focus for the keyboard.
+  assert.deepEqual(await audit(page), []);
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "revealContinue", "focus moves to Keep playing");
+  assert.ok(await focusRing(page), "visible focus on Keep playing");
+  await page.keyboard.press("Enter");
+  await page.waitForSelector("#revealModal", {state: "detached"});
+  await page.waitForFunction(() => document.activeElement?.id === "word" || document.activeElement?.matches(".end .board-title"));
+  assert.equal(await page.locator("#srAnnounce").textContent(), said, "continuing does not announce the reveal again");
   if (await page.locator("#word").count()) {
     assert.match(await page.getAttribute("#word", "aria-describedby"), /\bprompt\b/, "the prompt words describe the input");
     assert.equal(await page.getAttribute("#prompt", "lang"), "en");
@@ -334,9 +347,11 @@ test("colour contrast of visible text meets WCAG AA (4.5:1 body, 3:1 large) in b
   const bot = await botWord(page);
   await page.fill("#word", bot.toLowerCase() === "rainbow" ? "thunder" : "rainbow");
   await page.click("#lockBtn");
+  await revealShown(page);
+  await collect("reveal-modal");
+  assert.ok(await continueReveal(page));
   await page.waitForSelector(".trail-row");
-  await continueReveal(page);
-  await collect("game-reveal");
+  await collect("game-after-reveal");
   await page.click('[data-lang="fr"]');
   await collect("game-fr");
   const unique = [...new Map(failures.map(f => [`${f.cls}|${f.color}|${f.ratio}`, f])).values()];

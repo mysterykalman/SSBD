@@ -52,8 +52,12 @@ export async function continueReveal(page, {timeout = 8000, grace = 300} = {}) {
   return true;
 }
 
-/** Type a word and press the lock button. `{reveal: true}` also dismisses a reveal modal afterwards. */
-export async function lockIn(page, word, {reveal = false} = {}) {
+/**
+ * Type a word and press the lock button. By default a reveal modal that follows is dismissed with
+ * "Keep playing" (a rejected word opens no modal, so that only costs a short grace period).
+ * Pass `{reveal: false}` to leave the modal open for inspection.
+ */
+export async function lockIn(page, word, {reveal = true} = {}) {
   await page.fill("#word", word);
   await page.click("#lockBtn");
   if (reveal) await continueReveal(page);
@@ -63,8 +67,8 @@ export async function noHorizontalScroll(page) {
   return page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
 }
 
-/** Submit with the Enter key instead of the button. */
-export async function lockInEnter(page, word, {reveal = false} = {}) {
+/** Submit with the Enter key instead of the button (same `reveal` option as lockIn). */
+export async function lockInEnter(page, word, {reveal = true} = {}) {
   await page.fill("#word", word);
   await page.press("#word", "Enter");
   if (reveal) await continueReveal(page);
@@ -108,12 +112,18 @@ export async function playDistinct(page, count, pool = PLAY_WORDS, {continueLast
     const word = pool.find(w => !mine.has(w) && w !== bot && !played.includes(w));
     if (!word) throw new Error("ran out of words");
     const before = revealedCount(game);
-    await lockIn(page, word);
+    await lockIn(page, word, {reveal: false});
     await waitForReveal(page, before);
     if (continueLast || i < count - 1) await continueReveal(page);
     played.push(word);
   }
   return played;
+}
+
+/** Wait until the open reveal modal shows its result and "Keep playing"; returns the modal's text. */
+export async function revealShown(page, {timeout = 10000} = {}) {
+  await page.locator("#revealContinue").waitFor({state: "visible", timeout});
+  return page.locator("#revealModal").innerText();
 }
 
 /** Progress as shown to the player: the progressbar's aria-valuenow (and its "Move n of 20" text). */

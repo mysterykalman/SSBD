@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {botWord, continueReveal, launch, lockIn, lockInEnter, playDistinct, progressOf, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
+import {botWord, continueReveal, launch, lockIn, lockInEnter, playDistinct, progressOf, revealShown, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -32,8 +32,7 @@ async function playMoves(page, words) {
     if (await page.locator(".end").count()) break;
     const before = await page.locator(".trail-row").count();
     const bot = await botWord(page);
-    await lockIn(page, bot.toLowerCase() === w ? `${w}s` : w);
-    await continueReveal(page);
+    await lockIn(page, bot.toLowerCase() === w ? `${w}s` : w); // dismisses the reveal modal
     await page.waitForFunction(n => document.querySelectorAll(".trail-row").length > n || document.querySelector(".end"), before);
   }
 }
@@ -71,7 +70,7 @@ test("offline Solo: start, play, refresh, reopen and finish with no network", as
   assert.deepEqual(await trailText(page), trail);
 
   if (!(await page.locator(".end").count())) {
-    await lockIn(page, await botWord(page), {reveal: true});
+    await lockIn(page, await botWord(page));
     await page.waitForSelector(".end.win");
   }
   await page.reload();
@@ -125,7 +124,7 @@ test("offline: a finished Solo game reloads to its end state and is not auto-res
   let page = await visitOnce(context);
   await context.setOffline(true);
   await page.click("#startSolo");
-  await lockIn(page, await botWord(page), {reveal: true}); // match the bot on move 1
+  await lockIn(page, await botWord(page)); // match the bot on move 1
   await page.waitForSelector(".end.win");
   const soloUrl = page.url();
   await page.reload();
@@ -256,8 +255,8 @@ async function offlineContext(options = {}) {
 }
 
 const lower = s => String(s).toLowerCase();
-// The reveal: inline banner today, a modal after the integrator's change.
-const REVEAL = "#revealModal, .reveal";
+// The reveal modal (the board keeps the pre-reveal turn until "Keep playing").
+const REVEAL = "#revealModal";
 
 /** What the player sees of the game, checked against the stored record. */
 async function assertGameShown(page, game, label) {
@@ -289,7 +288,7 @@ async function assertGameShown(page, game, label) {
 }
 
 test("offline Solo regression: new game, several moves, reveal, history, progress; refresh and reopen keep it all", async () => {
-  const {context, page: first, apiCalls} = await offlineContext({locale: "en-US"});
+  const {context, page: first, apiCalls} = await offlineContext({locale: "en-US", reducedMotion: "reduce"});
   let page = first;
   await page.click("#startSolo");
   await page.waitForSelector("#word");
@@ -302,9 +301,12 @@ test("offline Solo regression: new game, several moves, reveal, history, progres
   // Move 1: the bot's locked word is revealed next to ours.
   const bot = await botWord(page);
   const played = await playDistinct(page, 1, undefined, {continueLast: false});
-  const reveal = lower(await page.locator(REVEAL).first().innerText());
+  const reveal = lower(await revealShown(page));
   assert.ok(reveal.includes(played[0]) && reveal.includes(lower(bot)), "reveal shows both words");
-  await continueReveal(page);
+  assert.equal((await progressOf(page)).now, 1, "progress stays on move 1 until Keep playing");
+  assert.equal(await page.locator(".trail-row").count(), 0, "history waits for Keep playing");
+  assert.ok(await continueReveal(page));
+  assert.equal((await progressOf(page)).now, 2);
   played.push(...await playDistinct(page, 3));
   game = await soloRecord(page);
   assert.equal(game.moves.filter(m => m.words).length, 4);
@@ -375,7 +377,7 @@ test("offline Solo: one-letter words submit by Enter and by button; repeating on
 });
 
 test("offline Solo: play to move 19, then 20, final reveal then game over; no move 21; refresh keeps it; Play again starts clean", async () => {
-  const {context, page, apiCalls} = await offlineContext({locale: "en-US"});
+  const {context, page, apiCalls} = await offlineContext({locale: "en-US", reducedMotion: "reduce"});
   await page.click("#startSolo");
   await page.waitForSelector("#word");
   const id = new URL(page.url()).pathname.split("/").pop();
@@ -403,10 +405,10 @@ test("offline Solo: play to move 19, then 20, final reveal then game over; no mo
   assert.equal(game.mode, "solo", "mode at completion");
   assert.equal(game.moves.length, 20);
   // The final reveal is shown first, then the game-over state.
-  await page.locator(REVEAL).first().waitFor({state: "visible"});
-  const reveal = lower(await page.locator(REVEAL).first().innerText());
+  const reveal = lower(await revealShown(page));
   assert.ok(reveal.includes(last) && reveal.includes(lower(game.moves[19].words.b)), "final reveal visible");
-  await continueReveal(page);
+  assert.equal(await page.locator("#app .end").count(), 0, "game over waits for the final reveal");
+  assert.ok(await continueReveal(page));
   await page.waitForSelector(".end");
   assert.equal(await page.isVisible(".end"), true);
   await assertGameShown(page, game, "game over");
