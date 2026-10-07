@@ -26,6 +26,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   await page.waitForSelector("#startSolo");
   const hero = await page.locator(".hero").innerText();
   assert.match(hero, /Try to read each other’s minds\.\s+No pressure\. Just your entire friendship\./);
+  assert.equal(await page.locator(".hero .hero-rules").innerText(), "You each secretly pick any word. Match and you win. Miss and your two words become the next clue. Keep connecting the dots until your brains finally cooperate.");
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
   assert.match(solo, /Play Solo\s+We heard you had no friends\.\s+So we lured Gary from Accounting over with the promise of cake\. Milo came anyway\.\s+There is no cake\./);
@@ -41,6 +42,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.doesNotMatch(await visibleText(page), EMOJI);
   await page.click('[data-lang="fr"]');
   assert.match(await page.locator(".hero").innerText(), /Essayez de lire dans les pensées de l’autre\./);
+  assert.match(await page.locator(".hero .hero-rules").innerText(), /^Choisissez chacun un mot en secret\. Les mêmes mots[\s\u202f]\? Vous gagnez[\s\u202f]! Sinon, vos deux mots deviennent le prochain indice\. Continuez à faire des liens jusqu’à ce que vos cerveaux coopèrent enfin\.$/);
   assert.match(await page.locator(".solo-card").innerText(), /Il n’y a pas de gâteau\./);
   assert.match(await page.locator(".family-card").innerText(), /Jouer ensemble/);
   assert.doesNotMatch(await visibleText(page), EMOJI);
