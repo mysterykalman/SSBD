@@ -5,9 +5,11 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs && node scripts/dev-server.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc -p jsconfig.json",
     "test": "node --test test/*.test.mjs",
     "test:e2e": "node scripts/build.mjs && node --test --test-concurrency=1 test/e2e/*.test.mjs",
-    "check": "npm test && npm run test:e2e"
+    "check": "npm run lint && npm run typecheck && npm test && npm run test:e2e"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

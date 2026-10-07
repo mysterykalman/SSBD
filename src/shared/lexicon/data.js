@@ -17,7 +17,7 @@ export const CONCEPTS = [
   ["thunder","thunder","tonnerre",["weather","sound"],["lightning","storm","loud","cloud","scary"]],
   ["lightning","lightning","éclair",["weather","light"],["thunder","storm","fast","electricity","bright"]],
   ["wind","wind","vent",["weather","nature"],["kite","storm","leaf","autumn","cloud","boat","cold"]],
-  ["umbrella","umbrella","parapluie",["weather"],["rain","wet","boots","puddle","coat"]],
+  ["umbrella","umbrella","parapluie",["weather"],["rain","wet","boots","puddle","coat","beach"]],
   ["puddle","puddle","flaque",["weather","water"],["rain","boots","mud","wet","jump"]],
   ["snowman","snowman","bonhomme de neige",["cold","season"],["snow","winter","carrot","scarf","cold","hat"]],
   ["snowflake","snowflake","flocon",["cold","weather"],["snow","winter","ice","cold","white"]],
@@ -44,7 +44,7 @@ export const CONCEPTS = [
   ["pet","pet","animal domestique",["pet","animal","home"],["dog","cat","fish","hamster","rabbit","animal","home","love","fur","paw","tail","vet"]],
   ["dog","dog","chien",["animal","pet"],["cat","bone","puppy","paw","tail","fur","pet","ball","walk","wolf"]],
   ["puppy","puppy","chiot",["animal","pet"],["dog","baby","cute","play","paw"]],
-  ["cat","cat","chat",["animal","pet"],["dog","mouse","milk","kitten","paw","tail","fur","pet"]],
+  ["cat","cat","chat",["animal","pet"],["dog","mouse","milk","kitten","paw","tail","fur","pet","fish"]],
   ["kitten","kitten","chaton",["animal","pet"],["cat","baby","cute","milk"]],
   ["fur","fur","fourrure",["animal","body"],["dog","cat","bear","soft","warm","rabbit","fox"]],
   ["paw","paw","patte",["animal","body"],["dog","cat","bear","foot"]],
@@ -83,7 +83,7 @@ export const CONCEPTS = [
   ["snake","snake","serpent",["animal"],["jungle","scary","desert","zoo","crocodile"]],
   ["giraffe","giraffe","girafe",["animal"],["zoo","elephant","zebra","tree","animal","jungle"]],
   ["zebra","zebra","zèbre",["animal"],["zoo","horse","giraffe","black","white"]],
-  ["penguin","penguin","pingouin",["animal","cold"],["ice","cold","snow","fish","swim","bird"]],
+  ["penguin","penguin","pingouin",["animal","cold"],["ice","cold","snow","fish","swim","bird","ocean"]],
   ["panda","panda","panda",["animal"],["bear","zoo","black","white","cute"]],
   ["shark","shark","requin",["animal","ocean"],["ocean","fish","tooth","sea","scary","swim"]],
   ["whale","whale","baleine",["animal","ocean"],["ocean","sea","big","dolphin","swim","fish"]],
@@ -109,7 +109,7 @@ export const CONCEPTS = [
   ["magic","magic","magie",["magic"],["wizard","wand","fairy","spell","unicorn","witch","dragon","sparkle"]],
   ["wizard","wizard","sorcier",["magic","story"],["magic","wand","spell","hat","witch","castle","owl","beard"]],
   ["witch","witch","sorcière",["magic","story","holiday"],["broom","halloween","hat","spell","cat","wizard","magic","cauldron"]],
-  ["fairy","fairy","fée",["magic","story"],["wing","magic","wand","princess","flower","sparkle","tooth","unicorn"]],
+  ["fairy","fairy","fée",["magic","story"],["wing","magic","wand","princess","flower","sparkle","tooth","unicorn","star"]],
   ["wand","wand","baguette magique",["magic"],["wizard","magic","fairy","spell","witch","star"]],
   ["spell","spell","sortilège",["magic"],["magic","wizard","witch","wand","potion"]],
   ["ghost","ghost","fantôme",["story","holiday"],["halloween","scary","haunted_house","white","monster","night"]],
@@ -142,7 +142,7 @@ export const CONCEPTS = [
   ["letter","letter","lettre",["school","book"],["write","read","word","alphabet"]],
 
   // Family, home, feelings
-  ["family","family","famille",["family","home"],["mom","dad","baby","brother","sister","home","love","grandma","grandpa"]],
+  ["family","family","famille",["family","home"],["mom","dad","baby","brother","sister","home","love","grandma","grandpa","christmas"]],
   ["mom","mom","maman",["family"],["dad","family","baby","love","hug","home"]],
   ["dad","dad","papa",["family"],["mom","family","baby","love","hug","home"]],
   ["baby","baby","bébé",["family"],["mom","dad","cry","small","family","cute"]],
@@ -161,7 +161,7 @@ export const CONCEPTS = [
   ["scary","scary","effrayant",["feeling"],["monster","ghost","dark","halloween","spider","nightmare","shark","fear"]],
   ["fear","fear","peur",["feeling"],["scary","dark","monster","brave","nightmare"]],
   ["fun","fun","amusant",["feeling","game"],["play","game","party","happy","laugh","friend","park","toy"]],
-  ["smile","smile","sourire",["feeling","body"],["happy","laugh","tooth","face","mouth"]],
+  ["smile","smile","sourire",["feeling","body"],["happy","laugh","tooth","face","mouth","sun"]],
   ["laugh","laugh","rire",["feeling","sound"],["smile","happy","funny","clown","fun"]],
   ["cry","cry","pleurer",["feeling"],["sad","baby","hurt","angry"]],
   ["door","door","porte",["home"],["key","window","home","roof"]],
@@ -183,7 +183,7 @@ export const CONCEPTS = [
   ["clothes","clothes","vêtements",["clothes"],["shirt","dress","shoe","sock","hat","coat","pajamas","pants"]],
   ["shoe","shoe","chaussure",["clothes"],["foot","sock","boots","walk","run"]],
   ["sock","sock","chaussette",["clothes"],["shoe","foot","warm"]],
-  ["hat","hat","chapeau",["clothes"],["head","wizard","witch","sun","scarf"]],
+  ["hat","hat","chapeau",["clothes"],["head","wizard","witch","sun","scarf","santa"]],
   ["boots","boots","bottes",["clothes"],["rain","puddle","snow","shoe","mud"]],
   ["coat","coat","manteau",["clothes","cold"],["winter","cold","warm","scarf","rain","jacket"]],
   ["scarf","scarf","écharpe",["clothes","cold"],["winter","cold","warm","snowman","coat","mitten"]],
@@ -202,7 +202,7 @@ export const CONCEPTS = [
   ["grape","grape","raisin",["food","plant"],["fruit","purple","juice","green","snack"]],
   ["lemon","lemon","citron",["food","plant"],["yellow","juice","fruit","lemonade","tea"]],
   ["cake","cake","gâteau",["food","sweet","celebration"],["birthday","candle","party","chocolate","oven","sugar","dessert","bake","food","snack"]],
-  ["cookie","cookie","biscuit",["food","sweet"],["chocolate","milk","oven","bake","sugar","grandma","dessert"]],
+  ["cookie","cookie","biscuit",["food","sweet"],["chocolate","milk","oven","bake","sugar","grandma","dessert","christmas"]],
   ["ice_cream","ice cream","glace",["food","sweet","cold"],["summer","cold","chocolate","dessert","strawberry","beach"]],
   ["chocolate","chocolate","chocolat",["food","sweet"],["cake","candy","cookie","easter","sweet","brown","ice_cream","hot_chocolate"]],
   ["candy","candy","bonbon",["food","sweet"],["sweet","sugar","halloween","lollipop","chocolate","party"]],
@@ -225,7 +225,7 @@ export const CONCEPTS = [
   ["vegetable","vegetable","légume",["food","plant"],["carrot","garden","tomato","salad","soup","farm","potato"]],
   ["tomato","tomato","tomate",["food","plant"],["red","pizza","salad","vegetable","garden"]],
   ["sandwich","sandwich","sandwich",["food"],["bread","cheese","lunch","picnic","butter"]],
-  ["picnic","picnic","pique-nique",["food","nature","adventure"],["park","sandwich","basket","ant","summer","blanket","grass","lunch"]],
+  ["picnic","picnic","pique-nique",["food","nature","adventure"],["park","sandwich","basket","ant","summer","blanket","grass","lunch","sun"]],
   ["oven","oven","four",["home","food","hot"],["bake","cake","cookie","pizza","bread","kitchen","hot","cook","food"]],
   ["cook","cook","cuisiner",["food","home"],["kitchen","oven","chef","food","bake","dinner","soup"]],
   ["bake","bake","pâtisserie",["food","sweet"],["cake","cookie","oven","bread","pie"]],
@@ -237,11 +237,11 @@ export const CONCEPTS = [
   ["wish","wish","vœu",["magic","feeling"],["star","birthday","candle","dream","fairy"]],
 
   // Holidays and seasons
-  ["christmas","christmas","noël",["holiday","celebration","cold"],["santa","gift","tree","snow","winter","reindeer","star","elf","candle"]],
+  ["christmas","christmas","noël",["holiday","celebration","cold"],["santa","gift","tree","snow","winter","reindeer","star","elf","candle","light"]],
   ["santa","santa","père noël",["holiday","story"],["christmas","gift","reindeer","sleigh","elf","beard","red","chimney"]],
   ["reindeer","reindeer","renne",["animal","holiday","cold"],["santa","christmas","snow","sleigh","elf","winter"]],
-  ["halloween","halloween","halloween",["holiday","celebration","night"],["ghost","pumpkin","witch","costume","candy","scary","spider","bat","monster","autumn"]],
-  ["pumpkin","pumpkin","citrouille",["holiday","food","plant"],["halloween","orange","autumn","pie","witch","farm"]],
+  ["halloween","halloween","halloween",["holiday","celebration","night"],["ghost","pumpkin","witch","costume","candy","scary","spider","bat","monster","autumn","night"]],
+  ["pumpkin","pumpkin","citrouille",["holiday","food","plant"],["halloween","orange","autumn","pie","witch","farm","candle"]],
   ["costume","costume","déguisement",["clothes","celebration"],["halloween","party","mask","cape","pirate","princess"]],
   ["easter","easter","pâques",["holiday","celebration","season"],["egg","rabbit","chocolate","spring","basket"]],
   ["holiday","holiday","vacances",["holiday","time"],["beach","summer","travel","camping","fun"]],
@@ -301,7 +301,7 @@ export const CONCEPTS = [
   ["win","win","gagner",["sport","game"],["game","team","trophy","race","medal"]],
   ["puzzle","puzzle","puzzle",["game","toy"],["game","toy","brain","board_game","blocks"]],
   ["doll","doll","poupée",["toy"],["toy","play","dress","teddy_bear","princess"]],
-  ["kite","kite","cerf-volant",["toy","sky"],["wind","fly","sky","beach","park"]],
+  ["kite","kite","cerf-volant",["toy","sky"],["wind","fly","sky","beach","park","field"]],
   ["park","park","parc",["city","nature"],["swing","slide","play","tree","grass","picnic","dog"]],
   ["zoo","zoo","zoo",["animal","city"],["animal","lion","elephant","monkey","giraffe","tiger","penguin","zebra"]],
   ["circus","circus","cirque",["celebration","adventure"],["clown","tent","elephant","lion","show"]],
@@ -368,7 +368,7 @@ export const CONCEPTS = [
   ["strong","strong","fort",["body","sport"],["superhero","lion","bear","elephant","brave"]],
   ["old","old","vieux",["time"],["grandma","grandpa","castle","dinosaur","fossil","new"]],
   ["new","new","nouveau",["time"],["old","gift","baby","year","birthday","toy"]],
-  ["round","round","rond",["shape"],["ball","circle","moon","planet","wheel","earth"]],
+  ["round","round","rond",["shape"],["ball","circle","moon","planet","wheel","earth","orange"]],
   ["tired","tired","fatigué",["feeling","night"],["sleep","bed","night","pillow","bedtime"]],
   ["angry","angry","en colère",["feeling"],["sad","red","happy","storm"]],
   ["hungry","hungry","faim",["food","feeling"],["food","eat","lunch","dinner","breakfast","snack"]],
@@ -439,9 +439,9 @@ export const CONCEPTS = [
   ["table","table","table",["home"],["chair","plate","dinner","kitchen","eat"]],
   ["chair","chair","chaise",["home","school"],["table","desk","sofa","kitchen","class"]],
   ["sofa","sofa","canapé",["home"],["tv","cozy","pillow","chair","blanket"]],
-  ["tv","tv","télé",["tech","home"],["cartoon","movie","sofa","screen"]],
+  ["tv","tv","télé",["tech","home"],["cartoon","movie","sofa","screen","weather"]],
   ["lamp","lamp","lampe",["light","home"],["light","bright","dark","bed","flashlight"]],
-  ["flashlight","flashlight","lampe torche",["light","adventure"],["dark","light","camping","battery","night"]],
+  ["flashlight","flashlight","lampe torche",["light","adventure"],["dark","light","camping","battery","night","cave"]],
   ["fridge","fridge","frigo",["home","cold","food"],["kitchen","cold","milk","ice","food"]],
   ["plate","plate","assiette",["food","home"],["fork","spoon","food","table","dinner"]],
   ["spoon","spoon","cuillère",["food","home"],["fork","soup","plate","eat"]],
@@ -518,7 +518,7 @@ export const CONCEPTS = [
   ["camel","camel","chameau",["animal","hot"],["desert","sand","hot","zoo","animal","palm_tree"]],
   ["crocodile","crocodile","crocodile",["animal","water"],["river","tooth","jungle","green","zoo"]],
   ["wool","wool","laine",["animal","clothes"],["sheep","scarf","sweater","soft","mitten","blanket"]],
-  ["sweater","sweater","pull",["clothes","cold"],["wool","winter","warm","coat"]],
+  ["sweater","sweater","pull",["clothes","cold"],["wool","winter","warm","coat","christmas"]],
   ["goat","goat","chèvre",["animal","farm"],["farm","cheese","mountain","milk","animal","grass"]],
   ["hay","hay","foin",["farm"],["horse","cow","barn","farm","field","pony"]],
   ["barn","barn","grange",["farm"],["farm","hay","cow","horse","tractor"]],
@@ -527,7 +527,7 @@ export const CONCEPTS = [
   ["vet","vet","vétérinaire",["job","animal"],["pet","dog","cat","doctor","animal"]],
   ["aquarium","aquarium","aquarium",["water","pet"],["fish","water","glass","octopus","shark"]],
   ["jellyfish","jellyfish","méduse",["animal","ocean"],["sea","ocean","beach","octopus","swim","fish"]],
-  ["polar_bear","polar bear","ours polaire",["animal","cold"],["bear","ice","snow","cold","penguin"]],
+  ["polar_bear","polar bear","ours polaire",["animal","cold"],["bear","ice","snow","cold","penguin","ocean"]],
   ["eagle","eagle","aigle",["animal","sky"],["bird","fly","mountain","wing","feather"]],
   ["mud","mud","boue",["nature","water"],["pig","puddle","rain","dirty","boots"]],
 
@@ -650,7 +650,7 @@ export const CONCEPTS = [
   ["sandbox","sandbox","bac à sable",["toy","game"],["sand","box","playground","bucket","park","play"]],
   ["beehive","beehive","ruche",["animal","nature"],["bee","honey","tree","garden","insect"]],
   ["doghouse","doghouse","niche",["pet","home"],["dog","home","garden","puppy","bone"]],
-  ["cowboy","cowboy","cowboy",["job","story","adventure"],["horse","hat","boots","ride","desert","farm","cow"]],
+  ["cowboy","cowboy","cowboy",["job","story","adventure"],["horse","hat","boots","ride","desert","farm","cow","story"]],
   ["bathtub","bathtub","baignoire",["home","water"],["bath","water","bubble","soap","duck","towel"]],
   ["pot","pot","pot",["home","plant"],["flower","honey","plant","garden","cauldron","kitchen","paint"]],
   ["bowl","bowl","bol",["home","food"],["soup","cereal","spoon","fish","milk","kitchen"]],
@@ -702,7 +702,8 @@ export const PHRASES = {
     party+hat: party hat | wedding+cake: wedding cake | wedding+ring: wedding ring | wedding+dress: wedding dress | love+song: love song
     winter+coat: winter coat | summer+holiday: summer holiday | autumn+leaf: autumn leaves | tree+frog: tree frog | frog+prince: frog prince
     bird+nest: bird nest | bird+song: birdsong | duck+pond: duck pond | farm+animal: farm animal | computer+game: computer game | clock+tower: clock tower
-    ear+ring: earring | eye+glasses: eyeglasses | arm+chair: armchair | wheel+chair: wheelchair | sleep+walk: sleepwalk | bow+arrow: bow and arrow
+    ear+ring: earring | eye+glasses: eyeglasses | fruit+cake: fruitcake | christmas+light: christmas lights | christmas+sweater: christmas sweater
+    picnic+blanket: picnic blanket | beach+umbrella: beach umbrella | christmas+dinner: christmas dinner | arm+chair: armchair | wheel+chair: wheelchair | sleep+walk: sleepwalk | bow+arrow: bow and arrow
   `),
   fr: phraseRows(`
     apple+earth: pomme de terre | fish+red: poisson rouge | bow+sky: arc-en-ciel | star+sea: étoile de mer | castle+sand: château de sable | castle+strong: château fort
@@ -727,5 +728,6 @@ export const PHRASES = {
     tail+mermaid: queue de sirène | tail+horse: queue de cheval | tooth+milk: dent de lait | bow+arrow: arc et flèches | race+foot: course à pied | planet+earth: planète terre
     snowflake+snow: flocon de neige | butterfly+night: papillon de nuit | bat+mouse: chauve-souris | horse+wood: cheval de bois | tower+magic: tour de magie | dog+wolf: chien-loup
     fish+aquarium: poisson d'aquarium | castle+princess: château de princesse | cake+cream: gâteau à la crème
+    blanket+picnic: couverture de pique-nique | dinner+christmas: dîner de noël | sweater+christmas: pull de noël | cake+fruit: gâteau aux fruits
   `)
 };

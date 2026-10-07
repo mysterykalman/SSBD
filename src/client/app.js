@@ -625,6 +625,7 @@ function playPanel(view, move) {
 function endPanel(view, last, fresh) {
   const matched = view.status === "MATCHED";
   const solo = isSoloLike(view);
+  const shownAt = performance.now();
   return h("div", {class: `end ${matched ? "win" : "over"}`},
     matched
       ? h("div", {class: "end-icon", "aria-hidden": "true"}, "🎉")
@@ -632,7 +633,11 @@ function endPanel(view, last, fresh) {
     h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
     h("p", {}, matched ? t("winCopy", {word: last.words.a.toUpperCase(), n: last.number}) : t("gameOverCopy")),
     h("div", {class: "row center end-actions"},
-      h("button", {class: "btn big", type: "button", id: "newGameBtn", onclick: event => playAgain(view, event.currentTarget)}, solo ? t("playAgain") : t("rematch")),
+      h("button", {class: "btn big", type: "button", id: "newGameBtn", onclick: event => {
+        // A held or doubled Enter from the last word must not skip the game-over screen.
+        if (event.detail === 0 && performance.now() - shownAt < 800) return;
+        playAgain(view, event.currentTarget);
+      }}, solo ? t("playAgain") : t("rematch")),
       h("button", {class: "btn ghost", type: "button", id: "homeBtn", onclick: () => navigate("/")}, t("returnHome")),
       h("button", {class: "btn ghost", type: "button", id: "historyBtn", onclick: viewHistory}, t("viewHistory"))));
 }

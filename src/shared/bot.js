@@ -45,7 +45,7 @@ function isExcluded(key, excludeKeys) {
  * level 0: at most a faint hint (one shared neighbour or a common tag).
  */
 function relation(lex, promptIds, candidate) {
-  let best = {score: 0, level: 0};
+  let best = {score: 0, level: 0, shared: 0};
   for (const promptId of promptIds) {
     const prompt = lex.concepts.get(promptId);
     if (!prompt || prompt.id === candidate.id) continue;
@@ -56,17 +56,23 @@ function relation(lex, promptIds, candidate) {
     const base = phrase && link ? 8 : phrase ? 7.5 : link ? 6 : 0;
     const score = base + Math.min(3, shared * 0.75) + Math.min(1, commonTags * 0.5);
     const level = base > 0 ? 2 : shared >= 2 ? 1 : 0;
-    if (level > best.level || (level === best.level && score > best.score)) best = {score, level};
+    if (level > best.level || (level === best.level && score > best.score)) best = {score, level, shared};
   }
   return best;
 }
 
-/** 3: direct on both sides; 2: direct + shared concept; 1: one-sided or two faint; 0: faint. */
+/**
+ * Rank how well a candidate connects the two prompts:
+ * 4: direct link or phrase on both sides;
+ * 3: direct on one side, a clear shared concept on the other;
+ * 2: several shared neighbours on both sides (a clear shared concept);
+ * 1: one-sided (direct on one side only), the last resort;
+ * 0.5: two thin shared concepts; 0: only faint hints.
+ */
 function tierOf(a, b) {
   const hi = Math.max(a.level, b.level), lo = Math.min(a.level, b.level);
-  if (hi === 2 && lo === 2) return 3;
-  if (hi === 2 && lo === 1) return 2;
-  if (hi === 2 || lo === 1) return 1;
+  if (hi === 2) return lo === 2 ? 4 : lo === 1 ? 3 : 1;
+  if (lo === 1) return Math.min(a.shared, b.shared) >= 3 ? 2 : 0.5;
   return 0;
 }
 
@@ -134,7 +140,7 @@ export function chooseResponse({prompts, language = "en", excludeKeys = new Set(
     const top = Math.max(...scored.map(item => item.tier));
     const shortlist = scored.filter(item => item.tier === top).sort((x, y) => y.score - x.score).slice(0, TOP_CHOICES);
     const pick = weightedPick(shortlist, rng);
-    return {word: pick.word, quality: pick.tier >= 2 ? "strong" : "loose"};
+    return {word: pick.word, quality: pick.tier >= 3 ? "strong" : "loose"};
   }
   return {...chooseOpening({language, excludeKeys: new Set([...excludeKeys, ...promptKeys]), rng}), quality: "loose"};
 }

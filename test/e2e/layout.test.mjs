@@ -104,7 +104,7 @@ test("keyboard: start and play Solo with the keyboard only, focus is visible", a
   await page.waitForSelector(".trail-row");
   const active = await page.evaluate(() => document.activeElement?.id);
   assert.ok(active === "word" || active === "newGameBtn", `focus after move: ${active}`);
-  assert.equal(await page.getAttribute(".meter", "role"), "progressbar");
+  assert.equal(await page.getAttribute(".stones", "role"), "progressbar");
   assert.ok(await page.getAttribute('[data-lang="en"]', "aria-pressed"));
   await context.close();
 });

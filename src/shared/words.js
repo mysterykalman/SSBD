@@ -11,7 +11,7 @@ export const MAX_WORD_PARTS = 3;
 export const MIN_KEY_LENGTH = 1;
 
 const EDGE_PUNCTUATION = /^[\s"'“”‘’«»`.,!?¿¡;:()[\]{}*_~-]+|[\s"'“”‘’«»`.,!?¿¡;:()[\]{}*_~-]+$/gu;
-const ALLOWED = /^[\p{L}\p{M}]+(?:[ '\-][\p{L}\p{M}]+)*$/u;
+const ALLOWED = /^[\p{L}\p{M}]+(?:[ '-][\p{L}\p{M}]+)*$/u;
 
 /**
  * Friendly display form: trimmed, single spaces, straight apostrophes, no edge punctuation.
@@ -42,7 +42,7 @@ export function wordKey(raw) {
     .replace(/ß/g, "ss")
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
-    .replace(/[\s'\-]+/g, "");
+    .replace(/[\s'-]+/g, "");
 }
 
 /**
