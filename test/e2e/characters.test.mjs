@@ -67,18 +67,26 @@ test("choosing Gary: the game shows Gary, exactly as before", async () => {
   await startSolo(page, "gary");
   await page.waitForSelector("#word");
   assert.equal((await soloRecord(page)).character, "gary");
-  assert.match(await page.locator("#app").innerText(), /Gary is picking his own word right now/);
-  assert.match(await page.locator("#formHelp").innerText(), /Gary has picked his word\./);
+  assert.match(await page.locator("#app").innerText(), /Gary is thinking\. This was not on his calendar\./);
+  assert.match(await page.locator("#formHelp").innerText(), /Gary has a word\. Apparently we're doing this\./);
   assert.match(await portrait(page, ".mode-chip .badge.gary"), /art-gary/);
   const bot = await botWord(page);
   await lockIn(page, bot.toLowerCase() === "tulip" ? "daisy" : "tulip", {reveal: false});
   await page.waitForSelector("#revealContinue");
   const garyModal = await page.locator("#revealModal").innerText();
   assert.match(garyModal, /GARY.S WORD/);
-  // Gary keeps the shared reveal wording.
-  assert.match(garyModal, /Nice connection! The trail continues\./);
-  assert.match(garyModal, /Next move starts with \S+ \+ \S+/);
+  // Gary's reveal: his dry result line and next pair; the button stays plain.
+  assert.match(garyModal, /Okay\. That's a start\./, "move 1 has nothing to connect yet");
+  assert.match(garyModal, /Fine\. Now try \S+ \+ \S+\./);
+  assert.doesNotMatch(garyModal, /Nice connection|On we go|!\s*$/m);
   assert.equal((await page.locator("#revealContinue").innerText()).trim(), "Keep playing");
+  await page.click("#revealContinue");
+  await page.waitForSelector("#revealModal", {state: "detached"});
+  // Move 2: the result line now reflects how well the word fit the pair (one of Gary's tier lines).
+  const second = await botWord(page);
+  await lockIn(page, second.toLowerCase() === "violin" ? "trumpet" : "violin", {reveal: false});
+  await page.waitForSelector("#revealContinue");
+  assert.match(await page.locator("#revealModal .rv-outcome").innerText(), /^(That was annoyingly good\.|Okay\. That actually makes sense\.|Gary has questions\.|That feels legally questionable\.)$/);
   assert.match(await portrait(page, "#revealModal .rv-word.gary small"), /art-gary/);
   assert.match(await portrait(page, "#garyLine"), /art-gary/);
   assert.match(await page.locator("#garyLine .gary-bubble").innerText(), /sigh/);

@@ -2,13 +2,13 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {CHARACTERS, CHARACTER_IDS, EARLY_MATCH, LATE_MATCH, REACTION_CHANCE, character, characterId, characterKeys, copyKey, pickReaction, rematchLine, revealKind} from "../src/client/characters.js";
+import {CHARACTERS, CHARACTER_IDS, EARLY_MATCH, LATE_MATCH, REACTION_CHANCE, character, characterId, characterKeys, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultKey, revealKind} from "../src/client/characters.js";
 import {STRINGS} from "../src/client/i18n.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {seededRandom} from "../src/shared/rules.js";
 
 // Titles, taglines and each character's wording of shared Solo sentences may be longer than a quick remark.
-const LONG_OK = new Set(["garyIntroCta", "garyTitle", "garyMeetAgain", "garyTagline", "miloTagline", "miloMeetAgain", ...CHARACTER_IDS.flatMap(id => Object.values(CHARACTERS[id].copy))]);
+const LONG_OK = new Set(["garyIntroCta", "garyTitle", "garyMeetAgain", "garyTagline", "miloTagline", "miloMeetAgain", ...CHARACTER_IDS.flatMap(id => [...Object.values(CHARACTERS[id].copy), ...Object.values(CHARACTERS[id].results)])]);
 const flat = list => list.flat().filter(key => key !== "before" && key !== "after");
 
 test("Gary and Milo share one config shape: id, name, avatar, personality, reaction pools, voice", () => {
@@ -114,10 +114,54 @@ test("shared Solo copy suits both characters; each character's own wording keeps
     assert.notEqual(copyKey("milo", key), key, `Milo says ${key} his way`);
     assert.notEqual(STRINGS.en[copyKey("milo", key)], STRINGS.en[copyKey("gary", key)]);
   }
-  // Gary keeps the wording players already know.
-  assert.equal(STRINGS.en[copyKey("gary", "firstSolo")], "Type any word you like. Gary is picking his own word right now. Then you both reveal!");
+  // Gary's own wording; buttons stay plain and functional for him.
+  assert.equal(STRINGS.en[copyKey("gary", "firstSolo")], "Type any word you like. Gary is thinking. This was not on his calendar. Then you both reveal!");
+  assert.equal(STRINGS.en[copyKey("gary", "botReady")], "Gary has a word. Apparently we're doing this.");
+  assert.equal(STRINGS.en[copyKey("gary", "revealNextStarts")], "Fine. Now try {a} + {b}.");
+  assert.equal(STRINGS.en[copyKey("gary", "gameOverCopy")], "Twenty moves. Gary would like this meeting to end.");
+  assert.equal(STRINGS.en[copyKey("gary", "gameOverAww")], "No match. Gary is pretending this was the expected outcome.");
   assert.equal(STRINGS.en[copyKey("gary", "keepPlaying")], "Keep playing");
-  assert.equal(STRINGS.en[copyKey("gary", "revealNextStarts")], "Next move starts with {a} + {b}");
+});
+
+test("Gary's reveal result follows how well the word fits; Milo keeps one cheerful line", () => {
+  const lex = getLexicon("en");
+  const cases = [[null, "beach", "opening"], [["sand", "shell"], "beach", "strong"], [["sand", "shell"], "castle", "good"], [["jogging", "sea"], "sport", "weak"], [["sand", "shell"], "violin", "veryWeak"], [["sand", "shell"], "qwzzk", "veryWeak"]];
+  for (const [prompts, mine, strength] of cases) assert.equal(connectionStrength(lex, {prompts, mine}), strength, `${prompts}: ${mine}`);
+  assert.deepEqual(["opening", "strong", "good", "weak", "veryWeak"].map(s => STRINGS.en[resultKey("gary", s)]),
+    ["Okay. That's a start.", "That was annoyingly good.", "Okay. That actually makes sense.", "Gary has questions.", "That feels legally questionable."]);
+  for (const s of ["opening", "strong", "good", "weak", "veryWeak"]) assert.equal(resultKey("milo", s), "miloRevealNice");
+  // After "That was annoyingly good." Gary never also remarks "that's annoyingly good".
+  assert.deepEqual(resultAvoid("gary", "strong"), ["garyAnnoyinglyGood"]);
+  for (let i = 0; i < 500; i++) {
+    const pick = pickReaction({character: "gary", status: "REVEALED", move: 4, recent: resultAvoid("gary", "strong"), random: seededRandom(i)});
+    assert.notDeepEqual(pick?.keys, ["garyAnnoyinglyGood"]);
+  }
+});
+
+test("Gary's voice: dry, reluctant, understated; never excited, gloomy or mean; not all accounting jokes", () => {
+  const c = CHARACTERS.gary;
+  // Everything Gary himself says (system sentences in his wording included, minus their neutral instruction part).
+  const said = [...flat(Object.values(c.lines.mismatch).flat()), ...flat(c.lines.close), ...flat(c.lines.strange), ...c.lines.middle, ...c.lines.nearEnd,
+    ...flat([...c.lines.earlyMatch, ...c.lines.lateMatch, ...c.lines.win]), ...c.lines.rematch, ...c.lines.gameOver, ...Object.values(c.results),
+    ...Object.values(c.copy), ...c.intro.lines];
+  for (const lang of ["en", "fr"]) {
+    for (const key of said) {
+      const text = STRINGS[lang][key].replace(/^(Type any word you like|Tape le mot que tu veux)\. /, "").replace(/ (Then you both reveal|Ensuite, vous révélez vos mots en même temps)[\s\u202f]?!$/, "");
+      assert.doesNotMatch(text, /!/, `${lang}.${key} is never exclaimed: ${text}`);
+      assert.doesNotMatch(text, /\b(amazing|awesome|yay|woo+|great job|love|génial|super|trop bien|youpi|j’adore)\b/i, `${lang}.${key} is not excited`);
+      assert.doesNotMatch(text, /\b(sad|cry|lonely|miserable|hate|alone|triste|pleure|seul|déteste)\b/i, `${lang}.${key} is not gloomy`);
+      assert.doesNotMatch(text, /\byou('re| are| were)? (bad|wrong|terrible|awful|slow)|\bterrible|\bnul\b|\bstupid|\bdumb/i, `${lang}.${key} is never mean to the player`);
+    }
+  }
+  // Attitude carries the humour: office/accounting references stay rare.
+  const office = said.filter(key => /calendar|meeting|spreadsheet|tax|invoice|account|for the file|a pen\b/i.test(STRINGS.en[key]));
+  assert.ok(office.length <= 4, `office jokes: ${office}`);
+  // Gary and Milo never share a line of dialogue.
+  const milo = new Set(characterKeys("milo").map(key => STRINGS.en[key].toLowerCase()));
+  for (const key of said) assert.ok(!milo.has(STRINGS.en[key].toLowerCase()), key);
+  // Win: Gary is not suddenly excited.
+  assert.ok(c.lines.win.some(([, key]) => key === "garyImpressive"));
+  assert.equal(STRINGS.en.garyImpressive, "well. that's inconveniently impressive");
 });
 
 test("a character speaks on roughly a third of ordinary reveals, and only from their own pools", () => {

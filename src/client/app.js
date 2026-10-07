@@ -11,7 +11,7 @@ import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
 import {garyRandom, hasMet, markMet, recentLines, rememberLines, typeInto} from "./gary.js";
-import {CHARACTER_IDS, character, characterId, copyKey, pickReaction, rematchLine, revealKind} from "./characters.js";
+import {CHARACTER_IDS, character, characterId, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultKey, revealKind} from "./characters.js";
 import {characterArt} from "./gary-art.js";
 
 const store = createStore();
@@ -720,7 +720,10 @@ function startReveal(view, move) {
   const solo = isSoloLike(view);
   // The character's occasional remark: flavour only, decided here and never fed back into the game.
   const kind = solo && move.status === "REVEALED" ? revealKind(getLexicon(view.language), {prompts: move.prompts, mine: move.words[view.youSide], theirs: move.words[view.otherSide]}) : null;
-  const reaction = solo ? pickReaction({character: view.character, status: move.status, move: move.number, kind, recent: recentLines(view.id), random: garyRandom}) : null;
+  // The result line can depend on how well the player's word fits; the remark never repeats its joke.
+  const strength = solo && move.status === "REVEALED" ? revealStrength(view, move) : null;
+  const recent = [...recentLines(view.id), ...(strength ? resultAvoid(view.character, strength) : [])];
+  const reaction = solo ? pickReaction({character: view.character, status: move.status, move: move.number, kind, recent, random: garyRandom}) : null;
   if (reaction) rememberLines(view.id, reaction.keys);
   state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token, reaction};
   const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
@@ -737,7 +740,7 @@ function startReveal(view, move) {
         reaction ? garyReaction(view) : null,
         h("p", {class: "rv-outcome rv-step"}, ...(move.status === "MATCHED"
           ? [h("span", {class: "rv-headline"}, t("revealMatchTitle")), " ", h("span", {class: "rv-subline"}, matchCopy(view, move))]
-          : [move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : ct(view, "revealNice")])),
+          : [move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : revealResult(view, move)])),
         move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, ct(view, "revealLoose", {name: characterName(view)})) : null,
         ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(view, move)))));
   document.body.append(dlg);
@@ -769,6 +772,16 @@ function garyRevealWord(view) {
   return h("div", {class: "rv-word other gary rv-step", "data-gary": "word", "data-character": view.character},
     h("small", {}, characterArt(view.character, "meh", "tiny"), t("revealBotWord", {name: characterName(view)})),
     h("span", {class: "chip-word", id: "garyWord", lang: state.game?.language}));
+}
+
+/** How well the player's word fit the two words in play (Solo result line only). */
+function revealStrength(view, move) {
+  return connectionStrength(getLexicon(view.language), {prompts: move.prompts, mine: move.words[view.youSide]});
+}
+
+/** A non-matching reveal's result line: shared in family games, the character's own in Solo. */
+function revealResult(view, move) {
+  return isSoloLike(view) ? t(resultKey(view.character, revealStrength(view, move))) : t("revealNice");
 }
 
 /** "You both said WORD. Your brains did a high five." with the player's own (matched) word. */
@@ -850,7 +863,7 @@ async function runReveal(view, move, ended, token) {
   announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: said[view.youSide].toUpperCase()}),
     t("revealSaid", {name: sideLabel(view, view.otherSide), word: said[view.otherSide].toUpperCase()}),
     remark ? t("revealSaid", {name: characterName(view), word: remark}) : "",
-    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : ct(view, "revealNice")].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
+    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : revealResult(view, move)].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : ct(view, "keepPlaying"));
   result.append(button);
   setRevealPhase("ready");

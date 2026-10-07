@@ -11,12 +11,14 @@
  *   id: string, name: string, title: string, tagline: string, personality: string,
  *   voiceId: string | null, voiceStyle: string, art: string,
  *   intro: {kicker: string, lines: string[], aside: string, cta: string}, meetAgain: string, copy: Record<string, string>,
+ *   results: Partial<Record<Strength, string>>, resultAvoid: Partial<Record<Strength, string[]>>,
  *   lines: {
  *     mismatch: Record<string, [string, string][]>, close: [string, string][], strange: [string, string][],
  *     middle: string[], nearEnd: string[], earlyMatch: string[][], lateMatch: string[][], win: string[][],
  *     rematch: string[], gameOver: [string, string]
  *   }
  * }} Character
+ * @typedef {"opening" | "strong" | "good" | "weak" | "veryWeak"} Strength
  */
 
 /** @type {Record<string, Character>} */
@@ -33,7 +35,11 @@ export const CHARACTERS = {
     intro: {kicker: "garyMeet", lines: ["garyIntro1", "garyIntro2", "garyIntro3"], aside: "garyIntroSigh", cta: "garyIntroCta"},
     meetAgain: "garyMeetAgain",
     // Shared Solo copy in this character's own words (anything not listed uses the shared key).
-    copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady", revealLoose: "garyRevealLoose", gameOverAww: "garyGameOverAww"},
+    copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady", revealLoose: "garyRevealLoose", revealNextStarts: "garyRevealNextStarts", gameOverAww: "garyGameOverAww", gameOverCopy: "garyGameOverCopy"},
+    // The reveal result, by how well the player's word fits the two words in play (see connectionStrength).
+    results: {opening: "garyResultStart", strong: "garyResultStrong", good: "garyResultGood", weak: "garyResultWeak", veryWeak: "garyResultVeryWeak"},
+    // Remarks not to make right after a given result (the same joke twice in one reveal).
+    resultAvoid: {strong: ["garyAnnoyinglyGood"]},
     lines: {
       mismatch: {
         resigned: [["garySigh", "before"], ["garyFine", "before"], ["garyApparently", "before"], ["garyThisAgain", "before"], ["garyOkayThen", "before"], ["garyThere", "after"]],
@@ -47,7 +53,7 @@ export const CHARACTERS = {
       nearEnd: ["garyToldEnding"],
       earlyMatch: [["garyDots", "garyAlready"]],
       lateMatch: [["garyDots", "garyEventually"]],
-      win: [["garyDots", "garyInconvenient"], ["garyDots", "garyYouWin"]],
+      win: [["garyDots", "garyInconvenient"], ["garyDots", "garyYouWin"], ["garyDots", "garyImpressive"]],
       rematch: ["garyRematch1", "garyRematch2"],
       gameOver: ["garyFinally", "garySameTime"]
     }
@@ -67,6 +73,8 @@ export const CHARACTERS = {
       firstSolo: "miloFirstSolo", botReady: "miloBotReady", revealLoose: "miloRevealLoose", revealNice: "miloRevealNice",
       revealNextStarts: "miloRevealNextStarts", keepPlaying: "miloKeepPlaying", gameOverAww: "miloGameOverAww", gameOverCopy: "miloGameOverCopy"
     },
+    results: {}, // one cheerful result line whatever the connection (copy.revealNice)
+    resultAvoid: {},
     lines: {
       mismatch: {
         bouncy: [["miloOoh", "before"], ["miloGotOne", "before"], ["miloBoing", "after"], ["miloAgainAgain", "after"]],
@@ -104,7 +112,7 @@ export const LATE_MATCH = 12; // matched on move 12 or later
 /** Every i18n key a character uses (for tests). */
 export function characterKeys(id) {
   const c = character(id);
-  const keys = new Set([c.name, c.title, c.tagline, c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta, c.meetAgain, ...Object.values(c.copy)]);
+  const keys = new Set([c.name, c.title, c.tagline, c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta, c.meetAgain, ...Object.values(c.copy), ...Object.values(c.results)]);
   for (const value of Object.values(c.lines)) {
     const lists = Array.isArray(value) ? [value] : Object.values(value);
     for (const list of lists) for (const item of list) for (const key of [item].flat()) if (key !== "before" && key !== "after") keys.add(key);
@@ -156,6 +164,35 @@ export function pickReaction({character: id, status, move, kind = null, recent =
 
 /** The i18n key for a shared Solo string in this character's own words (or the shared key). */
 export const copyKey = (id, key) => character(id).copy[key] ?? key;
+
+/** The reveal result line's key for a connection strength: the character's own, else their usual line. */
+export const resultKey = (id, strength) => character(id).results[strength] ?? copyKey(id, "revealNice");
+/** Remarks to skip right after that result line. */
+export const resultAvoid = (id, strength) => character(id).resultAvoid[strength] ?? [];
+
+/**
+ * How well the player's word fits the two words in play, for the reveal result line only:
+ * "strong" (directly linked to both), "good" (linked to one, near the other), "weak" (some link),
+ * "veryWeak" (unknown, or no link to either), "opening" on move 1 (nothing to connect yet).
+ * @param {{resolve: (word: string) => string | null, concepts: Map<string, {near: Set<string>}>}} lex
+ * @param {{prompts: string[] | null, mine: string}} round
+ * @returns {Strength}
+ */
+export function connectionStrength(lex, {prompts, mine}) {
+  if (!prompts) return "opening";
+  const id = lex.resolve(mine);
+  const concept = id ? lex.concepts.get(id) : null;
+  if (!concept) return "veryWeak";
+  const fit = prompts.map(word => {
+    const other = lex.resolve(word);
+    if (!other) return 0;
+    if (other === id || concept.near.has(other)) return 1;
+    const near = lex.concepts.get(other)?.near;
+    return near && [...concept.near].some(n => near.has(n)) ? 0.5 : 0;
+  });
+  const total = fit[0] + fit[1];
+  return total >= 2 ? "strong" : total >= 1.5 ? "good" : total > 0 ? "weak" : "veryWeak";
+}
 
 /** The line a character greets a rematch with (Play again keeps the same character). */
 export function rematchLine(id, random = Math.random) {
