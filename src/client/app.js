@@ -9,7 +9,8 @@ import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
 import {trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
-import {GARY, garyArt, garyRandom, hasMetGary, markMetGary, pickReaction, recentLines, rememberLines, typeInto} from "./gary.js";
+import {GARY, garyRandom, hasMetGary, markMetGary, pickReaction, recentLines, rememberLines, typeInto} from "./gary.js";
+import {garyArt} from "./gary-art.js";
 
 const store = createStore();
 const state = {

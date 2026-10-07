@@ -512,29 +512,17 @@ main:focus { outline: none; }
 }
 
 /* ---------- Gary from Accounting (Solo opponent) ---------- */
-.gary-art-wrap { display: inline-grid; place-items: center; flex: none; line-height: 0; }
-.gary-art { width: 100%; height: 100%; overflow: visible; }
-.gary-art * { stroke: var(--ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
-.gary-art .g-head, .gary-art .g-ear { fill: var(--peach); }
-.gary-art .g-nose { fill: var(--coral); }
-.gary-art .g-shirt, .gary-art .g-collar { fill: var(--paper); }
-.gary-art .g-tie { fill: var(--grape); }
-.gary-art .g-glass { fill: rgba(255, 255, 255, .45); }
-.gary-art .g-eye { fill: var(--ink); stroke: none; }
-.gary-art .g-hair, .gary-art .g-brow, .gary-art .g-bridge, .gary-art .g-lid, .gary-art .g-mouth { fill: none; }
-.gary-art .g-shut { display: none; }
-.gary-sleepy .g-open { display: none; }
-.gary-sleepy .g-shut { display: inline; }
-.gary-sleepy .g-mouth { d: path("M53 81q7 3 14 0"); }
+.gary-art-wrap { display: inline-grid; place-items: center; flex: none; line-height: 0; border-radius: 50%; }
+/* The portrait carries its own dark ring, so its frames add no border of their own. */
+.gary-art { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; user-select: none; }
 
 /* Small Gary in round badges (mode chip, game list). */
-.badge.gary { overflow: hidden; padding: 0; background: var(--sun); }
-.badge.gary .badge-art { width: 112%; height: 112%; transform: translateY(8%); }
+.badge.gary { overflow: hidden; padding: 0; border: 0; background: none; }
+.badge.gary .badge-art { width: 100%; height: 100%; }
 
 /* In the reveal modal: a tiny Gary next to "GARY'S WORD", his word typed in, an occasional remark. */
 .rv-word.gary small { display: inline-flex; align-items: center; gap: 6px; }
-.rv-word.gary .tiny { width: 26px; height: 26px; border: 2px solid var(--ink); border-radius: 50%; overflow: hidden; background: var(--sun); }
-.rv-word.gary .tiny .gary-art { transform: translateY(10%) scale(1.15); }
+.rv-word.gary .tiny { width: 26px; height: 26px; }
 .rv-word .chip-word .ghost { visibility: hidden; }
 .gary-line { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin: 0; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 14px 14px 14px 4px; background: var(--paper); font-weight: 800; font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
 .gary-line[hidden] { display: none; }
@@ -542,20 +530,18 @@ main:focus { outline: none; }
 
 /* Solo game over: sleepy Gary says goodbye. */
 .gary-end { display: grid; justify-items: center; gap: 8px; margin: 12px auto 0; }
-.gary-end .end-art { width: 112px; height: 112px; border: 3px solid var(--ink); border-radius: 50%; overflow: hidden; background: var(--sun); box-shadow: 0 4px 0 var(--ink); }
-.gary-end .end-art .gary-art { transform: translateY(9%) scale(1.08); }
+.gary-end .end-art { width: 112px; height: 112px; box-shadow: 0 4px 0 var(--ink); }
 .gary-end.animate .end-art .gary-art { animation: garyDroop 1.6s ease-in-out .2s both; }
 .gary-bye { display: grid; gap: 2px; margin: 0; font-weight: 800; font-size: 1.05rem; color: var(--ink); }
 .gary-bye .bye-line:empty { display: none; }
 .gary-bye .later { color: var(--muted); }
-@keyframes garyDroop { 0% { transform: translateY(9%) scale(1.08); } 45% { transform: translateY(13%) rotate(-5deg) scale(1.08); } 100% { transform: translateY(11%) rotate(-3deg) scale(1.08); } }
+@keyframes garyDroop { 0% { transform: none; } 45% { transform: translateY(3%) rotate(-5deg); } 100% { transform: translateY(2%) rotate(-3deg); } }
 
 /* "Meet your rival" intro (first Solo game). */
 .gary-intro { width: min(440px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: 0; border: 3px solid var(--ink); border-radius: var(--radius); background: var(--cream); color: var(--ink); box-shadow: 0 8px 0 var(--ink); }
 .gary-intro::backdrop { background: rgba(43, 27, 61, .6); }
 .gi-body { display: grid; justify-items: center; gap: 10px; padding: 22px 18px 24px; text-align: center; }
-.gi-body .intro-art { width: clamp(110px, 32vw, 150px); height: clamp(110px, 32vw, 150px); border: 3px solid var(--ink); border-radius: 50%; overflow: hidden; background: var(--sun); box-shadow: 0 5px 0 var(--ink); }
-.gi-body .intro-art .gary-art { transform: translateY(8%) scale(1.06); }
+.gi-body .intro-art { width: clamp(110px, 32vw, 150px); height: clamp(110px, 32vw, 150px); box-shadow: 0 5px 0 var(--ink); }
 .gi-title { margin: 4px 0 0; font-size: clamp(1.4rem, 5vw, 1.8rem); }
 .gi-says { display: grid; gap: 2px; font-size: 1.15rem; font-weight: 800; line-height: 1.35; }
 .gi-says p { margin: 0; }

@@ -138,32 +138,3 @@ export function typeInto(el, text, {reduced = false, maxTotal = 900, alive = () 
     setTimeout(tick, Math.min(60, step));
   });
 }
-
-/**
- * Gary, drawn in the app's own style (ink outlines, peach, coral nose, grape tie).
- * Decorative: his name is always written next to him, so the art is hidden from screen readers.
- * @param {"meh" | "sleepy"} mood
- */
-export function garyArt(mood = "meh", cls = "") {
-  const wrap = document.createElement("span");
-  wrap.className = `gary-art-wrap ${cls}`;
-  wrap.setAttribute("aria-hidden", "true");
-  wrap.innerHTML = `<svg class="gary-art gary-${mood}" viewBox="0 0 120 120" focusable="false">
-  <path class="g-shirt" d="M14 122c3-21 21-32 46-32s43 11 46 32z"/>
-  <path class="g-tie" d="M56 95l4 5 4-5 5 27H51z"/>
-  <path class="g-collar" d="M43 90l17 9 17-9-5-7-12 7-12-7z"/>
-  <ellipse class="g-ear" cx="27" cy="58" rx="7" ry="10"/>
-  <ellipse class="g-ear" cx="93" cy="58" rx="7" ry="10"/>
-  <ellipse class="g-head" cx="60" cy="55" rx="32" ry="35"/>
-  <path class="g-hair" d="M31 47c-7-9-4-21 5-25M89 47c7-9 4-21-5-25M50 21c3-8 13-9 17-3M60 20c4-6 12-5 14 1"/>
-  <path class="g-brow" d="M37 45l15-5M83 45l-15-5"/>
-  <rect class="g-glass" x="34" y="47" width="21" height="15" rx="5"/>
-  <rect class="g-glass" x="65" y="47" width="21" height="15" rx="5"/>
-  <path class="g-bridge" d="M55 54h10"/>
-  <g class="g-open"><circle class="g-eye" cx="45" cy="56.5" r="2.6"/><circle class="g-eye" cx="75" cy="56.5" r="2.6"/><path class="g-lid" d="M38 53.5h14M68 53.5h14"/></g>
-  <g class="g-shut"><path class="g-lid" d="M38 56q7 4 14 0M68 56q7 4 14 0"/></g>
-  <ellipse class="g-nose" cx="60" cy="67" rx="8.5" ry="7.5"/>
-  <path class="g-mouth" d="M51 81q9-5 18 0"/>
-</svg>`;
-  return wrap;
-}

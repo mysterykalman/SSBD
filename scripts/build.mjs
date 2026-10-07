@@ -11,7 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(root, "dist");
 const src = p => join(root, "src", p);
 
-const appBundle = await build({entryPoints: [src("client/app.js")], bundle: true, format: "esm", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
+const appBundle = await build({entryPoints: [src("client/app.js")], bundle: true, loader: {".webp": "dataurl"}, format: "esm", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
 const appJs = appBundle.outputFiles[0].text;
 const css = await readFile(src("client/styles.css"), "utf8");
 const icon = await readFile(src("client/icon.svg"), "utf8");
