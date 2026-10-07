@@ -203,7 +203,7 @@ test("rematch: same players, same slots and language, fresh round 1, other playe
   assert.equal(r.existing, false);
   assert.notEqual(r.id, m.id);
   assert.equal(r.id, await rematchIdFor(m.id));
-  assert.match(r.join_code, /^[A-Z]{4}-\d{2}$/);
+  assert.match(r.join_code, /^[A-Z]{2}[0-9]{2}$/);
 
   const v = (await view(r.id, m.ana.id)).game;
   assert.equal(v.kind, "family");
@@ -286,7 +286,7 @@ test("rematch of a COMPLETE game from an earlier release works and keeps the old
   await call("/api/health");
   await db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
     INSERT INTO players VALUES('p2','Timer','TIM-2222','2025-01-01','2025-01-01');
-    INSERT INTO games (id,join_code,status,round_number,created_at,updated_at) VALUES('g9','WXYZ-99','COMPLETE',1,'2025-01-01','2025-01-01');
+    INSERT INTO games (id,join_code,status,round_number,created_at,updated_at) VALUES('g9','WX99','COMPLETE',1,'2025-01-01','2025-01-01');
     INSERT INTO game_players VALUES('g9','p2',1,'2025-01-01'); INSERT INTO game_players VALUES('g9','p1',2,'2025-01-01');
     INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES('r-uuid-9','g9',1,NULL,NULL,'COMPLETE','2025-01-01','2025-01-01');
     INSERT INTO submissions VALUES('r-uuid-9','p1','CAT','2025-01-01'); INSERT INTO submissions VALUES('r-uuid-9','p2','CAT','2025-01-01');`);
@@ -429,7 +429,10 @@ test("the migration is additive: an existing database keeps its rows and gains t
     await old.migrate(); // applying it twice is harmless
     const cols = (await old.all("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'games' ORDER BY ordinal_position")).map(c => c.column_name);
     assert.deepEqual(cols, ["id", "join_code", "status", "round_number", "created_at", "updated_at", "language", "rematch_of"]);
-    assert.deepEqual({...(await old.get("SELECT * FROM games WHERE id = 'g1'"))}, {id: "g1", join_code: "ABCD-12", status: "ACTIVE", round_number: 3, created_at: "2025-01-01", updated_at: "2025-01-01", language: "fr", rematch_of: null});
+    // The row keeps its data; only its old-format room code ("ABCD-12") was rewritten to the current format.
+    const row = {...(await old.get("SELECT * FROM games WHERE id = 'g1'"))};
+    assert.match(row.join_code, /^[A-Z]{2}[0-9]{2}$/);
+    assert.deepEqual({...row, join_code: "AB12"}, {id: "g1", join_code: "AB12", status: "ACTIVE", round_number: 3, created_at: "2025-01-01", updated_at: "2025-01-01", language: "fr", rematch_of: null});
     assert.equal((await old.get("SELECT display_name FROM players WHERE id = 'p1'")).display_name, "Old");
     env = {store: old.store};
     assert.equal((await call("/api/player/recover", {recovery_code: "old-1111"})).id, "p1");

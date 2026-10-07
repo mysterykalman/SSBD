@@ -140,7 +140,7 @@ test("existing rows from earlier releases (uppercase words, uuid round ids) stil
   await call("/api/health");
   await db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
     INSERT INTO players VALUES('p2','Timer','TIM-2222','2025-01-01','2025-01-01');
-    INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES('g1','ABCD-12','ACTIVE',2,'2025-01-01','2025-01-01','en');
+    INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES('g1','AB12','ACTIVE',2,'2025-01-01','2025-01-01','en');
     INSERT INTO game_players VALUES('g1','p1',1,'2025-01-01'); INSERT INTO game_players VALUES('g1','p2',2,'2025-01-01');
     INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES('r-uuid-1','g1',1,NULL,NULL,'REVEALED','2025-01-01','2025-01-01');
     INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES('r-uuid-2','g1',2,'SUN','MOON','OPEN','2025-01-01',NULL);
@@ -279,7 +279,7 @@ test("join: idempotent (even concurrently), a full game is rejected, two racing 
 
   const solo = await call("/api/games", {player_id: ana.id, solo: true});
   assert.equal((await call("/api/games/join", {player_id: carl.id, join_code: solo.join_code})).code, "GAME_FULL", "legacy Solo games cannot be joined");
-  assert.equal((await call("/api/games/join", {player_id: carl.id, join_code: "ZZZZ-00"})).code, "GAME_NOT_FOUND");
+  assert.equal((await call("/api/games/join", {player_id: carl.id, join_code: "ZZ00"})).code, "GAME_NOT_FOUND");
 });
 
 test("a move left with both words but unrevealed (interrupted request) is revealed once on the next read", async () => {
@@ -348,7 +348,7 @@ test("rows from earlier releases: COMPLETE games and rounds read as MATCHED and 
   await call("/api/health");
   await db.exec(`INSERT INTO players VALUES('p1','Old','OLD-1111','2025-01-01','2025-01-01');
     INSERT INTO players VALUES('p2','Timer','TIM-2222','2025-01-01','2025-01-01');
-    INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES('g9','WXYZ-99','COMPLETE',1,'2025-01-01','2025-01-01','en');
+    INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES('g9','WX99','COMPLETE',1,'2025-01-01','2025-01-01','en');
     INSERT INTO game_players VALUES('g9','p1',1,'2025-01-01'); INSERT INTO game_players VALUES('g9','p2',2,'2025-01-01');
     INSERT INTO rounds (id,game_id,round_number,previous_a,previous_b,status,created_at,revealed_at) VALUES('r-uuid-9','g9',1,NULL,NULL,'COMPLETE','2025-01-01','2025-01-01');
     INSERT INTO submissions VALUES('r-uuid-9','p1','CAT','2025-01-01'); INSERT INTO submissions VALUES('r-uuid-9','p2','CAT','2025-01-01');`);

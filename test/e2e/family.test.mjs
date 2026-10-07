@@ -21,7 +21,7 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
   await ana.click('dialog button[type="submit"]');
   await ana.waitForSelector("#joinCode");
   const code = (await ana.locator("#joinCode").innerText()).trim();
-  assert.match(code, /^[A-Z]{4}-\d{2}$/);
+  assert.match(code, /^[A-Z]{2}[0-9]{2}$/);
   assert.equal(await ana.locator("#word").count(), 0, "can't play before a friend joins");
 
   await ben.goto(`${server.url}/join/${code}`);

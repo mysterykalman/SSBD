@@ -29,7 +29,7 @@ check(health.type.includes("json"), "/api/health answers JSON", `${health.res.st
 check(health.body?.ok === true && health.body?.db === true, "database reachable and migrated", JSON.stringify(health.body)?.slice(0, 160));
 const missing = await get("/api/does-not-exist");
 check(missing.res.status === 404 && missing.type.includes("json"), "unknown /api path is a JSON 404", `${missing.res.status} ${missing.type}`);
-for (const path of ["/", "/games/smoke-check", "/join/SMOK-00", "/solo"]) {
+for (const path of ["/", "/games/smoke-check", "/join/SM00", "/solo"]) {
   const page = await get(path);
   check(page.res.status === 200 && /<main id="app"/.test(String(page.body)), `${path} serves the app`, String(page.res.status));
 }

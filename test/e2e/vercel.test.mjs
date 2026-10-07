@@ -20,7 +20,7 @@ async function contextAs(player, options = {}) {
 test("routing: deep links serve the app, /api/* always answers JSON, assets and the service worker get the right headers", async () => {
   const config = JSON.parse(await readFile("vercel.json", "utf8"));
   assert.equal(config.outputDirectory, "dist");
-  for (const path of ["/", "/games/some-id", "/join/ABCD-12", "/solo", "/solo/some-id", "/index.html"]) {
+  for (const path of ["/", "/games/some-id", "/join/AB12", "/solo", "/solo/some-id", "/index.html"]) {
     const res = await fetch(server.url + path);
     assert.equal(res.status, 200, path);
     assert.match(res.headers.get("content-type"), /text\/html/, path);

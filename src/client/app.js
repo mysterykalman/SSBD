@@ -4,6 +4,7 @@
 
 import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js";
 import {publicMove, setGaryDiagnostics, startSoloGame, submitSoloWord} from "../shared/solo.js";
+import {isJoinCode, normalizeJoinCode} from "../shared/codes.js";
 import {getLexicon} from "../shared/lexicon/index.js";
 import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
 import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
@@ -445,7 +446,6 @@ function gameListItems() {
       language: g.language,
       yourTurn: g.status === "ACTIVE" && !g.locked,
       theirTurn: g.status === "ACTIVE" && g.locked && !g.bot ? g.opponent_name || t("friend") : null,
-      code: !g.bot ? g.join_code : null,
       open: () => navigate(`/games/${g.id}`)
     });
   }
@@ -850,14 +850,11 @@ function playPanel(view, move) {
   }
 
   if (waiting) {
-    const link = `${location.origin}/join/${encodeURIComponent(view.joinCode)}`;
+    // The room code is the whole point of this card: big, centred, easy to read aloud or type.
     panel.append(h("div", {class: "share"},
       h("h2", {}, t("shareTitle")),
       h("p", {}, t("shareCopy")),
-      h("p", {class: "code", id: "joinCode"}, view.joinCode),
-      h("button", {class: "btn teal", type: "button", disabled: !state.online, onclick: async () => {
-        try { await navigator.clipboard.writeText(link); toast(t("copied"), {kind: "success"}); } catch { toast(link, {timeout: 10000}); }
-      }}, t("copyLink"))));
+      h("p", {class: "code share-code", id: "joinCode"}, view.joinCode)));
     return panel;
   }
 
@@ -1461,7 +1458,9 @@ function joinDialog(prefill) {
   const d = dialog(t("joinTitle"), t("joinCopy"), field("joinInput", t("joinLabel"), {value: prefill || "", autocapitalize: "characters", maxlength: "60"}), {
     label: t("join"),
     submit: async () => {
-      const code = $("joinInput").value.trim().split("/").pop();
+      // A pasted invite link works too: the code is its last part.
+      const code = normalizeJoinCode($("joinInput").value.trim().split("/").pop());
+      if (!isJoinCode(code)) return d.error(errorText("BAD_JOIN_CODE"));
       try {
         const data = await api("/api/games/join", {player_id: state.player.id, join_code: code});
         d.close();
