@@ -78,7 +78,11 @@ test("choosing Gary: the game shows Gary, exactly as before", async () => {
   // Gary's reveal: his dry result line and next pair; the button stays plain.
   assert.match(garyModal, /Okay\. That's a start\./, "move 1 has nothing to connect yet");
   assert.match(garyModal, /Fine\. Now try \S+ \+ \S+\./);
-  assert.doesNotMatch(garyModal, /Nice connection|On we go|!\s*$/m);
+  assert.doesNotMatch(garyModal, /Nice connection|On we go/);
+  for (const line of await page.locator("#revealModal .rv-outcome, #revealModal .rv-next").allInnerTexts()) assert.doesNotMatch(line, /!/, `Gary does not exclaim: ${line}`);
+  assert.match(await portrait(page, "#revealModal .rv-word.gary small"), /art-gary/);
+  assert.match(await portrait(page, "#garyLine"), /art-gary/);
+  assert.match(await page.locator("#garyLine .gary-bubble").innerText(), /sigh/);
   assert.equal((await page.locator("#revealContinue").innerText()).trim(), "Keep playing");
   await page.click("#revealContinue");
   await page.waitForSelector("#revealModal", {state: "detached"});
@@ -87,9 +91,8 @@ test("choosing Gary: the game shows Gary, exactly as before", async () => {
   await lockIn(page, second.toLowerCase() === "violin" ? "trumpet" : "violin", {reveal: false});
   await page.waitForSelector("#revealContinue");
   assert.match(await page.locator("#revealModal .rv-outcome").innerText(), /^(That was annoyingly good\.|Okay\. That actually makes sense\.|Gary has questions\.|That feels legally questionable\.)$/);
-  assert.match(await portrait(page, "#revealModal .rv-word.gary small"), /art-gary/);
-  assert.match(await portrait(page, "#garyLine"), /art-gary/);
-  assert.match(await page.locator("#garyLine .gary-bubble").innerText(), /sigh/);
+  assert.match(await portrait(page, "#garyLine"), /art-gary/, "Gary's remark on move 2 is still Gary's");
+  assert.doesNotMatch(await page.locator("#garyLine .gary-bubble").innerText(), MILO_LINES);
   assert.doesNotMatch(await allText(page), /milo/i);
   await context.close();
 });
