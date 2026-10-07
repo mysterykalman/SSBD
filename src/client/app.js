@@ -402,7 +402,8 @@ function renderHome() {
   mount(
     h("section", {class: "hero"},
       h("h1", {}, t("heroTitle")),
-      h("p", {class: "lede"}, t("heroCopy"))),
+      h("p", {class: "lede"}, t("heroCopy")),
+      h("p", {class: "hero-rules"}, t("heroRules"))),
     h("div", {class: "start-grid"},
       h("section", {class: "card start solo-card", "aria-labelledby": "soloTitle"},
         h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {bot: true, who: lastCharacter()})),
