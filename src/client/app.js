@@ -892,7 +892,7 @@ function playPanel(view, move) {
     h("h1", {id: "boardTitle", class: "board-title"}, waiting && !solo ? t("waitingJoin") : first ? t("firstTitle") : t("promptTitle")),
     ...(waiting && !solo) || locked ? []
       : first
-        ? [h("p", {class: "instruction"}, solo ? ct(view, "firstSolo", {name: otherName}) : t("firstFamily", {name: otherName})), solo && view.rematch ? rematchGreeting(view) : null]
+        ? [h("p", {class: "instruction"}, solo ? ct(view, "firstSolo", {name: otherName}) : t("firstFamily", {name: otherName})), ...(solo && view.rematch ? [rematchGreeting(view)] : [])]
         : [h("p", {class: "instruction"}, t("promptCopy"))]);
   if (!first) {
     // The "+" is glued to the second word so it never dangles at the end of a line.

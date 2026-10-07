@@ -50,6 +50,14 @@ test("no null/undefined/false text in the game UI when optional content is absen
   await continueReveal(page);
   await page.waitForSelector("#app .end");
   assert.deepEqual(await leaks(page), [], "game over");
+  // Play again (same character, with or without a rematch greeting) and a game with no greeting.
+  await page.click("#newGameBtn");
+  await page.waitForSelector("#word");
+  assert.deepEqual(await leaks(page), [], "Play again");
+  await page.goto(server.url);
+  await startSolo(page, "milo");
+  await page.waitForSelector("#word");
+  assert.deepEqual(await leaks(page), [], "new Solo game with Milo");
 
   // Family game waiting for a friend (no opponent, no prompts yet).
   await page.goto(server.url);

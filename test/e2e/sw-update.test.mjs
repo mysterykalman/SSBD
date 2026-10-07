@@ -6,7 +6,7 @@ import {execFileSync} from "node:child_process";
 import {cp, mkdir, mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {dirname, join} from "node:path";
-import {botWord, launch, lockIn, startServer, startSolo} from "./helpers.mjs";
+import {botWord, launch, lockIn, startServer} from "./helpers.mjs";
 
 // The release before this fix: cache-first navigations and a worker that waits for the page.
 const PREVIOUS_RELEASE = "d2838d0";
@@ -80,7 +80,7 @@ test("old worker and cache from the previous release, then this deployment: the 
     await page.waitForSelector("#startSolo");
     await controlled(page);
     assert.equal((await frontend(page)).script, await scriptOf(old), "running the previous release");
-    await startSolo(page);
+    await page.click("#startSolo"); // the previous release starts Solo directly (no character picker yet)
     await page.waitForSelector("#word");
     await playOneMove(page);
     const trail = await page.locator(".trail-row").allInnerTexts();

@@ -28,7 +28,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.match(hero, /Try to read each other’s minds\.\s+No pressure\. Just your entire friendship\./);
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
-  assert.match(solo, /Play Solo\s+We heard you had no friends\.\s+So we lured Gary from Accounting over with the promise of cake\.\s+There is no cake\./);
+  assert.match(solo, /Play Solo\s+We heard you had no friends\.\s+So we lured Gary from Accounting over with the promise of cake\. Milo came anyway\.\s+There is no cake\./);
   assert.equal((await page.locator("#startSolo").innerText()).trim(), "Let’s play!");
   assert.match(solo, /Plays offline too\. Fancy\./);
   assert.doesNotMatch(solo, /without internet/i);
