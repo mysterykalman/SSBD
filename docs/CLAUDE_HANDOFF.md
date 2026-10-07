@@ -327,10 +327,98 @@ Never edit it by hand.
   - family features disabled, with a friendly explanation
 
 ### Tests run (final)
-%TESTS%
+Final run on the last commit of the branch:
+
+- `npm run build`: OK.
+- `npm run lint`: clean.
+- `npm run typecheck` (tsc, checkJs strict on `src/shared`, `src/server` and
+  `src/client/store.js`): clean.
+- `npm test`, unit and API integration: **140/140 pass**.
+
+  | File | Tests |
+  |---|---|
+  | rules | 21 |
+  | solo-rules | 14 |
+  | solo | 12 |
+  | words | 6 |
+  | lexicon | 18 |
+  | api | 21 |
+  | api-integrity | 21 |
+  | store | 17 |
+  | i18n | 10 |
+
+- `npm run test:e2e` (Playwright, Chromium): **55/55 pass**. The suites are
+  `reveal`, `solo`, `offline`, `family`, `input`, `a11y`, `layout` and
+  `visual`.
+
+Reveal regression coverage (`test/e2e/reveal.test.mjs`):
+
+- **Frozen-board monitor.** An in-page MutationObserver checks every DOM
+  mutation while the modal is open. It fails if the pending pair is on the board
+  or in the trail, if the move counter or progress stones move, if a trail row is
+  added, or if countdown content is still visible during the reveal.
+- **The monitor really fails.** Deliberately disabling the freeze makes both
+  core tests fail.
+- **The two tests you specified:**
+  - "When the reveal modal is open, the pending next pair is not rendered in the
+    active game card"
+  - "After Keep playing is pressed, the modal disappears and the pending pair
+    becomes the active pair exactly once"
+- **Full 20-move Solo games at 390×844 and 1280×860.** Each reveal is checked
+  for the modal staying inside the viewport, no overlapping parts, "A + B" kept
+  on one line, countdown removed, and no horizontal overflow. After that come the
+  final reveal, then game over, a refresh, and Play again.
+- **Other cases:** a match then the win, one-letter "s", refresh mid-reveal,
+  Escape, French copy, reduced motion, family games (both players), and long
+  words.
+
+Root causes fixed during final verification (each with a regression test):
+
+- **Reveal test timeout (test bug).** The test reused the same player word,
+  which the game correctly rejects as same-as-last. It also leaked
+  MutationObservers between moves.
+- **Intermittent keyboard-language failure (real app bug).** The 30 ms re-focus
+  after starting Solo pulled focus away from a control the player had just moved
+  to.
+- **Older suites.** These were migrated to the modal flow without weakening
+  assertions (8 old-flow assertions replaced, 47 added).
 
 ### Browser scenarios verified
-%BROWSER%
+Every scenario below ran in Chromium against the built worker through
+`scripts/dev-server.mjs`.
+
+- **Viewports:** 320×640, 390×844, 667×375 (landscape), 768×1024, 1280×800 and
+  1280×860, in EN and FR, plus 200% text size.
+- **Solo:**
+  - a blank start
+  - bot independence (a locked word is never re-rolled by refresh or by what
+    the player types)
+  - the reveal modal flow
+  - full 20-move games, then game over, then Play again
+  - a match and the win
+  - duplicate and invalid input, one-letter words, and suggestions that never
+    auto-replace
+- **Offline Solo** (network off after one cached visit):
+  - new game, many moves, refresh, close and reopen, moves 19 and 20, game over
+  - one-letter words
+  - French
+  - zero `/api/` requests
+  - family features disabled
+- **Family games:**
+  - create, join by code and by link, private words (leak scan of HTML, storage
+    and API), simultaneous reveal for both players, next prompt in a stable
+    order
+  - refresh while locked, double-submit idempotency, a third player refused
+  - match, rematch, notifications (unread and read, no duplicates)
+- **Accessibility:**
+  - keyboard-only play, visible focus, labelled dialogs and progress, one live
+    announcement per reveal
+  - reduced motion, WCAG AA contrast (including the modal), touch targets of at
+    least 44px
+- **Visual:** overlap checks for chips, connectors, badges, stones, buttons and
+  the modal at every viewport, with short, long, accented and one-letter words.
+- **Reviewed by eye:** screenshots at 390×844 and 1280×860 of home, Solo start,
+  countdown, reveal, next turn and game over.
 
 ### Known limitations
 - **No release or deployment.** This environment cannot reach the hosting

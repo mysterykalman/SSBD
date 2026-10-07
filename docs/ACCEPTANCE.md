@@ -24,4 +24,12 @@ Playwright in Chromium 141. Two kinds of evidence back each item:
 | 10 | Accessibility: keyboard, focus, labels, reduced motion, contrast | PASS | `test/e2e/a11y.test.mjs` (keyboard play, dialogs, live regions, DOM audit, WCAG AA contrast) | Keyboard-only play works, with a visible focus ring. Reduced motion removes the animations. Contrast spot checks give 5.06–15.3:1. |
 | 11 | Notifications readable, dismissible, non-blocking | PASS | `test/e2e/layout.test.mjs` connectivity-toast check, `test/e2e/offline.test.mjs` | 44px close button, auto-dismiss, typed word kept. Connectivity toasts now replace each other instead of stacking. |
 
-Last full run: `npm test` passed 99/99 and `npm run test:e2e` passed 24/24.
+Round 2 added the reveal modal flow, the progress trail, game over, notifications,
+rematch and the one-letter fix; see the final status section in `docs/CLAUDE_HANDOFF.md`.
+
+Last full run (final branch commit), all passing:
+
+- `npm run lint`
+- `npm run typecheck`
+- `npm test`: 140/140
+- `npm run test:e2e`: 55/55
