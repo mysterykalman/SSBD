@@ -56,6 +56,13 @@ async function layoutProblems(page) {
   });
 }
 
+/** What sticks out sideways (for a readable failure message). */
+async function wideItems(page) {
+  return page.evaluate(() => [...document.querySelectorAll("body *")]
+    .filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1 || (e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX === "visible"))
+    .map(e => `${e.tagName.toLowerCase()}.${[...e.classList].join(".")} ${e.scrollWidth}/${e.clientWidth}`).slice(0, 12));
+}
+
 async function check(page, where) {
   assert.ok(await noHorizontalScroll(page), `${where}: page scrolls sideways`);
   assert.deepEqual(await layoutProblems(page), [], `${where}: overlapping or clipped items`);
@@ -141,7 +148,7 @@ test("visual: doubled text size still fits, nothing scrolls sideways and control
       await page.addStyleTag({content: "html { font-size: 200% !important; } body { font-size: 36px !important; }"});
       await playWords(page, WORDS[lang].slice(0, 2));
       await page.waitForSelector("#word");
-      const wide = await page.evaluate(() => [...document.querySelectorAll("body *")].filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1).map(e => `${e.tagName}.${e.className}`).slice(0, 5));
+      const wide = await wideItems(page);
       assert.ok(await noHorizontalScroll(page), `${viewport.width} ${lang}: sideways scroll at 200% text: ${wide.join(", ")}`);
       for (const sel of ["#word", "#lockBtn", "#backBtn", "#profileBtn"]) {
         const el = page.locator(sel);

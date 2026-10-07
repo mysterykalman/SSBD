@@ -2,7 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {chooseResponse} from "../src/shared/bot.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
-import {currentMove, seededRandom, usedKeys} from "../src/shared/rules.js";
+import {currentMove, moveRandom, seededRandom, usedKeys} from "../src/shared/rules.js";
 import {publicMove, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
 import {wordKey} from "../src/shared/words.js";
 
@@ -134,4 +134,69 @@ test("Solo duplicate rules: same word twice in a row and reused words are blocke
   assert.equal(submitSoloWord(game, first).code, "SAME_AS_LAST");
   assert.equal(submitSoloWord(game, "   ").code, "EMPTY");
   assert.ok(usedKeys(game).has(wordKey(first)));
+});
+
+test("each bot word comes from the exact current prompts, one word per move", () => {
+  for (const language of ["en", "fr"]) {
+    for (let seed = 1; seed <= 10; seed++) {
+      let game = startSoloGame({id: `exact-${language}-${seed}`, language, seed});
+      const lex = getLexicon(language);
+      const all = [...lex.concepts.values()];
+      const random = seededRandom(seed * 31);
+      for (let n = 0; n < 19 && game.status === "ACTIVE"; n++) {
+        const move = currentMove(game);
+        const hidden = move.hidden.b;
+        assert.equal(typeof hidden, "string");
+        assert.ok(hidden.split(" ").length <= 3, hidden);
+        if (move.prompts) {
+          // Recomputing from this move's prompts and the revealed words gives the same word.
+          const again = chooseResponse({prompts: move.prompts, language, excludeKeys: usedKeys(game), rng: moveRandom(game, move.number)});
+          assert.equal(again.word, hidden, `move ${move.number}`);
+        }
+        let r = {ok: false};
+        while (!r.ok) r = submitSoloWord(game, all[Math.floor(random() * all.length)].label);
+        assert.equal(r.move.words.b, hidden, "the revealed bot word is the locked one");
+        game = r.game;
+      }
+    }
+  }
+});
+
+test("French games use French vocabulary only (200 games)", () => {
+  const fr = getLexicon("fr"), en = getLexicon("en");
+  const frOnly = word => fr.byKey.has(wordKey(word));
+  const playerWords = [...fr.concepts.values()].map(c => c.label);
+  for (let seed = 1; seed <= 200; seed++) {
+    let game = startSoloGame({id: `fr-${seed}`, language: "fr", seed});
+    const random = seededRandom(seed);
+    for (let n = 0; n < 6 && game.status === "ACTIVE"; n++) {
+      const bot = currentMove(game).hidden.b;
+      assert.ok(frOnly(bot), `seed ${seed}: ${bot} is not French`);
+      // Some player words are English or nonsense; the bot must still answer in French.
+      const typed = n % 3 === 2 ? [...en.concepts.values()][Math.floor(random() * en.concepts.size)].label : playerWords[Math.floor(random() * playerWords.length)];
+      const r = submitSoloWord(game, typed);
+      if (r.ok) game = r.game;
+      else break;
+    }
+  }
+});
+
+test("one-letter and unusual player words never break the bot", () => {
+  for (const language of ["en", "fr"]) {
+    let game = startSoloGame({id: `odd-${language}`, language, seed: 11});
+    for (const word of ["s", "I", "a", "zorblax", "é", "quuxify", "x", "velvet"]) {
+      if (game.status !== "ACTIVE") break;
+      const r = submitSoloWord(game, word);
+      if (!r.ok) {
+        // One-letter words may be refused by validation; that must be a normal error code.
+        assert.ok(["TOO_SHORT", "ALREADY_USED", "SAME_AS_LAST"].includes(r.code), `${word}: ${r.code}`);
+        continue;
+      }
+      game = r.game;
+      if (game.status === "ACTIVE") {
+        const bot = currentMove(game).hidden.b;
+        assert.ok(bot && getLexicon(language).byKey.has(wordKey(bot)), `${word} -> ${bot}`);
+      }
+    }
+  }
 });

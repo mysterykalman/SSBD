@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {CONCEPTS, TAGS} from "../src/shared/lexicon/data.js";
+import {CONCEPTS, PHRASES, TAGS} from "../src/shared/lexicon/data.js";
 import {EXTRA_WORDS} from "../src/shared/lexicon/vocab.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {chooseOpening, chooseResponse, wordForms} from "../src/shared/bot.js";
@@ -170,7 +170,7 @@ test("bot sweep: linked pairs give valid, mostly strong answers in both language
       }
     }
     assert.ok(sharing >= 60, `${lang}: only ${sharing} pairs share a neighbour`);
-    assert.ok(strong / sharing >= 0.7, `${lang}: strong for ${strong}/${sharing}`);
+    assert.ok(strong / sharing >= 0.85, `${lang}: strong for ${strong}/${sharing}`);
   }
 });
 
@@ -222,5 +222,184 @@ test("Solo openings never start a game on a spooky or sad word", async () => {
       const {word} = chooseOpening({language, rng: seededRandom(seed * 7919)});
       if (gloomy.has(word)) throw new Error(`gloomy opening ${word} (${language}, seed ${seed})`);
     }
+  }
+});
+
+test("phrase data: enough everyday phrases, known concepts, labels appear in the phrase", () => {
+  const byId = new Map(CONCEPTS.map(row => [row[0], row]));
+  for (const [lang, index, min] of [["en", 1, 150], ["fr", 2, 100]]) {
+    const rows = PHRASES[lang];
+    assert.ok(rows.length >= min, `${lang} has ${rows.length} phrases`);
+    const seen = new Set();
+    for (const [a, b, phrase] of rows) {
+      assert.ok(byId.has(a) && byId.has(b), `${lang} ${a}+${b}`);
+      assert.notEqual(a, b);
+      const pair = [a, b].sort().join("+");
+      assert.ok(!seen.has(pair), `${lang} repeats ${pair}`);
+      seen.add(pair);
+      const phraseKey = wordKey(phrase);
+      for (const id of [a, b]) {
+        const label = wordKey(byId.get(id)[index]);
+        assert.ok(phraseKey.includes(label) || (label.length >= 4 && phraseKey.includes(label.slice(0, -1))), `${lang} "${phrase}" lacks ${label}`);
+      }
+    }
+  }
+  const en = getLexicon("en"), fr = getLexicon("fr");
+  assert.ok(en.concepts.get("snow").phrases.has("ball"));
+  assert.ok(en.concepts.get("ball").phrases.has("snow"), "phrases are undirected");
+  assert.ok(fr.concepts.get("apple").phrases.has("earth"), "pomme de terre");
+  assert.ok(!en.concepts.get("apple").phrases.has("earth"), "phrases are per language");
+});
+
+test("a common phrase counts as a strong link for that side", () => {
+  // "snow" + "dog": only "ball" (snowball + a dog's ball) is tied directly to both.
+  for (let seed = 1; seed <= 10; seed++) {
+    const pick = chooseResponse({prompts: ["snow", "dog"], rng: rng(seed)});
+    assert.deepEqual(pick, {word: "ball", quality: "strong"});
+  }
+  // "pomme" + "terre": "ver" (ver de terre, a worm in an apple).
+  assert.equal(chooseResponse({prompts: ["pomme", "terre"], language: "fr", rng: rng(1)}).word, "ver");
+  // Exclusions still win over phrases, including plural forms.
+  const pick = chooseResponse({prompts: ["snow", "dog"], excludeKeys: new Set(["balls"]), rng: rng(1)});
+  assert.notEqual(pick.word, "ball");
+});
+
+test("compound and plural prompts resolve; unknown words resolve to nothing", () => {
+  const en = getLexicon("en"), fr = getLexicon("fr");
+  assert.deepEqual(en.resolveAll("firetruck"), ["fire", "truck"]);
+  assert.deepEqual(en.resolveAll("snowy"), ["snow"]);
+  assert.deepEqual(fr.resolveAll("pommes de terre"), ["potato"]);
+  for (const odd of ["s", "I", "a", "", "zorblax", "velvet", "marble"]) assert.deepEqual(en.resolveAll(odd), [], odd);
+});
+
+// Independent judge for bot quality: 3 = direct link or phrase, 2.5 / 2 = shares
+// three / two neighbours, 1 = one shared neighbour or tag, 0 = unrelated.
+function judgeSide(lex, promptId, pickId) {
+  if (!promptId || !pickId || promptId === pickId) return 0;
+  const p = lex.concepts.get(promptId), c = lex.concepts.get(pickId);
+  if (p.links.has(pickId) || p.phrases.has(pickId)) return 3;
+  let shared = 0;
+  for (const n of c.near) if (p.near.has(n)) shared++;
+  if (shared >= 3) return 2.5;
+  if (shared === 2) return 2;
+  return shared === 1 || c.tags.some(tag => p.tags.includes(tag)) ? 1 : 0;
+}
+const isUsed = (used, key) => [...wordForms(key)].some(form => used.has(form));
+
+test("bot quality in simulated games and random pairs (EN and FR)", t => {
+  for (const lang of ["en", "fr"]) {
+    const lex = getLexicon(lang);
+    const all = [...lex.concepts.values()];
+    const records = [];
+    const judge = (prompts, used, word) => {
+      const [a, b] = prompts.map(p => lex.resolve(p));
+      const c = lex.resolve(word);
+      assert.ok(c, `${lang}: ${word} is a lexicon word`);
+      const sa = judgeSide(lex, a, c), sb = judgeSide(lex, b, c);
+      let strongPossible = false;
+      for (const x of all) {
+        if (x.id === a || x.id === b || isUsed(used, x.key)) continue;
+        if (judgeSide(lex, a, x.id) === 3 && judgeSide(lex, b, x.id) === 3) { strongPossible = true; break; }
+      }
+      records.push({prompts, word, sa, sb, strongPossible});
+    };
+    // Realistic games: the "player" answers with a word related to one or both prompts.
+    for (let g = 0; g < 60; g++) {
+      const random = rng(1000 + g), botRng = rng(5000 + g);
+      const used = new Set();
+      let player = all[Math.floor(random() * all.length)].label;
+      let bot = chooseOpening({language: lang, excludeKeys: used, rng: botRng}).word;
+      for (let move = 2; move <= 20 && wordKey(player) !== wordKey(bot); move++) {
+        used.add(wordKey(player));
+        used.add(wordKey(bot));
+        const prompts = [player, bot];
+        const next = chooseResponse({prompts, language: lang, excludeKeys: new Set(used), rng: botRng}).word;
+        assert.ok(!isUsed(used, wordKey(next)), `${lang}: reused ${next}`);
+        judge(prompts, used, next);
+        const ids = prompts.map(p => lex.resolve(p));
+        const pool = all.filter(x => !isUsed(used, x.key) && ids.some(id => lex.concepts.get(id).near.has(x.id)));
+        const both = pool.filter(x => ids.every(id => lex.concepts.get(id).near.has(x.id)));
+        const source = both.length && random() < 0.5 ? both : pool.length ? pool : all.filter(x => !isUsed(used, x.key));
+        player = source[Math.floor(random() * source.length)].label;
+        bot = next;
+      }
+    }
+    // Random concept pairs.
+    const random = rng(lang === "fr" ? 77 : 33);
+    for (let i = 0; i < 300; i++) {
+      const a = all[Math.floor(random() * all.length)], b = all[Math.floor(random() * all.length)];
+      if (a.id === b.id) continue;
+      judge([a.label, b.label], new Set([a.key, b.key]), chooseResponse({prompts: [a.label, b.label], language: lang, rng: rng(i + 1)}).word);
+    }
+    const possible = records.filter(r => r.strongPossible);
+    const strong = possible.filter(r => r.sa === 3 && r.sb === 3);
+    const unrelated = records.filter(r => r.sa === 0 && r.sb === 0);
+    const weakest = [...records].sort((x, y) => (Math.min(x.sa, x.sb) - Math.min(y.sa, y.sb)) || (x.sa + x.sb - y.sa - y.sb)).slice(0, 20);
+    t.diagnostic(`${lang}: ${records.length} picks; strong where possible ${strong.length}/${possible.length}; unrelated to both ${unrelated.length}`);
+    t.diagnostic(`${lang} weakest: ${weakest.map(r => `${r.prompts.join(" + ")} -> ${r.word} [${r.sa},${r.sb}]`).join("; ")}`);
+    assert.ok(possible.length >= 100, `${lang}: only ${possible.length} pairs had a strong answer`);
+    assert.ok(strong.length / possible.length >= 0.85, `${lang}: strong for ${strong.length}/${possible.length}`);
+    assert.deepEqual(unrelated.map(r => `${r.prompts.join("+")}->${r.word}`), [], `${lang}: picks unrelated to both prompts`);
+    // Whenever a direct-both word existed, the bot never settled for a one-sided word.
+    for (const r of possible) assert.ok(Math.min(r.sa, r.sb) >= 2, `${lang}: ${r.prompts.join("+")} -> ${r.word}`);
+  }
+});
+
+test("one-letter and unknown prompts never crash and still give one valid word", () => {
+  for (const lang of ["en", "fr"]) {
+    const lex = getLexicon(lang);
+    const known = lang === "fr" ? "chien" : "dog";
+    const dogId = lex.resolve(known);
+    for (const odd of ["s", "I", "a", "é", "zorblax", "velvet", "marble", "", "   ", "x-y"]) {
+      for (const prompts of [[odd, known], [known, odd], [odd, "q"]]) {
+        for (let seed = 1; seed <= 5; seed++) {
+          const pick = chooseResponse({prompts, language: lang, rng: rng(seed)});
+          assert.equal(typeof pick.word, "string");
+          assert.ok(validateWord(pick.word).ok, `${prompts} -> ${pick.word}`);
+          assert.ok(lex.byKey.has(wordKey(pick.word)), `${lang}: ${pick.word} is from the ${lang} pool`);
+          assert.notEqual(wordKey(pick.word), wordKey(known));
+          // With one known prompt, the word is tied directly to it.
+          if (prompts.includes(known)) {
+            const c = lex.concepts.get(lex.resolve(pick.word));
+            assert.ok(c.links.has(dogId) || c.phrases.has(dogId), `${prompts} -> ${pick.word}`);
+          }
+        }
+      }
+    }
+  }
+  // Odd input shapes.
+  assert.ok(chooseResponse({prompts: ["s"], rng: rng(1)}).word);
+  assert.ok(chooseResponse({prompts: [], rng: rng(1)}).word);
+});
+
+test("chooseResponse returns exactly one word, deterministic per rng, varied across seeds", () => {
+  const pairs = [["sun", "moon"], ["rain", "garden"], ["pizza", "party"], ["dragon", "castle"], ["snow", "winter"], ["cat", "milk"]];
+  let distinct = 0;
+  for (const lang of ["en", "fr"]) {
+    const lex = getLexicon(lang);
+    for (const [a, b] of pairs) {
+      const prompts = lang === "fr" ? [lex.concepts.get(a).label, lex.concepts.get(b).label] : [a, b];
+      const words = new Set();
+      for (let seed = 1; seed <= 20; seed++) {
+        const pick = chooseResponse({prompts, language: lang, rng: rng(seed)});
+        assert.deepEqual(Object.keys(pick).sort(), ["quality", "word"]);
+        assert.equal(typeof pick.word, "string");
+        assert.ok(pick.word.split(" ").length <= 3 && validateWord(pick.word).ok, pick.word);
+        assert.ok(!/[,;/+]/.test(pick.word), `one word only: ${pick.word}`);
+        assert.deepEqual(chooseResponse({prompts, language: lang, rng: rng(seed)}), pick, "same rng, same word");
+        words.add(pick.word);
+      }
+      distinct += words.size;
+    }
+  }
+  assert.ok(distinct >= pairs.length * 2 * 2.5, `only ${distinct} distinct answers`);
+});
+
+test("speller never suggests for one- or two-letter input and stays non-blocking", () => {
+  for (const lang of ["en", "fr"]) {
+    const speller = createSpeller(getLexicon(lang).words);
+    for (const raw of ["s", "I", "a", "é", "x", "zz", "ab", "", "  ", "-"]) assert.equal(speller.suggest(raw), null, raw);
+    // Unknown words get no suggestion rather than an error.
+    for (const raw of ["zorblax", "qqqqqqqqqqqqqqqqqqqqqqqq", "s s s"]) assert.equal(speller.suggest(raw), null, raw);
   }
 });
