@@ -50,14 +50,33 @@ test("no null/undefined/false text in the game UI when optional content is absen
   await continueReveal(page);
   await page.waitForSelector("#app .end");
   assert.deepEqual(await leaks(page), [], "game over");
-  // Play again (same character, with or without a rematch greeting) and a game with no greeting.
+  // Play again with Gary (his rematch greeting), then a new game from home (no greeting).
   await page.click("#newGameBtn");
-  await page.waitForSelector("#word");
-  assert.deepEqual(await leaks(page), [], "Play again");
+  await page.waitForSelector("#rematchLine");
+  assert.deepEqual(await leaks(page), [], "Gary Play again (rematch greeting)");
   await page.goto(server.url);
   await startSolo(page, "milo");
   await page.waitForSelector("#word");
   assert.deepEqual(await leaks(page), [], "new Solo game with Milo");
+  // Milo's reveal (his remark and result line), his win, and his rematch greeting.
+  const miloWord = await botWord(page);
+  await page.fill("#word", miloWord.toLowerCase() === "garden" ? "pencil" : "garden");
+  await page.click("#lockBtn");
+  await page.waitForSelector("#revealContinue");
+  assert.deepEqual(await leaks(page), [], "Milo reveal");
+  await continueReveal(page);
+  await page.waitForSelector("#trailNow #nowHint");
+  assert.deepEqual(await leaks(page), [], "Milo, move 2");
+  await page.fill("#word", await botWord(page));
+  await page.click("#lockBtn");
+  await page.waitForSelector("#revealContinue");
+  assert.deepEqual(await leaks(page), [], "Milo match reveal");
+  await continueReveal(page);
+  await page.waitForSelector("#app .end");
+  assert.deepEqual(await leaks(page), [], "Milo game over");
+  await page.click("#newGameBtn");
+  await page.waitForSelector("#rematchLine");
+  assert.deepEqual(await leaks(page), [], "Milo Play again (rematch greeting)");
 
   // Family game waiting for a friend (no opponent, no prompts yet).
   await page.goto(server.url);

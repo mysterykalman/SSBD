@@ -195,7 +195,7 @@ verified.
 | Tooling | `package.json`, `package-lock.json`, `eslint.config.js`, `jsconfig.json`, `.gitignore` |
 | Shared game logic | `src/shared/rules.js` (move state machine), `solo.js` (device-local Solo), `bot.js` (contextual bot), `words.js` (cleaning, keys, validation, speller), `types.js` (JSDoc types), `lexicon/{data,vocab,index}.js` |
 | Server | `src/server/api.js` (family games), `db.js` (Postgres access); `api/index.js` (Vercel Function); `vercel.json`; `supabase/migrations/` |
-| Client | `src/client/index.html`, `styles.css`, `app.js`, `i18n.js`, `store.js`, `sw.js`, `diagnostics.js`, `manifest.webmanifest`, `icon.svg` |
+| Client | `src/client/index.html`, `styles.css`, `app.js`, `i18n.js`, `store.js`, `sw.js`, `diagnostics.js`, `manifest.webmanifest`, `icons/` (favicon and app icons) |
 | Scripts | `scripts/build.mjs` (writes the static `dist/`), `dev-server.mjs` (mirrors Vercel locally), `postgres-local.mjs` (throwaway PostgreSQL), `smoke.mjs` (deployment check) |
 | Tests | `test/*.test.mjs` (unit and API integration), `test/e2e/*.test.mjs` (Playwright, Chromium) |
 | Docs | `README.md`, `docs/ACCEPTANCE.md`, this section, `reference/README.md` |
