@@ -939,3 +939,17 @@ See `docs/BOT_ENGINE.md` for the details: root causes, formula, stages, licensin
 - **Tools.**
   - `node scripts/solo-review.mjs` prints simulated transcripts for manual review.
   - `node scripts/convergence.mjs` runs per character, now with a noisier `human` stand-in.
+
+## Status update: hidden move cap, Quit / Leave, stable commentary width (2026-10-08)
+
+- **Hidden 20-move cap.** `MAX_MOVES` stays as an internal safety limit, but players never see it.
+  - The progress trail is open-ended: "Move N", one stone per move so far, no total, no countdown and no progress bar with a maximum.
+  - The game list shows "Move N".
+  - Reaching the cap ends neutrally with "That one got away from us." and offers Play again / Return home.
+  - Gary's and Milo's lines that revealed the cap (last chance, move twenty, twenty moves, running out of moves, "We lost") were rewritten in their voice. `test/hidden-cap.test.mjs` guards every line in EN and FR.
+- **Quit (Solo) / Leave (Together).** A quiet text action in the game header opens a confirmation dialog.
+  - **Solo:** the game is stored as `ENDED` and logged as "ended", never a win or a loss; the player goes home.
+  - **Together:** `POST /api/games/leave` (idempotent) sets the game to `ENDED` and sends `PLAYER_LEFT` to the other player. Their next poll shows "{name} left the game." with Return home / Start a new game.
+  - No migration is needed: `games.status` is free text, and who left comes from the notification.
+  - An ended game cannot be rematched or joined.
+- **Commentary width.** Character bubbles have one fixed, responsive width (`min(100%, 520px)`) that is independent of the text. The typewriter never resizes them and the avatar stays anchored. `test/e2e/commentary.test.mjs` checks this.

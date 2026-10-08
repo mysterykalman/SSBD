@@ -42,7 +42,7 @@ export const CHARACTERS = {
     meetAgain: "garyMeetAgain",
     rating: ["garyRate1", "garyRate2"], // the 1–5 star question on the win card
     // Shared Solo copy in this character's own words (anything not listed uses the shared key).
-    copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady", gameOverAww: "garyGameOverAww", gameOverCopy: "garyGameOverCopy"},
+    copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady"},
     // Gary speaks through his branching narrative (src/client/gary-narrative.js): one paired
     // before/after beat per move, chosen from the direction of the game. No random remarks.
     narrative: GARY_NARRATIVE,

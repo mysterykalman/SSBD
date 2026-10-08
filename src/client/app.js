@@ -2,7 +2,7 @@
 // Solo games run fully on the device (src/shared/solo.js) and work offline.
 // Family games use the API in src/server/api.js.
 
-import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js";
+import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js"; // MAX_MOVES: internal cap, never shown
 import {publicMove, setGaryDiagnostics, startSoloGame, submitSoloWord} from "../shared/solo.js";
 import {isJoinCode, looksLikeRoomCode, normalizeJoinCode} from "../shared/codes.js";
 import {getLexicon} from "../shared/lexicon/index.js";
@@ -15,7 +15,7 @@ import {hasMet, markMet, typeInto} from "./gary.js";
 import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, connectionStrength, copyKey, rematchLine, revealKind} from "./characters.js";
 import {characterArt} from "./gary-art.js";
 import {decisionView} from "./decision-view.js";
-import {endUnfinished, logRating, logRound, startLogSync} from "./gamelog.js";
+import {endGame, endUnfinished, logRating, logRound, startLogSync} from "./gamelog.js";
 import {renderReview} from "./review.js";
 
 const store = createStore();
@@ -215,6 +215,7 @@ function serverView(game) {
     language: game.language,
     status: game.status,
     waitingForPlayer: game.waitingForPlayer,
+    leftBy: game.leftBy || null,
     createdAt: game.createdAt,
     maxMoves: game.maxMoves || MAX_MOVES,
     youSide: game.you.side,
@@ -521,9 +522,10 @@ function gameListItems() {
   items.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
   if (!items.length) return [h("li", {class: "empty"}, h("span", {class: "empty-line"}, t("gamesEmpty1")), h("span", {class: "empty-line muted"}, t("gamesEmpty2")))];
   return items.map(item => {
-    const finished = item.status === "MATCHED" || item.status === "EXHAUSTED";
+    const finished = item.status === "MATCHED" || item.status === "EXHAUSTED" || item.status === "ENDED";
     const status = item.status === "MATCHED" ? t("statusMatched")
-      : item.status === "EXHAUSTED" ? t("gameOverTitle")
+      : item.status === "EXHAUSTED" ? t("statusFinished")
+      : item.status === "ENDED" ? t("statusEnded")
       : item.status === "WAITING" ? t("waitingJoin")
       : item.theirTurn ? t("statusTheirTurn", {name: item.theirTurn})
       : item.yourTurn ? t("statusYourTurn") : t("statusActive");
@@ -532,7 +534,7 @@ function gameListItems() {
       h("div", {class: "game-info"},
         h("strong", {}, item.title),
         h("span", {class: "game-meta"}, when(item.createdAt)),
-        h("span", {class: "game-meta"}, [status, finished ? null : t("moveOf", {n: item.move, max: MAX_MOVES}), item.language && item.language !== state.lang ? t("gameInLang", {lang: languageName(t, item.language)}) : null].filter(Boolean).join(" · "))),
+        h("span", {class: "game-meta"}, [status, finished ? null : t("moveN", {n: item.move}), item.language && item.language !== state.lang ? t("gameInLang", {lang: languageName(t, item.language)}) : null].filter(Boolean).join(" · "))),
       h("button", {class: `btn small ${finished ? "ghost" : ""}`, type: "button", onclick: item.open, "aria-label": t("openGame", {action: finished ? t("view") : t("resume"), title: item.title, date: when(item.createdAt)})}, finished ? t("view") : t("resume")));
   });
 }
@@ -631,7 +633,7 @@ function renderGame() {
   const keep = captureInput();
   renderChrome();
   const move = view.moves[view.moves.length - 1];
-  const finished = view.status === "MATCHED" || view.status === "EXHAUSTED";
+  const finished = isFinished(view);
   const revealed = latestRevealed(view);
   // The turn the player just continued into gets its one-time pop/celebration; re-renders don't repeat it.
   const fresh = Boolean(revealed && !state.reveal && revealed.number === state.justContinued);
@@ -650,7 +652,9 @@ function renderGame() {
       h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, backLabel()),
       h("span", {class: "mode-chip"},
         view.waitingForPlayer && !solo ? null : otherBadge(view, "small"),
-        h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")})))),
+        h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")}))),
+      // Quit (Solo) / Leave (Together): always there while the game is on, never a main action.
+      finished ? null : h("button", {class: "quit-link", type: "button", id: "quitBtn", onclick: () => confirmQuit(state.game)}, solo ? t("quitBtn") : t("leaveBtn"))),
     board,
     trail(view),
     garyDebugPanel(view));
@@ -675,35 +679,32 @@ function garyDebugPanel(view) {
 }
 
 /**
- * 20 stepping stones instead of a bar: played moves carry a check, the current move is
- * bigger (it pops once when you arrive), future moves are outlined. At the end every
- * stone lights up and the last one becomes a trophy (match) or a star (20 moves).
+ * The move trail: one stepping stone per move so far (played moves carry a check, the current one
+ * is bigger and pops once when you arrive). Open-ended on purpose: no total, no "moves left", no
+ * countdown (the internal move cap is never shown). When the game ends every stone lights up and
+ * the last one becomes a star.
  */
 function progressTrail(view, move, finished, revealed, fresh) {
-  const max = view.maxMoves;
-  const current = finished ? revealed.number : move.number;
-  const togo = Math.max(0, max - current);
-  const label = t("moveOf", {n: current, max});
+  const ended = view.status === "ENDED";
+  const current = ended ? revealed?.number ?? 0 : finished ? revealed?.number ?? move.number : move.number;
+  const label = ended ? t("progressRounds", {n: current}) : t("moveN", {n: current});
   const sub = finished
-    ? (view.status === "MATCHED" ? t("progressMatched", {n: current}) : t("progressFinale"))
-    : current <= 1 ? t("progressStart") : t("progressToGo", {n: togo});
+    ? (view.status === "MATCHED" ? t("progressMatched", {n: current}) : ended ? t("progressEnded") : t("progressFinale"))
+    : current <= 1 ? t("progressStart") : t("progressRounds", {n: current - 1});
   const pop = fresh && !finished && !reducedMotion();
   const stones = [];
-  for (let n = 1; n <= max; n++) {
+  for (let n = 1; n <= current; n++) {
     let cls, mark;
-    if (finished) {
-      cls = n < current ? "done lit" : n === current ? "final lit" : "lit spare";
-      mark = n === current ? "★" : n < current ? "✓" : "★";
-    } else if (n < current) { cls = "done"; mark = "✓"; }
-    else if (n === current) { cls = `now ${pop ? "pop" : ""}`; mark = String(n); }
-    else { cls = "todo"; mark = ""; }
+    if (finished) { cls = n === current ? "final lit" : "done lit"; mark = n === current ? "★" : "✓"; }
+    else if (n < current) { cls = "done"; mark = "✓"; }
+    else { cls = `now ${pop ? "pop" : ""}`; mark = String(n); }
     stones.push(h("span", {class: `stone ${cls}`}, mark));
   }
-  return h("div", {class: `progress ${finished ? "finale" : ""}`},
+  return h("div", {class: `progress ${finished ? "finale" : ""}`, id: "progress", role: "group", "aria-label": t("progressLabel2"), "data-move": String(current)},
     h("p", {class: "progress-labels"},
       h("span", {class: "move-count", id: "moveLabel"}, label),
       h("span", {class: "progress-sub", id: "progressSub"}, sub)),
-    h("div", {class: "stones", role: "progressbar", "aria-label": t("progressLabel2"), "aria-valuemin": "0", "aria-valuemax": String(max), "aria-valuenow": String(finished && view.status === "EXHAUSTED" ? max : current), "aria-valuetext": `${label}, ${sub}`}, stones));
+    stones.length ? h("div", {class: "stones", "aria-hidden": "true"}, stones) : null);
 }
 
 function languageNote(view) {
@@ -785,7 +786,7 @@ function startReveal(view, move) {
         // The character's AFTER line is their reaction to the result, so there is no separate
         // result sentence; only a match gets the headline (and a family game's last move its note).
         move.status === "MATCHED" ? h("p", {class: "rv-outcome rv-step"}, h("span", {class: "rv-headline"}, t("revealMatchTitle")), " ", h("span", {class: "rv-subline"}, matchCopy(view, move)))
-          : !beat && move.status === "EXHAUSTED" ? h("p", {class: "rv-outcome rv-step"}, ct(view, "gameOverAww")) : null,
+          : !beat && move.status === "EXHAUSTED" ? h("p", {class: "rv-outcome rv-step"}, t("gameOverTitle")) : null,
         ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(view, move)))));
   document.body.append(dlg);
   dlg.showModal();
@@ -952,7 +953,7 @@ async function runReveal(view, move, ended, token) {
   announce([t("revealTitle"), beforeText ? t("revealSaid", {name: characterName(view), word: beforeText}) : "", t("revealSaid", {name: sideLabel(view, view.youSide), word: said[view.youSide].toUpperCase()}),
     t("revealSaid", {name: sideLabel(view, view.otherSide), word: said[view.otherSide].toUpperCase()}),
     remark ? t("revealSaid", {name: characterName(view), word: remark}) : "",
-    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : !beat && move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : ""].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
+    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : !beat && move.status === "EXHAUSTED" ? t("gameOverTitle") : ""].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : ct(view, "keepPlaying"));
   result.append(button);
   setRevealPhase("ready");
@@ -1043,16 +1044,89 @@ function endPanel(view, last, fresh) {
   const matched = view.status === "MATCHED";
   const solo = isSoloLike(view);
   if (matched && solo) return soloWinCard(view, last, fresh);
+  if (view.status === "ENDED") return endedPanel(view);
   const shownAt = performance.now();
+  // No match before the internal cap: a neutral, graceful ending (never "out of moves" or a loss).
   return h("div", {class: `end ${matched ? "win" : "over"}`},
     matched
       ? h("div", {class: "end-icon win-burst", "aria-hidden": "true"}, h("span", {class: "burst-star"}, "★"))
       : solo ? garyGoodbye(view, fresh && !reducedMotion()) : sleepyToken(fresh && !reducedMotion()),
     h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
-    h("p", {}, matched
-      ? t("winCopy", {n: last.number})
-      : ct(view, "gameOverCopy")),
+    matched ? h("p", {}, t("winCopy", {n: last.number})) : null,
     endActions(view, shownAt));
+}
+
+/**
+ * A game someone quit (Solo) or left (Together): no win, no loss. The player who stayed is told who
+ * left; everyone gets a way home and a fresh start.
+ */
+function endedPanel(view) {
+  const solo = isSoloLike(view);
+  const otherLeft = !solo && view.leftBy === "other";
+  const line = solo ? t("endedQuit") : otherLeft ? t("endedOtherLeft", {name: view.otherName || t("friend")}) : t("endedYouLeft");
+  const home = h("button", {class: `btn ${otherLeft ? "big" : "ghost"}`, type: "button", id: "homeBtn", onclick: () => navigate("/")}, t("returnHome"));
+  const again = solo
+    ? h("button", {class: "btn big", type: "button", id: "newGameBtn", onclick: event => playAgain(view, event.currentTarget)}, t("playAgainWith", {name: characterName(view)}))
+    : h("button", {class: `btn ${otherLeft ? "ghost" : "big"}`, type: "button", id: "newGameBtn", disabled: !state.online, onclick: () => ensurePlayer(() => createFamily(view.language))}, t("newFamilyGame"));
+  return h("div", {class: "end ended", id: "endedPanel"},
+    h("h1", {id: "boardTitle", class: "board-title"}, otherLeft ? line : t("endedTitle")),
+    otherLeft ? null : h("p", {}, line),
+    h("div", {class: "row center end-actions"}, ...(otherLeft ? [home, again] : [again, home])));
+}
+
+/** Quit (Solo) or Leave (Together): a confirmation first; "Keep playing" changes nothing. */
+function confirmQuit(view) {
+  if (!view || isFinished(view)) return;
+  $("quitDialog")?.remove();
+  const solo = isSoloLike(view);
+  const close = () => { const dlg = $("quitDialog"); if (dlg) { if (dlg.open) dlg.close(); dlg.remove(); } };
+  const keep = () => { close(); $("quitBtn")?.focus(); };
+  const dlg = h("dialog", {id: "quitDialog", class: "dialog quit-dialog", "aria-labelledby": "quitTitle", "aria-describedby": "quitBody",
+    oncancel: event => { event.preventDefault(); keep(); }},
+    h("div", {class: "dialog-body"},
+    h("h2", {id: "quitTitle"}, solo ? t("quitTitle") : t("leaveTitle")),
+    h("p", {id: "quitBody"}, solo ? t("quitBody") : t("leaveBody")),
+    h("div", {class: "row center quit-actions"},
+      h("button", {class: "btn", type: "button", id: "quitKeep", onclick: keep}, t("quitKeep")),
+      h("button", {class: "btn ghost", type: "button", id: "quitConfirm", onclick: async event => {
+        event.currentTarget.disabled = true;
+        const done = solo ? quitSolo(view) : await leaveFamily(view);
+        close();
+        if (!done) $("quitBtn")?.focus();
+      }}, solo ? t("quitConfirm") : t("leaveConfirm")))));
+  document.body.append(dlg);
+  dlg.showModal();
+  $("quitKeep")?.focus();
+}
+
+/** End this Solo game on purpose: kept on the device as ENDED (logged as "ended", not a loss), then home. */
+function quitSolo(view) {
+  const game = store.soloGame(view.id);
+  if (game && !isFinished(game)) {
+    const at = new Date().toISOString();
+    store.saveSolo({...game, status: "ENDED", endedAt: at, updatedAt: at});
+    endGame(game.id);
+  }
+  closeReveal();
+  clearTimeout(idleTimer);
+  navigate("/");
+  return true;
+}
+
+/** Leave this Together game: the server ends it and tells the other player; then home. */
+async function leaveFamily(view) {
+  if (!state.player) return false;
+  try {
+    await api("/api/games/leave", {player_id: state.player.id, game_id: view.id});
+  } catch (error) {
+    toast(errorText(error.code), {kind: "error"});
+    return false;
+  }
+  stopPolling();
+  closeReveal();
+  navigate("/");
+  refreshDashboard();
+  return true;
 }
 
 /** Play again (primary), Return home (secondary), View history (quiet). */
@@ -1275,7 +1349,7 @@ function promptChips(view, prompts) {
 /** The open round, pinned above the finished ones. Only shows your own locked word, never the other side's. */
 function activeRow(view) {
   const move = view.moves[view.moves.length - 1];
-  if (!move || move.words || view.waitingForPlayer || view.status === "MATCHED" || view.status === "EXHAUSTED") return null;
+  if (!move || move.words || view.waitingForPlayer || isFinished(view)) return null;
   const hidden = () => h("span", {class: "chip mystery"}, h("small", {}, otherLabel(view)), h("span", {class: "chip-word"}, h("span", {"aria-hidden": "true"}, "?"), h("span", {class: "sr-only"}, t("hiddenWord"))));
   const yours = move.mine
     ? wordChip(move.mine, t("you"), "you")
@@ -1286,7 +1360,7 @@ function activeRow(view) {
     // Only these two words matter; the rows below are history (once there are two words to match).
     move.prompts ? h("div", {class: "now-hint", id: "nowHint"}, h("p", {class: "now-hint-main"}, t("nowHint"))) : null,
     h("div", {class: "trail-row-inner"},
-      h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, move.number), h("span", {class: "sr-only"}, t("moveOf", {n: move.number, max: view.maxMoves}))),
+      h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, move.number), h("span", {class: "sr-only"}, t("moveN", {n: move.number}))),
       h("div", {class: "trail-eq"},
         h("span", {class: "trail-in"}, move.prompts ? promptChips(view, move.prompts) : h("span", {class: "start-label"}, t("start"))),
         h("span", {class: "trail-out"},
@@ -1310,7 +1384,7 @@ function trail(view) {
       ? h("ol", {class: "trail-list", reversed: true}, rows.map((m, index) => {
         const ending = m.status === "MATCHED" || m.status === "EXHAUSTED";
         return h("li", {class: `trail-row ${m.status === "MATCHED" ? "match" : ""}`, "data-move": m.number},
-          h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, m.number), h("span", {class: "sr-only"}, t("moveOf", {n: m.number, max: view.maxMoves}))),
+          h("span", {class: "move-badge"}, h("span", {"aria-hidden": "true"}, m.number), h("span", {class: "sr-only"}, t("moveN", {n: m.number}))),
           // WORD 1 + WORD 2 → WORD 3 + WORD 4; each "+" is glued to the word after it so lines break cleanly.
           h("div", {class: "trail-eq"},
             h("span", {class: "trail-in"},
@@ -1692,7 +1766,7 @@ function celebrate() {
 // The bell lists news from GET /api/notifications. Entries are keyed by id, so a refresh never
 // duplicates them, and nothing is marked read until the player opens one or taps "Mark all as read".
 const notifs = {items: new Map(), unread: 0, status: "idle", loadedFor: null, inflight: null};
-const NOTIF_TEXT = {YOUR_TURN: "notifYourTurn", READY_TO_REVEAL: "notifReveal", PLAYER_JOINED: "notifJoined", GAME_COMPLETE: "notifMatch", GAME_EXHAUSTED: "notifComplete", REMATCH: "notifRematch"};
+const NOTIF_TEXT = {YOUR_TURN: "notifYourTurn", READY_TO_REVEAL: "notifReveal", PLAYER_JOINED: "notifJoined", GAME_COMPLETE: "notifMatch", GAME_EXHAUSTED: "notifComplete", REMATCH: "notifRematch", PLAYER_LEFT: "notifLeft"};
 const bellAllowed = () => Boolean(state.player?.id && state.player.display_name?.trim() && state.online);
 
 function renderBell() {

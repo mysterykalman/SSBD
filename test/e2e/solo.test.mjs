@@ -22,7 +22,7 @@ test("fresh Solo: blank start, one input, simultaneous reveal, next prompt equal
   assert.equal(await page.locator("#revealModal").count(), 0);
   const board = await page.locator(".board").innerText();
   assert.doesNotMatch(board, MULTIPLAYER_TEXT);
-  assert.match(await page.locator("#moveLabel").innerText(), /Move 1 of 20/);
+  assert.match(await page.locator("#moveLabel").innerText(), /^Move 1$/);
 
   const bot = await botWord(page);
   const mine = bot.toLowerCase() === "giraffe" ? "penguin" : "giraffe";
@@ -33,13 +33,13 @@ test("fresh Solo: blank start, one input, simultaneous reveal, next prompt equal
   assert.match(reveal, /\bYOU\b/);
   assert.match(reveal, new RegExp(`YOU[\\s\\S]*${mine}[\\s\\S]*GARY[\\s\\S]*${bot}`, "i"), "your word first, then the bot's");
   assert.equal(await page.locator("#prompt").count(), 0, "board stays on move 1 until Keep playing");
-  assert.match(await page.locator("#moveLabel").innerText(), /Move 1 of 20/);
+  assert.match(await page.locator("#moveLabel").innerText(), /^Move 1$/);
   assert.ok(await continueReveal(page), "Keep playing closes the reveal");
   assert.equal(await page.locator("#revealModal").count(), 0);
   const tiles = await page.locator("#prompt .tile").allInnerTexts();
   assert.deepEqual(tiles.map(s => s.toLowerCase()), [mine, bot.toLowerCase()]);
   assert.equal(await page.inputValue("#word"), "", "input is reset for the new move");
-  assert.match(await page.locator("#moveLabel").innerText(), /Move 2 of 20/);
+  assert.match(await page.locator("#moveLabel").innerText(), /^Move 2$/);
   assert.equal(await page.locator(".trail-row").count(), 1);
   assert.doesNotMatch(await page.locator("main").innerText(), MULTIPLAYER_TEXT);
   assert.deepEqual(errors, []);

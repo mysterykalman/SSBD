@@ -10,7 +10,8 @@ import {seededRandom} from "../src/shared/rules.js";
 
 const M = MILO_NARRATIVE;
 
-// The approved English script, word for word: [before, after, post-win / follow-up].
+// The approved English script, word for word: [before, after, post-win / follow-up]. The lines that
+// revealed the internal move cap (last chance, move twenty, twenty moves) were rewritten in his voice.
 const APPROVED = {
   opening: [
     ["Okay, I picked one. I’ve been ready for this since, like, five minutes before we started.", "Oh! Completely different. Great. Now it gets interesting."],
@@ -105,12 +106,12 @@ const APPROVED = {
   veryLateWin: [
     ["Please be it. Please be it. Please be it.", "YES!", "FINALLY."],
     ["I refuse to believe we can miss again.", "WE GOT IT.", "Okay. That took years off my life."],
-    ["Last few chances. I’m emotionally involved now.", "YES!", "Worth it."],
+    ["Okay. I’m emotionally involved now.", "YES!", "Worth it."],
     ["I think this is it. I need this to be it.", "FINALLY!", "Okay. That was ridiculous. Again?"]],
   exhausted: [
-    ["Okay. Last one.", "Nooo.", "Twenty moves and our brains still refused to cooperate. Honestly, kind of impressive."],
-    ["This is literally our last chance.", "Not it.", "Okay. We lost. But in a very committed way."],
-    ["Move twenty. Please do something useful, brain.", "Nope.", "I still want another round."]]
+    ["Okay. Here goes.", "Nooo.", "Our brains really refused to cooperate on that one. Honestly, kind of impressive."],
+    ["Okay. I have a really specific feeling about this.", "Not it.", "Okay. That one got away. But in a very committed way."],
+    ["Okay. Please do something useful, brain.", "Nope.", "I still want another round."]]
 };
 const APPROVED_ONE_OFF = {
   alreadyUsed: ["We used that one already! Pick another.", "Already played. My memory works sometimes.", "That one’s taken. Try another."],

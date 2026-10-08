@@ -9,7 +9,9 @@
 // after a 20-move miss. Milo's normal win is moves 4–10 (late from 11), and he has one long-game
 // branch (from move 10), no separate very-long one.
 //
-// The English copy is the approved script, word for word. French is a faithful translation.
+// The English copy is the approved script, word for word, except the lines that revealed the
+// internal move cap (the game never mentions it), which were rewritten in the same voice.
+// French is a faithful translation.
 
 import {createNarrative, levelOf, trendOf} from "./narrative.js";
 
@@ -200,18 +202,18 @@ const SCRIPT = {
       fr: ["Pourvu que ce soit ça. Pourvu que ce soit ça. Pourvu que ce soit ça.", "OUI !", "ENFIN."]},
     b: {en: ["I refuse to believe we can miss again.", "WE GOT IT.", "Okay. That took years off my life."],
       fr: ["Je refuse de croire qu’on puisse encore rater.", "ON L’A.", "OK. Ça m’a coûté des années de vie."]},
-    c: {en: ["Last few chances. I’m emotionally involved now.", "YES!", "Worth it."],
-      fr: ["Dernières chances. Je suis émotionnellement impliqué, maintenant.", "OUI !", "Ça valait le coup."]},
+    c: {en: ["Okay. I’m emotionally involved now.", "YES!", "Worth it."],
+      fr: ["OK. Je suis émotionnellement impliqué, maintenant.", "OUI !", "Ça valait le coup."]},
     d: {en: ["I think this is it. I need this to be it.", "FINALLY!", "Okay. That was ridiculous. Again?"],
       fr: ["Je crois que c’est ça. J’ai besoin que ce soit ça.", "ENFIN !", "OK. C’était ridicule. On recommence ?"]}
   },
   exhausted: {
-    a: {en: ["Okay. Last one.", "Nooo.", "Twenty moves and our brains still refused to cooperate. Honestly, kind of impressive."],
-      fr: ["OK. Le dernier.", "Nooon.", "Vingt coups et nos cerveaux n’ont toujours pas voulu coopérer. Honnêtement, c’est presque impressionnant."]},
-    b: {en: ["This is literally our last chance.", "Not it.", "Okay. We lost. But in a very committed way."],
-      fr: ["C’est littéralement notre dernière chance.", "Pas ça.", "OK. On a perdu. Mais d’une manière très déterminée."]},
-    c: {en: ["Move twenty. Please do something useful, brain.", "Nope.", "I still want another round."],
-      fr: ["Coup numéro vingt. S’il te plaît, fais quelque chose d’utile, cerveau.", "Non.", "Je veux quand même une autre manche."]}
+    a: {en: ["Okay. Here goes.", "Nooo.", "Our brains really refused to cooperate on that one. Honestly, kind of impressive."],
+      fr: ["OK. C’est parti.", "Nooon.", "Nos cerveaux n’ont vraiment pas voulu coopérer sur celle-là. Honnêtement, c’est presque impressionnant."]},
+    b: {en: ["Okay. I have a really specific feeling about this.", "Not it.", "Okay. That one got away. But in a very committed way."],
+      fr: ["OK. J’ai un pressentiment très précis.", "Pas ça.", "OK. Celle-là nous a échappé. Mais d’une manière très déterminée."]},
+    c: {en: ["Okay. Please do something useful, brain.", "Nope.", "I still want another round."],
+      fr: ["OK. S’il te plaît, fais quelque chose d’utile, cerveau.", "Non.", "Je veux quand même une autre manche."]}
   }
 };
 

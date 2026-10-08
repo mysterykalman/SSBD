@@ -140,15 +140,16 @@ test("shared Solo copy suits both characters; each character's own wording keeps
     }
   }
   // Milo's lines come only from his narrative: shared system sentences stay neutral for him.
-  for (const key of ["firstSolo", "revealNextStarts", "keepPlaying", "gameOverAww", "gameOverCopy", "errALREADY_USED"]) assert.equal(copyKey("milo", key), key, `${key} stays neutral for Milo`);
+  for (const key of ["firstSolo", "revealNextStarts", "keepPlaying", "errALREADY_USED"]) assert.equal(copyKey("milo", key), key, `${key} stays neutral for Milo`);
   // The next pair is plain system copy for both (the character's narrative says the rest).
   assert.equal(copyKey("gary", "revealNextStarts"), "revealNextStarts");
   assert.equal(STRINGS.en.revealNextStarts, "Next: {a} + {b}");
   // Gary's own wording; buttons stay plain and functional for him.
   assert.equal(STRINGS.en[copyKey("gary", "firstSolo")], "Type any word you like. Gary is thinking. This was not on his calendar. Then you both reveal!");
   assert.equal(STRINGS.en[copyKey("gary", "botReady")], "Gary has a word. Apparently we're doing this.");
-  assert.equal(STRINGS.en[copyKey("gary", "gameOverCopy")], "Twenty moves. Gary would like this meeting to end.");
-  assert.equal(STRINGS.en[copyKey("gary", "gameOverAww")], "No match. Gary is pretending this was the expected outcome.");
+  // The neutral ending at the internal move cap is shared system copy (never Gary's "twenty moves").
+  assert.equal(copyKey("gary", "gameOverCopy"), "gameOverCopy");
+  assert.equal(STRINGS.en.gameOverTitle, "That one got away from us.");
   assert.equal(STRINGS.en[copyKey("gary", "keepPlaying")], "Keep playing");
 });
 

@@ -203,13 +203,12 @@ export async function revealShown(page, {timeout = 10000} = {}) {
   return page.locator("#revealModal").innerText();
 }
 
-/** Progress as shown to the player: the progressbar's aria-valuenow (and its "Move n of 20" text). */
+/** Progress as shown to the player: the current move (open-ended: no total is shown) and the trail's text. */
 export async function progressOf(page) {
-  const bar = page.locator("[role=progressbar]").first();
+  const trail = page.locator("#progress").first();
   return {
-    now: Number(await bar.getAttribute("aria-valuenow")),
-    max: Number(await bar.getAttribute("aria-valuemax")),
-    text: (await bar.getAttribute("aria-valuetext")) || ""
+    now: Number(await trail.getAttribute("data-move")),
+    text: (await trail.innerText()).trim()
   };
 }
 

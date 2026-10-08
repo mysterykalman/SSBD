@@ -112,7 +112,9 @@ test("keyboard: start and play Solo with the keyboard only, focus is visible", a
   await page.waitForSelector(".trail-row");
   const active = await page.evaluate(() => document.activeElement?.id || (document.activeElement?.matches(".end .board-title") ? "end-title" : document.activeElement?.tagName));
   assert.ok(active === "word" || active === "end-title", `focus after move: ${active}`);
-  assert.equal(await page.getAttribute(".stones", "role"), "progressbar");
+  // The move trail is open-ended: no progress bar with a maximum, no "of 20".
+  assert.equal(await page.locator("[role=progressbar]").count(), 0);
+  assert.doesNotMatch(await page.locator("#progress").innerText(), /of 20|left|to go/i);
   assert.ok(await page.getAttribute('[data-lang="en"]', "aria-pressed"));
   await context.close();
 });

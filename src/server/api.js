@@ -41,14 +41,15 @@ import {logBatch, reviewRoute} from "./logs.js";
  * @typedef {{id: string, join_code: string, status: string, round_number: number, created_at: string, updated_at: string, language?: string | null, rematch_of?: string | null}} GameRow
  * @typedef {{player_id: string, slot: number, display_name: string | null}} MemberRow
  * @typedef {{id: string, number: number, prompts: [string, string] | null, status: MoveStatus, openedAt: string, revealedAt: string | null, words: {a: string, b: string} | null, submitted: Partial<Record<Side, Submission>>, botQuality: any}} LoadedMove
- * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, rules: {status: GameStatus, language: string, moves: LoadedMove[]}}} LoadedGame
+ * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, stayed: string | null, rules: {status: GameStatus, language: string, moves: LoadedMove[]}}} LoadedGame
+ *   stayed: in a game someone left (ENDED), the player who was told (the one who did not leave)
  * @typedef {{joinCode: () => string, recoveryDigits: () => number}} Codes
  * @typedef {{store?: Store | null, codes?: Partial<Codes>, reviewToken?: string}} ApiEnv
  */
 
 const BOT = "BOT";
 /** Finished game statuses, including COMPLETE from earlier releases (read as MATCHED). */
-const FINISHED = new Set(["MATCHED", "EXHAUSTED", "COMPLETE"]);
+const FINISHED = new Set(["MATCHED", "EXHAUSTED", "COMPLETE", "ENDED"]);
 /** @param {GameRow} row */
 const isPlayable = row => row.status !== "WAITING" && !FINISHED.has(row.status);
 /** Notification kinds the API creates (family games only). */
@@ -141,10 +142,12 @@ async function loadGame(db, gameId) {
     /** @type {{id: string} | null} */
     let linked = null;
     if (FINISHED.has(game.status)) linked = await first(q, "SELECT id FROM games WHERE id = $1 AND rematch_of = $2", [await rematchIdFor(game.id), game.id]);
-    return {game, members, rounds, submissions, linked};
+    // A game someone left: the player who stayed is the one the PLAYER_LEFT notification went to.
+    const stayed = game.status === "ENDED" ? await first(q, "SELECT player_id FROM notifications WHERE game_id = $1 AND kind = 'PLAYER_LEFT' LIMIT 1", [gameId]) : null;
+    return {game, members, rounds, submissions, linked, stayed};
   });
   if (!raw) return null;
-  const {game, members, rounds, submissions, linked} = raw;
+  const {game, members, rounds, submissions, linked, stayed} = raw;
   /** @type {Map<string, Side>} */
   const slotOf = new Map(members.map(m => [m.player_id, m.slot === 1 ? "a" : "b"]));
   /** @type {LoadedMove[]} */
@@ -171,8 +174,8 @@ async function loadGame(db, gameId) {
     };
   });
   /** @type {GameStatus} */
-  const status = game.status === "COMPLETE" ? "MATCHED" : game.status === "MATCHED" || game.status === "EXHAUSTED" ? game.status : "ACTIVE";
-  return {row: game, members, moves, slotOf, rematchId: linked ? linked.id : null, rules: {status, language: game.language === "fr" ? "fr" : "en", moves}};
+  const status = game.status === "COMPLETE" ? "MATCHED" : game.status === "MATCHED" || game.status === "EXHAUSTED" || game.status === "ENDED" ? game.status : "ACTIVE";
+  return {row: game, members, moves, slotOf, rematchId: linked ? linked.id : null, stayed: stayed ? stayed.player_id : null, rules: {status, language: game.language === "fr" ? "fr" : "en", moves}};
 }
 
 /**
@@ -201,6 +204,8 @@ function viewFor(loaded, playerId) {
     language: row.language === "fr" ? "fr" : "en",
     status,
     waitingForPlayer: status === "WAITING",
+    // Someone left: "other" for the player who stayed (they are told), "you" for the one who left.
+    leftBy: status === "ENDED" ? (loaded.stayed === playerId ? "other" : "you") : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     maxMoves: MAX_MOVES,
@@ -219,6 +224,39 @@ function viewFor(loaded, playerId) {
       otherLocked: move.status === "OPEN" ? Boolean(move.submitted[otherSide]) : false
     }))
   };
+}
+
+/**
+ * A player leaves a game (Together "Leave game"): it ends for both (status ENDED, never a win or a
+ * loss), and the other player is told (PLAYER_LEFT), so nobody is left waiting. Works before anyone
+ * joined, mid-round, after a reveal, and again after a reload: leaving a game that already ended
+ * changes nothing.
+ * @param {Store} db
+ * @param {any} body {player_id, game_id}
+ */
+async function leave(db, body) {
+  const playerId = String(body.player_id || ""), gameId = String(body.game_id || "");
+  const player = await first(db, "SELECT id, display_name FROM players WHERE id = $1", [playerId]);
+  if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
+  const result = await db.tx(async q => {
+    // Lock the game row: a reveal or a second leave waits, then sees the game as it now is.
+    const game = await first(q, "SELECT * FROM games WHERE id = $1 FOR UPDATE", [gameId]);
+    if (!game) return "missing";
+    const members = await all(q, "SELECT player_id FROM game_players WHERE game_id = $1", [gameId]);
+    if (!members.some(m => m.player_id === playerId)) return "stranger";
+    if (game.status !== "WAITING" && game.status !== "ACTIVE") return "done";
+    const at = now();
+    await q.query("UPDATE games SET status = 'ENDED', updated_at = $1 WHERE id = $2", [at, gameId]);
+    for (const m of members) {
+      if (m.player_id !== playerId && m.player_id !== BOT) await notify(q, m.player_id, gameId, "PLAYER_LEFT", `${player.display_name} left the game.`, "left", at);
+    }
+    return "left";
+  });
+  if (result === "missing") return fail(404, "GAME_NOT_FOUND", "Game not found");
+  if (result === "stranger") return fail(403, "NOT_A_MEMBER", "You are not part of this game");
+  const loaded = await loadGame(db, gameId);
+  if (!loaded) return fail(404, "GAME_NOT_FOUND", "Game not found");
+  return json({ok: true, left: result === "left", game: viewFor(loaded, playerId)});
 }
 
 /**
@@ -263,7 +301,7 @@ async function revealIfReady(db, loaded) {
       for (const m of humans) await notify(q, m.player_id, row.id, "READY_TO_REVEAL", "New move ready! Find the next connection!", `reveal-${move.number}`, at);
     } else {
       await q.query("UPDATE games SET status = $1, updated_at = $2 WHERE id = $3 AND status = 'ACTIVE'", [outcome, at, row.id]);
-      for (const m of humans) await notify(q, m.player_id, row.id, outcome === "MATCHED" ? "GAME_COMPLETE" : "GAME_EXHAUSTED", outcome === "MATCHED" ? "You matched! Same thing!" : "20 moves used. Try a rematch!", "end", at);
+      for (const m of humans) await notify(q, m.player_id, row.id, outcome === "MATCHED" ? "GAME_COMPLETE" : "GAME_EXHAUSTED", outcome === "MATCHED" ? "You matched! Same thing!" : "That one got away from us. Try a rematch!", "end", at);
     }
   });
   return true;
@@ -413,7 +451,7 @@ async function rematch(db, body, codes) {
   if (!loaded) return fail(404, "GAME_NOT_FOUND", "Game not found");
   if (!loaded.slotOf.has(playerId)) return fail(403, "NOT_A_MEMBER", "You are not part of this game");
   if (isLegacySolo(loaded)) return fail(409, "NOT_FAMILY_GAME", "Rematches are for family games.");
-  if (!FINISHED.has(loaded.row.status) || loaded.members.length !== 2) return fail(409, "GAME_NOT_FINISHED", "Finish this game first, then start a rematch.");
+  if (!FINISHED.has(loaded.row.status) || loaded.row.status === "ENDED" || loaded.members.length !== 2) return fail(409, "GAME_NOT_FINISHED", "Finish this game first, then start a rematch.");
 
   const id = await rematchIdFor(loaded.row.id);
   /** @returns {Promise<{id: string, join_code: string} | null>} */
@@ -701,6 +739,8 @@ async function route(request, db, codes, reviewToken) {
   }
 
   if (path === "/api/games/rematch" && request.method === "POST") return rematch(db, body, codes);
+
+  if (path === "/api/games/leave" && request.method === "POST") return leave(db, body);
 
   if (path === "/api/game" && request.method === "GET") {
     const playerId = url.searchParams.get("player_id") || "";

@@ -64,7 +64,7 @@ test("French copy speaks to kids with tu, not vous", () => {
 test("translator substitutes variables and falls back to English, then the key", () => {
   let lang = "fr";
   const t = translator(() => lang);
-  assert.equal(t("moveOf", {n: 3, max: 20}), "Coup 3 sur 20");
+  assert.equal(t("moveN", {n: 3}), "Coup 3");
   assert.equal(t("langNoteTitle", {game: languageName(t, "en")}), "Cette partie est en anglais.");
   assert.equal(t("langNewGame", {ui: languageName(t, "fr")}), "Nouvelle partie en français");
   assert.equal(t("profileTitle", {name: "Zoé"}), "Salut, Zoé !");

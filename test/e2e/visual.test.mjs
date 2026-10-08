@@ -132,23 +132,23 @@ for (const [name, viewport] of Object.entries(VIEWPORTS)) {
   });
 }
 
-test("visual: the game-over screen (20 moves) is tidy, lit up and offers the three actions", async () => {
+test("visual: reaching the internal move cap ends gracefully: tidy, lit up, neutral copy and the three actions", async () => {
   for (const viewport of [VIEWPORTS["320x640"], VIEWPORTS["1280x800"]]) {
     const context = await browser.newContext({viewport, reducedMotion: "reduce"});
     const page = await soloGame(context, "en");
     await playDistinct(page, 20);
     await continueReveal(page);
     await page.waitForSelector(".end.over");
-    assert.match(await page.locator(".end").innerText(), /Game over!/);
-    assert.doesNotMatch(await page.locator("main").innerText(), /no moves left/i);
+    assert.match(await page.locator(".end .board-title").innerText(), /^That one got away from us\.$/);
+    assert.doesNotMatch(await page.locator("main").innerText(), /no moves left|20 moves|out of moves|you lost|last chance|game over|of 20/i);
     for (const id of ["#newGameBtn", "#homeBtn", "#historyBtn"]) assert.equal(await page.isVisible(id), true, `${id} visible`);
     assert.equal(await page.locator("#word, #lockBtn").count(), 0, "no input once the game is over");
     // Finale: every stone lit, never an empty bar.
     assert.equal(await page.locator(".stone.lit").count(), 20);
-    assert.equal(await page.getAttribute("[role=progressbar]", "aria-valuenow"), "20");
-    assert.match(await page.locator(".progress").innerText(), /All 20 moves played!/);
+    assert.equal(await page.getAttribute("#progress", "data-move"), "20");
+    assert.equal(await page.locator("[role=progressbar]").count(), 0, "no bar that implies a limit");
     assert.equal(await page.locator(".gary-end").count(), 1, "sleepy Gary rests on the Solo game-over screen");
-    // Gary's FOLLOW-UP from his 20-move beat (one of three exact lines).
+    // Gary's FOLLOW-UP from his exhausted beat (one of three lines; none mentions the cap).
     assert.match(await page.locator("#garyBye").innerText(), /two people can think near each other|suspiciously close to teamwork|formally conclude whatever this was/);
     await check(page, `game over ${viewport.width}`);
     if (SHOTS) await page.screenshot({path: `${SHOTS}/visual-gameover-${viewport.width}.png`, fullPage: true});

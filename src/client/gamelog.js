@@ -94,6 +94,27 @@ export function endUnfinished(keepIds = []) {
 }
 
 /**
+ * The player quit this Solo game ("Quit game"): it is logged as "ended" (never a win or a loss),
+ * like any game left unfinished on purpose.
+ * @param {string} gameId
+ */
+export function endGame(gameId) {
+  try {
+    const data = load();
+    const g = data.games[gameId];
+    if (g && g.status === "in_progress") {
+      const at = new Date().toISOString();
+      g.status = "ended";
+      g.ended_at = at;
+      g.last_activity_at = at;
+      queue(data.pending.games, g.game_id);
+      save(data);
+      syncSoon();
+    }
+  } catch {}
+}
+
+/**
  * The player rated a won game (1–5 stars). Updates the same game record (never a new one) and keeps
  * the rating queued until the server confirms it, whether or not the game itself was already
  * uploaded. A failure here never touches the rest of the log.

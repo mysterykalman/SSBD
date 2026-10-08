@@ -215,9 +215,9 @@ async function assertGameShown(page, game, label) {
   const finished = game.status !== "ACTIVE";
   const expectedMove = finished ? revealed[revealed.length - 1].number : open.number;
   const progress = await progressOf(page);
-  assert.equal(progress.now, expectedMove, `${label}: aria-valuenow`);
-  assert.equal(progress.max, 20, `${label}: aria-valuemax`);
-  const moveText = game.language === "fr" ? `Coup ${expectedMove} sur 20` : `Move ${expectedMove} of 20`;
+  assert.equal(progress.now, expectedMove, `${label}: current move`);
+  const moveText = game.language === "fr" ? `Coup ${expectedMove}` : `Move ${expectedMove}`;
+  assert.doesNotMatch(progress.text, /of 20|sur 20|left|to go|restants?/i, `${label}: no total shown`);
   // The visible move count (whatever element carries it) uses the UI language; the game here matches it.
   if (await page.getAttribute("html", "lang") === game.language) {
     assert.ok((await page.locator(".board").innerText()).includes(moveText), `${label}: shows "${moveText}"`);
