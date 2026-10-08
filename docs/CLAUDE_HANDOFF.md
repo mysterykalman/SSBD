@@ -845,3 +845,25 @@ newest finished row keeps "↑ Next round's words". Test: `test/e2e/trail-now.te
 - Tests: `test/together.test.mjs` (server), `test/e2e/together.test.mjs` (two browser sessions: names,
   duplicates, wins in both orders, simultaneous submit, slow out-of-order network, reconnect, Gary/Milo
   duplicates, FR), `test/e2e/keyboard.test.mjs`, updated rules tests; e2e helper `joinRoom`.
+
+## Homepage tile, character cards, Milo's script, favicon (latest)
+
+- **Homepage tile:** "Friends not around?" / "Hang out with Milo or Gary from Accounting." / "Choose someone"
+  (opens the picker). Gary and Milo portraits side by side at the same size (`#soloPair`). The old "Play Solo",
+  cake joke and "Plays offline too" lines are gone (the cake joke lives on Gary's card).
+- **Picker cards:** name + two lines each (`card` in characters.js). Gary: "We heard you had no friends, so we
+  lured Gary over from Accounting with the promise of cake." / "There is no cake." Milo: "I’ve been waiting,
+  like, all day." / "Are you ready to play already?". Buttons: "Play with Gary" / "Play with Milo".
+- **Milo's script** (`CHARACTERS.milo.script`): exactly one line per moment, never random. Start of a game (incl.
+  Play again): bubble "Okay, I’m ready."; help line: move 1 "Okay, what are you thinking?", later "I think we’re
+  close.", after 20 s idle "No rush. I’m thinking too."; reveal result (`scriptedResult`): very weak → far apart,
+  strong + close to Milo's word → confident, strong → strong connection, indirect bridge to both (`cleverBridge`)
+  → clever, else normal miss; his loose word → "Okay, hear me out."; bubbles (`scriptedReaction`): his best word
+  was already played (`wantedUsedWord`, same engine asked again, presentation only) → "Oh, right. We already used
+  that.", move 9 → several misses, move 17 → long trail, match → fast (≤3) / long (≥12) / normal win; end screen
+  "That was fun. Again?"; used word → "We used that one already! Try another.". Milo has no intro dialog now.
+  Gary's script is unchanged. Shared system text (instructions, next move, Keep playing) is neutral for Milo.
+- **Favicon:** the approved icon is unreadable at tab sizes, and no compact version existed, so
+  `scripts/compact-favicon.py` derives one from it (blue | orange tile, two speech bubbles, no lettering) for
+  `favicon.ico` (16/32/48) and `favicon-32.png`. `apple-touch-icon.png`, `icon-192.png` and `icon-512.png` keep
+  the full artwork; the manifest lists 192/512. No other icon is referenced.

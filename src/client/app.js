@@ -4,6 +4,7 @@
 
 import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js";
 import {publicMove, setGaryDiagnostics, startSoloGame, submitSoloWord} from "../shared/solo.js";
+import {chooseResponse} from "../shared/bot.js";
 import {isJoinCode, looksLikeRoomCode, normalizeJoinCode} from "../shared/codes.js";
 import {getLexicon} from "../shared/lexicon/index.js";
 import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
@@ -11,7 +12,7 @@ import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
 import {garyRandom, hasMet, markMet, recentLines, rememberLines, typeInto} from "./gary.js";
-import {CHARACTER_IDS, character, characterId, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultKey, revealKind} from "./characters.js";
+import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, cleverBridge, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultKey, revealKind, scriptedHelp, scriptedReaction, scriptedResult} from "./characters.js";
 import {characterArt} from "./gary-art.js";
 
 const store = createStore();
@@ -26,6 +27,7 @@ const state = {
   // game as it was before that reveal; `justContinued` marks the move the player just continued from.
   reveal: null,
   justContinued: 0,
+  idle: null, // {gameId, move}: the player has been thinking a while on this Solo move (scripted characters only)
   busy: false,
   dashboard: null,
   dismissedSuggestion: null,
@@ -449,11 +451,11 @@ function renderHome() {
       h("p", {class: "hero-rules"}, t("heroRules"))),
     h("div", {class: "start-grid"},
       h("section", {class: "card start solo-card", "aria-labelledby": "soloTitle"},
-        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {bot: true, who: lastCharacter()})),
+        // Both characters, side by side and the same size: "Choose someone" lets the player pick either.
+        h("div", {class: "start-icon pair", id: "soloPair", "aria-hidden": "true"}, ...CHARACTER_IDS.map(id => badge(null, {bot: true, who: id, cls: `pair-${id}`}))),
         h("h2", {id: "soloTitle"}, t("soloTitle")),
-        h("div", {class: "start-copy"}, h("p", {}, t("soloCopy1")), h("p", {}, t("soloCopy2")), h("p", {}, t("soloCopy3"))),
-        h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart")),
-        h("p", {class: "start-note"}, t("soloOfflineNote"))),
+        h("div", {class: "start-copy"}, h("p", {}, t("soloBody"))),
+        h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))),
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
         h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {cls: "other"})),
         h("h2", {id: "familyTitle"}, t("togetherTitle")),
@@ -560,7 +562,7 @@ function startSolo(language = state.lang, {who = lastCharacter(), rematch = fals
   if (!store.saveSolo(game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
   navigate(`/solo/${game.id}`);
   $("word")?.focus(); // Solo renders synchronously; focus now so typing right away is never lost
-  if (!hasMet(id)) showCharacterIntro(id, {onDone: () => $("word")?.focus()});
+  if (character(id).intro && !hasMet(id)) showCharacterIntro(id, {onDone: () => $("word")?.focus()});
   // Retry only if focus was lost (e.g. to <body>), never pulling it away from a control the player moved to.
   setTimeout(() => { const active = document.activeElement; if (!active || active === document.body) $("word")?.focus(); }, 30);
 }
@@ -580,8 +582,8 @@ function pickCharacter() {
       h("input", {type: "radio", name: "character", value: id, id: `pick-${id}`, class: "pick-radio", checked: id === chosen,
         "aria-describedby": `pick-${id}-line`, onchange: () => { chosen = id; $("startCharacter").textContent = startLabel(); }}),
       characterArt(id, "meh", "pick-art"),
-      h("span", {class: "pick-name"}, t(c.title)),
-      h("span", {class: "pick-line", id: `pick-${id}-line`}, t(c.tagline)));
+      h("span", {class: "pick-name"}, t(c.name)),
+      h("span", {class: "pick-copy", id: `pick-${id}-line`}, ...c.card.map(key => h("span", {class: "pick-line"}, t(key)))));
   };
   const dlg = h("dialog", {id: "characterPicker", class: "character-picker", "aria-labelledby": "pickTitle", onclose: () => $("characterPicker")?.remove()},
     h("form", {method: "dialog", class: "pick-body", onsubmit: event => { event.preventDefault(); close(); startSolo(state.lang, {who: chosen}); }},
@@ -637,6 +639,7 @@ function renderGame() {
     trail(view),
     garyDebugPanel(view));
   restoreInput(keep);
+  watchIdle(view);
   if (fresh && revealed.status === "MATCHED") celebrate();
 }
 
@@ -767,7 +770,10 @@ function startReveal(view, move) {
   // The result line can depend on how well the player's word fits; the remark never repeats its joke.
   const strength = solo && move.status === "REVEALED" ? revealStrength(view, move) : null;
   const recent = [...recentLines(view.id), ...(strength ? resultAvoid(view.character, strength) : [])];
-  const reaction = solo ? pickReaction({character: view.character, status: move.status, move: move.number, kind, recent, random: garyRandom}) : null;
+  const script = solo ? soloCharacter(view).script : null;
+  const reaction = !solo ? null
+    : script ? scriptedReaction(script, {status: move.status, move: move.number, cantUse: move.status === "REVEALED" && wantedUsedWord(view, move), recent: recentLines(view.id)})
+    : pickReaction({character: view.character, status: move.status, move: move.number, kind, recent, random: garyRandom});
   if (reaction) rememberLines(view.id, reaction.keys);
   state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token, reaction};
   const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
@@ -825,7 +831,54 @@ function revealStrength(view, move) {
 
 /** A non-matching reveal's result line: shared in family games, the character's own in Solo. */
 function revealResult(view, move) {
-  return isSoloLike(view) ? t(resultKey(view.character, revealStrength(view, move))) : t("revealNice");
+  if (!isSoloLike(view)) return t("revealNice");
+  const script = soloCharacter(view).script;
+  if (!script) return t(resultKey(view.character, revealStrength(view, move)));
+  const lex = getLexicon(view.language), round = {prompts: move.prompts, mine: move.words[view.youSide]};
+  return t(scriptedResult(script, {strength: revealStrength(view, move), close: revealKind(lex, {...round, theirs: move.words[view.otherSide]}) === "close", clever: cleverBridge(lex, round)}));
+}
+
+/**
+ * Whether the word the Solo character would have liked best this move had already been played
+ * (so it had to pick another): the same engine, asked again with nothing excluded. Presentation only.
+ */
+function wantedUsedWord(view, move) {
+  if (!move.prompts) return false;
+  const before = view.moves.filter(m => m.words && m.number < move.number);
+  const used = new Set(before.flatMap(m => [wordKey(m.words.a), wordKey(m.words.b)]));
+  if (!used.size) return false;
+  try {
+    const free = chooseResponse({prompts: move.prompts, language: view.language, history: before.map(m => [m.words.a, m.words.b]), excludeKeys: new Set(), rng: () => 0.5});
+    return used.has(wordKey(free.word)) && wordKey(free.word) !== wordKey(move.words[view.otherSide]);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A scripted character notices a long think: after TAKING_A_WHILE_MS on the same move without a
+ * word played, their line above the word box becomes "No rush. I'm thinking too." (presentation only).
+ */
+let idleTimer = null;
+function watchIdle(view) {
+  clearTimeout(idleTimer);
+  const move = view.moves[view.moves.length - 1];
+  if (!isSoloLike(view) || !soloCharacter(view).script || isFinished(view) || !$("word")) return;
+  if (state.idle && (state.idle.gameId !== view.id || state.idle.move !== move.number)) state.idle = null;
+  if (state.idle) return;
+  idleTimer = setTimeout(() => {
+    const now = state.game;
+    if (now?.id !== view.id || state.reveal || !$("word") || now.moves[now.moves.length - 1].number !== move.number) return;
+    state.idle = {gameId: view.id, move: move.number};
+    if (!$("formHelp")?.classList.contains("error")) setHelp();
+  }, TAKING_A_WHILE_MS);
+}
+
+/** The line above the word box in Solo: a scripted character's own (and a gentle nudge after a long think), else the usual one. */
+function soloHelp(view, move) {
+  const script = soloCharacter(view).script;
+  if (!script) return ct(view, "botReady", {name: otherLabel(view)});
+  return t(scriptedHelp(script, {move: move.number, idle: state.idle?.gameId === view.id && state.idle.move === move.number}));
 }
 
 /** "You both said WORD. Your brains did a high five." with the player's own (matched) word. */
@@ -949,7 +1002,7 @@ function playPanel(view, move) {
     h("h1", {id: "boardTitle", class: "board-title"}, waiting && !solo ? t("waitingJoin") : first ? t("firstTitle") : t("promptTitle")),
     ...(waiting && !solo) || locked ? []
       : first
-        ? [h("p", {class: "instruction"}, solo ? ct(view, "firstSolo", {name: otherName}) : t("firstFamily", {name: otherName})), ...(solo && view.rematch ? [rematchGreeting(view)] : [])]
+        ? [h("p", {class: "instruction"}, solo ? ct(view, "firstSolo", {name: otherName}) : t("firstFamily", {name: otherName})), ...(solo && (view.rematch || soloCharacter(view).script) ? [rematchGreeting(view)] : [])]
         : [h("p", {class: "instruction"}, t("promptCopy"))]);
   if (!first) {
     // The "+" is glued to the second word so it never dangles at the end of a line.
@@ -985,7 +1038,7 @@ function playPanel(view, move) {
     submitWord(source);
   }},
     h("label", {class: "sr-only", for: "word"}, t("placeholder")),
-    h("p", {id: "formHelp", class: "form-help", "aria-live": "polite"}, solo ? ct(view, "botReady", {name: otherName}) : move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})),
+    h("p", {id: "formHelp", class: "form-help", "aria-live": "polite"}, solo ? soloHelp(view, move) : move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})),
     h("div", {id: "suggestion", class: "suggestion", "aria-live": "polite"}),
     h("input", {id: "word", name: "word", type: "text", class: "word-input", placeholder: t("placeholder"), autocomplete: "off", autocapitalize: "none", autocorrect: "off", spellcheck: "true", lang: view.language, maxlength: "40", enterkeyhint: "go", "aria-describedby": first ? "formHelp" : "prompt formHelp", "aria-invalid": "false", oninput: onWordInput,
       onkeydown: event => { submitSource = event.key === "Enter" && !event.isComposing ? "enter" : null; }}),
@@ -1006,6 +1059,8 @@ function endPanel(view, last, fresh) {
     h("p", {}, matched
       ? t("winCopy", {n: last.number})
       : ct(view, "gameOverCopy")),
+    // A scripted character's post-game line ("That was fun. Again?") after a win; the game-over goodbye says it otherwise.
+    matched && solo && soloCharacter(view).script ? characterLine(view, soloCharacter(view).script.postWin, "postWinLine") : null,
     h("div", {class: "row center end-actions"},
       h("button", {class: "btn big", type: "button", id: "newGameBtn", disabled: !solo && !state.online && !view.rematchId, onclick: event => {
         // A held or doubled Enter from the last word must not skip the game-over screen.
@@ -1016,20 +1071,20 @@ function endPanel(view, last, fresh) {
       h("button", {class: "btn ghost", type: "button", id: "historyBtn", onclick: viewHistory}, t("viewHistory"))));
 }
 
-/** Solo game over: the character says goodbye in two beats (Gary: "finally", then "...same time tomorrow?"). */
+/** Solo game over: the character says goodbye (Gary in two beats: "finally", then "...same time tomorrow?"). */
 function garyGoodbye(view, animate) {
-  const [first, second] = soloCharacter(view).lines.gameOver.map(key => t(key));
+  const [first, second = ""] = soloCharacter(view).lines.gameOver.map(key => t(key));
   const one = h("span", {class: "bye-line", "aria-hidden": "true"});
   const two = h("span", {class: "bye-line later", "aria-hidden": "true"});
   const block = h("div", {class: `gary-end ${animate ? "animate" : ""}`},
     characterArt(view.character, "sleepy", "end-art"),
-    h("p", {class: "gary-bye", id: "garyBye"}, one, two, h("span", {class: "sr-only"}, `${characterName(view)}: ${first} ${second}`)));
+    h("p", {class: "gary-bye", id: "garyBye"}, one, two, h("span", {class: "sr-only"}, `${characterName(view)}: ${[first, second].filter(Boolean).join(" ")}`)));
   if (!animate) {
     one.textContent = first;
     two.textContent = second;
   } else {
     typeInto(one, first, {maxTotal: 500}).then(() => sleep(1100)).then(() => {
-      if (two.isConnected) typeInto(two, second, {maxTotal: 900});
+      if (two.isConnected && second) typeInto(two, second, {maxTotal: 900});
     });
   }
   return block;
@@ -1040,8 +1095,12 @@ function garyGoodbye(view, animate) {
  * (avatar + speech bubble, like their reveal remarks).
  */
 function rematchGreeting(view) {
-  const key = rematchLine(view.character, seededPick(view.id));
-  return h("div", {class: "gary-reaction rematch-line", id: "rematchLine", "data-character": view.character},
+  return characterLine(view, rematchLine(view.character, seededPick(view.id)), "rematchLine", "rematch-line");
+}
+
+/** The character's avatar saying one line in a speech bubble. */
+function characterLine(view, key, id, cls = "") {
+  return h("div", {class: `gary-reaction ${cls}`, id, "data-character": view.character},
     characterArt(view.character, "meh", "gary-reaction-art"),
     h("p", {class: "gary-bubble"}, h("span", {class: "sr-only"}, `${characterName(view)}: `), t(key)));
 }
@@ -1290,7 +1349,7 @@ function setHelp(message, isError = false) {
   const view = state.game;
   const move = view.moves[view.moves.length - 1];
   const error = Boolean(message && isError);
-  const text = message || (isSoloLike(view) ? ct(view, "botReady", {name: otherLabel(view)}) : move.otherLocked ? t("otherLocked", {name: otherLabel(view)}) : t("otherThinking", {name: otherLabel(view)}));
+  const text = message || (isSoloLike(view) ? soloHelp(view, move) : move.otherLocked ? t("otherLocked", {name: otherLabel(view)}) : t("otherThinking", {name: otherLabel(view)}));
   help.classList.toggle("error", error);
   const input = $("word");
   // #formHelp is a polite live region and the input's description (aria-describedby).
@@ -1725,7 +1784,7 @@ async function savePlayerName(name) {
 }
 
 function profileDialog() {
-  const meetGary = CHARACTER_IDS.map(id => h("button", {class: "link", type: "button", id: `meet${id[0].toUpperCase()}${id.slice(1)}Again`, onclick: () => { $("dialog")?.close(); showCharacterIntro(id); }}, t(character(id).meetAgain)));
+  const meetGary = CHARACTER_IDS.filter(id => character(id).intro).map(id => h("button", {class: "link", type: "button", id: `meet${id[0].toUpperCase()}${id.slice(1)}Again`, onclick: () => { $("dialog")?.close(); showCharacterIntro(id); }}, t(character(id).meetAgain)));
   if (!state.player) {
     dialog(t("solo"), t("profileSolo"), null, {cancelLabel: t("close"), extra: [h("button", {class: "link", type: "button", onclick: () => recoveryDialog(null)}, t("haveRecovery")), ...meetGary]});
     return;

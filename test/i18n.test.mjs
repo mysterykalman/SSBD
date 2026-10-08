@@ -105,12 +105,13 @@ test("homepage copy", () => {
   const en = STRINGS.en;
   assert.equal(en.heroTitle, "Try to read each other’s minds.");
   assert.equal(en.heroCopy, "No pressure. Just your entire friendship.");
-  assert.deepEqual([en.soloTitle, en.soloCopy1, en.soloCopy2, en.soloCopy3, en.soloStart, en.soloOfflineNote],
-    ["Play Solo", "We heard you had no friends.", "So we lured Gary from Accounting over with the promise of cake. Milo came anyway.", "There is no cake.", "Let’s play!", "Plays offline too. Fancy."]);
+  assert.deepEqual([en.soloTitle, en.soloBody, en.soloStart], ["Friends not around?", "Hang out with Milo or Gary from Accounting.", "Choose someone"]);
+  // The old Solo tile copy is gone (the cake joke lives on Gary's card only).
+  for (const key of ["soloCopy1", "soloCopy2", "soloCopy3", "soloOfflineNote"]) assert.equal(en[key], undefined, key);
   assert.deepEqual([en.togetherTitle, en.togetherCopy1, en.togetherCopy2, en.familyCreate, en.familyJoin],
     ["Play Together", "Choose someone who claims to know you well.", "Time to investigate.", "Start a game", "Join a game"]);
   assert.deepEqual([en.gamesTitle, en.gamesEmpty1, en.gamesEmpty2], ["Your games", "Nothing here yet.", "Suspiciously peaceful."]);
-  for (const key of ["heroTitle", "heroCopy", "soloCopy1", "soloCopy2", "soloCopy3", "soloOfflineNote", "soloStart", "togetherTitle", "togetherCopy1", "togetherCopy2", "familyCreate", "familyJoin", "gamesEmpty1", "gamesEmpty2"]) {
+  for (const key of ["heroTitle", "heroCopy", "soloTitle", "soloBody", "soloStart", "togetherTitle", "togetherCopy1", "togetherCopy2", "familyCreate", "familyJoin", "gamesEmpty1", "gamesEmpty2"]) {
     assert.ok(STRINGS.fr[key] && STRINGS.fr[key] !== en[key], `fr.${key} is translated`);
   }
   // No technical "works without internet" phrasing, and no special copy for inflected matches.
