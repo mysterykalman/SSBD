@@ -13,7 +13,8 @@ import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
 import {garyRandom, hasMet, markMet, poolTurn, recentLines, rememberLines, typeInto} from "./gary.js";
-import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, cleverBridge, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultLines, revealKind, scriptedHelp, scriptedReaction} from "./characters.js";
+import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, cleverBridge, connectionStrength, copyKey, rematchLine, resultLines, revealKind, scriptedHelp, scriptedReaction} from "./characters.js";
+import {garyBeats, oneOffLine} from "./gary-narrative.js";
 import {characterArt} from "./gary-art.js";
 import {decisionView} from "./decision-view.js";
 import {endUnfinished, logRating, logRound, startLogSync} from "./gamelog.js";
@@ -31,7 +32,9 @@ const state = {
   // game as it was before that reveal; `justContinued` marks the move the player just continued from.
   reveal: null,
   justContinued: 0,
-  idle: null, // {gameId, move}: the player has been thinking a while on this Solo move (scripted characters only)
+  idle: null, // {gameId, move, index}: the player has been thinking a while on this Solo move (Milo's line, or one of Gary's waiting lines)
+  /** Gary's occasional note on a spelling correction the player just accepted: {gameId, key}. */
+  typoAside: null,
   busy: false,
   dashboard: null,
   dismissedSuggestion: null,
@@ -258,7 +261,7 @@ const soloCharacter = view => character(view?.character);
 const characterName = view => t(soloCharacter(view).name);
 /** Shared Solo copy in the chosen character's own words (family games: the shared copy). */
 const ct = (view, key, vars) => t(isSoloLike(view) ? copyKey(view.character, key) : key, vars);
-// The Solo opponent is the chosen character; family opponents keep their own names.
+// The Solo teammate is the chosen character; family players keep their own names.
 const otherLabel = view => (isSoloLike(view) ? characterName(view) : view.otherName || t("friend"));
 const sideLabel = (view, side) => (side === view.youSide ? t("you") : otherLabel(view));
 
@@ -468,7 +471,7 @@ function renderHome() {
         // Both characters, side by side and the same size: "Choose someone" lets the player pick either.
         h("div", {class: "start-icon pair", id: "soloPair", "aria-hidden": "true"}, ...CHARACTER_IDS.map(id => badge(null, {bot: true, who: id, cls: `pair-${id}`}))),
         h("h2", {id: "soloTitle"}, t("soloTitle")),
-        h("div", {class: "start-copy"}, h("p", {}, t("soloBody"))),
+        h("div", {class: "start-copy"}, h("p", {}, t("soloBody")), h("p", {}, t("soloBody2"))),
         h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))),
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
         h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {cls: "other"})),
@@ -757,32 +760,36 @@ function startReveal(view, move) {
   closeReveal();
   const token = Symbol("reveal");
   const solo = isSoloLike(view);
-  // The character's occasional remark: flavour only, decided here and never fed back into the game.
-  const kind = solo && move.status === "REVEALED" ? revealKind(getLexicon(view.language), {prompts: move.prompts, mine: move.words[view.youSide], theirs: move.words[view.otherSide]}) : null;
-  // The result line can depend on how well the player's word fits; the remark never repeats its joke.
-  const strength = solo && move.status === "REVEALED" ? revealStrength(view, move) : null;
-  const recent = [...recentLines(view.id), ...(strength ? resultAvoid(view.character, strength) : [])];
   const script = solo ? soloCharacter(view).script : null;
+  // Gary: one paired beat for this move from his narrative (before the reveal, then after it),
+  // chosen from the direction of the whole game so far. Flavour only: never fed back into the game.
+  const beat = solo && soloCharacter(view).narrative ? garyBeatFor(view, move) : null;
   // Which line of a pool: that pool's next turn in this game (stable for this move on a reload).
   const turn = pool => poolTurn(view.id, pool, move.number);
-  const reaction = !solo ? null
+  const reaction = !solo || beat ? null
     : script ? scriptedReaction(script, {status: move.status, move: move.number, cantUse: move.status === "REVEALED" && wantedUsedWord(view, move), recent: recentLines(view.id), random: garyRandom, gameId: view.id, turn, pools: soloCharacter(view).pools})
-    : pickReaction({character: view.character, status: move.status, move: move.number, kind, strength, recent, random: garyRandom, gameId: view.id, turn});
+    : null;
   if (reaction) rememberLines(view.id, reaction.keys);
-  state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token, reaction};
+  // A spelling correction the player just accepted: Gary sometimes notes it (never mocking).
+  const aside = beat && state.typoAside?.gameId === view.id ? state.typoAside.key : null;
+  state.typoAside = null;
+  state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token, reaction, beat};
   const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
   const dlg = h("dialog", {id: "revealModal", class: `reveal-modal ${move.status === "MATCHED" ? "match" : ""}`, "aria-labelledby": "revealHeading",
     oncancel: event => { event.preventDefault(); if (state.reveal?.phase === "ready") finishReveal(); }},
     h("div", {class: "rv-body"},
       h("p", {class: "rv-kicker", id: "revealHeading"}, t("revealTitle")),
+      aside ? characterLine(view, aside, "garyAside", "gary-aside") : null,
+      beat ? garyBefore(view) : null,
       h("div", {class: "rv-count", id: "revealCount", "aria-hidden": "true"}),
       h("div", {class: "rv-result", id: "revealResult", hidden: true},
         h("div", {class: "rv-words"},
           revealWord(t("revealYourWord"), shownWords(view, move)[view.youSide], "you"),
           h("span", {class: "op rv-step", "aria-hidden": "true"}, move.status === "MATCHED" ? "=" : "+"),
           solo ? garyRevealWord(view) : revealWord(t("revealTheirWord", {name: otherLabel(view)}), shownWords(view, move)[view.otherSide], "other")),
-        reaction ? garyReaction(view) : null,
-        h("p", {class: "rv-outcome rv-step"}, ...(move.status === "MATCHED"
+        reaction || beat ? garyReaction(view) : null,
+        // Gary's AFTER line is his reaction to the result, so he has no separate result line.
+        beat && move.status !== "MATCHED" ? null : h("p", {class: "rv-outcome rv-step"}, ...(move.status === "MATCHED"
           ? [h("span", {class: "rv-headline"}, t("revealMatchTitle")), " ", h("span", {class: "rv-subline"}, matchCopy(view, move))]
           : [move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : revealResult(view, move)])),
         move.botQuality === "loose" && move.status !== "MATCHED" ? h("p", {class: "rv-note rv-step"}, ct(view, "revealLoose", {name: characterName(view)})) : null,
@@ -818,9 +825,25 @@ function garyRevealWord(view) {
     h("span", {class: "chip-word", id: "garyWord", lang: state.game?.language}));
 }
 
-/** How well the player's word fit the two words in play (Solo result line only). */
-function revealStrength(view, move) {
-  return connectionStrength(getLexicon(view.language), {prompts: move.prompts, mine: move.words[view.youSide]});
+/**
+ * Gary's beat for a revealed move: his narrative replayed over the whole game up to that move
+ * (src/client/gary-narrative.js), so it is the same beat every time the move is shown.
+ */
+function garyBeatFor(view, move) {
+  const lex = getLexicon(view.language);
+  const rounds = [...view.moves.filter(m => m.words && m.number < move.number), move].map(m => {
+    const round = {prompts: m.prompts, mine: m.words[view.youSide]};
+    return {number: m.number, status: m.status, strength: m.prompts ? connectionStrength(lex, round) : "opening",
+      kind: m.prompts && m.status === "REVEALED" ? revealKind(lex, {...round, theirs: m.words[view.otherSide]}) : null};
+  });
+  return garyBeats(view.id, rounds).at(-1);
+}
+
+/** Gary's BEFORE line: said once the player has locked in, before both words are shown. */
+function garyBefore(view) {
+  return h("div", {class: "gary-reaction gary-before", id: "garyBefore", "data-character": view.character},
+    characterArt(view.character, "meh", "gary-reaction-art"),
+    h("p", {class: "gary-bubble"}, h("span", {class: "sr-only"}, `${characterName(view)}: `), h("span", {class: "gary-says"})));
 }
 
 /**
@@ -863,16 +886,18 @@ function wantedUsedWord(view, move) {
  * word played, their line above the word box becomes "No rush. I'm thinking too." (presentation only).
  */
 let idleTimer = null;
+const idleCount = new Map(); // game id → long thinks so far (Gary's waiting lines rotate)
 function watchIdle(view) {
   clearTimeout(idleTimer);
   const move = view.moves[view.moves.length - 1];
-  if (!isSoloLike(view) || !soloCharacter(view).script || isFinished(view) || !$("word")) return;
+  if (!isSoloLike(view) || !(soloCharacter(view).script || soloCharacter(view).narrative) || isFinished(view) || !$("word")) return;
   if (state.idle && (state.idle.gameId !== view.id || state.idle.move !== move.number)) state.idle = null;
   if (state.idle) return;
   idleTimer = setTimeout(() => {
     const now = state.game;
     if (now?.id !== view.id || state.reveal || !$("word") || now.moves[now.moves.length - 1].number !== move.number) return;
-    state.idle = {gameId: view.id, move: move.number};
+    state.idle = {gameId: view.id, move: move.number, index: idleCount.get(view.id) || 0};
+    idleCount.set(view.id, state.idle.index + 1);
     if (!$("formHelp")?.classList.contains("error")) setHelp();
   }, TAKING_A_WHILE_MS);
 }
@@ -880,6 +905,9 @@ function watchIdle(view) {
 /** The line above the word box in Solo: a scripted character's own (and a gentle nudge after a long think), else the usual one. */
 function soloHelp(view, move) {
   const script = soloCharacter(view).script;
+  const idle = state.idle?.gameId === view.id && state.idle.move === move.number;
+  // Gary after a long think: one of his waiting lines (never pressure); otherwise the usual line.
+  if (!script && soloCharacter(view).narrative && idle) return t(oneOffLine("waiting", view.id, state.idle.index));
   if (!script) return ct(view, "botReady", {name: otherLabel(view)});
   return t(scriptedHelp(script, {move: move.number, idle: state.idle?.gameId === view.id && state.idle.move === move.number}));
 }
@@ -930,6 +958,12 @@ async function runReveal(view, move, ended, token) {
   const alive = () => state.reveal?.token === token && $("revealModal")?.open;
   const count = $("revealCount"), result = $("revealResult");
   const motion = !reducedMotion();
+  const beat = state.reveal?.beat;
+  // Gary's BEFORE line: he speaks once the player has locked in, before anything is revealed.
+  const beforeText = beat ? t(beat.before) : "";
+  // (typed while the countdown runs; complete before the words appear)
+  const target = beat ? $("garyBefore")?.querySelector(".gary-says") : null;
+  const saying = target ? typeInto(target, beforeText, {reduced: !motion, alive, maxTotal: 1400}) : Promise.resolve();
   if (motion) {
     for (const label of ["3", "2", "1", t("sameTime")]) {
       count.textContent = label;
@@ -941,6 +975,8 @@ async function runReveal(view, move, ended, token) {
       if (!alive()) return;
     }
   }
+  await saying;
+  if (!alive()) return;
   count.hidden = true;
   result.hidden = false;
   setRevealPhase("revealing");
@@ -955,15 +991,17 @@ async function runReveal(view, move, ended, token) {
       await typeInto(step.querySelector(".chip-word"), shownWords(view, move)[view.otherSide], {reduced: !motion, alive});
       if (!alive()) return;
       if (reaction?.when === "after") { if (motion) await sleep(350); remark = await garySays(reaction.keys, {reduced: !motion, alive}); }
+      // Gary's AFTER line: his reaction now that both words are visible.
+      if (beat) { if (motion) await sleep(350); remark = await garySays([beat.after], {reduced: !motion, alive}); }
     }
     if (motion) { await sleep(STEP_MS); if (!alive()) return; }
   }
   // One announcement, once everything (including Gary's word and remark) is complete.
   const said = shownWords(view, move);
-  announce([t("revealTitle"), t("revealSaid", {name: sideLabel(view, view.youSide), word: said[view.youSide].toUpperCase()}),
+  announce([t("revealTitle"), beforeText ? t("revealSaid", {name: characterName(view), word: beforeText}) : "", t("revealSaid", {name: sideLabel(view, view.youSide), word: said[view.youSide].toUpperCase()}),
     t("revealSaid", {name: sideLabel(view, view.otherSide), word: said[view.otherSide].toUpperCase()}),
     remark ? t("revealSaid", {name: characterName(view), word: remark}) : "",
-    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : revealResult(view, move)].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
+    move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : beat ? "" : move.status === "EXHAUSTED" ? ct(view, "gameOverAww") : revealResult(view, move)].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : ct(view, "keepPlaying"));
   result.append(button);
   setRevealPhase("ready");
@@ -1088,7 +1126,6 @@ function soloWinCard(view, last, fresh) {
   const id = characterId(view.character);
   const animate = fresh && !reducedMotion();
   const shownAt = performance.now();
-  const script = soloCharacter(view).script;
   const decor = h("div", {class: "wc-decor", "aria-hidden": "true"},
     ...["star", "dot", "squiggle", "confetto", "dot small", ...(id === "milo" ? ["star small", "confetto alt"] : [])].map(kind => h("span", {class: `wc-piece ${kind}`})));
   const said = winReactionText(view, last);
@@ -1100,7 +1137,7 @@ function soloWinCard(view, last, fresh) {
     h("div", {class: "wc-says", id: "winReaction", "data-character": id},
       h("p", {class: "gary-bubble wc-bubble"}, h("span", {class: "sr-only"}, `${characterName(view)}: `), said),
       // A scripted character's post-win line ("That was fun. Again?") stays its own fixed beat.
-      script ? h("p", {class: "gary-bubble wc-bubble wc-after", id: "postWinLine"}, h("span", {class: "sr-only"}, `${characterName(view)}: `), t(script.postWin)) : null),
+      postWinLine(view, last) ? h("p", {class: "gary-bubble wc-bubble wc-after", id: "postWinLine"}, h("span", {class: "sr-only"}, `${characterName(view)}: `), postWinLine(view, last)) : null),
     ratingBlock(view),
     h("div", {class: "wc-actions end-actions"},
       h("button", {class: "btn big wc-primary", type: "button", id: "newGameBtn", onclick: event => {
@@ -1117,11 +1154,16 @@ function soloWinCard(view, last, fresh) {
  * ordinary or long win; Gary's next win line for this game (the same turn as the reveal used).
  */
 function winReactionText(view, last) {
-  const script = soloCharacter(view).script;
-  const reaction = script
-    ? scriptedReaction(script, {status: "MATCHED", move: last.number})
-    : pickReaction({character: view.character, status: "MATCHED", move: last.number, random: () => 0, gameId: view.id, turn: pool => poolTurn(view.id, pool, last.number)});
-  return reaction.keys.filter(key => !key.endsWith("Dots")).map(key => t(key)).join(" ");
+  const c = soloCharacter(view);
+  if (c.narrative) return t(garyBeatFor(view, last).after);
+  return scriptedReaction(c.script, {status: "MATCHED", move: last.number}).keys.map(key => t(key)).join(" ");
+}
+
+/** The beat after a win: Gary's POST-WIN line from the same pair, or a scripted character's fixed line. */
+function postWinLine(view, last) {
+  const c = soloCharacter(view);
+  if (c.narrative) { const extra = garyBeatFor(view, last).extra; return extra ? t(extra) : null; }
+  return c.script ? t(c.script.postWin) : null;
 }
 
 /**
@@ -1179,7 +1221,10 @@ function rateGame(view, n) {
 
 /** Solo game over: the character says goodbye (Gary in two beats: "finally", then "...same time tomorrow?"). */
 function garyGoodbye(view, animate) {
-  const [first, second = ""] = soloCharacter(view).lines.gameOver.map(key => t(key));
+  // Gary: the FOLLOW-UP of his 20-move beat. Scripted characters: their own game-over lines.
+  const last = [...view.moves].reverse().find(m => m.words);
+  const followUp = soloCharacter(view).narrative && last ? garyBeatFor(view, last).extra : null;
+  const [first, second = ""] = followUp ? [t(followUp)] : soloCharacter(view).lines.gameOver.map(key => t(key));
   const one = h("span", {class: "bye-line", "aria-hidden": "true"});
   const two = h("span", {class: "bye-line later", "aria-hidden": "true"});
   const block = h("div", {class: `gary-end ${animate ? "animate" : ""}`},
@@ -1479,6 +1524,8 @@ function setHelp(message, isError = false) {
   input?.setAttribute("aria-invalid", String(error));
 }
 
+const typoCount = new Map(); // game id → accepted spelling corrections (Gary's occasional aside)
+
 /**
  * A spelling suggestion for what is in the word box, with how sure we are:
  * "high" for a typical slip of a known word (battelship → battleship), "medium" for a looser match.
@@ -1512,7 +1559,17 @@ function updateSuggestion({confirming = false} = {}) {
   box.classList.toggle("strong", strong);
   box.classList.toggle("confirming", strong && confirming);
   if (!found) return box.replaceChildren();
-  const use = () => { state.inputNote = {original: value, suggestion: found.word, confidence: found.confidence, accepted: true}; input.value = found.word; box.replaceChildren(); box.dataset.word = ""; };
+  const use = () => {
+    state.inputNote = {original: value, suggestion: found.word, confidence: found.confidence, accepted: true};
+    input.value = found.word; box.replaceChildren(); box.dataset.word = "";
+    // Gary sometimes notes an accepted correction (every other one in a game; never mocking).
+    const view = state.game;
+    if (view && isSoloLike(view) && soloCharacter(view).narrative) {
+      const n = typoCount.get(view.id) || 0;
+      typoCount.set(view.id, n + 1);
+      state.typoAside = n % 2 === 0 ? {gameId: view.id, key: oneOffLine("typo", view.id, n / 2)} : null;
+    }
+  };
   const keep = () => { state.inputNote = {original: value, suggestion: found.word, confidence: found.confidence, accepted: false}; state.dismissedSuggestion = value; box.replaceChildren(); box.dataset.word = ""; };
   if (!strong) {
     // A quiet hint: the player can always lock in their own word as typed.
@@ -1536,7 +1593,14 @@ function rulesGame(view) {
 
 /** Show why a word was not taken, right next to the input, and keep the keyboard up. */
 /** A rejected word's message; in Solo, the character's own wording where they have one ("already played"). */
+const usedCount = new Map(); // game id → how many "already played" lines Gary has said (rotation)
 function wordErrorText(view, code, word) {
+  // Gary says "already played" his own way, rotating through his lines (functional, kept short).
+  if (view && isSoloLike(view) && soloCharacter(view).narrative && code === "ALREADY_USED") {
+    const n = usedCount.get(view.id) || 0;
+    usedCount.set(view.id, n + 1);
+    return t(oneOffLine("alreadyUsed", view.id, n));
+  }
   const key = view && isSoloLike(view) ? copyKey(view.character, `err${code}`) : `err${code}`;
   return key === `err${code}` ? errorText(code, word) : t(key, {word: word ? word.toUpperCase() : ""});
 }

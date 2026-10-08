@@ -43,7 +43,7 @@ test("Gary win: match copy with the word in the modal, Gary's avatar speaking hi
     const reaction = page.locator("#revealModal #garyLine");
     assert.ok(await reaction.isVisible(), "Gary reacts");
     assert.equal(await reaction.locator(".gary-art").count(), 1, "with his avatar");
-    assert.match(await reaction.locator(".gary-bubble").innerText(), /already\? huh/, "a move-2 match gets Gary's early-match line");
+    assert.match(await reaction.locator(".gary-says").getAttribute("data-full"), /^(\.\.\.we got it already\.|\.\.\.that’s a match\.|\.\.\.we got it\.)$/, "a move-2 match gets Gary's fast-win AFTER line");
     const avatar = await box(page, "#garyLine .gary-art"), bubble = await box(page, "#garyLine .gary-bubble");
     assert.ok(avatar.x + avatar.width <= bubble.x + 1 && bubble.x - (avatar.x + avatar.width) <= 16, "the avatar sits right beside the bubble");
     assert.ok(avatar.y < bubble.y + bubble.height && bubble.y < avatar.y + avatar.height, "on the same row");

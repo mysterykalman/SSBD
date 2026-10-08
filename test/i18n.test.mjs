@@ -55,7 +55,7 @@ test("English has no stray space before punctuation", () => {
 test("French copy speaks to kids with tu, not vous", () => {
   const formal = /\b(vous|votre|vos)\b/i;
   // The few lines addressed to both players together legitimately use the plural.
-  const plural = new Set(["heroTitle", "heroCopy", "heroRules", "firstSolo", "garyFirstSolo", "miloFirstSolo", "firstFamily", "revealDifferent", "revealMatchCopy", "winCopy"]);
+  const plural = new Set(["heroTitle", "heroCopy", "heroRules", "firstSolo", "garyFirstSolo", "miloFirstSolo", "firstFamily", "revealDifferent", "revealMatchCopy", "winCopy", "togetherCopy2"]);
   for (const [key, value] of Object.entries(STRINGS.fr)) {
     if (!plural.has(key)) assert.doesNotMatch(value, formal, `fr.${key}`);
   }
@@ -84,7 +84,12 @@ test("copy stays warm and kid-facing: no technical or failure words", () => {
   };
   for (const lang of LANGUAGES) {
     for (const [key, value] of Object.entries(STRINGS[lang])) {
-      for (const re of banned[lang]) assert.doesNotMatch(value, re, `${lang}.${key}: ${value}`);
+      for (const re of banned[lang]) {
+        // Gary's approved script ("This is usually where things go wrong", "Not wrong, exactly") is
+        // his own dry voice about the game, never a verdict on the player.
+        if (key.startsWith("gn.") && String(re) === String(/\bwrong\b/i)) continue;
+        assert.doesNotMatch(value, re, `${lang}.${key}: ${value}`);
+      }
     }
   }
 });
@@ -105,17 +110,20 @@ test("homepage copy", () => {
   const en = STRINGS.en;
   assert.equal(en.heroTitle, "Try to read each other’s minds.");
   assert.equal(en.heroCopy, "No pressure. Just your entire friendship.");
-  assert.deepEqual([en.soloTitle, en.soloBody, en.soloStart], ["Friends not around?", "Hang out with Milo or Gary from Accounting.", "Choose someone"]);
+  assert.deepEqual([en.soloTitle, en.soloBody, en.soloBody2, en.soloStart], ["Solo Play", "Milo finished his homework early, so now he’s free to play.",
+    "We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building.", "Choose your player"]);
   // The old Solo tile copy is gone (the cake joke lives on Gary's card only).
   for (const key of ["soloCopy1", "soloCopy2", "soloCopy3", "soloOfflineNote"]) assert.equal(en[key], undefined, key);
   assert.deepEqual([en.togetherTitle, en.togetherCopy1, en.togetherCopy2, en.familyCreate, en.familyJoin],
-    ["Play Together", "Choose someone who claims to know you well.", "Time to investigate.", "Start a game", "Join a game"]);
+    ["Play Together", "Challenge a friend, sibling, cousin, or future ex-best friend to prove they can think exactly like you.",
+      "Do you go together like peanut butter and... uh, peanut butter? Or more like peanut butter and... pickles?", "Start a game", "Join a game"]);
   assert.deepEqual([en.gamesTitle, en.gamesEmpty1, en.gamesEmpty2], ["Your games", "Nothing here yet.", "Suspiciously peaceful."]);
-  for (const key of ["heroTitle", "heroCopy", "soloTitle", "soloBody", "soloStart", "togetherTitle", "togetherCopy1", "togetherCopy2", "familyCreate", "familyJoin", "gamesEmpty1", "gamesEmpty2"]) {
+  for (const key of ["heroTitle", "heroCopy", "soloTitle", "soloBody", "soloBody2", "soloStart", "togetherTitle", "togetherCopy1", "togetherCopy2", "familyCreate", "familyJoin", "gamesEmpty1", "gamesEmpty2"]) {
     assert.ok(STRINGS.fr[key] && STRINGS.fr[key] !== en[key], `fr.${key} is translated`);
   }
   // No technical "works without internet" phrasing, and no special copy for inflected matches.
   for (const lang of ["en", "fr"]) {
-    assert.doesNotMatch(Object.values(STRINGS[lang]).join(" "), /without internet|sans internet|close enough|schmural|ça compte/i);
+    // (Gary's approved script may say "close enough to be concerning": that is not match copy.)
+    assert.doesNotMatch(Object.entries(STRINGS[lang]).filter(([key]) => !key.startsWith("gn.")).map(([, v]) => v).join(" "), /without internet|sans internet|close enough|schmural|ça compte/i);
   }
 });

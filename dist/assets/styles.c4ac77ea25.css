@@ -171,7 +171,7 @@ main:focus { outline: none; }
 .start-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
 .start { display: flex; flex-direction: column; gap: 10px; }
 .start p { color: var(--muted); }
-.start-copy { flex: 1; display: grid; align-content: start; gap: 4px; }
+.start-copy { flex: 1; display: grid; align-content: start; gap: 10px; }
 .start-copy p { margin: 0; line-height: 1.45; }
 .start-copy p:first-child { color: var(--ink); font-weight: 800; }
 .start-note { margin: 0; font-size: .92rem; font-weight: 700; }
@@ -731,3 +731,9 @@ main:focus { outline: none; }
   .win-card.animate .wc-avatar, .win-card.animate .board-title, .win-card.animate .wc-piece { animation: none; }
   .wc-star.lit { transform: none; }
 }
+
+/* Gary's narrative beats in the reveal: BEFORE (under the title, during the countdown) and AFTER. */
+.reveal-modal .gary-before, .reveal-modal .gary-aside { display: flex; justify-content: center; margin: 4px auto 8px; max-width: 520px; }
+.reveal-modal .gary-before .gary-bubble, .reveal-modal .gary-aside .gary-bubble { font-size: .98rem; }
+.reveal-modal .gary-aside .gary-bubble { font-weight: 700; }
+.reveal-modal #garyLine { margin: 6px auto 4px; max-width: 520px; }

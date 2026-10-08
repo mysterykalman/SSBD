@@ -898,3 +898,14 @@ See `docs/BOT_ENGINE.md` for the details: root causes, formula, stages, licensin
 - **Input understanding.** `src/shared/understand.js` handles spelling slips, spacing, inflections and compounds. It is shared by the engine and the "Did you mean?" prompt, which now asks once on lock-in for high-confidence typos.
 - **Lexicon-3.** `src/shared/lexicon/additions3.js` adds 195 concepts.
 - **Logs.** How each player word was read is logged (`player_input`). No migration is needed.
+
+## Status update: Gary's branching narrative and new homepage tiles (2026-10-08)
+
+- **Gary's dialogue** comes only from `src/client/gary-narrative.js`, the exact approved script.
+  - Each move gets ONE paired beat: BEFORE (after lock-in), AFTER (after the reveal), and POST-WIN or FOLLOW-UP where defined.
+  - Branches follow a fixed precedence: match, close, recovery, improving, drifting, stuck, strange, strong, good, weak, very weak, normal. Long-game variants replace only stuck, weak, very weak and normal (from move 10 and 16). The game's trend comes from recent rounds.
+  - Beats are re-derived from the game itself on every render, so they are reload-stable, nothing is stored, and the engine never sees them.
+  - Old random remarks and result lines are removed. The rematch, already-played, typo and waiting lines rotate.
+  - French is a faithful translation.
+  - The intro kicker now reads "Meet your teammate" (was "Meet your rival").
+- **Homepage tiles** use the exact approved copy: Solo Play / Choose your player; Play Together.

@@ -122,13 +122,13 @@ test("EN: whitespace and case variants; one-letter duplicates get a visible, fri
   // Already used earlier in the game.
   assert.equal(await submit(page, "b", "enter"), "accepted");
   assert.equal(await submit(page, "s", "enter"), "rejected");
-  await assertVisibleFeedback(page, /^Already played\. Gary checked\. Twice\.$/);
+  await assertVisibleFeedback(page, /^(We already used that one\. I checked\.|That word’s already been played\. Unfortunately, I remember\.|We used that already\. Try another one\.|Already played\. I have notes\.)$/);
   rejected = await lastTrace(page, "rejected");
   assert.equal(rejected.code, "ALREADY_USED");
   assert.equal(rejected.source, "enter");
   // The same rejection again is still shown (and re-announced), never silently ignored.
   assert.equal(await submit(page, " S ", "enter"), "rejected");
-  await assertVisibleFeedback(page, /^Already played\. Gary checked\. Twice\.$/);
+  await assertVisibleFeedback(page, /^(We already used that one\. I checked\.|That word’s already been played\. Unfortunately, I remember\.|We used that already\. Try another one\.|Already played\. I have notes\.)$/);
   assert.equal((await revealed(page)).length, 2);
   await context.close();
 });
@@ -156,7 +156,7 @@ test("FR: é and É are one-letter words, accents and case count as the same wor
   assert.equal((await lastTrace(page, "rejected")).code, "SAME_AS_LAST");
   assert.equal(await submit(page, "a", "button"), "accepted");
   assert.equal(await submit(page, "É", "enter"), "rejected");
-  await assertVisibleFeedback(page, /^Déjà joué\. Gary a vérifié\. Deux fois\.$/);
+  await assertVisibleFeedback(page, /^(On a déjà utilisé celui-là\. J’ai vérifié\.|Ce mot a déjà été joué\. Malheureusement, je m’en souviens\.|On l’a déjà utilisé\. Essaie un autre mot\.|Déjà joué\. J’ai des notes\.)$/);
   assert.deepEqual((await revealed(page)).map(m => m.words.a), ["é", "a"]);
   await context.close();
 });

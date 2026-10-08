@@ -4,6 +4,8 @@
 // and what they say around the word. Nothing here reads or changes game state or scoring,
 // and nothing here makes network calls. Copy lives in i18n.js under the keys below.
 
+import {BRANCHES, ONE_OFF, oneOffKeys, pairKeys, pairsOf} from "./gary-narrative.js";
+
 /**
  * A line is [key, when]: typed before the character's word ("sigh" … STORY) or after it.
  * Match lines are two short phrases with a beat between them ("..." then "fine. you win this one").
@@ -11,7 +13,7 @@
  *   id: string, name: string, title: string, card: string[], personality: string,
  *   voiceId: string | null, voiceStyle: string, art: string,
  *   intro: {kicker: string, lines: string[], aside: string, cta: string} | null, meetAgain: string | null, rating: string[], copy: Record<string, string>,
- *   script?: MiloScript, pools?: Record<string, string[]>, moods?: Partial<Record<Strength, string[]>>,
+ *   script?: MiloScript, pools?: Record<string, string[]>, narrative?: boolean,
  *   results: Partial<Record<Strength, string[]>>, resultAvoid: Partial<Record<Strength, string[]>>,
  *   lines: {
  *     mismatch: Record<string, [string, string][]>, close: [string, string][], strange: [string, string][],
@@ -44,38 +46,13 @@ export const CHARACTERS = {
     meetAgain: "garyMeetAgain",
     rating: ["garyRate1", "garyRate2"], // the 1–5 star question on the win card
     // Shared Solo copy in this character's own words (anything not listed uses the shared key).
-    copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady", revealLoose: "garyRevealLoose", revealNextStarts: "garyRevealNextStarts", gameOverAww: "garyGameOverAww", gameOverCopy: "garyGameOverCopy", errALREADY_USED: "garyAlreadyUsed"},
-    // The reveal result, by how well the player's word fits the two words in play (see connectionStrength).
-    // Each is a pool, rotated per game (see rotate); the first line is the original one.
-    results: {
-      opening: ["garyResultStart"],
-      strong: ["garyResultStrong", "garyResultStrong2", "garyResultStrong3"],
-      good: ["garyResultGood", "garyResultGood2", "garyResultGood3"],
-      weak: ["garyResultWeak", "garyResultWeird"],
-      veryWeak: ["garyResultVeryWeak", "garyResultWeird"]
-    },
-    // Remarks not to make right after a given result (the same joke twice in one reveal).
-    resultAvoid: {strong: ["garyAnnoyinglyGood"]},
-    // Remark moods allowed for each result: a weak or strange word never gets the competitive
-    // (grudging praise) remarks.
-    moods: {weak: ["resigned", "dramatic", "minimal"], veryWeak: ["resigned", "dramatic", "minimal"]},
-    lines: {
-      mismatch: {
-        resigned: [["garySigh", "before"], ["garyFine", "before"], ["garyApparently", "before"], ["garyThisAgain", "before"], ["garyOkayThen", "before"], ["garyThere", "after"], ["garyOneWay", "after"], ["garySureWhyNot", "after"]],
-        competitive: [["garyObject", "after"], ["garyRude", "after"], ["garyWasGoingTo", "after"], ["garyAnnoyinglyGood", "after"], ["garyPleased", "after"]],
-        dramatic: [["garyNeedMinute", "after"], ["garyConcerns", "after"], ["garyUnnecessary", "after"], ["garyDoneNow", "after"], ["garyHappy", "after"], ["garyNotAgreed", "after"], ["garyMadeWorse", "after"]],
-        minimal: [["garyUgh", "before"], ["garyReally", "before"], ["garyWow", "after"], ["garyNoted", "after"], ["garyLegalReasons", "after"]]
-      },
-      close: [["garyClose", "after"], ["garyNearlyAgree", "after"], ["garyAlmost", "after"]],
-      strange: [["garyBold", "after"], ["garyAllowIt", "after"], ["garyForTheFile", "after"]],
-      middle: ["garyStillDoing"],
-      nearEnd: ["garyToldEnding"],
-      earlyMatch: [["garyDots", "garyAlready"]],
-      lateMatch: [["garyDots", "garyEventually"]],
-      win: [["garyDots", "garyInconvenient"], ["garyDots", "garyYouWin"], ["garyDots", "garyImpressive"]],
-      rematch: ["garyRematch1", "garyRematch2"],
-      gameOver: ["garyFinally", "garySameTime"]
-    }
+    copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady", revealLoose: "garyRevealLoose", revealNextStarts: "garyRevealNextStarts", gameOverAww: "garyGameOverAww", gameOverCopy: "garyGameOverCopy"},
+    // Gary speaks through his branching narrative (src/client/gary-narrative.js): one paired
+    // before/after beat per move, chosen from the direction of the game. No random remarks.
+    narrative: true,
+    results: {},
+    resultAvoid: {},
+    lines: {mismatch: {}, close: [], strange: [], middle: [], nearEnd: [], earlyMatch: [], lateMatch: [], win: [], rematch: oneOffKeys("rematch"), gameOver: []}
   },
   milo: {
     id: "milo",
@@ -120,9 +97,6 @@ export const characterId = id => (Object.hasOwn(CHARACTERS, String(id)) ? String
 export const character = id => CHARACTERS[characterId(id)];
 
 export const REACTION_CHANCE = 0.3; // about a third of ordinary reveals
-const KIND_CHANCE = 0.45; // close or strange answers get a remark a little more often
-const MATCH_CHANCE = 0.7;
-const SPECIAL_CHANCE = 0.2;
 export const EARLY_MATCH = 3; // matched on move 1–3
 export const LATE_MATCH = 12; // matched on move 12 or later
 
@@ -131,6 +105,10 @@ export function characterKeys(id) {
   const c = character(id);
   const keys = new Set([c.name, c.title, ...c.card, ...c.rating, ...(c.intro ? [c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta] : []), ...(c.meetAgain ? [c.meetAgain] : []),
     ...Object.values(c.copy), ...Object.values(c.results).flat(), ...Object.values(c.script || {}), ...Object.values(c.pools || {}).flat()]);
+  if (c.narrative) {
+    for (const branch of BRANCHES) for (const pair of pairsOf(branch)) for (const key of Object.values(pairKeys(branch, pair))) keys.add(key);
+    for (const kind of ONE_OFF) for (const key of oneOffKeys(kind)) keys.add(key);
+  }
   for (const value of Object.values(c.lines)) {
     const lists = Array.isArray(value) ? [value] : Object.values(value);
     for (const list of lists) for (const item of list) for (const key of [item].flat()) if (key !== "before" && key !== "after") keys.add(key);
@@ -168,44 +146,6 @@ export function rotate(list, {seed = "", index = 0, avoid = [], keyOf = item => 
   return list[(offset + index) % list.length];
 }
 
-/**
- * Decide whether the character says something on this reveal. Pure: same inputs, same answer.
- * Whether to speak is a chance roll (`random`); which line is the next one of that pool's rotation
- * for this game (`turn(pool)` = how many times this game has used the pool before this reveal).
- * @param {{character?: string, status: string, move: number, kind?: "close" | "strange" | null, strength?: Strength | null, recent?: string[],
- *   random?: () => number, gameId?: string, turn?: (pool: string) => number}} options
- *   status: the revealed move's status (REVEALED, MATCHED, EXHAUSTED); kind: how the player's word related
- *   to the round (see revealKind); strength: the result (see connectionStrength); recent: keys to avoid.
- * @returns {{when: "before" | "after", keys: string[], pool: string} | null}
- */
-export function pickReaction({character: id, status, move, kind = null, strength = null, recent = [], random = Math.random, gameId = "", turn = () => 0}) {
-  const c = character(id);
-  const {lines} = c;
-  const used = new Set(recent);
-  const next = (pool, list, keyOf) => rotate(list, {seed: `${gameId}:${c.id}:${pool}`, index: turn(pool), avoid: used, keyOf});
-  if (status === "MATCHED") {
-    if (random() >= MATCH_CHANCE) return null;
-    const pool = move <= EARLY_MATCH ? "earlyMatch" : move >= LATE_MATCH ? "lateMatch" : "win";
-    return {when: "after", keys: [...next(pool, lines[pool])], pool};
-  }
-  if (status === "EXHAUSTED") return null; // the game-over beat says goodbye instead
-  // Rare one-off lines around the middle and near the end of a long game.
-  if (move >= 9 && move <= 11 && !lines.middle.some(key => used.has(key)) && random() < SPECIAL_CHANCE) return {when: "after", keys: [lines.middle[0]], pool: "long"};
-  if (move >= 17 && move <= 19 && !lines.nearEnd.some(key => used.has(key)) && random() < SPECIAL_CHANCE) return {when: "after", keys: [lines.nearEnd[0]], pool: "long"};
-  if (kind === "close" || kind === "strange") {
-    if (random() < KIND_CHANCE) {
-      const [key, when] = next(kind, lines[kind], ([key]) => [key]);
-      return {when: /** @type {"before" | "after"} */ (when), keys: [key], pool: kind};
-    }
-    return null;
-  }
-  if (random() >= REACTION_CHANCE) return null;
-  const moods = (strength && c.moods?.[strength]) || Object.keys(lines.mismatch);
-  const mood = next("mismatch", moods.filter(m => lines.mismatch[m]?.length), m => [m]);
-  const [key, when] = next(`mismatch:${mood}`, lines.mismatch[mood], ([key]) => [key]);
-  return {when: /** @type {"before" | "after"} */ (when), keys: [key], pool: "mismatch"};
-}
-
 /** The i18n key for a shared Solo string in this character's own words (or the shared key). */
 export const copyKey = (id, key) => character(id).copy[key] ?? key;
 
@@ -220,8 +160,6 @@ export const resultKey = (id, strength, rotation = {}) => {
   const list = character(id).results[strength];
   return list?.length ? rotate(list, {...rotation, seed: `${rotation.seed || ""}:${characterId(id)}:${strength}`}) : copyKey(id, "revealNice");
 };
-/** Remarks to skip right after that result line. */
-export const resultAvoid = (id, strength) => character(id).resultAvoid[strength] ?? [];
 
 /**
  * How well the player's word fits the two words in play, for the reveal result line only:

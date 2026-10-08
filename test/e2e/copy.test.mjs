@@ -29,14 +29,14 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.equal(await page.locator(".hero .hero-rules").innerText(), "You each secretly pick any word. Match and you win. Miss and your two words become the next clue. Keep connecting the dots until your brains finally cooperate.");
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
-  // The tile, exactly: title, one line, the button, and nothing else.
-  assert.equal(solo.trim().replace(/\s+/g, " "), "Friends not around? Hang out with Milo or Gary from Accounting. Choose someone");
-  assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Friends not around?");
-  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose someone");
+  // The tile, exactly: title, two short paragraphs, the button, and nothing else.
+  assert.equal(solo.trim().replace(/\s+/g, " "), "Solo Play Milo finished his homework early, so now he’s free to play. We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building. Choose your player");
+  assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play");
+  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your player");
   assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|We heard you had no friends|There is no cake|Plays offline too/);
   assert.doesNotMatch(solo, /without internet/i);
   const together = await page.locator(".family-card").innerText();
-  assert.match(together, /Play Together\s+Choose someone who claims to know you well\.\s+Time to investigate\./);
+  assert.equal(together.trim().replace(/\s+/g, " ").replace(/^.*?(?=Play Together)/, ""), "Play Together Challenge a friend, sibling, cousin, or future ex-best friend to prove they can think exactly like you. Do you go together like peanut butter and... uh, peanut butter? Or more like peanut butter and... pickles? Start a game Join a game");
   assert.equal((await page.locator("#createFamily").innerText()).trim(), "Start a game");
   assert.equal((await page.locator("#joinFamily").innerText()).trim(), "Join a game");
   const games = await page.locator(".games").innerText();
@@ -45,7 +45,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   await page.click('[data-lang="fr"]');
   assert.match(await page.locator(".hero").innerText(), /Essayez de lire dans les pensées de l’autre\./);
   assert.match(await page.locator(".hero .hero-rules").innerText(), /^Choisissez chacun un mot en secret\. Les mêmes mots[\s\u202f]\? Vous gagnez[\s\u202f]! Sinon, vos deux mots deviennent le prochain indice\. Continuez à faire des liens jusqu’à ce que vos cerveaux coopèrent enfin\.$/);
-  assert.match(await page.locator(".solo-card").innerText(), /^Tes amis ne sont pas là[\s\u202f]\?\s+Passe du temps avec Milo ou Gary de la comptabilité\.\s+Choisis quelqu’un$/);
+  assert.match(await page.locator(".solo-card").innerText(), /^Jeu en solo\s+Milo a fini ses devoirs en avance, alors maintenant il est libre de jouer\.\s+On n’a trouvé personne d’autre, alors on a fait venir Gary de la comptabilité\. Les RH disent que c’est du team building\.\s+Choisis ton joueur$/);
   assert.match(await page.locator(".family-card").innerText(), /Jouer ensemble/);
   assert.doesNotMatch(await visibleText(page), EMOJI);
   await context.close();
