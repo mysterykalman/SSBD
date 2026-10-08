@@ -1579,7 +1579,11 @@ function dialog(title, copy, body, actions) {
   const opener = dlg.open ? null : document.activeElement;
   if (opener) {
     dlg.addEventListener("close", () => {
-      if (opener.isConnected && !dlg.open && !dlg.contains(document.activeElement)) opener.focus?.({preventScroll: true});
+      // Only when focus has nowhere better to be: the browser may already have put it back, and the
+      // player (or a keyboard shortcut) may have moved it on before this event arrives. Never steal it.
+      const active = document.activeElement;
+      const lost = !active || active === document.body || dlg.contains(active);
+      if (opener.isConnected && !dlg.open && lost) opener.focus?.({preventScroll: true});
     }, {once: true});
   }
   dlg.replaceChildren(
