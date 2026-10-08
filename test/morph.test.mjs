@@ -64,14 +64,15 @@ test("game state: exact and inflected matches end the game; synonyms and unrelat
   assert.equal(moveOutcome(5, "chevaux", "cheval", "fr"), "MATCHED");
 });
 
-test("duplicates use the same rule: a side can't replay a variant of its own word", () => {
+test("duplicates use the same rule: nobody can replay a played word or a variant of it", () => {
   let game = createGame({id: "dup"});
   game = revealMove(game, {a: "car", b: "tree"});
   assert.equal(checkWord(game, "a", "cars").code, "SAME_AS_LAST");
   game = revealMove(game, {a: "road", b: "leaf"});
   assert.equal(checkWord(game, "a", "Cars").code, "ALREADY_USED");
   assert.equal(checkWord(game, "a", "vehicle").ok, true, "a synonym is a new word");
-  assert.equal(checkWord(game, "a", "trees").ok, true, "the other side's word (or its variant) is fine");
+  assert.equal(checkWord(game, "a", "trees").code, "ALREADY_USED", "the other side's word (or its variant) is used up too");
+  assert.equal(checkWord(game, "b", "car").code, "ALREADY_USED");
 });
 
 test("adversarial words: inflections match, look-alikes and derivations don't", () => {

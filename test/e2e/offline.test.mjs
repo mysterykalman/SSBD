@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, continueReveal, launch, lockIn, lockInEnter, playDistinct, progressOf, revealShown, soloRecord, startServer, startSolo, waitForReveal} from "./helpers.mjs";
+import {botWord, continueReveal, launch, lockIn, lockInEnter, PLAY_WORDS, playDistinct, progressOf, revealShown, soloRecord, startServer, startSolo, usedWords, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -28,8 +28,11 @@ async function playMoves(page, words) {
   for (const w of words) {
     if (await page.locator(".end").count()) break;
     const before = await page.locator(".trail-row").count();
-    const bot = await botWord(page);
-    await lockIn(page, bot.toLowerCase() === w ? `${w}s` : w); // dismisses the reveal modal
+    const bot = (await botWord(page)).toLowerCase();
+    // Never the bot's word (no match) nor a word either side already played (used up): then a fresh one.
+    const played = usedWords(await soloRecord(page));
+    const word = [w, ...PLAY_WORDS].find(x => x !== bot && !played.has(x));
+    await lockIn(page, word); // dismisses the reveal modal
     await page.waitForFunction(n => document.querySelectorAll(".trail-row").length > n || document.querySelector(".end"), before);
   }
 }
@@ -466,7 +469,8 @@ test("offline Solo: a second Enter right after the final move does not skip the 
   await playDistinct(page, 19);
   const game = await soloRecord(page);
   const bot = lower(game.moves[19].hidden.b);
-  const word = ["lantern", "trumpet", "walrus"].find(w => w !== bot && !game.moves.some(m => m.words && lower(m.words.a) === w));
+  const played = usedWords(game); // a word either side played is used up
+  const word = ["lantern", "trumpet", "walrus"].find(w => w !== bot && !played.has(w));
   // A child types the last word and presses Enter twice (or holds it a little too long).
   await page.fill("#word", word);
   await page.press("#word", "Enter");

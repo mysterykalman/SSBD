@@ -2,7 +2,7 @@
 // never changes the game, never leaks into family games, and stays accessible.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, joinRoom, launch, startServer, startSolo} from "./helpers.mjs";
+import {botWord, joinRoom, launch, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -177,7 +177,8 @@ test("game over: Gary says 'finally', then '...same time tomorrow?'; a match can
   let used = 0;
   for (let move = 1; move <= 20; move++) {
     const bot = (await botWord(page)).toLowerCase();
-    let mine; do { mine = words[used++]; } while (mine === bot);
+    const played = usedWords(await soloRecord(page)); // a word either side played is used up
+    let mine; do { mine = words[used++]; } while (mine === bot || played.has(mine));
     await submit(page, mine);
     await page.waitForSelector("#revealContinue");
     await page.click("#revealContinue");

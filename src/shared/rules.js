@@ -112,7 +112,7 @@ export function usedKeys(game, side) {
  * Check a word for one side before it is locked in.
  * Errors: GAME_OVER, plus validateWord codes, plus
  *   SAME_AS_LAST  - the side's own previous word, typed again
- *   ALREADY_USED  - anyone (either player, Gary or Milo) already played this word in the game
+ *   ALREADY_USED  - either side (a player or the Solo opponent) already played this word in the game
  * Only revealed words count: the open move's words are never compared here, so two players
  * typing the same word in the same move is still a match.
  * @param {RulesGame} game

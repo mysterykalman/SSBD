@@ -97,7 +97,9 @@ test("word rules: invalid input and repeated words are rejected with codes", asy
   await call("/api/submit", {game_id: created.id, player_id: ana.id, word: "dog", move: 1});
   await call("/api/submit", {game_id: created.id, player_id: ben.id, word: "cat", move: 1});
   assert.equal((await call("/api/submit", {game_id: created.id, player_id: ana.id, word: "Dog", move: 2})).code, "SAME_AS_LAST");
-  assert.equal((await call("/api/submit", {game_id: created.id, player_id: ana.id, word: "cat", move: 2})).ok, true, "the other side's word is allowed");
+  assert.equal((await call("/api/submit", {game_id: created.id, player_id: ana.id, word: "cat", move: 2})).code, "ALREADY_USED", "the other side's word is used up too");
+  assert.equal((await call("/api/submit", {game_id: created.id, player_id: ben.id, word: "DOG", move: 2})).code, "ALREADY_USED");
+  assert.equal((await call("/api/submit", {game_id: created.id, player_id: ana.id, word: "bird", move: 2})).ok, true);
   assert.equal((await call("/api/submit", {game_id: created.id, player_id: ben.id, word: "pet", move: 1})).ok, true, "stale move retry returns state");
 });
 

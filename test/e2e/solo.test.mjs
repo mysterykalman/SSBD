@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, continueReveal, launch, lockIn, revealShown, startServer, startSolo} from "./helpers.mjs";
+import {botWord, continueReveal, launch, lockIn, PLAY_WORDS, revealShown, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -83,8 +83,10 @@ test("Solo survives refresh and reopening, and a match ends the game", async () 
   const played = [];
   for (const w of ["apple", "orchard", "basket"]) {
     if (await page.locator(".end").count()) break;
-    const bot = await botWord(page);
-    const mine = bot.toLowerCase() === w ? `${w}y` : w;
+    const bot = (await botWord(page)).toLowerCase();
+    // Never the bot's word (no match) nor a word either side already played (used up).
+    const used = usedWords(await soloRecord(page));
+    const mine = [w, ...PLAY_WORDS].find(x => x !== bot && !used.has(x));
     await lockIn(page, mine);
     await page.waitForSelector(".trail-row");
     played.push(mine);

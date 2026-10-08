@@ -56,6 +56,10 @@ test("deep links on a cold first visit: an invite link joins the game, a game li
   await pageB.waitForSelector("dialog #joinInput");
   assert.equal(await pageB.inputValue("#joinInput"), game.join_code);
   await pageB.click('dialog button[type="submit"]');
+  // Then their own name, prefilled because this device already knows them.
+  await pageB.waitForSelector("dialog #nameInput");
+  assert.equal(await pageB.inputValue("#nameInput"), "Ben");
+  await pageB.click('dialog button[type="submit"]');
   await pageB.waitForSelector("#word");
   assert.match(pageB.url(), new RegExp(`/games/${game.id}$`));
   // Ana opens the game link directly.

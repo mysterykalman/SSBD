@@ -157,6 +157,19 @@ export async function waitForReveal(page, n) {
   }, n);
 }
 
+/**
+ * Every word either side already played in a Solo game (lowercase, with simple plural forms):
+ * a played word is used up for both the player and Gary/Milo, so it can't be played again.
+ */
+export function usedWords(game) {
+  const used = new Set();
+  for (const m of game?.moves || []) {
+    if (!m.words) continue;
+    for (const w of [m.words.a, m.words.b].map(x => x.toLowerCase())) for (const form of [w, `${w}s`, `${w}es`, w.replace(/e?s$/, "")]) used.add(form);
+  }
+  return used;
+}
+
 // Distinct, ordinary words for long Solo games (more than 20, so a clash with the bot can be skipped).
 export const PLAY_WORDS = ["whale", "garden", "pencil", "rocket", "banana", "violin", "jungle", "candle", "turtle", "pillow",
   "marble", "forest", "ladder", "rabbit", "button", "carrot", "dragon", "mirror", "kettle", "puzzle", "anchor", "walrus", "trumpet", "lantern"];
@@ -171,9 +184,9 @@ export async function playDistinct(page, count, pool = PLAY_WORDS, {continueLast
   for (let i = 0; i < count; i++) {
     const game = await soloRecord(page);
     if (!game || game.status !== "ACTIVE") break;
-    const mine = new Set(game.moves.filter(m => m.words).map(m => m.words.a.toLowerCase()));
+    const used = usedWords(game);
     const bot = String(game.moves[game.moves.length - 1].hidden?.b || "").toLowerCase();
-    const word = pool.find(w => !mine.has(w) && w !== bot && !played.includes(w));
+    const word = pool.find(w => !used.has(w) && w !== bot && !played.includes(w));
     if (!word) throw new Error("ran out of words");
     const before = revealedCount(game);
     await lockIn(page, word, {reveal: false});

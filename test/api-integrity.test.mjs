@@ -58,12 +58,15 @@ for (const language of ["en", "fr"]) {
     assert.equal((await submitAs(id, ana.id, "a", 2)).ok, true);
     assert.equal((await submitAs(id, ben.id, "I", 2)).ok, true);
     assert.equal((await submitAs(id, ana.id, "s", 3)).code, "ALREADY_USED");
-    assert.equal((await submitAs(id, ana.id, "é", 3)).ok, true, "the other side's word is allowed");
+    assert.equal((await submitAs(id, ana.id, "é", 3)).code, "ALREADY_USED", "the other side's word is used up too");
+    assert.equal((await submitAs(id, ana.id, "I", 3)).code, "ALREADY_USED", "even the other side's latest word");
+    assert.equal((await submitAs(id, ana.id, "o", 3)).ok, true);
     assert.equal((await submitAs(id, ben.id, "E", 3)).code, "ALREADY_USED", "Ben used É on move 1");
     assert.equal((await submitAs(id, ben.id, "ê", 3)).code, "ALREADY_USED", "ê, é and e share one key");
+    assert.equal((await submitAs(id, ben.id, "S", 3)).code, "ALREADY_USED", "Ana's move-1 word is used up for Ben");
     const three = await submitAs(id, ben.id, "x", 3);
     assert.equal(three.game.moves[2].status, "REVEALED");
-    assert.deepEqual(three.game.moves[3].prompts, ["é", "x"]);
+    assert.deepEqual(three.game.moves[3].prompts, ["o", "x"]);
     assert.equal((await submitAs(id, ana.id, "z", 4)).ok, true);
     const end = await submitAs(id, ben.id, "Z", 4);
     assert.equal(end.game.status, "MATCHED", "a one-letter match ends the game");

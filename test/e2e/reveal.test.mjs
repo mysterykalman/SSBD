@@ -3,7 +3,7 @@
 // active turn after "Keep playing", and there is never a frame showing it in both places.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, joinRoom, launch, startServer, startSolo} from "./helpers.mjs";
+import {botWord, joinRoom, launch, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -99,8 +99,9 @@ test("After Keep playing is pressed, the modal disappears and the pending pair b
   await page.waitForSelector("#word");
   for (let move = 1; move <= 3; move++) {
     const bot = await botWord(page);
-    // A different word every move (the player may not repeat their own words), never the bot's.
-    const mine = [["lantern", "lighthouse"], ["meadow", "prairie"], ["pebble", "boulder"]][move - 1].find(w => w !== bot.toLowerCase());
+    // A different word every move (nobody may repeat a played word), never the bot's.
+    const played = usedWords(await soloRecord(page));
+    const mine = [["lantern", "lighthouse"], ["meadow", "prairie"], ["pebble", "boulder"]][move - 1].find(w => w !== bot.toLowerCase() && !played.has(w));
     const before = await page.locator("#app #prompt .tile").allTextContents();
     await watchForDuplicates(page, [mine, bot]);
     await submit(page, mine);
@@ -242,8 +243,9 @@ for (const [name, viewport] of [["phone 390x844", {width: 390, height: 844}], ["
     let used = 0;
     for (let move = 1; move <= 20; move++) {
       const bot = (await botWord(page)).toLowerCase();
+      const played = usedWords(await soloRecord(page));
       let mine;
-      do { mine = LONG_GAME[used++]; } while (mine === bot);
+      do { mine = LONG_GAME[used++]; } while (mine === bot || played.has(mine));
       await watchForDuplicates(page, [mine, bot]);
       await submit(page, mine);
       await page.waitForSelector("#revealContinue");
