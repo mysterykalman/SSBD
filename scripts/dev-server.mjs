@@ -90,7 +90,7 @@ createServer(async (req, res) => {
       const dest = new URL(target, url);
       for (const [key, value] of url.searchParams) if (!dest.searchParams.has(key)) dest.searchParams.append(key, value);
       const request = new Request(dest, {method: req.method, headers: req.headers, body: ["GET", "HEAD"].includes(req.method) ? undefined : Buffer.concat(chunks)});
-      const response = await handle(request, {store});
+      const response = await handle(request, {store, reviewToken: process.env.REVIEW_TOKEN || undefined});
       res.writeHead(response.status, Object.fromEntries(response.headers));
       res.end(Buffer.from(await response.arrayBuffer()));
       return;

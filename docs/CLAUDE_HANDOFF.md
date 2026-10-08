@@ -867,3 +867,14 @@ newest finished row keeps "↑ Next round's words". Test: `test/e2e/trail-now.te
   `scripts/compact-favicon.py` derives one from it (blue | orange tile, two speech bubbles, no lettering) for
   `favicon.ico` (16/32/48) and `favicon-32.png`. `apple-touch-icon.png`, `icon-192.png` and `icon-512.png` keep
   the full artwork; the manifest lists 192/512. No other icon is referenced.
+
+## Status update: Solo engine-2.0, game logs and review (2026-10-08)
+
+See `docs/BOT_ENGINE.md` for the details: root causes, formula, stages, licensing, logging, review and replay.
+
+- **Engine.** Solo now uses `src/shared/engine.js` (`selectBotWord`, engine-2.0) on dataset lexicon-2 (`src/shared/lexicon/additions.js`). `src/shared/bot.js` (engine-1) is kept for replay and for Milo's scripted "wanted word" hint.
+- **Logs.** Every revealed Solo round is logged on the device (`ssbd.gamelog`) and uploaded to `POST /api/log/batch` → Supabase `bot_games` / `bot_rounds` / `bot_reviews`.
+- **Before logs reach the server:**
+  - Apply `supabase/migrations/20261009120000_bot_game_logs.sql` (not applied by Claude).
+  - Set `REVIEW_TOKEN` in Vercel to open `/review` (not set by Claude). Without it, the review API answers 404.
+- **Replay.** `node scripts/replay.mjs` compares engine-1 and the current engine on `test/fixtures/bot-replay.json`. `--log <export.json>` replays reviewed rounds.

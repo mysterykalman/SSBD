@@ -32,7 +32,9 @@ test("same seed, same player words: Gary and Milo pick exactly the same words (a
         const gary = play("gary", seed, language), milo = play("milo", seed, language);
         assert.deepEqual(milo.words, gary.words, `${language} seed ${seed}`);
         assert.deepEqual(milo.decisions, gary.decisions, "identical ranking, support checks and rejections");
-        assert.deepEqual(milo.game.moves, gary.game.moves);
+        // Identical game state, apart from how long the open move's decision took (wall-clock time).
+        const timeless = moves => moves.map(({hidden, ...m}) => (hidden ? {...m, hidden: {...hidden, ms: 0}} : m));
+        assert.deepEqual(timeless(milo.game.moves), timeless(gary.game.moves));
         assert.equal(gary.game.character, "gary");
         assert.equal(milo.game.character, "milo");
       }
@@ -51,16 +53,23 @@ test("determinism per character: the same game replays identically, and old game
   assert.deepEqual(play(undefined, 3).words, play("gary", 3).words);
 });
 
-test("the engine never reads the character: no shared game code mentions it except to store it", async () => {
+test("the engine never reads the character: it is an explicit input, but no choice depends on it", async () => {
   const dir = new URL("../src/shared/", import.meta.url);
   for (const file of (await readdir(dir, {recursive: true})).filter(f => f.endsWith(".js"))) {
-    const source = await readFile(new URL(file, dir), "utf8");
+    const source = (await readFile(new URL(file, dir), "utf8")).replace(/^\s*(\/\/|\*).*$/gm, "");
     if (file === "solo.js") {
-      // startSoloGame stores it on the game; nothing else in the file (the engine calls included) uses it.
-      const start = source.match(/export function startSoloGame[\s\S]*?\n}\n/)[0];
-      assert.match(start, /character/);
-      const rest = source.replace(start, "").replace(/^\s*\*.*$/gm, "");
-      assert.doesNotMatch(rest, /\bcharacter\b/, "solo.js only stores the character");
+      // startSoloGame stores it; lockBotWord passes it to the engine as part of its explicit input.
+      assert.equal((source.match(/\bcharacter\b/g) || []).length, 6, "solo.js stores the character and passes it on, nothing else");
+      continue;
+    }
+    if (file === "engine.js") {
+      // The engine takes it as an input and sets it aside (both characters share one baseline).
+      assert.deepEqual(source.match(/.*\bcharacter\b.*/g).map(line => line.trim()), ['export function selectBotWord({pair, blocked = [], language = "en", character = "gary", seed = 0, config = ENGINE_CONFIG}) {', "void character;"]);
+      continue;
+    }
+    if (file === "gamelog.js") {
+      // The evaluation log records which character played (to compare them); it never chooses a word.
+      assert.doesNotMatch(source, /selectBotWord|chooseResponse|rankCandidates|from "\.\/(engine|bot)\.js"/, file);
       continue;
     }
     if (file === "types.js") continue;

@@ -1,5 +1,5 @@
 // Developer diagnostics for Gary's decisions: shown only in development mode, after the reveal,
-// with the pair, the predicted human answers, every candidate's score, the pick and the reason.
+// with the pair, the stage, every leading candidate's connection to each word, the pick and the pool.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
 import {botWord, launch, lockIn, startServer, startSolo} from "./helpers.mjs";
@@ -32,7 +32,10 @@ test("developer mode: the decision panel explains Gary's pick after each reveal 
   const gary = await botWord(page);
   await lockIn(page, gary.toLowerCase() === "violin" ? "candle" : "violin");
   const panel = await page.locator("#garyDebug").innerText();
-  for (const label of ["Current pair", "Predicted human answers", "Gary's candidate words", "score", "Selected word", "Reason selected"]) assert.ok(panel.includes(label), `panel shows ${label}`);
+  for (const label of ["Latest pair", "Stage", "Candidate words", "final", "Selected word", "Strong pool", "engine-2"]) assert.ok(panel.includes(label), `panel shows ${label}`);
+  // Both connection scores, one per word of the pair, for every candidate.
+  const [a, b] = prompts.map(w => w.toUpperCase());
+  assert.ok(panel.includes(`→ ${a}`) && panel.includes(`→ ${b}`), "a column for each input word");
   assert.ok(panel.includes(prompts.map(w => w.toUpperCase()).join(" + ")), "the pair Gary answered");
   assert.ok(panel.includes(gary.toUpperCase()), "the word he selected");
   assert.equal(await page.locator("#garyDebug tr.gd-pick").count(), 1, "the selected candidate is highlighted");

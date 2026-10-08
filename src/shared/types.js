@@ -34,7 +34,7 @@
 /** @typedef {{a: string, b: string}} Reveal */
 
 /** The Solo bot's word, locked when the move opens and before the player types. */
-/** @typedef {{b: string, quality: BotQuality, decision?: object}} HiddenWord */
+/** @typedef {{b: string, quality: BotQuality, decision?: object, ms?: number}} HiddenWord */
 
 /** @typedef {"opening" | "strong" | "loose"} BotQuality */
 

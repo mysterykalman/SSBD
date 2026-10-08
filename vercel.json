@@ -11,7 +11,8 @@
     {"source": "/api/:path*", "destination": "/api?__path=:path*"},
     {"source": "/games/:path*", "destination": "/index.html"},
     {"source": "/join/:path*", "destination": "/index.html"},
-    {"source": "/solo/:path*", "destination": "/index.html"}
+    {"source": "/solo/:path*", "destination": "/index.html"},
+    {"source": "/review", "destination": "/index.html"}
   ],
   "headers": [
     {"source": "/sw.js", "headers": [

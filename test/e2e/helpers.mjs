@@ -12,8 +12,8 @@ let factory = null;
  * different build; `beforeMigrate` runs SQL on an empty database before the migrations
  * (an already-populated database); `database: false` runs with no database at all.
  */
-export async function startServer({port = 9000 + Math.floor(Math.random() * 900), staticDir, database = true, beforeMigrate} = {}) {
-  const env = {...process.env};
+export async function startServer({port = 9000 + Math.floor(Math.random() * 900), staticDir, database = true, beforeMigrate, env: extraEnv = {}} = {}) {
+  const env = {...process.env, ...extraEnv};
   delete env.POSTGRES_URL;
   delete env.NO_DATABASE;
   if (staticDir) env.STATIC_DIR = staticDir;

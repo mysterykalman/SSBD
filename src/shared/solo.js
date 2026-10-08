@@ -3,8 +3,8 @@
 // move opens (before the player types anything), so it cannot react to the
 // player's word, and a refresh never changes its choice.
 
-import {chooseOpening, chooseResponse} from "./bot.js";
-import {checkWord, createGame, currentMove, isFinished, moveRandom, revealMove, usedKeys} from "./rules.js";
+import {selectBotWord} from "./engine.js";
+import {checkWord, createGame, currentMove, hashString, isFinished, revealMove, usedKeys} from "./rules.js";
 import {wordKey} from "./words.js";
 
 /**
@@ -12,42 +12,42 @@ import {wordKey} from "./words.js";
  * @typedef {import("./types.js").BotQuality} BotQuality
  * @typedef {import("./types.js").Move} Move
  * @typedef {import("./types.js").WordError} WordError
- * @typedef {{ok: true, game: GameState, move: Move}} SoloSubmitOk
+ * @typedef {{ok: true, game: GameState, move: Move, decision?: object | null, decisionMs?: number | null}} SoloSubmitOk
  * @typedef {WordError | {ok: false, code: "BOT_NOT_READY"}} SoloSubmitError
  */
 
 let explainDecisions = false;
 /**
- * Developer diagnostics: keep Gary's full decision (predicted human answers, every candidate's
- * score, the reason) with each move. Off by default; the app turns it on in development mode.
+ * Developer diagnostics: also keep the engine's full decision on each revealed move (for the
+ * ?debug=gary panel). Off by default. Every decision is always handed to the game log on reveal.
  * @param {boolean} on
  */
 export function setGaryDiagnostics(on) {
   explainDecisions = Boolean(on);
 }
 
+/** The engine seed for one move of one game (fixed per game and move, so a reload gets the same word). */
+export const moveSeed = (game, number) => hashString(`${game.seed}:${game.id}:${number}`);
+
+const clock = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
 /**
- * Lock the bot's word for the open move, from the prompts and revealed words only.
+ * Lock the bot's word for the open move, before the player answers it. The engine's only input is
+ * what both players can already see: the latest revealed pair, every word revealed so far (blocked
+ * for both sides), the language, the character and the move's seed. Never the player's word.
  * @param {GameState} game
  * @returns {GameState}
  */
 function lockBotWord(game) {
   if (isFinished(game)) return game;
   const move = currentMove(game);
-  const rng = moveRandom(game, move.number);
-  const excludeKeys = usedKeys(game);
-  // The recent trail goes in too: Gary reads its emerging theme (it informs, never dominates).
-  const history = game.moves.flatMap(m => (m.words ? [[m.words.a, m.words.b]] : []));
-  /** @type {import("./types.js").BotPick & {decision?: any}} */
-  const pick = move.prompts
-    ? chooseResponse({prompts: move.prompts, language: game.language, excludeKeys, rng, history, explain: explainDecisions})
-    : chooseOpening({language: game.language, excludeKeys, rng});
-  if (explainDecisions && !pick.decision) {
-    pick.decision = {pair: null, language: game.language, trail: [], predicted: [], candidates: [], selected: pick.word, quality: pick.quality, reason: "opening move: no words on the table yet, so a friendly, well-known word at random"};
-  }
+  const blocked = game.moves.flatMap(m => (m.words ? [m.words.a, m.words.b] : []));
+  const started = clock();
+  const pick = selectBotWord({pair: move.prompts, blocked, language: game.language, character: game.character || "gary", seed: moveSeed(game, move.number)});
+  const ms = Math.round((clock() - started) * 10) / 10;
   const {hidden: _previous, ...rest} = move;
   /** @type {Move} */
-  const locked = {...rest, hidden: {b: pick.word, quality: /** @type {BotQuality} */ (pick.quality), ...(pick.decision ? {decision: pick.decision} : {})}};
+  const locked = {...rest, hidden: {b: pick.word, quality: /** @type {BotQuality} */ (pick.quality), decision: pick.decision, ms}};
   return {...game, moves: [...game.moves.slice(0, -1), locked]};
 }
 
@@ -85,11 +85,12 @@ export function submitSoloWord(game, raw, now = new Date().toISOString()) {
   const closed = next.moves.find(m => m.number === move.number);
   if (!closed) return {ok: false, code: "BOT_NOT_READY"};
   /** @type {Move} */
-  const revealed = {...closed, botQuality: quality, ...(move.hidden?.decision ? {garyDecision: move.hidden.decision} : {})};
+  const revealed = {...closed, botQuality: quality, ...(explainDecisions && move.hidden?.decision ? {garyDecision: move.hidden.decision} : {})};
   delete revealed.hidden;
   next = {...next, moves: next.moves.map(m => (m.number === move.number ? revealed : m))};
   next = lockBotWord(next);
-  return {ok: true, game: next, move: revealed};
+  // The decision that produced this move's word (for the game log), committed before the reveal.
+  return {ok: true, game: next, move: revealed, decision: move.hidden?.decision ?? null, decisionMs: move.hidden?.ms ?? null};
 }
 
 /**

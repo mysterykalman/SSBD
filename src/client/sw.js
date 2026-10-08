@@ -20,7 +20,7 @@ const VERSION = "%VERSION%";
 const CACHE = `shell-${VERSION}`;
 const PRECACHE = %PRECACHE%;
 // In-app pages that are all the same shell (kept in step with vercel.json's rewrites).
-const SHELL_ROUTES = /^\/(?:$|index\.html$|games(?:\/|$)|join(?:\/|$)|solo(?:\/|$))/;
+const SHELL_ROUTES = /^\/(?:$|index\.html$|games(?:\/|$)|join(?:\/|$)|solo(?:\/|$)|review$)/;
 // A navigation that gets no answer in this long falls back to the cached shell.
 const NETWORK_TIMEOUT_MS = 4000;
 

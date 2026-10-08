@@ -1,6 +1,7 @@
 // Turns the curated concept list into a per-language lookup graph.
 
 import {CATEGORIES, CONCEPTS, PHRASES} from "./data.js";
+import {ADDED_CONCEPTS, ADDED_LINKS, ADDED_PHRASES, ALIASES, DATASET_VERSION} from "./additions.js";
 import {EXTRA_WORDS} from "./vocab.js";
 import {wordKey} from "../words.js";
 
@@ -10,20 +11,32 @@ const PLURAL_ENDINGS = {
   fr: [["s", ""], ["x", ""], ["e", ""], ["es", ""], ["aux", "al"]]
 };
 
-export function getLexicon(language = "en") {
+/** The original curated graph, kept so older engine decisions can be replayed on the data they used. */
+export const BASE_DATASET = "lexicon-1";
+export {DATASET_VERSION};
+
+/**
+ * The lookup graph for a language. `dataset` picks the data version (default: the current one);
+ * "lexicon-1" is the original graph without the dataset-2 additions.
+ */
+export function getLexicon(language = "en", dataset = DATASET_VERSION) {
   const lang = language === "fr" ? "fr" : "en";
-  if (!cache.has(lang)) cache.set(lang, buildLexicon(lang));
-  return cache.get(lang);
+  const version = dataset === BASE_DATASET ? BASE_DATASET : DATASET_VERSION;
+  const key = `${lang}:${version}`;
+  if (!cache.has(key)) cache.set(key, buildLexicon(lang, version));
+  return cache.get(key);
 }
 
-function buildLexicon(lang) {
+function buildLexicon(lang, version) {
   const labelIndex = lang === "fr" ? 2 : 1;
+  const extended = version !== BASE_DATASET;
+  const rows = extended ? [...CONCEPTS, ...ADDED_CONCEPTS] : CONCEPTS;
   const concepts = new Map();
-  for (const [id, en, fr, tags] of CONCEPTS) {
+  for (const [id, en, fr, tags] of rows) {
     concepts.set(id, {id, label: lang === "fr" ? fr : en, key: wordKey(lang === "fr" ? fr : en), tags, links: new Set(), phrases: new Set(), near: new Set(), out: new Map(), kinds: new Map(), members: new Set()});
   }
   // Links are undirected.
-  for (const row of CONCEPTS) {
+  for (const row of rows) {
     const [id, , , , links] = row;
     // `out` keeps the curator's own ordered list for this concept: the words a person is most
     // likely to think of first when they see it (used as the bot's "human likelihood").
@@ -34,9 +47,16 @@ function buildLexicon(lang) {
       concepts.get(other).links.add(id);
     }
   }
+  if (extended) {
+    for (const [a, b] of ADDED_LINKS) {
+      if (!concepts.has(a) || !concepts.has(b) || a === b) continue;
+      concepts.get(a).links.add(b);
+      concepts.get(b).links.add(a);
+    }
+  }
   // Phrases and compounds are language-specific ("snow" + "ball" in English,
   // "pomme" + "terre" in French) and undirected.
-  for (const [a, b] of PHRASES[lang] || []) {
+  for (const [a, b] of [...(PHRASES[lang] || []), ...(extended ? ADDED_PHRASES[lang] || [] : [])]) {
     if (!concepts.has(a) || !concepts.has(b) || a === b) continue;
     concepts.get(a).phrases.add(b);
     concepts.get(b).phrases.add(a);
@@ -58,14 +78,19 @@ function buildLexicon(lang) {
   for (const concept of concepts.values()) concept.near = new Set([...concept.links, ...concept.phrases]);
   const byKey = new Map();
   for (const concept of concepts.values()) if (!byKey.has(concept.key)) byKey.set(concept.key, concept.id);
+  // Synonyms and variants: only where no concept already has that spelling.
+  const aliases = new Map();
+  if (extended) for (const [word, id] of Object.entries(ALIASES[lang] || {})) if (concepts.has(id) && !byKey.has(wordKey(word))) aliases.set(wordKey(word), id);
   const knownKeys = [...byKey.keys()].sort((x, y) => y.length - x.length);
 
   function exact(key) {
     if (byKey.has(key)) return byKey.get(key);
+    if (aliases.has(key)) return aliases.get(key);
     for (const [ending, replacement] of PLURAL_ENDINGS[lang]) {
       if (key.length > ending.length + 2 && key.endsWith(ending)) {
         const stem = key.slice(0, -ending.length) + replacement;
         if (byKey.has(stem)) return byKey.get(stem);
+        if (aliases.has(stem)) return aliases.get(stem);
       }
     }
     return null;
@@ -107,5 +132,5 @@ function buildLexicon(lang) {
   }
 
   const words = [...concepts.values()].map(c => c.label).concat(EXTRA_WORDS[lang] || []);
-  return {language: lang, labelIndex, concepts, byKey, resolve, resolveAll, words};
+  return {language: lang, dataset: version, labelIndex, concepts, byKey, aliases, resolve, resolveAll, words};
 }

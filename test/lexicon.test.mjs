@@ -4,6 +4,7 @@ import {CONCEPTS, PHRASES, TAGS} from "../src/shared/lexicon/data.js";
 import {EXTRA_WORDS} from "../src/shared/lexicon/vocab.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {chooseOpening, chooseResponse, wordForms, rankCandidates} from "../src/shared/bot.js";
+import {selectBotWord} from "../src/shared/engine.js";
 import {createSpeller, validateWord, wordKey} from "../src/shared/words.js";
 
 // Local seeded RNG so these tests do not depend on rules.js.
@@ -287,13 +288,14 @@ function judgeSide(lex, promptId, pickId) {
   return shared === 1 || c.tags.some(tag => p.tags.includes(tag)) ? 1 : 0;
 }
 const isUsed = (used, key) => [...wordForms(key)].some(form => used.has(form));
+const BRIDGE_STAGES = new Set(["shared-direct", "direct-plus-indirect", "indirect-both", "weak-fallback"]);
 
 test("bot quality in simulated games and random pairs (EN and FR)", t => {
   for (const lang of ["en", "fr"]) {
     const lex = getLexicon(lang);
     const all = [...lex.concepts.values()];
     const records = [];
-    const judge = (prompts, used, word, source) => {
+    const judge = (prompts, used, word, source, stage) => {
       const [a, b] = prompts.map(p => lex.resolve(p));
       const c = lex.resolve(word);
       assert.ok(c, `${lang}: ${word} is a lexicon word`);
@@ -303,10 +305,9 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
         if (x.id === a || x.id === b || isUsed(used, x.key)) continue;
         if (judgeSide(lex, a, x.id) === 3 && judgeSide(lex, b, x.id) === 3) { strongPossible = true; break; }
       }
-      // Was a meaningful two-sided word available at all (bot tiers 1-4)?
-      const ranked = rankCandidates({prompts, language: lang, excludeKeys: used}).ranked;
-      // (A lazy piece of a prompt, like BASKET for BASKETBALL, is not a real bridge: it never wins.)
-      const bridgeable = ranked.some(r => r.tier >= 1 && r.tier <= 4 && !r.lazyReject);
+      // Was a meaningful two-sided word available at all (engine stages 1-4)? The engine logs the
+      // stage it reached; a lazy piece of a prompt (BASKET for BASKETBALL) is never counted as a bridge.
+      const bridgeable = BRIDGE_STAGES.has(stage);
       records.push({prompts, word, sa, sb, strongPossible, source, bridgeable});
     };
     // Realistic games: the "player" answers with a word related to one or both prompts.
@@ -319,9 +320,10 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
         used.add(wordKey(player));
         used.add(wordKey(bot));
         const prompts = [player, bot];
-        const next = chooseResponse({prompts, language: lang, excludeKeys: new Set(used), rng: botRng}).word;
+        const pick = selectBotWord({pair: prompts, blocked: [...used], language: lang, seed: Math.floor(botRng() * 1e9)});
+        const next = pick.word;
         assert.ok(!isUsed(used, wordKey(next)), `${lang}: reused ${next}`);
-        judge(prompts, used, next, "game");
+        judge(prompts, used, next, "game", pick.decision.stage);
         const ids = prompts.map(p => lex.resolve(p));
         const pool = all.filter(x => !isUsed(used, x.key) && ids.some(id => lex.concepts.get(id).near.has(x.id)));
         const both = pool.filter(x => ids.every(id => lex.concepts.get(id).near.has(x.id)));
@@ -335,7 +337,8 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     for (let i = 0; i < 300; i++) {
       const a = all[Math.floor(random() * all.length)], b = all[Math.floor(random() * all.length)];
       if (a.id === b.id) continue;
-      judge([a.label, b.label], new Set([a.key, b.key]), chooseResponse({prompts: [a.label, b.label], language: lang, rng: rng(i + 1)}).word, "random");
+      const pick = selectBotWord({pair: [a.label, b.label], blocked: [], language: lang, seed: i + 1});
+      judge([a.label, b.label], new Set([a.key, b.key]), pick.word, "random", pick.decision.stage);
     }
     const possible = records.filter(r => r.strongPossible);
     const strong = possible.filter(r => r.sa === 3 && r.sb === 3);
@@ -368,7 +371,7 @@ test("one-letter and unknown prompts never crash and still give one valid word",
     for (const odd of ["s", "I", "a", "é", "zorblax", "velvet", "marble", "", "   ", "x-y"]) {
       for (const prompts of [[odd, known], [known, odd], [odd, "q"]]) {
         for (let seed = 1; seed <= 5; seed++) {
-          const pick = chooseResponse({prompts, language: lang, rng: rng(seed)});
+          const pick = selectBotWord({pair: prompts, language: lang, seed});
           assert.equal(typeof pick.word, "string");
           assert.ok(validateWord(pick.word).ok, `${prompts} -> ${pick.word}`);
           assert.ok(lex.byKey.has(wordKey(pick.word)), `${lang}: ${pick.word} is from the ${lang} pool`);
