@@ -380,10 +380,11 @@ function cachedLemmas(label, language) {
  * Score every candidate for these exact prompts. Returns all candidates (best first) with every
  * part of their score, the predicted human answers and the trail theme, so callers, tests and
  * the developer diagnostics can see exactly why a word won or was rejected.
- * @param {{prompts: string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], tuning?: typeof BOT_TUNING}} options
+ * `dataset` pins a lexicon version (the replay tool runs this engine on the data it shipped with).
+ * @param {{prompts: string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], tuning?: typeof BOT_TUNING, dataset?: string}} options
  */
-export function rankCandidates({prompts, language = "en", excludeKeys = new Set(), history = [], tuning = BOT_TUNING}) {
-  const lex = getLexicon(language);
+export function rankCandidates({prompts, language = "en", excludeKeys = new Set(), history = [], tuning = BOT_TUNING, dataset = undefined}) {
+  const lex = getLexicon(language, dataset);
   const list = (Array.isArray(prompts) ? prompts : []).slice(0, 2).map(p => String(p ?? ""));
   const [idsA = [], idsB = []] = list.map(p => resolvePrompt(lex, p, language));
   const promptIds = new Set([...idsA, ...idsB]);
@@ -530,11 +531,11 @@ export function rankCandidates({prompts, language = "en", excludeKeys = new Set(
 const GLOOMY_OPENINGS = new Set(["nightmare", "scary", "fear", "ghost", "monster", "haunted_house", "skeleton", "zombie", "witch", "spider", "snake", "shark", "sad", "angry", "cry", "storm", "volcano", "dark"]);
 
 /**
- * @param {{language?: Language, excludeKeys?: Set<string>, rng?: () => number}} options
+ * @param {{language?: Language, excludeKeys?: Set<string>, rng?: () => number, dataset?: string}} options
  * @returns {BotPick}
  */
-export function chooseOpening({language = "en", excludeKeys = new Set(), rng = Math.random}) {
-  const lex = getLexicon(language);
+export function chooseOpening({language = "en", excludeKeys = new Set(), rng = Math.random, dataset = undefined}) {
+  const lex = getLexicon(language, dataset);
   const pool = [...lex.concepts.values()].filter(c => c.links.size >= 7 && !c.label.includes(" ") && !GLOOMY_OPENINGS.has(c.id) && !isExcluded(c.key, excludeKeys));
   const fallback = [...lex.concepts.values()].filter(c => !isExcluded(c.key, excludeKeys));
   const list = pool.length ? pool : fallback;
@@ -631,14 +632,14 @@ function explain(pick, predicted, lex, tierNote) {
  * that means nothing to the game's vocabulary (nonsense, one letter): no relationship to it can
  * exist, so Gary answers from the known prompt. Gary still sends exactly one word.
  * With `explain: true` the result carries the full decision (see GaryDecision).
- * @param {{prompts: [string, string] | string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], rng?: () => number, tuning?: typeof BOT_TUNING, explain?: boolean}} options
+ * @param {{prompts: [string, string] | string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], rng?: () => number, tuning?: typeof BOT_TUNING, explain?: boolean, dataset?: string}} options
  * @returns {BotPick & {decision?: GaryDecision}}
  */
-export function chooseResponse({prompts, language = "en", excludeKeys = new Set(), history = [], rng = Math.random, tuning = BOT_TUNING, explain: wantExplain = false}) {
+export function chooseResponse({prompts, language = "en", excludeKeys = new Set(), history = [], rng = Math.random, tuning = BOT_TUNING, explain: wantExplain = false, dataset = undefined}) {
   // rng is only used for an opening or last-resort word; a decision about words on the table is a
   // pure function of the game state.
-  const {ranked, predicted, themeWords, before, knownA, knownB} = rankCandidates({prompts, language, excludeKeys, history, tuning});
-  const lex = getLexicon(language);
+  const {ranked, predicted, themeWords, before, knownA, knownB} = rankCandidates({prompts, language, excludeKeys, history, tuning, dataset});
+  const lex = getLexicon(language, dataset);
   const tier = n => ranked.filter(item => item.tier === n);
   /** @type {{pick: any, runnerUp: any, rivals: number, quality: import("./types.js").BotQuality, note: string} | null} */
   let choice = null;
@@ -669,7 +670,7 @@ export function chooseResponse({prompts, language = "en", excludeKeys = new Set(
   }
   if (!choice) {
     const list = (Array.isArray(prompts) ? prompts : []).map(p => wordKey(String(p ?? ""))).filter(Boolean);
-    const opening = chooseOpening({language, excludeKeys: new Set([...excludeKeys, ...list]), rng});
+    const opening = chooseOpening({language, excludeKeys: new Set([...excludeKeys, ...list]), rng, dataset});
     return {...opening, quality: "loose"};
   }
   /** @type {BotPick} */

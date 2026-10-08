@@ -15,6 +15,8 @@ import {garyRandom, hasMet, markMet, recentLines, rememberLines, typeInto} from 
 import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, cleverBridge, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultKey, revealKind, scriptedHelp, scriptedReaction, scriptedResult} from "./characters.js";
 import {characterArt} from "./gary-art.js";
 import {decisionView} from "./decision-view.js";
+import {endUnfinished, logRound, startLogSync} from "./gamelog.js";
+import {renderReview} from "./review.js";
 
 const store = createStore();
 const state = {
@@ -293,6 +295,12 @@ async function route() {
     if (!state.player) { toast(t("errUNKNOWN_PLAYER"), {kind: "error"}); return navigate("/", true); }
     return loadFamilyGame(match[1]);
   }
+  if (path === "/review") {
+    // Private bot review (developer tool); server data needs the review token.
+    state.screen = "review";
+    state.game = null;
+    return renderReview($("app"), {onHome: () => navigate("/")});
+  }
   if ((match = path.match(/^\/join\/([\w-]+)$/))) {
     history.replaceState({}, "", "/");
     renderHome();
@@ -561,6 +569,7 @@ function startSolo(language = state.lang, {who = lastCharacter(), rematch = fals
   store.setCharacter(id);
   const game = startSoloGame({id: newId(), language, seed: randomSeed(), character: id, rematch});
   if (!store.saveSolo(game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
+  endUnfinished([game.id]); // starting another game ends any unfinished one on purpose (logged as "ended")
   navigate(`/solo/${game.id}`);
   $("word")?.focus(); // Solo renders synchronously; focus now so typing right away is never lost
   if (character(id).intro && !hasMet(id)) showCharacterIntro(id, {onDone: () => $("word")?.focus()});
@@ -1408,7 +1417,9 @@ async function submitWord(source = "direct") {
     trace("result", {...info, path: "local", ok: result.ok, code: result.ok ? null : result.code});
     if (!result.ok) return rejectWord(result.code, result.word, info);
     if (!store.saveSolo(result.game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
-    logGaryDecision(result.move.garyDecision);
+    // Bot evaluation log: this revealed round, written to the device at once and uploaded when possible.
+    logRound(result.game, result.move, result.decision, result.decisionMs);
+    logGaryDecision(result.move.garyDecision || result.decision);
     input.value = "";
     openView(soloView(result.game));
     if (!state.reveal) focusAfterMove();
@@ -1828,6 +1839,7 @@ function boot() {
   checkApi();
 
   watchKeyboard();
+  startLogSync();
   registerServiceWorker();
 }
 

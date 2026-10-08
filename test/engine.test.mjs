@@ -6,8 +6,7 @@ import {ENGINE_CONFIG, ENGINE_VERSION, STAGE_NAMES, relation, selectBotWord} fro
 import {DATASET_VERSION, getLexicon} from "../src/shared/lexicon/index.js";
 import {lemmaKeys} from "../src/shared/morph.js";
 import {checkWord, currentMove, seededRandom} from "../src/shared/rules.js";
-import {moveSeed, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
-import {wordKey} from "../src/shared/words.js";
+import {startSoloGame, submitSoloWord} from "../src/shared/solo.js";
 
 const lex = getLexicon("en");
 const everyday = [...lex.concepts.values()].filter(c => c.links.size >= 6 && !c.label.includes(" ")).map(c => c.label);

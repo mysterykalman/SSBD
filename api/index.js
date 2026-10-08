@@ -29,7 +29,8 @@ async function restorePath(request) {
  */
 export async function handle(request, env) {
   try {
-    return await handleApi(await restorePath(request), env || {store: storeFromEnv()});
+    // REVIEW_TOKEN (server-side only) unlocks the private bot-review endpoints; without it they are off.
+    return await handleApi(await restorePath(request), env || {store: storeFromEnv(), reviewToken: process.env.REVIEW_TOKEN || undefined});
   } catch (error) {
     console.error(error);
     return new Response(JSON.stringify({error: "Something went wrong. Please try again.", code: "SERVER_ERROR"}), {status: 500, headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}});

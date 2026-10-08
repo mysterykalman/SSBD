@@ -67,6 +67,11 @@ test("the engine never reads the character: it is an explicit input, but no choi
       assert.deepEqual(source.match(/.*\bcharacter\b.*/g).map(line => line.trim()), ['export function selectBotWord({pair, blocked = [], language = "en", character = "gary", seed = 0, config = ENGINE_CONFIG}) {', "void character;"]);
       continue;
     }
+    if (file === "gamelog.js") {
+      // The evaluation log records which character played (to compare them); it never chooses a word.
+      assert.doesNotMatch(source, /selectBotWord|chooseResponse|rankCandidates|from "\.\/(engine|bot)\.js"/, file);
+      continue;
+    }
     if (file === "types.js") continue;
     assert.doesNotMatch(source, /\bcharacter\b|\bmilo\b/i, file);
   }

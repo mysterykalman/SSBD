@@ -25,6 +25,7 @@ import {MAX_MOVES, checkWord, hashString, moveOutcome, seededRandom} from "../sh
 import {wordKey} from "../shared/words.js";
 import {isSchemaMissing, isUnavailable, isUniqueViolation} from "./db.js";
 import {isJoinCode, looksLikeRoomCode, normalizeJoinCode, randomJoinCode} from "../shared/codes.js";
+import {logBatch, reviewRoute} from "./logs.js";
 
 /**
  * @typedef {import("../shared/types.js").Store} Store
@@ -42,7 +43,7 @@ import {isJoinCode, looksLikeRoomCode, normalizeJoinCode, randomJoinCode} from "
  * @typedef {{id: string, number: number, prompts: [string, string] | null, status: MoveStatus, openedAt: string, revealedAt: string | null, words: {a: string, b: string} | null, submitted: Partial<Record<Side, Submission>>, botQuality: any}} LoadedMove
  * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, rules: {status: GameStatus, language: string, moves: LoadedMove[]}}} LoadedGame
  * @typedef {{joinCode: () => string, recoveryDigits: () => number}} Codes
- * @typedef {{store?: Store | null, codes?: Partial<Codes>}} ApiEnv
+ * @typedef {{store?: Store | null, codes?: Partial<Codes>, reviewToken?: string}} ApiEnv
  */
 
 const BOT = "BOT";
@@ -503,7 +504,7 @@ export async function handleApi(request, env) {
   const db = env.store;
   if (!db) return fail(503, "NO_DATABASE", "Database is not configured", {ok: false, db: false});
   try {
-    return await route(request, db, {...RANDOM_CODES, ...env.codes});
+    return await route(request, db, {...RANDOM_CODES, ...env.codes}, env.reviewToken);
   } catch (error) {
     if (isUnavailable(error)) {
       console.error("database unavailable", reason(error));
@@ -521,9 +522,10 @@ export async function handleApi(request, env) {
  * @param {Request} request
  * @param {Store} db
  * @param {Codes} codes
+ * @param {string} [reviewToken] the server-side REVIEW_TOKEN (review endpoints are off without it)
  * @returns {Promise<Response>}
  */
-async function route(request, db, codes) {
+async function route(request, db, codes, reviewToken) {
   const url = new URL(request.url);
   const path = url.pathname;
   /** @type {any} */
@@ -533,6 +535,11 @@ async function route(request, db, codes) {
   }
 
   if (path === "/api/health") return health(db);
+
+  // Solo bot evaluation logs (anonymous, write-only) and the token-protected review endpoints.
+  if (path === "/api/log/batch" && request.method === "POST") return logBatch(db, body);
+  const review = await reviewRoute(request, db, reviewToken, body);
+  if (review) return review;
 
   if (path === "/api/player" && request.method === "POST") {
     const created = now(), playerId = uuid();
