@@ -1,7 +1,7 @@
 // Unit tests for device-local persistence (src/client/store.js) with a fake localStorage.
 import {test, beforeEach} from "node:test";
 import assert from "node:assert/strict";
-import {SCHEMA_VERSION} from "../src/shared/rules.js";
+import {SCHEMA_VERSION, checkWord} from "../src/shared/rules.js";
 import {startSoloGame, submitSoloWord} from "../src/shared/solo.js";
 import {KEY, LANGUAGE_KEY, MAX_SOLO_GAMES, createStore, migrate} from "../src/client/store.js";
 
@@ -192,12 +192,11 @@ test("setLast validates input", () => {
 
 const WORDS = ["apple", "river", "cloud", "tiger", "candle", "pencil", "rocket", "violin", "jungle", "turtle",
   "pillow", "marble", "forest", "ladder", "rabbit", "button", "carrot", "dragon", "mirror", "kettle", "puzzle", "anchor"];
-/** Play `n` moves that never match the bot (a word equal to the bot's locked word is skipped). */
+/** Play `n` moves that never match the bot (its locked word, and any word already played, is skipped). */
 function playNoMatch(game, n) {
   for (let i = 0; i < n && game.status === "ACTIVE"; i++) {
     const bot = game.moves[game.moves.length - 1].hidden.b.toLowerCase();
-    const mine = new Set(game.moves.filter(m => m.words).map(m => m.words.a));
-    const word = WORDS.find(w => w !== bot && !mine.has(w));
+    const word = WORDS.find(w => w !== bot && checkWord(game, "a", w).ok);
     const r = submitSoloWord(game, word, tick());
     assert.equal(r.ok, true, `move ${i + 1}: ${r.code}`);
     game = r.game;

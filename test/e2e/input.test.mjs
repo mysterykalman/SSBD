@@ -3,7 +3,7 @@
 // on automatically under webdriver). Offline Solo one-letter cases live in offline.test.mjs.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {continueReveal, launch, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
+import {continueReveal, joinRoom, launch, soloRecord, startServer, startSolo, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -16,7 +16,7 @@ async function soloPage({lang = "en", viewport = {width: 390, height: 844}} = {}
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   return {context, page, errors};
 }
@@ -122,13 +122,13 @@ test("EN: whitespace and case variants; one-letter duplicates get a visible, fri
   // Already used earlier in the game.
   assert.equal(await submit(page, "b", "enter"), "accepted");
   assert.equal(await submit(page, "s", "enter"), "rejected");
-  await assertVisibleFeedback(page, /already used S/i);
+  await assertVisibleFeedback(page, /^Already played\. Gary checked\. Twice\.$/);
   rejected = await lastTrace(page, "rejected");
   assert.equal(rejected.code, "ALREADY_USED");
   assert.equal(rejected.source, "enter");
   // The same rejection again is still shown (and re-announced), never silently ignored.
   assert.equal(await submit(page, " S ", "enter"), "rejected");
-  await assertVisibleFeedback(page, /already used S/i);
+  await assertVisibleFeedback(page, /^Already played\. Gary checked\. Twice\.$/);
   assert.equal((await revealed(page)).length, 2);
   await context.close();
 });
@@ -156,7 +156,7 @@ test("FR: é and É are one-letter words, accents and case count as the same wor
   assert.equal((await lastTrace(page, "rejected")).code, "SAME_AS_LAST");
   assert.equal(await submit(page, "a", "button"), "accepted");
   assert.equal(await submit(page, "É", "enter"), "rejected");
-  await assertVisibleFeedback(page, /déjà utilisé É/);
+  await assertVisibleFeedback(page, /^Déjà joué\. Gary a vérifié\. Deux fois\.$/);
   assert.deepEqual((await revealed(page)).map(m => m.words.a), ["é", "a"]);
   await context.close();
 });
@@ -186,10 +186,7 @@ test("family game: a one-letter word goes through the API and a double submit sh
   await ana.waitForSelector("#joinCode");
   const code = (await ana.locator("#joinCode").innerText()).trim();
   await ben.goto(`${server.url}/join/${code}`);
-  await ben.fill("#nameInput", "Ben");
-  await ben.click('dialog button[type="submit"]');
-  await ben.waitForSelector("dialog #joinInput");
-  await ben.click('dialog button[type="submit"]');
+  await joinRoom(ben, {name: "Ben"});
   await ben.waitForSelector("#word");
   await ana.waitForSelector("#word", {timeout: 10000});
 
@@ -224,7 +221,7 @@ test("no trace outside automation unless asked for", async () => {
   const logs = [];
   page.on("console", m => logs.push(m.text()));
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.fill("#word", "s");
   await page.press("#word", "Enter");
   await waitForReveal(page, 0);
@@ -232,7 +229,7 @@ test("no trace outside automation unless asked for", async () => {
   assert.equal(logs.filter(l => l.includes("[submit]")).length, 0);
   // ?debug=1 turns it on.
   await page.goto(`${server.url}/?debug=1`);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.fill("#word", "s");
   await page.press("#word", "Enter");
   await waitForReveal(page, 0);

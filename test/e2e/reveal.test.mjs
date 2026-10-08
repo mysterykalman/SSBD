@@ -3,7 +3,7 @@
 // active turn after "Keep playing", and there is never a frame showing it in both places.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, startServer} from "./helpers.mjs";
+import {botWord, joinRoom, launch, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -58,7 +58,7 @@ test("When the reveal modal is open, the pending next pair is not rendered in th
   const context = await browser.newContext({viewport: {width: 390, height: 844}});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const bot = await botWord(page);
   const mine = bot.toLowerCase() === "night" ? "story" : "night";
@@ -80,7 +80,7 @@ test("When the reveal modal is open, the pending next pair is not rendered in th
   const modal = await page.locator("#revealModal").innerText();
   assert.match(modal, /YOUR WORD[\s\S]*GARY.S WORD/i);
   assert.match(modal, new RegExp(`${mine}[\\s\\S]*${bot}`, "i"));
-  assert.match(modal, new RegExp(`Next move starts with ${mine} \\+ ${bot}`, "i"));
+  assert.match(modal, new RegExp(`Fine\\. Now try ${mine} \\+ ${bot}\\.`, "i")); // Gary's wording of the next pair
   assert.match(await page.locator("#revealContinue").innerText(), /Keep playing/);
   assert.equal(await page.locator("#app #prompt").count(), 0, "board still pre-reveal while the reveal is shown");
   assert.equal(await page.locator("dialog[open]").count(), 1, "exactly one modal");
@@ -95,12 +95,13 @@ test("After Keep playing is pressed, the modal disappears and the pending pair b
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   for (let move = 1; move <= 3; move++) {
     const bot = await botWord(page);
-    // A different word every move (the player may not repeat their own words), never the bot's.
-    const mine = [["lantern", "lighthouse"], ["meadow", "prairie"], ["pebble", "boulder"]][move - 1].find(w => w !== bot.toLowerCase());
+    // A different word every move (nobody may repeat a played word), never the bot's.
+    const played = usedWords(await soloRecord(page));
+    const mine = [["lantern", "lighthouse"], ["meadow", "prairie"], ["pebble", "boulder"]][move - 1].find(w => w !== bot.toLowerCase() && !played.has(w));
     const before = await page.locator("#app #prompt .tile").allTextContents();
     await watchForDuplicates(page, [mine, bot]);
     await submit(page, mine);
@@ -133,7 +134,7 @@ test("one-letter word, refresh during the reveal, Escape and FR copy", async () 
   const context = await browser.newContext({locale: "fr-CA"});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const bot = await botWord(page);
   const mine = bot.toLowerCase() === "s" ? "t" : "s";
@@ -148,7 +149,7 @@ test("one-letter word, refresh during the reveal, Escape and FR copy", async () 
   await page.waitForSelector("#revealContinue");
   assert.equal(await page.locator("#revealModal[open]").count(), 1);
   assert.match(await page.locator("#revealModal").innerText(), /TON MOT[\s\S]*MOT DE GARY/i);
-  assert.match(await page.locator("#revealModal").innerText(), /Le prochain coup commence avec/);
+  assert.match(await page.locator("#revealModal").innerText(), /Bon\. Maintenant, essaie \S+ \+ \S+\./);
   assert.match(await page.locator("#revealContinue").innerText(), /On continue/);
   await page.keyboard.press("Escape"); // when ready, Escape continues like the button
   await page.waitForSelector("#revealModal", {state: "detached"});
@@ -163,7 +164,7 @@ test("reduced motion: no countdown, the reveal is shown straight away", async ()
   const context = await browser.newContext({reducedMotion: "reduce"});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const bot = await botWord(page);
   await submit(page, bot.toLowerCase() === "acorn" ? "maple" : "acorn");
@@ -178,11 +179,11 @@ test("a match: the modal reveals it, then Continue shows the celebration", async
   const context = await browser.newContext({reducedMotion: "reduce"});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   await submit(page, await botWord(page));
   await page.waitForSelector("#revealContinue");
-  assert.match(await page.locator("#revealModal").innerText(), /SAME WORD/);
+  assert.match(await page.locator("#revealModal").innerText(), /THAT’S A MATCH!/);
   assert.equal(await page.locator("#app .end").count(), 0, "game over waits for the reveal to be dismissed");
   assert.match(await page.locator("#revealContinue").innerText(), /Continue/);
   await page.click("#revealContinue");
@@ -202,10 +203,7 @@ test("family game: both players get one reveal each, and the board waits for Kee
   await ana.waitForSelector("#joinCode");
   const code = (await ana.locator("#joinCode").innerText()).trim();
   await ben.goto(`${server.url}/join/${code}`);
-  await ben.fill("#nameInput", "Ben");
-  await ben.click('dialog button[type="submit"]');
-  await ben.waitForSelector("dialog #joinInput");
-  await ben.click('dialog button[type="submit"]');
+  await joinRoom(ben, {name: "Ben"});
   await ben.waitForSelector("#word");
   await ana.waitForSelector("#word", {timeout: 10000});
   await submit(ana, "Comet");
@@ -240,13 +238,14 @@ for (const [name, viewport] of [["phone 390x844", {width: 390, height: 844}], ["
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     let used = 0;
     for (let move = 1; move <= 20; move++) {
       const bot = (await botWord(page)).toLowerCase();
+      const played = usedWords(await soloRecord(page));
       let mine;
-      do { mine = LONG_GAME[used++]; } while (mine === bot);
+      do { mine = LONG_GAME[used++]; } while (mine === bot || played.has(mine));
       await watchForDuplicates(page, [mine, bot]);
       await submit(page, mine);
       await page.waitForSelector("#revealContinue");
@@ -271,7 +270,7 @@ for (const [name, viewport] of [["phone 390x844", {width: 390, height: 844}], ["
       assert.ok(layout.countGone, "countdown removed before the reveal");
       assert.ok(layout.scroll, "no horizontal overflow");
       if (move === 20) {
-        assert.match(await page.locator("#revealModal").innerText(), /no match this time/i, "final reveal is shown before game over");
+        assert.match(await page.locator("#revealModal").innerText(), /No match\. Gary is pretending this was the expected outcome\./, "final reveal is shown before game over");
         assert.equal(await page.locator("#app .end").count(), 0, "game over waits for the final reveal");
       }
       await page.click("#revealContinue");
@@ -312,7 +311,7 @@ test("long words: the revealed pair stays together and the modal never overflows
     const context = await browser.newContext({viewport, reducedMotion: "reduce"});
     const page = await context.newPage();
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     const bot = (await botWord(page)).toLowerCase();
     await submit(page, bot === "supercalifragilistic" ? "abracadabra" : "Supercalifragilistic");
@@ -335,7 +334,7 @@ test("an inflected match (Gary's word, pluralised) looks exactly like a normal w
   let bot, plural;
   for (let tries = 0; tries < 15 && !plural; tries++) {
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     bot = await botWord(page);
     const candidate = `${bot}s`;
@@ -348,13 +347,13 @@ test("an inflected match (Gary's word, pluralised) looks exactly like a normal w
   // Both sides read as the player's own word: the inflection rule is invisible.
   assert.deepEqual((await page.locator("#revealModal .rv-word .chip-word .typed, #revealModal .rv-word.you .chip-word").allTextContents()).map(w => w.trim().toUpperCase()), [plural.toUpperCase(), plural.toUpperCase()]);
   assert.match(modal, new RegExp(`GARY.S WORD\\s+${plural}`, "i"), "Gary's side shows the player's form");
-  assert.match(modal, /SAME WORD! You win!/, "the standard exact-match copy");
+  assert.match(modal, new RegExp(`THAT’S A MATCH!\\s+You both said ${plural}\\. Your brains did a high five\\.`, "i"), "the standard match copy, in the player's word");
   assert.doesNotMatch(modal, /close enough|plural|schmural|tense|variant|same idea/i);
   assert.equal(await page.locator("#revealNext").count(), 0, "no 'next move starts with' for a match");
   await page.click("#revealContinue");
   await page.waitForSelector("#app .end.win");
   const end = await page.locator("#app .end").innerText();
-  assert.match(end, new RegExp(`You both said ${plural} on move 1\\.`, "i"), "standard win copy, in the player's word");
+  assert.match(end, /YOU DID IT!\s+Matched on move 1\. Somebody cue the tiny parade\./, "standard win copy");
   assert.doesNotMatch(end, /close enough|plural|schmural|tense|variant|same idea/i);
   const trailRow = await page.locator("#app .trail-row.match").innerText();
   assert.equal((trailRow.match(new RegExp(`\\b${plural}\\b`, "gi")) || []).length, 2, "the trail shows the player's word on both sides");

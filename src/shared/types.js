@@ -67,6 +67,8 @@
  * @property {string} updatedAt
  * @property {number} revealSeen
  * @property {Move[]} moves
+ * @property {string} [character] Solo only: who the player chose to play with (presentation only; absent = Gary)
+ * @property {boolean} [rematch] Solo only: started with "Play again" from the previous game
  */
 
 /** The minimum the rules need from a game (the server builds this from database rows). */

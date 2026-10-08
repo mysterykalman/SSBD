@@ -3,7 +3,7 @@
 // long, accented and one-letter words, and again with the text size doubled.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {SHOTS, botWord, continueReveal, launch, lockIn, noHorizontalScroll, playDistinct, revealShown, startServer} from "./helpers.mjs";
+import {botWord, continueReveal, launch, lockIn, noHorizontalScroll, playDistinct, revealShown, SHOTS, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -92,7 +92,8 @@ async function playWords(page, words, where = null) {
   for (const word of words) {
     if (await page.locator(".end").count()) break;
     const bot = (await botWord(page) || "").toLowerCase();
-    if (bot === word.toLowerCase()) continue;
+    // Skip the bot's locked word (no match) and any word either side already played (used up).
+    if (bot === word.toLowerCase() || usedWords(await soloRecord(page)).has(word.toLowerCase())) continue;
     const before = await page.locator(".trail-row").count();
     await lockIn(page, word, {reveal: false});
     if (where) await checkReveal(page, `${where} "${word}"`, word);
@@ -107,7 +108,7 @@ async function soloGame(context, lang) {
   await page.goto(server.url);
   await page.waitForSelector("#startSolo");
   if (lang === "fr") await page.click('[data-lang="fr"]');
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   return page;
 }

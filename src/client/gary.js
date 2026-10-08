@@ -1,70 +1,9 @@
-// Gary from Accounting: the presentation identity of the Solo opponent.
+// Presentation helpers for the Solo characters (Gary, Milo; see characters.js).
 // Everything here is flavour only. The bot engine (src/shared/bot.js) still picks
-// the word; Gary just shows it. Nothing in this file reads or changes game state,
+// the word; the character just shows it. Nothing in this file reads or changes game state,
 // scoring or storage of games, and nothing here makes network calls.
-//
-// Copy lives in i18n.js under the keys referenced below.
 
-/** Character config: i18n keys only. */
-export const GARY = {
-  name: "garyName",
-  title: "garyTitle",
-  intro: {kicker: "garyMeet", lines: ["garyIntro1", "garyIntro2", "garyIntro3"], aside: "garyIntroSigh", cta: "garyIntroCta"},
-  // Each reaction is typed either before Gary's word ("sigh" … STORY) or after it (STORY … "I object").
-  reactions: {
-    resigned: [["garySigh", "before"], ["garyFine", "before"], ["garyApparently", "before"], ["garyThisAgain", "before"], ["garyOkayThen", "before"], ["garyThere", "after"]],
-    competitive: [["garyObject", "after"], ["garyRude", "after"], ["garyWasGoingTo", "after"], ["garyAnnoyinglyGood", "after"], ["garyPleased", "after"]],
-    dramatic: [["garyNeedMinute", "after"], ["garyConcerns", "after"], ["garyUnnecessary", "after"], ["garyDoneNow", "after"], ["garyHappy", "after"]],
-    minimal: [["garyUgh", "before"], ["garyReally", "before"], ["garyWow", "after"], ["garyNoted", "after"]]
-  },
-  special: {
-    match: [["garyDots", "garyInconvenient"], ["garyDots", "garyYouWin"]],
-    middle: ["garyStillDoing"],
-    nearEnd: ["garyToldEnding"],
-    gameOver: ["garyFinally", "garySameTime"]
-  }
-};
-
-export const REACTION_CHANCE = 0.3; // about a third of ordinary reveals
-const MATCH_CHANCE = 0.7;
-const SPECIAL_CHANCE = 0.2;
 const RECENT_LIMIT = 6;
-
-/** Every i18n key Gary uses (for tests). */
-export function garyKeys() {
-  const keys = new Set([GARY.name, GARY.title, GARY.intro.kicker, ...GARY.intro.lines, GARY.intro.aside, GARY.intro.cta]);
-  for (const list of Object.values(GARY.reactions)) for (const [key] of list) keys.add(key);
-  for (const list of Object.values(GARY.special)) for (const item of list) for (const key of [item].flat()) keys.add(key);
-  return [...keys];
-}
-
-/**
- * Decide whether Gary says something on this reveal. Pure: same inputs, same answer.
- * @param {{status: string, move: number, recent: string[], random: () => number}} options
- *   status: the revealed move's status (REVEALED, MATCHED, EXHAUSTED); recent: keys Gary used lately in this game.
- * @returns {{when: "before" | "after", keys: string[]} | null}
- */
-export function pickReaction({status, move, recent = [], random = Math.random}) {
-  const used = new Set(recent);
-  if (status === "MATCHED") {
-    if (random() >= MATCH_CHANCE) return null;
-    const options = GARY.special.match.filter(([, line]) => !used.has(line));
-    const pick = (options.length ? options : GARY.special.match)[Math.floor(random() * (options.length || GARY.special.match.length))];
-    return {when: "after", keys: [...pick]};
-  }
-  if (status === "EXHAUSTED") return null; // the game-over beat says goodbye instead
-  // Rare one-off lines around the middle and near the end of a long game.
-  if (move >= 9 && move <= 11 && !used.has("garyStillDoing") && random() < SPECIAL_CHANCE) return {when: "after", keys: ["garyStillDoing"]};
-  if (move >= 17 && move <= 19 && !used.has("garyToldEnding") && random() < SPECIAL_CHANCE) return {when: "after", keys: ["garyToldEnding"]};
-  if (random() >= REACTION_CHANCE) return null;
-  const categories = Object.keys(GARY.reactions);
-  const category = categories[Math.floor(random() * categories.length)];
-  let pool = GARY.reactions[category].filter(([key]) => !used.has(key));
-  if (!pool.length) pool = Object.values(GARY.reactions).flat().filter(([key]) => !used.has(key));
-  if (!pool.length) pool = GARY.reactions[category];
-  const [key, when] = pool[Math.floor(random() * pool.length)];
-  return {when: /** @type {"before" | "after"} */ (when), keys: [key]};
-}
 
 // Recently used lines, per game, kept for this browser session only.
 const RECENT_KEY = "ssbd.gary.recent";
@@ -79,13 +18,13 @@ export function rememberLines(gameId, keys) {
   } catch {}
 }
 
-// Whether the player has met Gary (the intro shows once).
-const MET_KEY = "ssbd_gary_met";
-export function hasMetGary() {
-  try { return localStorage.getItem(MET_KEY) === "1"; } catch { return true; }
+// Whether the player has met a character (each intro shows once). Gary's key predates Milo.
+const metKey = id => `ssbd_${id}_met`;
+export function hasMet(id = "gary") {
+  try { return localStorage.getItem(metKey(id)) === "1"; } catch { return true; }
 }
-export function markMetGary() {
-  try { localStorage.setItem(MET_KEY, "1"); } catch {}
+export function markMet(id = "gary") {
+  try { localStorage.setItem(metKey(id), "1"); } catch {}
 }
 
 /** Presentation randomness. Automated tests may pin it via window.__garyRandom; players never see a difference. */

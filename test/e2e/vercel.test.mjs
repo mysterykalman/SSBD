@@ -3,7 +3,7 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {botWord, launch, startServer} from "./helpers.mjs";
+import {botWord, launch, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -20,7 +20,7 @@ async function contextAs(player, options = {}) {
 test("routing: deep links serve the app, /api/* always answers JSON, assets and the service worker get the right headers", async () => {
   const config = JSON.parse(await readFile("vercel.json", "utf8"));
   assert.equal(config.outputDirectory, "dist");
-  for (const path of ["/", "/games/some-id", "/join/ABCD-12", "/solo", "/solo/some-id", "/index.html"]) {
+  for (const path of ["/", "/games/some-id", "/join/AB12", "/solo", "/solo/some-id", "/index.html"]) {
     const res = await fetch(server.url + path);
     assert.equal(res.status, 200, path);
     assert.match(res.headers.get("content-type"), /text\/html/, path);
@@ -55,6 +55,10 @@ test("deep links on a cold first visit: an invite link joins the game, a game li
   await pageB.goto(`${server.url}/join/${game.join_code}`);
   await pageB.waitForSelector("dialog #joinInput");
   assert.equal(await pageB.inputValue("#joinInput"), game.join_code);
+  await pageB.click('dialog button[type="submit"]');
+  // Then their own name, prefilled because this device already knows them.
+  await pageB.waitForSelector("dialog #nameInput");
+  assert.equal(await pageB.inputValue("#nameInput"), "Ben");
   await pageB.click('dialog button[type="submit"]');
   await pageB.waitForSelector("#word");
   assert.match(pageB.url(), new RegExp(`/games/${game.id}$`));
@@ -113,7 +117,7 @@ test("Family mode unavailable: no database (JSON 503) and a host answering HTML 
     assert.equal(await page.isDisabled("#createFamily"), true);
     assert.equal(await page.isDisabled("#joinFamily"), true);
     // Solo is untouched.
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     const bot = await botWord(page);
     await page.fill("#word", bot.toLowerCase() === "acorn" ? "maple" : "acorn");

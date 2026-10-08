@@ -195,7 +195,7 @@ verified.
 | Tooling | `package.json`, `package-lock.json`, `eslint.config.js`, `jsconfig.json`, `.gitignore` |
 | Shared game logic | `src/shared/rules.js` (move state machine), `solo.js` (device-local Solo), `bot.js` (contextual bot), `words.js` (cleaning, keys, validation, speller), `types.js` (JSDoc types), `lexicon/{data,vocab,index}.js` |
 | Server | `src/server/api.js` (family games), `db.js` (Postgres access); `api/index.js` (Vercel Function); `vercel.json`; `supabase/migrations/` |
-| Client | `src/client/index.html`, `styles.css`, `app.js`, `i18n.js`, `store.js`, `sw.js`, `diagnostics.js`, `manifest.webmanifest`, `icon.svg` |
+| Client | `src/client/index.html`, `styles.css`, `app.js`, `i18n.js`, `store.js`, `sw.js`, `diagnostics.js`, `manifest.webmanifest`, `icons/` (favicon and app icons) |
 | Scripts | `scripts/build.mjs` (writes the static `dist/`), `dev-server.mjs` (mirrors Vercel locally), `postgres-local.mjs` (throwaway PostgreSQL), `smoke.mjs` (deployment check) |
 | Tests | `test/*.test.mjs` (unit and API integration), `test/e2e/*.test.mjs` (Playwright, Chromium) |
 | Docs | `README.md`, `docs/ACCEPTANCE.md`, this section, `reference/README.md` |
@@ -743,3 +743,105 @@ semantic relationship?". The validation found the first convergence model still 
   like GAME for SISTER + PLAY are a strong first thought of one word that plausibly fits the other),
   and the POMME + TERRE phrase test now checks VER's phrase strength in the ranking instead of
   forcing it to be picked (ARBRE is POMME's stronger first thought).
+
+## Both words must matter (latest)
+
+Playtesting found answers carried by one word only (JOGGING + SEA → TURTLE, LOBSTER + SAND → CASTLE,
+CATCH + CASTLE → SANDBOX, SAND + SANDBOX → BOX). Causes: JOGGING and LOBSTER were not in the
+vocabulary (Gary answered from the known word alone); CATCH + CASTLE has no word linked to both, so
+the trail decided among one-shared-neighbour bridges; BOX was only penalised, not rejected.
+
+The human-first model, contender rule, convergence distance, trail, personality and diagnostics are
+unchanged. Added (`src/shared/bot.js`, `BOT_TUNING.support`; `supportRules: false` = previous model):
+- **Per-word support** `supportA` / `supportB` (0..1, from the current pair only; the trail never
+  changes it), `weakSideSupport = min`, `supportImbalance = |A − B|`.
+- **Weak-side rules:** ≥ 0.40 no penalty; 0.25–0.40 a small tie-break penalty; 0.15–0.25 a
+  meaningful penalty; < 0.15 not allowed to win, unless it leads the trail-free human likelihood by
+  0.30 and nothing better supported is reasonably human-likely. Imbalance > 0.60 with weak side
+  < 0.20 adds a strong one-sided penalty. Support penalties never affect who is a contender, so they
+  only break near-ties; a clearly more human answer still wins.
+- **Lazy decomposition:** a candidate that is a piece of a current word (BOX in SANDBOX) is rejected
+  unless the other word supports it on its own (≥ 0.25). When the other word is the rest of the
+  compound (SAND + SANDBOX), its support doesn't count. Lazy words never win, even as a last resort.
+- **Fallback:** when no word in the data connects both words, Gary picks the best-supported weak
+  bridge (weak side, then total support, then two-step paths), ignoring trail and personality.
+- **Vocabulary:** lobster, jog (JOGGING resolves to it).
+- **Diagnostics** per candidate: human likelihood, word A / B support, weak side, imbalance,
+  centre, trail +, personality +, lazy −, support −, final, contender, and why a word couldn't win;
+  plain-English notes ("BOX was rejected as a lazy decomposition of SANDBOX because SAND
+  independently supported BOX at only 0.00 (SANDBOX = SAND + BOX).").
+- **Tests:** `test/one-sided.test.mjs` (support from the pair only, human-first, weak-side, trail,
+  lazy, determinism, same-turn convergence vs the previous model, no overcorrection).
+- **Known limit:** the curated graph (~615 concepts) often has no word linking two unrelated
+  words; then Gary can only offer a weak bridge, and unknown words still get answered from the
+  known word. More curated links and vocabulary shrink both.
+
+### Current turn in the Word Trail
+The NOW PLAYING row now says "Match these two words!" / "Old rows are just your history." (FR:
+"Trouve un mot pour ces deux-là !" / "Les lignes du dessous, c’est juste ton histoire."), its two
+words are the biggest in the trail, finished rows sit quietly under "Earlier moves", and only the
+newest finished row keeps "↑ Next round's words". Test: `test/e2e/trail-now.test.mjs`.
+
+## Family room codes: AA00 (latest)
+
+- Codes are exactly two uppercase letters and two digits (`AB12`), defined once in `src/shared/codes.js`
+  (`JOIN_CODE_PATTERN`, `randomJoinCode`, `normalizeJoinCode`, `isJoinCode`) and used by the server and the join dialog.
+- Typed codes are normalised (spaces removed, uppercased); anything else, including the old `ABCD-12` format, is
+  rejected with `400 BAD_JOIN_CODE` before any lookup.
+- A code is unique only among active rooms (`WAITING`/`ACTIVE`). Create and rematch skip codes in use (up to 25
+  tries); joining only ever finds the active room with that code, so a finished room can never be joined by mistake.
+- The waiting room shows the code big and centred, with no "Copy invite link" button.
+- **Migration to apply in Supabase:** `supabase/migrations/20261008120000_short_join_codes.sql`. It swaps the
+  full unique index for a partial one on active rooms and rewrites non-conforming codes. The server works before
+  and after it, but old-format codes stay in the database until it runs.
+- Tests: `test/room-codes.test.mjs`, `test/e2e/room-code.test.mjs`.
+
+## Solo characters: Gary and Milo (latest)
+
+- New Solo games from home open "Who do you want to play with?" (`#characterPicker`): two big radio cards,
+  "Gary from Accounting / He was told there would be cake." and "Milo / Ready. Probably too ready.".
+  The last choice is remembered (`localStorage.ssbd_character`) and preselected. "Play again" keeps the
+  character, skips the picker and shows a rematch greeting; a new Solo from home can switch.
+- One config system: `src/client/characters.js` (`CHARACTERS`: id, name, title, tagline, personality,
+  voiceId, voiceStyle, art, intro, reaction pools, and `copy`, the character's own wording of shared Solo
+  sentences). Portraits come from `characterArt(id)` in `gary-art.js` (`gary.webp`, `milo.webp`).
+- Reaction pools per character: mismatch (by mood), close, strange, middle/near end of a long game,
+  early match (move ≤ 3), match, late match (move ≥ 12), rematch, and the game-over goodbye. `revealKind()`
+  decides close/strange from the lexicon (presentation only). Neither character's match lines repeat "high five".
+- Shared copy is neutral (the picker, "{name}'s word", the match and win copy, "Match these two words!").
+  Gary keeps the wording players already know; Milo has his own for the first-move help, "ready" line,
+  reveal outcome, next pair, the Keep playing button, game over and loose-word note.
+- **Same engine:** the game stores `character` (and `rematch`) for presentation only. `src/shared` never reads
+  it, so both characters choose identical words with identical diagnostics (`test/characters-engine.test.mjs`).
+  Every human-first, weak-side and lazy-answer invariant therefore holds for both. Old games without the field
+  are Gary's. `?debug=gary` still works for both characters and shows which one was chosen.
+- Tests: `test/gary.test.mjs` (config, pools, copy, tone), `test/characters-engine.test.mjs`,
+  `test/e2e/characters.test.mjs` (picker, persistence, rematch, labels/avatars, no stray Gary with Milo, EN/FR).
+  The e2e helper `startSolo(page, character?)` goes through the picker.
+
+## Together mode fixes: names, keyboard, shared duplicates, win sync (latest)
+
+- **Joining asks for the friend's own name.** "Join a game" (and an invite link) now asks for the room code
+  first, checks it with `GET /api/games/lookup`, then asks "What should we call you?" (prefilled when the
+  device already has a player, who may change it via `POST /api/player/name`), then joins. Previously the
+  name dialog came first, so a friend could type the code into it ("ZLED-31" → badge "Z"). Names that look
+  like room codes (AB12 or the old ABCD-12) are refused by the client and the server (`BAD_NAME`).
+- **Played words are used up for everyone.** `checkWord` (src/shared/rules.js) checks both sides of every
+  revealed move, so the server (Together), and Solo against Gary or Milo, all refuse a word anyone already
+  played (same normalisation: case, spacing, punctuation, inflections). Your own last word keeps
+  `SAME_AS_LAST`. The open move is never compared, so a same-move match still wins. Messages: Together
+  "That word has already been played."; Gary "Already played. Gary checked. Twice."; Milo "Ooh, that
+  one's taken! Got another one?" (character `copy.errALREADY_USED`).
+- **Win sync.** The server already closes a round once (`UPDATE … WHERE status = 'OPEN'`). The client bug
+  was ordering: a poll sent just before a submit could answer after it and put the older state back
+  (un-locking a locked word, or replacing the win with the pre-match board, after which the end screen came
+  without the reveal or confetti). `applyServerGame` now ignores any state older than the one on screen
+  (`progressOf`: revealed moves, finished, joined, locked words). A player waiting on the other polls every
+  second (otherwise 3.5 s), and re-checks at once on focus, `pageshow` and reconnect.
+- **On-screen keyboard.** `interactive-widget=resizes-content` (Android) plus `visualViewport` (iOS): while
+  the word box is focused on a touch screen and the visible height drops by over a quarter, `html.kb-open`
+  hides the decorative parts (back row, progress, language note; title and instruction become visually
+  hidden) and `keepPlayInView` keeps the two words, hint/error, input and Lock button in the visible area.
+- Tests: `test/together.test.mjs` (server), `test/e2e/together.test.mjs` (two browser sessions: names,
+  duplicates, wins in both orders, simultaneous submit, slow out-of-order network, reconnect, Gary/Milo
+  duplicates, FR), `test/e2e/keyboard.test.mjs`, updated rules tests; e2e helper `joinRoom`.

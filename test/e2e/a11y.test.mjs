@@ -3,7 +3,7 @@
 // (names, labels, ids, ARIA references, live regions, focus, dialogs, lang, contrast).
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, continueReveal, launch, revealShown, startServer} from "./helpers.mjs";
+import {botWord, continueReveal, launch, revealShown, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -150,6 +150,10 @@ test("keyboard-only Solo: Tab to start, type, Enter, focus returns to the word b
   assert.ok(await tabTo(page, () => document.activeElement?.id === "startSolo"), "Start Solo reachable by Tab");
   assert.ok(await focusRing(page), "visible focus on Start Solo");
   await page.keyboard.press("Enter");
+  // "Who do you want to play with?": focus lands on the preselected character; Enter starts.
+  await page.waitForSelector("#characterPicker[open]");
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "pick-gary");
+  await page.keyboard.press("Enter");
   await page.waitForSelector("#word");
   await page.waitForFunction(() => document.activeElement?.id === "word");
 
@@ -218,7 +222,7 @@ test("language: keyboard toggle, persists across reload, updates lang, keeps the
   assert.equal(await page.getAttribute("#langGroup", "aria-label"), "Language");
 
   // Start an English game, then switch the UI to French with the keyboard.
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   await page.fill("#word", "pizz");
   await page.focus('[data-lang="fr"]');
@@ -254,7 +258,7 @@ test("language: keyboard toggle, persists across reload, updates lang, keeps the
   // Home in French: the English game is labelled as such in the list.
   await page.click("#backBtn");
   await page.waitForSelector("#startSolo");
-  assert.equal(await page.locator("#startSolo").innerText(), "Jouer contre Gary");
+  assert.equal(await page.locator("#startSolo").innerText(), "On joue\u202f!");
   assert.match(await page.locator("#gameList").innerText(), /En anglais/);
   assert.doesNotMatch(await page.locator("body").innerText(), /\bSSBD\b/);
   assert.deepEqual(await audit(page), []);
@@ -339,7 +343,7 @@ test("colour contrast of visible text meets WCAG AA (4.5:1 body, 3:1 large) in b
   const failures = [];
   const collect = async where => { for (const f of await contrastFailures(page)) failures.push({where, ...f}); };
   await collect("home");
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   await page.fill("#word", "");
   await page.click("#lockBtn"); // error state
@@ -365,7 +369,7 @@ test("word box: native spellcheck in the game's language, never auto-changes the
     const context = await browser.newContext({locale: lang === "fr" ? "fr-CA" : "en-US", viewport: {width: 390, height: 844}, hasTouch: true, reducedMotion: "reduce"});
     const page = await context.newPage();
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     const attrs = await page.evaluate(() => {
       const input = document.getElementById("word");
@@ -407,7 +411,9 @@ test("starting a Solo game never pulls focus back from a control the player move
   await page.goto(server.url);
   await page.waitForSelector("#startSolo");
   // Start the game and move focus to the FR toggle in the same tick, before any delayed focus runs.
-  await page.evaluate(() => { document.getElementById("startSolo").click(); document.querySelector('[data-lang="fr"]').focus(); });
+  await page.click("#startSolo");
+  await page.waitForSelector("#characterPicker[open]");
+  await page.evaluate(() => { document.getElementById("startCharacter").click(); document.querySelector('[data-lang="fr"]').focus(); });
   await page.waitForTimeout(150);
   assert.equal(await page.evaluate(() => document.activeElement?.dataset.lang), "fr", "focus stays where the player put it");
   await page.keyboard.press("Space");

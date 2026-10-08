@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, continueReveal, launch, lockIn, lockInEnter, playDistinct, progressOf, revealShown, soloRecord, startServer, waitForReveal} from "./helpers.mjs";
+import {botWord, continueReveal, launch, lockIn, lockInEnter, PLAY_WORDS, playDistinct, progressOf, revealShown, soloRecord, startServer, startSolo, usedWords, waitForReveal} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -28,8 +28,11 @@ async function playMoves(page, words) {
   for (const w of words) {
     if (await page.locator(".end").count()) break;
     const before = await page.locator(".trail-row").count();
-    const bot = await botWord(page);
-    await lockIn(page, bot.toLowerCase() === w ? `${w}s` : w); // dismisses the reveal modal
+    const bot = (await botWord(page)).toLowerCase();
+    // Never the bot's word (no match) nor a word either side already played (used up): then a fresh one.
+    const played = usedWords(await soloRecord(page));
+    const word = [w, ...PLAY_WORDS].find(x => x !== bot && !played.has(x));
+    await lockIn(page, word); // dismisses the reveal modal
     await page.waitForFunction(n => document.querySelectorAll(".trail-row").length > n || document.querySelector(".end"), before);
   }
 }
@@ -51,7 +54,7 @@ test("offline Solo: start, play, refresh, reopen and finish with no network", as
   assert.doesNotMatch(await page.locator("#offlinePill").innerText(), /error|fail|lost|broken/i);
   assert.equal(await page.isDisabled("#createFamily"), true);
 
-  await page.click("#startSolo");
+  await startSolo(page);
   await playMoves(page, ["whale", "ocean", "bubble", "coral"]);
   const trail = await trailText(page);
   assert.ok(trail.length >= 1);
@@ -82,7 +85,7 @@ test("offline: reopening the bare URL resumes the unfinished Solo game; deep lin
   const apiCalls = watchApi(context);
   await context.setOffline(true);
 
-  await page.click("#startSolo");
+  await startSolo(page);
   await playMoves(page, ["apple", "garden"]);
   const soloUrl = page.url();
   assert.match(new URL(soloUrl).pathname, /^\/solo\/[\w-]+$/);
@@ -120,7 +123,7 @@ test("offline: a finished Solo game reloads to its end state and is not auto-res
   const context = await browser.newContext();
   let page = await visitOnce(context);
   await context.setOffline(true);
-  await page.click("#startSolo");
+  await startSolo(page);
   await lockIn(page, await botWord(page)); // match the bot on move 1
   await page.waitForSelector(".end.win");
   const soloUrl = page.url();
@@ -149,7 +152,7 @@ test("offline: language choice persists across refresh and reopen", async () => 
   assert.equal(await page.getAttribute("html", "lang"), "fr");
   assert.equal(await page.getAttribute("[data-lang=fr]", "aria-pressed"), "true");
   assert.match(await page.locator("#offlinePill").innerText(), /Hors ligne/);
-  await page.click("#startSolo");
+  await startSolo(page);
   await playMoves(page, ["pomme"]);
   const id = new URL(page.url()).pathname.split("/").pop();
   assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem("ssbd.store")).solo[id].language, id), "fr");
@@ -237,7 +240,7 @@ async function assertGameShown(page, game, label) {
 test("offline Solo regression: new game, several moves, reveal, history, progress; refresh and reopen keep it all", async () => {
   const {context, page: first, apiCalls} = await offlineContext({locale: "en-US", reducedMotion: "reduce"});
   let page = first;
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   let game = await soloRecord(page);
   assert.equal(game.mode, "solo");
@@ -293,7 +296,7 @@ test("offline Solo: one-letter words submit by Enter and by button; repeating on
     await page.goto(server.url + "/");
     await page.waitForSelector("#startSolo");
     await page.click(`[data-lang=${c.lang}]`);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#word");
     // Make sure "s" can't match the bot (it never would, but keep the test honest).
     assert.notEqual(lower(await botWord(page)), "s");
@@ -325,7 +328,7 @@ test("offline Solo: one-letter words submit by Enter and by button; repeating on
 
 test("offline Solo: play to move 19, then 20, final reveal then game over; no move 21; refresh keeps it; Play again starts clean", async () => {
   const {context, page, apiCalls} = await offlineContext({locale: "en-US", reducedMotion: "reduce"});
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const id = new URL(page.url()).pathname.split("/").pop();
   assert.equal((await soloRecord(page)).mode, "solo", "mode at creation");
@@ -449,7 +452,7 @@ test("offline: family create/join/invite and notifications are not offered; a fr
 
   // Solo game screen never shows invite or notifications offline.
   await page.goto(server.url + "/");
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   await assertNoFamily("solo game");
   await playDistinct(page, 1);
@@ -461,12 +464,13 @@ test("offline: family create/join/invite and notifications are not offered; a fr
 
 test("offline Solo: a second Enter right after the final move does not skip the game-over screen", async () => {
   const {context, page, apiCalls} = await offlineContext({locale: "en-US"});
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   await playDistinct(page, 19);
   const game = await soloRecord(page);
   const bot = lower(game.moves[19].hidden.b);
-  const word = ["lantern", "trumpet", "walrus"].find(w => w !== bot && !game.moves.some(m => m.words && lower(m.words.a) === w));
+  const played = usedWords(game); // a word either side played is used up
+  const word = ["lantern", "trumpet", "walrus"].find(w => w !== bot && !played.has(w));
   // A child types the last word and presses Enter twice (or holds it a little too long).
   await page.fill("#word", word);
   await page.press("#word", "Enter");

@@ -2,7 +2,7 @@
 // with the pair, the predicted human answers, every candidate's score, the pick and the reason.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, lockIn, startServer} from "./helpers.mjs";
+import {botWord, launch, lockIn, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -15,7 +15,7 @@ test("developer mode: the decision panel explains Gary's pick after each reveal 
   const logs = [];
   page.on("console", m => logs.push(m.text()));
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   assert.match(await page.locator("#garyDebug").innerText(), /No decision recorded yet/, "nothing is shown before a reveal");
   // Move 1: Gary's opening.
@@ -47,7 +47,7 @@ test("players never see the panel (automated browsers count as players unless th
   const context = await browser.newContext({reducedMotion: "reduce"});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const opening = await botWord(page);
   await lockIn(page, opening.toLowerCase() === "acorn" ? "maple" : "acorn");

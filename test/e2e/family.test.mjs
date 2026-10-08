@@ -1,6 +1,6 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {continueReveal, launch, revealShown, startServer} from "./helpers.mjs";
+import {continueReveal, joinRoom, launch, revealShown, startServer} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -21,15 +21,14 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
   await ana.click('dialog button[type="submit"]');
   await ana.waitForSelector("#joinCode");
   const code = (await ana.locator("#joinCode").innerText()).trim();
-  assert.match(code, /^[A-Z]{4}-\d{2}$/);
+  assert.match(code, /^[A-Z]{2}[0-9]{2}$/);
   assert.equal(await ana.locator("#word").count(), 0, "can't play before a friend joins");
 
   await ben.goto(`${server.url}/join/${code}`);
-  await ben.fill("#nameInput", "Ben");
-  await ben.click('dialog button[type="submit"]');
+  // The invite link fills in the code; the friend still gives their own name.
   await ben.waitForSelector("dialog #joinInput");
   assert.equal(await ben.inputValue("#joinInput"), code);
-  await ben.click('dialog button[type="submit"]');
+  await joinRoom(ben, {name: "Ben"});
   await ben.waitForSelector("#word");
   assert.match(await ben.locator(".mode-chip").innerText(), /Ana/);
 
@@ -75,7 +74,7 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
   await ben.fill("#word", "Space");
   await ben.click("#lockBtn");
   for (const page of [ben, ana]) {
-    assert.match(await revealShown(page), /SAME WORD/);
+    assert.match(await revealShown(page), /THAT’S A MATCH!/);
     assert.equal(await page.locator("#app .end").count(), 0, "game over waits for the reveal to be dismissed");
     assert.ok(await continueReveal(page));
     await page.waitForSelector(".end.win");
@@ -106,9 +105,7 @@ test("family: letter badges, notifications bell, rematch", async () => {
   assert.equal(await ana.isVisible("#notifBtn"), true, "named, online family player gets the bell");
 
   await elo.goto(`${server.url}/join/${code}`);
-  await joinAs(elo, "Élodie");
-  await elo.waitForSelector("dialog #joinInput");
-  await elo.click('dialog button[type="submit"]');
+  await joinRoom(elo, {name: "Élodie"});
   await elo.waitForSelector("#word");
   assert.equal((await elo.locator("#profileBtn").innerText()).trim(), "É", "accented initial");
   assert.equal((await elo.locator(".mode-chip .badge").innerText()).trim(), "A");

@@ -305,7 +305,8 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
       }
       // Was a meaningful two-sided word available at all (bot tiers 1-4)?
       const ranked = rankCandidates({prompts, language: lang, excludeKeys: used}).ranked;
-      const bridgeable = ranked.some(r => r.tier >= 1 && r.tier <= 4);
+      // (A lazy piece of a prompt, like BASKET for BASKETBALL, is not a real bridge: it never wins.)
+      const bridgeable = ranked.some(r => r.tier >= 1 && r.tier <= 4 && !r.lazyReject);
       records.push({prompts, word, sa, sb, strongPossible, source, bridgeable});
     };
     // Realistic games: the "player" answers with a word related to one or both prompts.

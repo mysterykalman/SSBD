@@ -89,19 +89,19 @@ test("recovery-code collisions are retried with a new code", async () => {
 });
 
 test("join-code collisions are retried with a new code (create and rematch)", async () => {
-  const codes = ["TAKE-11", "TAKE-11", "FREE-22", "TAKE-11", "FREE-33"];
-  const {call, db} = await setup(null, {joinCode: () => codes.shift() ?? "LAST-99"});
+  const codes = ["TK11", "TK11", "FR22", "TK11", "FR33"];
+  const {call, db} = await setup(null, {joinCode: () => codes.shift() ?? "LS99"});
   const ana = await call("/api/player", {display_name: "Ana"}), ben = await call("/api/player", {display_name: "Ben"});
   const first = await call("/api/games", {player_id: ana.id, solo: false});
-  assert.equal(first.join_code, "TAKE-11");
+  assert.equal(first.join_code, "TK11");
   const second = await call("/api/games", {player_id: ana.id, solo: false});
-  assert.equal(second.join_code, "FREE-22", "the taken code was skipped");
+  assert.equal(second.join_code, "FR22", "the taken code was skipped");
   await call("/api/games/join", {player_id: ben.id, join_code: second.join_code});
   await call("/api/submit", {game_id: second.id, player_id: ana.id, word: "tea", move: 1});
   await call("/api/submit", {game_id: second.id, player_id: ben.id, word: "tea", move: 1});
   const r = await call("/api/games/rematch", {player_id: ben.id, game_id: second.id});
   assert.equal(r.status, 200);
-  assert.equal(r.join_code, "FREE-33");
+  assert.equal(r.join_code, "FR33");
   assert.equal(r.existing, false);
   assert.equal(await db.count("SELECT COUNT(*) AS n FROM games"), 3);
   assert.equal(await db.count("SELECT COUNT(*) AS n FROM rounds"), 3, "no half-created game from the collided attempts");

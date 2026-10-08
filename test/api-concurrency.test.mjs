@@ -7,6 +7,7 @@ import {test, beforeEach, afterEach} from "node:test";
 import assert from "node:assert/strict";
 import {handleApi} from "../src/server/api.js";
 import {createStore} from "../src/server/db.js";
+import {randomJoinCode} from "../src/shared/codes.js";
 import {caller, freshDatabase} from "./support/db.mjs";
 
 let db, other, callA, callB;
@@ -188,16 +189,16 @@ test("rematch race: both players and their retries get one rematch game, created
 });
 
 test("join-code and recovery-code collisions between simultaneous requests are retried", async () => {
-  const codesFor = list => ({joinCode: () => list.shift() ?? `Z${Math.random().toString(36).slice(2, 6).toUpperCase()}-99`});
+  const codesFor = list => ({joinCode: () => list.shift() ?? randomJoinCode()});
   const ana = await player("Ana");
   for (let round = 0; round < 5; round++) {
-    const x = codesFor([`SAME-${10 + round}`, `XXXX-${10 + round}`]), y = codesFor([`SAME-${10 + round}`, `YYYY-${10 + round}`]);
+    const x = codesFor([`SM${10 + round}`, `XA${10 + round}`]), y = codesFor([`SM${10 + round}`, `YB${10 + round}`]);
     const callX = caller(handleApi, () => ({store: db.store, codes: x})), callY = caller(handleApi, () => ({store: other, codes: y}));
     const [a, b] = await Promise.all([callX("/api/games", {player_id: ana.id, solo: false}), callY("/api/games", {player_id: ana.id, solo: false})]);
     assert.equal(a.status, 200);
     assert.equal(b.status, 200);
     assert.notEqual(a.join_code, b.join_code);
-    assert.ok([a.join_code, b.join_code].includes(`SAME-${10 + round}`), "one of them got the contested code");
+    assert.ok([a.join_code, b.join_code].includes(`SM${10 + round}`), "one of them got the contested code");
   }
   assert.equal(await db.count("SELECT COUNT(*) AS n FROM rounds"), 10, "no half-made games");
   for (let round = 0; round < 5; round++) {

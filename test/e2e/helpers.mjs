@@ -51,12 +51,36 @@ export async function launch() {
   browser.newContext = async ({meetGary = false, garyRandomValue = 0.99, ...options} = {}) => {
     const context = await newContext(options);
     await context.addInitScript(([met, value]) => {
-      if (!met) { try { localStorage.setItem("ssbd_gary_met", "1"); } catch {} }
+      if (!met) { try { localStorage.setItem("ssbd_gary_met", "1"); localStorage.setItem("ssbd_milo_met", "1"); } catch {} }
       if (value !== null) window.__garyRandom = () => value;
     }, [meetGary, garyRandomValue]);
     return context;
   };
   return browser;
+}
+
+/**
+ * Start a Solo game from home: "Let's play!" opens "Who do you want to play with?", then pick a
+ * character (by default whoever is preselected: the last choice, or Gary) and start.
+ */
+export async function startSolo(page, character = null) {
+  await page.click("#startSolo");
+  await page.waitForSelector("#characterPicker[open]");
+  if (character) await page.click(`#characterPicker label[data-character="${character}"]`);
+  await page.click("#startCharacter");
+}
+
+/**
+ * Join a family game through the UI: the room code first (typed, or already filled in from an invite
+ * link when `code` is omitted), then "What should we call you?" with the player's own name.
+ */
+export async function joinRoom(page, {name, code = null}) {
+  await page.waitForSelector("dialog #joinInput");
+  if (code !== null) await page.fill("#joinInput", code);
+  await page.click('dialog button[type="submit"]');
+  await page.waitForSelector("dialog #nameInput");
+  await page.fill("#nameInput", name);
+  await page.click('dialog button[type="submit"]');
 }
 
 /** The bot's locked word for the open Solo move, read from device storage (test-only peek). */
@@ -133,6 +157,19 @@ export async function waitForReveal(page, n) {
   }, n);
 }
 
+/**
+ * Every word either side already played in a Solo game (lowercase, with simple plural forms):
+ * a played word is used up for both the player and Gary/Milo, so it can't be played again.
+ */
+export function usedWords(game) {
+  const used = new Set();
+  for (const m of game?.moves || []) {
+    if (!m.words) continue;
+    for (const w of [m.words.a, m.words.b].map(x => x.toLowerCase())) for (const form of [w, `${w}s`, `${w}es`, w.replace(/e?s$/, "")]) used.add(form);
+  }
+  return used;
+}
+
 // Distinct, ordinary words for long Solo games (more than 20, so a clash with the bot can be skipped).
 export const PLAY_WORDS = ["whale", "garden", "pencil", "rocket", "banana", "violin", "jungle", "candle", "turtle", "pillow",
   "marble", "forest", "ladder", "rabbit", "button", "carrot", "dragon", "mirror", "kettle", "puzzle", "anchor", "walrus", "trumpet", "lantern"];
@@ -147,9 +184,9 @@ export async function playDistinct(page, count, pool = PLAY_WORDS, {continueLast
   for (let i = 0; i < count; i++) {
     const game = await soloRecord(page);
     if (!game || game.status !== "ACTIVE") break;
-    const mine = new Set(game.moves.filter(m => m.words).map(m => m.words.a.toLowerCase()));
+    const used = usedWords(game);
     const bot = String(game.moves[game.moves.length - 1].hidden?.b || "").toLowerCase();
-    const word = pool.find(w => !mine.has(w) && w !== bot && !played.includes(w));
+    const word = pool.find(w => !used.has(w) && w !== bot && !played.includes(w));
     if (!word) throw new Error("ran out of words");
     const before = revealedCount(game);
     await lockIn(page, word, {reveal: false});

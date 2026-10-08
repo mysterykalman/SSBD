@@ -2,7 +2,7 @@
 // and inflected matches presented as normal wins in each player's own word.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, startServer} from "./helpers.mjs";
+import {botWord, joinRoom, launch, startServer, startSolo} from "./helpers.mjs";
 
 // Emoji characters in copy. ★ (U+2605) and ✓ are drawn marks inside designed components (progress stones,
 // win badge), not emoji in text, so they are excluded.
@@ -26,10 +26,11 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   await page.waitForSelector("#startSolo");
   const hero = await page.locator(".hero").innerText();
   assert.match(hero, /Try to read each other’s minds\.\s+No pressure\. Just your entire friendship\./);
+  assert.equal(await page.locator(".hero .hero-rules").innerText(), "You each secretly pick any word. Match and you win. Miss and your two words become the next clue. Keep connecting the dots until your brains finally cooperate.");
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
-  assert.match(solo, /Play Solo\s+We heard you had no friends\.\s+So we lured Gary from Accounting over with the promise of cake\.\s+There is no cake\./);
-  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Play Gary");
+  assert.match(solo, /Play Solo\s+We heard you had no friends\.\s+So we lured Gary from Accounting over with the promise of cake\. Milo came anyway\.\s+There is no cake\./);
+  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Let’s play!");
   assert.match(solo, /Plays offline too\. Fancy\./);
   assert.doesNotMatch(solo, /without internet/i);
   const together = await page.locator(".family-card").innerText();
@@ -41,6 +42,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.doesNotMatch(await visibleText(page), EMOJI);
   await page.click('[data-lang="fr"]');
   assert.match(await page.locator(".hero").innerText(), /Essayez de lire dans les pensées de l’autre\./);
+  assert.match(await page.locator(".hero .hero-rules").innerText(), /^Choisissez chacun un mot en secret\. Les mêmes mots[\s\u202f]\? Vous gagnez[\s\u202f]! Sinon, vos deux mots deviennent le prochain indice\. Continuez à faire des liens jusqu’à ce que vos cerveaux coopèrent enfin\.$/);
   assert.match(await page.locator(".solo-card").innerText(), /Il n’y a pas de gâteau\./);
   assert.match(await page.locator(".family-card").innerText(), /Jouer ensemble/);
   assert.doesNotMatch(await visibleText(page), EMOJI);
@@ -51,7 +53,7 @@ test("no inline emoji in game states: Solo start, locked, reveal, win, game over
   const context = await browser.newContext({reducedMotion: "reduce", garyRandomValue: 0.1}); // Gary makes remarks
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   assert.doesNotMatch(await visibleText(page), EMOJI, "Solo start");
   const bot = await botWord(page);
@@ -92,12 +94,8 @@ async function familyPair(url, {reducedMotion = "reduce"} = {}) {
   const code = (await ana.locator("#joinCode").innerText()).trim();
   await ben.goto(url);
   await ben.click("#joinFamily");
-  await ben.fill("#nameInput", "Élodie");
-  await ben.click('dialog button[type="submit"]');
-  await ben.waitForSelector("dialog #joinInput");
-  assert.equal((await ben.locator("#dialogError").textContent()).trim(), "", "no error after a valid name");
-  await ben.fill("#joinInput", code);
-  await ben.click('dialog button[type="submit"]');
+  await joinRoom(ben, {name: "Élodie", code});
+  assert.equal(((await ben.locator("#dialogError").textContent().catch(() => "")) || "").trim(), "", "no error after a valid name");
   await ben.waitForSelector("#word");
   await ana.waitForSelector("#word", {timeout: 10000});
   return {ana, ben, ctxA, ctxB};
@@ -161,12 +159,12 @@ test("an inflected Family match looks like a normal win, each player seeing thei
     const words = (await page.locator("#revealModal .rv-word .chip-word").allTextContents()).map(w => w.trim().toUpperCase());
     assert.deepEqual(words, [mine, mine], `${mine}: both sides read as this player's word`);
     const modal = await page.locator("#revealModal").innerText();
-    assert.match(modal, /SAME WORD! You win!/);
+    assert.match(modal, new RegExp(`THAT’S A MATCH!\\s+You both said ${mine}\\. Your brains did a high five\\.`));
     assert.doesNotMatch(modal, /close enough|plural|schmural|tense|variant|same idea/i);
     await page.click("#revealContinue");
     await page.waitForSelector("#app .end.win");
     const end = await page.locator("#app .end").innerText();
-    assert.match(end, new RegExp(`You both said ${mine} on move 1\\.`));
+    assert.match(end, /YOU DID IT!\s+Matched on move 1\. Somebody cue the tiny parade\./);
     assert.doesNotMatch(end, /close enough|plural|schmural|tense|variant/i);
     assert.doesNotMatch(await visibleText(page), EMOJI);
   }

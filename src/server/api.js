@@ -24,6 +24,7 @@ import {chooseOpening, chooseResponse} from "../shared/bot.js";
 import {MAX_MOVES, checkWord, hashString, moveOutcome, seededRandom} from "../shared/rules.js";
 import {wordKey} from "../shared/words.js";
 import {isSchemaMissing, isUnavailable, isUniqueViolation} from "./db.js";
+import {isJoinCode, looksLikeRoomCode, normalizeJoinCode, randomJoinCode} from "../shared/codes.js";
 
 /**
  * @typedef {import("../shared/types.js").Store} Store
@@ -55,6 +56,17 @@ const NOTIFICATION_LIMIT = 50;
 /** Tables the API needs; /api/health reports SCHEMA_MISSING until all exist. */
 export const TABLES = ["players", "games", "game_players", "rounds", "submissions", "notifications"];
 const CODE_ATTEMPTS = 5;
+/** Room codes are short (67,600 in all), so allow more attempts to find one no active room uses. */
+const JOIN_CODE_ATTEMPTS = 25;
+/** Rooms whose code is in use: waiting for a friend, or being played. Finished rooms free their code. */
+const ACTIVE_ROOM = "status IN ('WAITING', 'ACTIVE')";
+/**
+ * Whether an active room already uses this code (checked inside the creating transaction; a racing
+ * insert of the same code is still caught by the database's unique index and retried).
+ * @param {Queryable} q
+ * @param {string} code
+ */
+const codeInUse = async (q, code) => Boolean(await first(q, `SELECT 1 AS used FROM games WHERE join_code = $1 AND ${ACTIVE_ROOM} LIMIT 1`, [code]));
 
 /** @param {unknown} data @param {number} [status] */
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
@@ -69,12 +81,7 @@ const reason = error => (error instanceof Error ? error.message : String(error))
 const now = () => new Date().toISOString();
 /** @type {Codes} */
 const RANDOM_CODES = {
-  joinCode() {
-    const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-    let out = "";
-    for (let i = 0; i < 4; i++) out += letters[Math.floor(Math.random() * letters.length)];
-    return out + "-" + Math.floor(10 + Math.random() * 90);
-  },
+  joinCode: () => randomJoinCode(),
   recoveryDigits: () => Math.floor(1000 + Math.random() * 9000)
 };
 
@@ -317,6 +324,9 @@ async function reload(db, loaded) {
 }
 
 /** @type {Record<string, string>} */
+/** A display name as stored: single spaces, trimmed, at most 24 characters. */
+const cleanName = raw => String(raw || "").replace(/\s+/g, " ").trim().slice(0, 24);
+
 const MESSAGES = {
   EMPTY: "Add a word first, then lock it in.",
   TOO_LONG: "That word is a bit long. Try a shorter one.",
@@ -324,7 +334,7 @@ const MESSAGES = {
   TOO_SHORT: "Try a word with at least two letters.", // retired: one-letter words are allowed
   TOO_MANY_WORDS: "Try one word (or a short phrase of up to three words).",
   SAME_AS_LAST: "You just played that word. Try a different one!",
-  ALREADY_USED: "You already used that word in this game. Try a new one!",
+  ALREADY_USED: "That word has already been played.",
   GAME_OVER: "This game is over. Start a new game to play again."
 };
 
@@ -414,9 +424,10 @@ async function rematch(db, body, codes) {
   const language = loaded.row.language === "fr" ? "fr" : "en";
   const others = loaded.members.filter(m => m.player_id !== playerId);
   try {
-    for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < JOIN_CODE_ATTEMPTS; attempt++) {
       const code = codes.joinCode();
       const outcome = await db.tx(async q => {
+        if (await codeInUse(q, code)) return (await first(q, "SELECT 1 AS ok FROM games WHERE id = $1", [id])) ? "exists" : "collision";
         // DO NOTHING on either key: a racing request already created this rematch (same id), or the code is taken.
         // If the other request is still in flight, this insert waits for it to commit or roll back.
         const inserted = await q.query("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language,rematch_of) VALUES($1,$2,'ACTIVE',1,$3,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING id", [id, code, created, language, loaded.row.id]);
@@ -525,7 +536,8 @@ async function route(request, db, codes) {
 
   if (path === "/api/player" && request.method === "POST") {
     const created = now(), playerId = uuid();
-    const displayName = String(body.display_name || "").replace(/\s+/g, " ").trim().slice(0, 24) || "Player";
+    const displayName = cleanName(body.display_name) || "Player";
+    if (looksLikeRoomCode(displayName)) return fail(400, "BAD_NAME", "That looks like a game code. Please type your name.");
     const base = displayName.normalize("NFD").replace(/\p{M}/gu, "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10) || "PLAYER";
     try {
       for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
@@ -542,6 +554,27 @@ async function route(request, db, codes) {
     return fail(500, "PLAYER_CREATE_FAILED", "Could not create a player right now. Please try again.");
   }
 
+  // A player's own name, typed again when they join a game (they may change it).
+  if (path === "/api/player/name" && request.method === "POST") {
+    const displayName = cleanName(body.display_name);
+    if (!displayName) return fail(400, "EMPTY_NAME", "Please type your name.");
+    if (looksLikeRoomCode(displayName)) return fail(400, "BAD_NAME", "That looks like a game code. Please type your name.");
+    const updated = await first(db, "UPDATE players SET display_name = $1, last_seen_at = $2 WHERE id = $3 RETURNING id, display_name, recovery_code", [displayName, now(), String(body.player_id || "")]);
+    return updated ? json(updated) : fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
+  }
+
+  // Is there an open room with this code? Checked before asking a joining player for their name.
+  if (path === "/api/games/lookup" && request.method === "GET") {
+    const code = normalizeJoinCode(url.searchParams.get("code"));
+    if (!isJoinCode(code)) return fail(400, "BAD_JOIN_CODE", "Game codes are two letters and two numbers, like AB12.");
+    const game = await first(db, `SELECT id FROM games WHERE join_code = $1 AND ${ACTIVE_ROOM} ORDER BY created_at DESC LIMIT 1`, [code]);
+    if (!game) return fail(404, "GAME_NOT_FOUND", "We couldn't find a game with that code.");
+    const members = await all(db, "SELECT player_id FROM game_players WHERE game_id = $1", [game.id]);
+    const member = members.some(m => m.player_id === String(url.searchParams.get("player_id") || ""));
+    if (!member && members.length >= 2) return fail(409, "GAME_FULL", "That game already has two players.");
+    return json({ok: true, join_code: code, member});
+  }
+
   if (path === "/api/player/recover" && request.method === "POST") {
     const found = await first(db, "SELECT id, display_name, recovery_code FROM players WHERE recovery_code = $1", [String(body.recovery_code || "").toUpperCase().trim()]);
     return found ? json(found) : fail(404, "RECOVERY_NOT_FOUND", "Recovery code not found");
@@ -554,11 +587,13 @@ async function route(request, db, codes) {
     const created = now(), gameId = uuid(), solo = body.solo === true;
     const language = body.language === "fr" ? "fr" : "en";
     try {
-      for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
+      for (let attempt = 0; attempt < JOIN_CODE_ATTEMPTS; attempt++) {
         const code = codes.joinCode();
         const made = await db.tx(async q => {
-          // A join-code collision inserts nothing (no error, the transaction stays usable): try another code.
-          const inserted = await q.query("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES($1,$2,$3,1,$4,$4,$5) ON CONFLICT (join_code) DO NOTHING RETURNING id", [gameId, code, solo ? "ACTIVE" : "WAITING", created, language]);
+          // A code an active room already uses is never reused (that would send a friend to the wrong game).
+          if (await codeInUse(q, code)) return false;
+          // A racing insert of the same code inserts nothing (no error, the transaction stays usable): try another code.
+          const inserted = await q.query("INSERT INTO games (id,join_code,status,round_number,created_at,updated_at,language) VALUES($1,$2,$3,1,$4,$4,$5) ON CONFLICT DO NOTHING RETURNING id", [gameId, code, solo ? "ACTIVE" : "WAITING", created, language]);
           if (inserted.rowCount !== 1) return false;
           await q.query("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES($1,$2,1,$3)", [gameId, player.id, created]);
           if (solo) await q.query("INSERT INTO game_players (game_id,player_id,slot,joined_at) VALUES($1,$2,2,$3)", [gameId, BOT, created]);
@@ -578,14 +613,17 @@ async function route(request, db, codes) {
     const playerId = String(body.player_id || "");
     const player = await first(db, "SELECT id, display_name FROM players WHERE id = $1", [playerId]);
     if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
-    const code = String(body.join_code || "").toUpperCase().replace(/\s+/g, "").trim();
+    const code = normalizeJoinCode(body.join_code);
+    // Only the current format: two letters and two digits ("AB12").
+    if (!isJoinCode(code)) return fail(400, "BAD_JOIN_CODE", "Game codes are two letters and two numbers, like AB12.");
     /** @type {{status: "missing" | "member" | "full" | "joined", game?: GameRow}} */
     let result;
     try {
       result = await db.tx(async q => {
         // Lock the game row: concurrent joins of one game take turns, and each sees the seats the previous one took.
         /** @type {GameRow | null} */
-        const game = await first(q, "SELECT * FROM games WHERE join_code = $1 FOR UPDATE", [code]);
+        // Codes are only unique among active rooms: never join a finished game that once had this code.
+        const game = await first(q, `SELECT * FROM games WHERE join_code = $1 AND ${ACTIVE_ROOM} ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, [code]);
         if (!game) return {status: "missing"};
         const members = await all(q, "SELECT player_id, slot FROM game_players WHERE game_id = $1", [game.id]);
         if (members.some(m => m.player_id === playerId)) return {status: "member", game};
@@ -603,7 +641,7 @@ async function route(request, db, codes) {
         return fail(500, "GAME_JOIN_FAILED", "Could not join the game right now. Please try again.");
       }
       // Backstop (the row lock should make this unreachable): the seat was taken by this player's other request, or by someone else.
-      const member = await first(db, "SELECT g.id, g.join_code FROM games g JOIN game_players gp ON gp.game_id = g.id WHERE g.join_code = $1 AND gp.player_id = $2", [code, playerId]);
+      const member = await first(db, "SELECT g.id, g.join_code FROM games g JOIN game_players gp ON gp.game_id = g.id WHERE g.join_code = $1 AND g.status IN ('WAITING', 'ACTIVE') AND gp.player_id = $2", [code, playerId]);
       if (member) return json({id: member.id, join_code: member.join_code});
       return fail(409, "GAME_FULL", "That game already has two players.");
     }

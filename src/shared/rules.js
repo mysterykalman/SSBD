@@ -111,8 +111,10 @@ export function usedKeys(game, side) {
 /**
  * Check a word for one side before it is locked in.
  * Errors: GAME_OVER, plus validateWord codes, plus
- *   SAME_AS_LAST  - the side's previous word, typed again
- *   ALREADY_USED  - the side used this word earlier in the game
+ *   SAME_AS_LAST  - the side's own previous word, typed again
+ *   ALREADY_USED  - either side (a player or the Solo opponent) already played this word in the game
+ * Only revealed words count: the open move's words are never compared here, so two players
+ * typing the same word in the same move is still a match.
  * @param {RulesGame} game
  * @param {Side} side
  * @param {unknown} raw
@@ -125,10 +127,12 @@ export function checkWord(game, side, raw) {
   // The same underlying word counts as a repeat too ("car" then "cars").
   const language = game.language || "en";
   const forms = lemmaKeys(valid.word, language);
-  const own = game.moves.flatMap(m => (m.words ? [lemmaKeys(m.words[side], language)] : []));
   const overlaps = set => [...set].some(key => forms.has(key));
-  if (own.length && overlaps(own[own.length - 1])) return {ok: false, code: "SAME_AS_LAST", word: valid.word};
-  if (own.some(overlaps)) return {ok: false, code: "ALREADY_USED", word: valid.word};
+  const revealed = game.moves.flatMap(m => (m.words ? [m.words] : []));
+  const last = revealed[revealed.length - 1];
+  if (last && overlaps(lemmaKeys(last[side], language))) return {ok: false, code: "SAME_AS_LAST", word: valid.word};
+  // A word is used up for everyone once anyone has played it (both sides of every revealed move).
+  if (revealed.some(words => SIDES.some(s => overlaps(lemmaKeys(words[s], language))))) return {ok: false, code: "ALREADY_USED", word: valid.word};
   return valid;
 }
 

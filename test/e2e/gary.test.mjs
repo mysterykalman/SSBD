@@ -2,7 +2,7 @@
 // never changes the game, never leaks into family games, and stays accessible.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, startServer} from "./helpers.mjs";
+import {botWord, joinRoom, launch, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -19,7 +19,7 @@ test("first Solo game introduces Gary once; the intro can be reopened from the p
   const context = await browser.newContext({meetGary: true, viewport: {width: 390, height: 844}});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#garyIntro[open]");
   const intro = await page.locator("#garyIntro").innerText();
   assert.match(intro, /MEET YOUR RIVAL/i);
@@ -37,7 +37,7 @@ test("first Solo game introduces Gary once; the intro can be reopened from the p
   await page.reload();
   await page.waitForSelector("#word");
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   await page.waitForTimeout(200);
   assert.equal(await page.locator("#garyIntro").count(), 0);
@@ -54,7 +54,7 @@ test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word
   const context = await browser.newContext({garyRandomValue: 0.1}); // pins a remark: "sigh" before his word
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   assert.equal(await page.locator(".mode-chip .badge.gary").count(), 1, "Gary's badge in the mode chip");
   const hidden = await botWord(page);
@@ -90,8 +90,10 @@ test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word
   assert.match(said[0], new RegExp(`Gary: ${hidden}`, "i"));
   assert.match(said[0], /Gary: sigh/i);
   const store = await page.evaluate(() => localStorage.getItem("ssbd.store"));
-  assert.doesNotMatch(store, /gary|sigh/i, "Gary's lines are never stored in the game");
   const game = Object.values(JSON.parse(store).solo)[0];
+  // The game remembers who the player chose (that is all): none of Gary's lines are stored in it.
+  assert.equal(game.character, "gary");
+  assert.doesNotMatch(JSON.stringify({...game, character: undefined}), /gary|sigh/i, "Gary's lines are never stored in the game");
   assert.equal(game.moves[0].words.b, hidden, "the revealed word is the engine's locked word");
   await page.click("#revealContinue");
   await page.waitForSelector("#prompt");
@@ -111,10 +113,7 @@ test("family games never show Gary", async () => {
   await ana.waitForSelector("#joinCode");
   const code = (await ana.locator("#joinCode").innerText()).trim();
   await ben.goto(`${server.url}/join/${code}`);
-  await ben.fill("#nameInput", "Ben");
-  await ben.click('dialog button[type="submit"]');
-  await ben.waitForSelector("dialog #joinInput");
-  await ben.click('dialog button[type="submit"]');
+  await joinRoom(ben, {name: "Ben"});
   await ben.waitForSelector("#word");
   await ana.waitForSelector("#word", {timeout: 10000});
   await submit(ana, "Kite");
@@ -133,7 +132,7 @@ test("reduced motion: Gary's word appears complete straight away", async () => {
   const context = await browser.newContext({reducedMotion: "reduce", garyRandomValue: 0.1});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const hidden = await botWord(page);
   await submit(page, hidden.toLowerCase() === "acorn" ? "maple" : "acorn");
@@ -151,7 +150,7 @@ test("French: Gary's copy, refresh mid-reveal keeps his word, offline Solo still
   await page.reload();
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
   await context.setOffline(true);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#garyIntro[open]");
   assert.match(await page.locator("#garyIntro").innerText(), /Gary de la comptabilité[\s\S]*Je fais des mots maintenant\.[\s\S]*Apparemment\./);
   await page.click("#garyIntroGo");
@@ -172,13 +171,14 @@ test("game over: Gary says 'finally', then '...same time tomorrow?'; a match can
   const context = await browser.newContext({reducedMotion: "reduce", viewport: {width: 390, height: 844}});
   const page = await context.newPage();
   await page.goto(server.url);
-  await page.click("#startSolo");
+  await startSolo(page);
   await page.waitForSelector("#word");
   const words = ["whale", "garden", "pencil", "rocket", "banana", "violin", "jungle", "candle", "turtle", "pillow", "comet", "meadow", "pebble", "lantern", "bubble", "castle", "forest", "kitten", "carrot", "dragon", "puzzle", "sandal"];
   let used = 0;
   for (let move = 1; move <= 20; move++) {
     const bot = (await botWord(page)).toLowerCase();
-    let mine; do { mine = words[used++]; } while (mine === bot);
+    const played = usedWords(await soloRecord(page)); // a word either side played is used up
+    let mine; do { mine = words[used++]; } while (mine === bot || played.has(mine));
     await submit(page, mine);
     await page.waitForSelector("#revealContinue");
     await page.click("#revealContinue");
@@ -193,11 +193,11 @@ test("game over: Gary says 'finally', then '...same time tomorrow?'; a match can
   const winCtx = await browser.newContext({reducedMotion: "reduce", garyRandomValue: 0.1});
   const win = await winCtx.newPage();
   await win.goto(server.url);
-  await win.click("#startSolo");
+  await startSolo(win);
   await win.waitForSelector("#word");
   await submit(win, await botWord(win));
   await win.waitForSelector("#revealContinue");
-  assert.match(await win.locator("#garyLine").innerText(), /well that's inconvenient|you win this one/);
+  assert.match(await win.locator("#garyLine").innerText(), /already\? huh/, "an early match gets Gary's early-match line");
   await win.click("#revealContinue");
   await win.waitForSelector("#app .end.win");
   await winCtx.close();
@@ -208,7 +208,7 @@ test("Gary's intro and reveal fit at phone, landscape, tablet and desktop sizes"
     const context = await browser.newContext({viewport, meetGary: true, reducedMotion: "reduce", garyRandomValue: 0.1});
     const page = await context.newPage();
     await page.goto(server.url);
-    await page.click("#startSolo");
+    await startSolo(page);
     await page.waitForSelector("#garyIntro[open]");
     const intro = await page.evaluate(() => {
       const dlg = document.getElementById("garyIntro").getBoundingClientRect();

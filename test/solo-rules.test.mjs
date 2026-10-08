@@ -150,12 +150,23 @@ test("player word errors return a code and leave the game untouched", () => {
   assert.equal(JSON.stringify(frozen), before);
 });
 
-test("the player may answer with a word the bot already played", () => {
-  let game = startSoloGame({id: "other-side", seed: 7});
-  const r1 = submitSoloWord(game, nonsense(7));
-  if (r1.game.status !== "ACTIVE") return;
-  const r2 = submitSoloWord(r1.game, r1.move.words.b);
-  assert.equal(r2.ok, true);
+test("the player may not answer with a word Gary or Milo already played (any earlier move)", () => {
+  for (const character of ["gary", "milo"]) {
+    let game = startSoloGame({id: `other-side-${character}`, seed: 7, character});
+    const r1 = submitSoloWord(game, nonsense(7));
+    assert.equal(r1.game.status, "ACTIVE");
+    const theirs = r1.move.words.b;
+    for (const raw of [theirs, theirs.toUpperCase(), `  ${theirs}! `]) {
+      const r2 = submitSoloWord(r1.game, raw);
+      assert.deepEqual([r2.ok, r2.code], [false, "ALREADY_USED"], `${character}: ${raw}`);
+    }
+    // Two moves later it is still used up.
+    game = submitSoloWord(r1.game, nonsense(8)).game;
+    assert.equal(submitSoloWord(game, theirs).code, "ALREADY_USED");
+    // And Gary/Milo never play a word the player used (one shared history).
+    const played = game.moves.filter(m => m.words).map(m => m.words.a.toLowerCase());
+    assert.ok(!played.includes(game.moves.at(-1).hidden.b.toLowerCase()));
+  }
 });
 
 test("submitting never mutates the saved game", () => {

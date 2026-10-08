@@ -80,7 +80,7 @@ test("old worker and cache from the previous release, then this deployment: the 
     await page.waitForSelector("#startSolo");
     await controlled(page);
     assert.equal((await frontend(page)).script, await scriptOf(old), "running the previous release");
-    await page.click("#startSolo");
+    await page.click("#startSolo"); // the previous release starts Solo directly (no character picker yet)
     await page.waitForSelector("#word");
     await playOneMove(page);
     const trail = await page.locator(".trail-row").allInnerTexts();
