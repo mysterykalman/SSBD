@@ -8,12 +8,41 @@ let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
 after(async () => { await browser?.close(); await server?.stop(); });
 
-const MILO_LINES = /ooh|I've got one|boing|again! again|next one's ours|let's gooo|wiggling|love that one|thinking hat|socks|snack|happy spin|hmmm|wheee|nice one|SO close|twins|wavelength|whoa|surprise|plot twist|still going|totally do this|WHAT|already\?!|PHEW|never gave up|YAY|same word!|best\. day|round two|hoping you'd say|SO fun|again tomorrow/i;
+// Milo's approved script (every line he can say), and his old writing that must be gone.
+const MILO_LINES = /Okay, I’m ready\.|Okay, what are you thinking\?|Oh! Okay, I see where you’re going\.|Huh\. I was not expecting that\.|Wait, that was actually really good\.|Okay, I think we’ve got this\.|We used that one already! Try another\.|Oh, right\. We already used that\.|No rush\. I’m thinking too\.|I think we’re getting closer\. Probably\.|Okay, now I really want to see where this ends\.|Ohhh\. That’s clever\.|Okay, hear me out\.|YES! We got it!|That was fun\. Again\?|Already\?! Okay, we’re good at this\.|FINALLY\. Okay, that was worth it\.|I think we’re close\./;
+const OLD_MILO = /Hi! I'm Milo!|I LOVE words|Let's go go go|\(I'm ready\.\)|SAY HI TO|Probably too ready|Let's play, Milo|gooo|boing|wiggl|thinking hat|happy spin|wheee|SO close|twins|wavelength|plot twist|super fast|REALLY ready|big leap|still grinning|Keep going!|Next up:|WHAT! already|best\. day|same word! same word|hoping you'd say|I stretched|SO fun|again tomorrow|that one's taken/i;
 
 /** Every bit of text in the page a person could see or hear (visible text, sr-only text, ARIA labels, image alts). */
 const allText = page => page.evaluate(() => [document.body.textContent,
   ...[...document.querySelectorAll("[aria-label], [alt], [title]")].map(el => `${el.getAttribute("aria-label") || ""} ${el.getAttribute("alt") || ""} ${el.getAttribute("title") || ""}`)].join(" "));
 const portrait = (page, selector) => page.locator(selector).first().evaluate(el => el.querySelector("img")?.className || el.className);
+
+test("the homepage tile: 'Friends not around?', Gary and Milo side by side at the same size, 'Choose someone' opens the picker", async () => {
+  for (const viewport of [{width: 390, height: 844}, {width: 1280, height: 860}]) {
+    const context = await browser.newContext({viewport, reducedMotion: "reduce"});
+    const page = await context.newPage();
+    await page.goto(server.url);
+    await page.waitForSelector("#startSolo");
+    assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Friends not around?");
+    assert.equal((await page.locator(".solo-card .start-copy").innerText()).trim(), "Hang out with Milo or Gary from Accounting.");
+    assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose someone");
+    assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|Plays offline too|We heard you had no friends/);
+    // Both portraits (the existing artwork), the same size, side by side, neither on top of the other.
+    const pair = await page.$$eval("#soloPair .badge", badges => badges.map(b => ({art: b.querySelector("img")?.className || "", box: b.getBoundingClientRect().toJSON()})));
+    assert.equal(pair.length, 2);
+    assert.match(pair[0].art, /art-gary/);
+    assert.match(pair[1].art, /art-milo/);
+    assert.equal(Math.round(pair[0].box.width), Math.round(pair[1].box.width));
+    assert.equal(Math.round(pair[0].box.height), Math.round(pair[1].box.height));
+    assert.ok(pair[0].box.right <= pair[1].box.left + 0.5, "side by side, no overlap");
+    assert.ok(Math.abs(pair[0].box.top - pair[1].box.top) < 6, "level with each other");
+    assert.ok(pair[0].box.width >= 40 && pair[0].box.width <= 60, "compact enough for the tile header");
+    await page.click("#startSolo");
+    await page.waitForSelector("#characterPicker[open]");
+    assert.match(await page.locator("#characterPicker").innerText(), /Who do you want to play with\?/);
+    await context.close();
+  }
+});
 
 test("the picker: 'Who do you want to play with?', two big cards, a clear selected state, never difficulty or age", async () => {
   for (const viewport of [{width: 390, height: 844}, {width: 1280, height: 860}]) {
@@ -24,8 +53,14 @@ test("the picker: 'Who do you want to play with?', two big cards, a clear select
     await page.waitForSelector("#characterPicker[open]");
     const picker = await page.locator("#characterPicker").innerText();
     assert.match(picker, /Who do you want to play with\?/);
-    assert.match(await page.locator('label[data-character="gary"]').innerText(), /Gary from Accounting\s+He was told there would be cake\./);
-    assert.match(await page.locator('label[data-character="milo"]').innerText(), /^\s*Milo\s+Ready\. Probably too ready\.\s*$/);
+    // The approved cards, word for word: a name and two lines each, no "SAY HI TO" style label.
+    assert.equal((await page.locator('label[data-character="gary"]').innerText()).trim().replace(/\s+/g, " "),
+      "Gary We heard you had no friends, so we lured Gary over from Accounting with the promise of cake. There is no cake.");
+    assert.equal((await page.locator('label[data-character="milo"]').innerText()).trim().replace(/\s+/g, " "),
+      "Milo I’ve been waiting, like, all day. Are you ready to play already?");
+    assert.deepEqual(await page.locator(".pick-name").allInnerTexts(), ["Gary", "Milo"]);
+    assert.doesNotMatch(picker, OLD_MILO);
+    assert.doesNotMatch(picker, /say hi|meet your/i);
     assert.doesNotMatch(picker, /difficult|easy|hard|level|\bbots?\b|\bAI\b|robot|kids?\b|child|age\b/i);
     // Each card: a large avatar of that character, a name and one line.
     for (const id of ["gary", "milo"]) {
@@ -97,70 +132,92 @@ test("choosing Gary: the game shows Gary, exactly as before", async () => {
   await context.close();
 });
 
-test("choosing Milo: Milo everywhere (labels, avatars, his own lines), and no Gary anywhere in the game", async () => {
+test("choosing Milo: his exact script at every step, his avatar everywhere, and no Gary anywhere in the game", async () => {
   const context = await browser.newContext({reducedMotion: "reduce", garyRandomValue: 0.1, meetGary: true});
   const page = await context.newPage();
   await page.goto(server.url);
   await startSolo(page, "milo");
-  // His own one-time intro.
-  await page.waitForSelector("#garyIntro[open]");
-  const intro = await page.locator("#garyIntro").innerText();
-  assert.match(intro, /SAY HI TO\s+Milo\s+Hi! I'm Milo!\s+I LOVE words\.\s+Let's go go go!/i);
-  assert.match(await portrait(page, "#garyIntro .intro-art"), /art-milo/);
-  assert.doesNotMatch(intro, /gary|rival/i);
-  await page.click("#garyIntroGo");
-  await page.waitForSelector("#garyIntro", {state: "detached"});
-  assert.equal(await page.evaluate(() => localStorage.getItem("ssbd_milo_met")), "1");
-  assert.equal(await page.evaluate(() => localStorage.getItem("ssbd_gary_met")), null, "meeting Milo is not meeting Gary");
-
+  // No intro dialog: his card was the introduction. Game start: "Okay, I’m ready."
+  await page.waitForSelector("#word");
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator("#garyIntro").count(), 0);
+  assert.equal((await page.locator("#rematchLine .gary-bubble").innerText()).trim().replace(/^Milo:\s*/, ""), "Okay, I’m ready.");
+  assert.match(await portrait(page, "#rematchLine"), /art-milo/);
+  // First turn.
+  assert.equal((await page.locator("#formHelp").innerText()).trim(), "Okay, what are you thinking?");
   assert.equal((await soloRecord(page)).character, "milo");
-  assert.match(await page.locator("#app").innerText(), /Type any word you like! Milo is picking one too, super fast\. Then you both reveal!/);
-  assert.match(await page.locator("#formHelp").innerText(), /Milo is ready\. Like, REALLY ready\./);
   assert.match(await portrait(page, ".mode-chip .badge.gary"), /art-milo/);
   assert.doesNotMatch(await allText(page), /gary/i, "start of game");
+  assert.doesNotMatch(await allText(page), OLD_MILO);
 
-  // Move 1: Milo's word, Milo's avatar, Milo speaking one of his own lines.
+  // Move 1 reveal: the result line is his; everything else is the plain game text.
   const first = await botWord(page);
   await lockIn(page, first.toLowerCase() === "garden" ? "pencil" : "garden", {reveal: false});
   await page.waitForSelector("#revealContinue");
   const modal = await page.locator("#revealModal").innerText();
   assert.match(modal, /MILO.S WORD/);
-  // The reveal screen speaks in Milo's voice too: the outcome, the next pair and the button.
-  assert.match(modal, /Ooh, nice connection! On we go!/);
-  assert.match(modal, /Next up: \S+ \+ \S+\. Let's gooo!/);
-  assert.doesNotMatch(modal, /The trail continues|Next move starts with/);
-  assert.equal((await page.locator("#revealContinue").innerText()).trim(), "Keep going!");
+  assert.equal((await page.locator("#revealModal .rv-outcome").innerText()).trim(), "Oh! Okay, I see where you’re going.");
+  assert.match(modal, /Next move starts with \S+ \+ \S+/);
+  assert.equal((await page.locator("#revealContinue").innerText()).trim(), "Keep playing");
   assert.match(await portrait(page, "#revealModal .rv-word.gary small"), /art-milo/);
-  assert.match(await portrait(page, "#garyLine"), /art-milo/, "the reaction shows Milo's avatar");
-  const line = await page.locator("#garyLine .gary-bubble").innerText();
-  assert.match(line, MILO_LINES);
-  assert.doesNotMatch(line, /sigh|ugh|fine|object|rude/i, "never one of Gary's lines");
+  for (const text of await page.locator("#revealModal .gary-bubble, #revealModal .rv-outcome, #revealModal .rv-note").allInnerTexts()) assert.match(text, MILO_LINES, text);
   assert.doesNotMatch(await allText(page), /gary/i, "reveal");
-  await page.waitForFunction(() => /Milo: ooh/i.test(document.getElementById("srAnnounce")?.textContent || ""));
+  assert.doesNotMatch(await allText(page), OLD_MILO);
   await page.click("#revealContinue");
   await page.waitForSelector("#revealModal", {state: "detached"});
 
-  // The latest-row rule is unchanged with Milo.
+  // Move 2: the latest-row rule is unchanged; his line above the word box; a used word gets his line.
   await page.waitForSelector("#trailNow #nowHint");
   assert.match(await page.locator("#trailNow").innerText(), /Match these two words!\s+Old rows are just your history\./);
-  assert.match(await page.locator("#trailNow").innerText(), /MILO/);
-  assert.match(await page.locator("#formHelp").innerText(), /Milo is ready\. Like, REALLY ready\./);
+  assert.equal((await page.locator("#formHelp").innerText()).trim(), "I think we’re close.");
+  assert.equal(await page.locator("#rematchLine").count(), 0, "the start line is for move 1 only");
+  await page.fill("#word", first);
+  await page.click("#lockBtn");
+  await page.waitForFunction(() => document.getElementById("formHelp")?.classList.contains("error"));
+  assert.equal((await page.locator("#formHelp").textContent()).trim(), "We used that one already! Try another.");
   assert.doesNotMatch(await allText(page), /gary/i, "board with a trail");
 
-  // Win: Milo's early-match reaction (not a second "high five"), then the final screen.
+  // Win on move 2: the fast-win line, then "That was fun. Again?" on the final screen.
   await lockIn(page, await botWord(page), {reveal: false});
   await page.waitForSelector("#revealContinue");
-  const win = await page.locator("#revealModal").innerText();
-  assert.match(await page.locator("#garyLine .gary-bubble").innerText(), /WHAT! already\?! amazing!/);
-  assert.equal(win.split(/high five/i).length - 1, 1, "'high five' only once: in the match subcopy");
+  assert.equal(await page.locator("#garyLine .gary-says").getAttribute("data-full"), "Already?! Okay, we’re good at this.");
   assert.match(await portrait(page, "#garyLine"), /art-milo/);
+  assert.equal((await page.locator("#revealModal").innerText()).split(/high five/i).length - 1, 1, "'high five' only in the match subcopy");
   await page.click("#revealContinue");
   await page.waitForSelector("#app .end.win");
-  // The final screen keeps the shared win copy; the button names who you'd play again.
   assert.match(await page.locator("#app .end").innerText(), /YOU DID IT!\s+Matched on move 2\. Somebody cue the tiny parade\./);
+  assert.equal((await page.locator("#postWinLine .gary-bubble").innerText()).trim().replace(/^Milo:\s*/, ""), "That was fun. Again?");
   assert.equal((await page.locator("#newGameBtn").innerText()).trim(), "Play again with Milo");
   assert.doesNotMatch(await allText(page), /gary/i, "end screen");
+  assert.doesNotMatch(await allText(page), OLD_MILO);
   await context.close();
+});
+
+test("Milo notices a long think: after 20 seconds on a move his line becomes 'No rush. I’m thinking too.'", async () => {
+  const context = await browser.newContext({reducedMotion: "reduce"});
+  const page = await context.newPage();
+  await page.clock.install();
+  await page.goto(server.url);
+  await startSolo(page, "milo");
+  await page.waitForSelector("#word");
+  assert.equal((await page.locator("#formHelp").innerText()).trim(), "Okay, what are you thinking?");
+  await page.clock.fastForward(19000);
+  assert.equal((await page.locator("#formHelp").innerText()).trim(), "Okay, what are you thinking?");
+  await page.clock.fastForward(2000);
+  await page.waitForFunction(() => document.getElementById("formHelp")?.textContent.trim() === "No rush. I’m thinking too.");
+  await context.close();
+});
+
+test("the built app: the new cards are in it; the old tile copy and Milo's old writing are not", async () => {
+  const html = await (await fetch(server.url)).text();
+  const script = html.match(/src="(\/assets\/app\.[0-9a-f]+\.js)"/)[1];
+  const bundle = await (await fetch(server.url + script)).text();
+  for (const old of ["Hi! I'm Milo!", "I LOVE words.", "Let's go go go!", "(I'm ready.)", "Say hi to", "Ready. Probably too ready.", "Play Solo", "We heard you had no friends.", "Plays offline too. Fancy."]) {
+    assert.ok(!bundle.includes(old), `"${old}" is still in the app`);
+  }
+  assert.ok(bundle.includes("We heard you had no friends, so we lured Gary over from Accounting with the promise of cake."));
+  assert.ok(bundle.includes("been waiting, like, all day."), "Milo's card");
+  assert.ok(bundle.includes("Hang out with Milo or Gary from Accounting.") && bundle.includes("Friends not around?") && bundle.includes("Choose someone"));
 });
 
 test("the choice is remembered and preselected; Play again keeps Milo and he greets the rematch", async () => {
@@ -170,10 +227,10 @@ test("the choice is remembered and preselected; Play again keeps Milo and he gre
   await startSolo(page, "milo");
   await page.waitForSelector("#word");
   assert.equal(await page.evaluate(() => localStorage.getItem("ssbd_character")), "milo");
-  // Home: Milo's avatar on the Solo card and in the game list; the picker opens on Milo, even after a reload.
+  // Home: the tile always shows both of them; the game list shows Milo; the picker opens on Milo, even after a reload.
   await page.goto(server.url);
   await page.waitForSelector("#startSolo");
-  assert.match(await portrait(page, ".solo-card .badge.gary"), /art-milo/);
+  assert.equal(await page.locator("#soloPair .badge").count(), 2);
   assert.match(await portrait(page, "#gameList .badge.gary"), /art-milo/);
   await page.reload();
   await page.click("#startSolo");
@@ -181,8 +238,8 @@ test("the choice is remembered and preselected; Play again keeps Milo and he gre
   assert.ok(await page.isChecked("#pick-milo"), "Milo preselected");
   await page.click("#startCharacter");
   await page.waitForSelector("#word");
-  // No rematch greeting on a new game from home.
-  assert.equal(await page.locator("#rematchLine").count(), 0);
+  // A new game from home starts with Milo's start line.
+  assert.equal((await page.locator("#rematchLine .gary-bubble").innerText()).trim().replace(/^Milo:\s*/, ""), "Okay, I’m ready.");
 
   // Win, then Play again: same character, no picker, and Milo says hello again.
   const firstId = (await soloRecord(page)).id;
@@ -196,7 +253,7 @@ test("the choice is remembered and preselected; Play again keeps Milo and he gre
   assert.equal(game.character, "milo", "rematch keeps the character");
   assert.equal(game.rematch, true);
   const greeting = page.locator("#rematchLine");
-  assert.match(await greeting.innerText(), /I was hoping you'd say that|round two! I stretched!/);
+  assert.equal((await greeting.locator(".gary-bubble").innerText()).trim().replace(/^Milo:\s*/, ""), "Okay, I’m ready.");
   assert.match(await portrait(page, "#rematchLine"), /art-milo/);
   assert.doesNotMatch(await allText(page), /gary/i);
   // The greeting is for the first move only.
@@ -240,22 +297,21 @@ test("French: the picker and Milo's game are translated", async () => {
   await page.waitForSelector("#characterPicker[open]");
   const picker = await page.locator("#characterPicker").innerText();
   assert.match(picker, /Avec qui veux-tu jouer[\s ]\?/);
-  assert.match(picker, /Gary de la comptabilité\s+On lui avait promis du gâteau\./);
-  assert.match(picker, /Milo\s+Prêt\. Sûrement trop prêt\./);
+  assert.match(picker, /Gary\s+Il paraît que tu n’as pas d’amis, alors on a attiré Gary de la comptabilité avec une promesse de gâteau\.\s+Il n’y a pas de gâteau\./);
+  assert.match(picker, /Milo\s+Je t’attends depuis, genre, toute la journée\.\s+Alors, on peut jouer maintenant[\s ]\?/);
   await page.click('label[data-character="milo"]');
   assert.match(await page.locator("#startCharacter").innerText(), /Jouer avec Milo/);
   await page.click("#startCharacter");
   await page.waitForSelector("#word");
-  assert.match(await page.locator("#app").innerText(), /Milo en choisit un aussi, à toute vitesse/);
+  assert.match(await page.locator("#rematchLine").innerText(), /OK, je suis prêt\./);
+  assert.match(await page.locator("#formHelp").innerText(), /OK, tu penses à quoi[\s ]\?/);
   const bot = await botWord(page);
   await lockIn(page, bot.toLowerCase() === "jardin" ? "fusée" : "jardin", {reveal: false});
   await page.waitForSelector("#revealContinue");
   const frModal = await page.locator("#revealModal").innerText();
   assert.match(frModal, /MOT DE MILO/);
-  assert.match(frModal, /Oh, belle connexion[\s\u202f]! On continue[\s\u202f]!/);
-  assert.match(frModal, /La suite[\s\u202f]: \S+ \+ \S+\. C’est parti[\s\u202f]!/);
-  assert.match(await page.locator("#revealContinue").innerText(), /Allez, la suite[\s\u202f]!/);
-  assert.match(await page.locator("#garyLine .gary-bubble").innerText(), /^oh[\s ]!/);
+  assert.match(await page.locator("#revealModal .rv-outcome").innerText(), /^Oh[\s\u202f]! OK, je vois où tu veux en venir\.$/);
+  assert.match(frModal, /Le prochain coup commence avec/);
   assert.doesNotMatch(await allText(page), /gary/i);
   await context.close();
 });

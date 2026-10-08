@@ -8,9 +8,10 @@
  * A line is [key, when]: typed before the character's word ("sigh" … STORY) or after it.
  * Match lines are two short phrases with a beat between them ("..." then "fine. you win this one").
  * @typedef {{
- *   id: string, name: string, title: string, tagline: string, personality: string,
+ *   id: string, name: string, title: string, card: string[], personality: string,
  *   voiceId: string | null, voiceStyle: string, art: string,
- *   intro: {kicker: string, lines: string[], aside: string, cta: string}, meetAgain: string, copy: Record<string, string>,
+ *   intro: {kicker: string, lines: string[], aside: string, cta: string} | null, meetAgain: string | null, copy: Record<string, string>,
+ *   script?: MiloScript,
  *   results: Partial<Record<Strength, string>>, resultAvoid: Partial<Record<Strength, string[]>>,
  *   lines: {
  *     mismatch: Record<string, [string, string][]>, close: [string, string][], strange: [string, string][],
@@ -19,6 +20,12 @@
  *   }
  * }} Character
  * @typedef {"opening" | "strong" | "good" | "weak" | "veryWeak"} Strength
+ * A scripted character says exactly one line per game moment (keys below), never a random pick.
+ * @typedef {{
+ *   start: string, firstTurn: string, normalMiss: string, farApart: string, strong: string, confident: string,
+ *   alreadyUsed: string, cantUse: string, takingWhile: string, severalMisses: string, longTrail: string,
+ *   clever: string, oddGuess: string, win: string, postWin: string, fastWin: string, longWin: string, encourage: string
+ * }} MiloScript
  */
 
 /** @type {Record<string, Character>} */
@@ -27,7 +34,7 @@ export const CHARACTERS = {
     id: "gary",
     name: "garyName",
     title: "garyTitle",
-    tagline: "garyTagline",
+    card: ["garyCard1", "garyCard2"], // the character picker card
     personality: "dry",
     voiceId: null, // no recorded voice yet
     voiceStyle: "flat, tired, deadpan; short sighs",
@@ -61,38 +68,26 @@ export const CHARACTERS = {
   milo: {
     id: "milo",
     name: "miloName",
-    title: "miloTitle",
-    tagline: "miloTagline",
+    title: "miloName",
+    card: ["miloCard1", "miloCard2"], // the character picker card ("character select")
     personality: "bouncy",
     voiceId: null, // no recorded voice yet
-    voiceStyle: "bright, fast, excited; lots of exclamation marks",
+    voiceStyle: "bright, warm, a little impatient to play",
     art: "milo",
-    intro: {kicker: "miloMeet", lines: ["miloIntro1", "miloIntro2", "miloIntro3"], aside: "miloIntroAside", cta: "miloIntroCta"},
-    meetAgain: "miloMeetAgain",
-    copy: {
-      firstSolo: "miloFirstSolo", botReady: "miloBotReady", revealLoose: "miloRevealLoose", revealNice: "miloRevealNice",
-      revealNextStarts: "miloRevealNextStarts", keepPlaying: "miloKeepPlaying", gameOverAww: "miloGameOverAww", gameOverCopy: "miloGameOverCopy",
-      errALREADY_USED: "miloAlreadyUsed"
-    },
-    results: {}, // one cheerful result line whatever the connection (copy.revealNice)
+    intro: null, // the picker card is his introduction; "Okay, I'm ready." opens each game
+    meetAgain: null,
+    copy: {revealLoose: "miloOddGuess", errALREADY_USED: "miloAlreadyUsed", errSAME_AS_LAST: "miloAlreadyUsed"},
+    results: {},
     resultAvoid: {},
-    lines: {
-      mismatch: {
-        bouncy: [["miloOoh", "before"], ["miloGotOne", "before"], ["miloBoing", "after"], ["miloAgainAgain", "after"]],
-        hype: [["miloNextOne", "after"], ["miloLetsGo", "after"], ["miloWiggle", "after"], ["miloLoveThat", "after"]],
-        silly: [["miloHat", "before"], ["miloSocks", "after"], ["miloSnack", "before"], ["miloSpin", "after"]],
-        minimal: [["miloHmm", "before"], ["miloWhee", "after"], ["miloNice", "after"]]
-      },
-      close: [["miloSoClose", "after"], ["miloTwins", "after"], ["miloWavelength", "after"]],
-      strange: [["miloWhoa", "after"], ["miloSurprise", "after"], ["miloTwist", "after"]],
-      middle: ["miloStillGoing"],
-      nearEnd: ["miloWeCan"],
-      earlyMatch: [["miloWhat", "miloAlreadyWow"]],
-      lateMatch: [["miloPhew", "miloNeverGaveUp"]],
-      win: [["miloYay", "miloSameWord"], ["miloYay", "miloBestDay"]],
-      rematch: ["miloRematch1", "miloRematch2"],
-      gameOver: ["miloFun", "miloAgainTomorrow"]
-    }
+    // Milo's whole script: one line per moment (see scriptedResult / scriptedReaction / scriptedHelp).
+    script: {
+      start: "miloStart", firstTurn: "miloFirstTurn", normalMiss: "miloNormalMiss", farApart: "miloFarApart",
+      strong: "miloStrong", confident: "miloConfident", alreadyUsed: "miloAlreadyUsed", cantUse: "miloCantUse",
+      takingWhile: "miloTakingWhile", severalMisses: "miloSeveralMisses", longTrail: "miloLongTrail", clever: "miloClever",
+      oddGuess: "miloOddGuess", win: "miloWin", postWin: "miloPostWin", fastWin: "miloFastWin", longWin: "miloLongWin",
+      encourage: "miloEncourage"
+    },
+    lines: {mismatch: {}, close: [], strange: [], middle: [], nearEnd: [], earlyMatch: [], lateMatch: [], win: [], rematch: [], gameOver: ["miloPostWin"]}
   }
 };
 
@@ -113,7 +108,8 @@ export const LATE_MATCH = 12; // matched on move 12 or later
 /** Every i18n key a character uses (for tests). */
 export function characterKeys(id) {
   const c = character(id);
-  const keys = new Set([c.name, c.title, c.tagline, c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta, c.meetAgain, ...Object.values(c.copy), ...Object.values(c.results)]);
+  const keys = new Set([c.name, c.title, ...c.card, ...(c.intro ? [c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta] : []), ...(c.meetAgain ? [c.meetAgain] : []),
+    ...Object.values(c.copy), ...Object.values(c.results), ...Object.values(c.script || {})]);
   for (const value of Object.values(c.lines)) {
     const lists = Array.isArray(value) ? [value] : Object.values(value);
     for (const list of lists) for (const item of list) for (const key of [item].flat()) if (key !== "before" && key !== "after") keys.add(key);
@@ -195,10 +191,78 @@ export function connectionStrength(lex, {prompts, mine}) {
   return total >= 2 ? "strong" : total >= 1.5 ? "good" : total > 0 ? "weak" : "veryWeak";
 }
 
-/** The line a character greets a rematch with (Play again keeps the same character). */
+/** The line a character greets a rematch with (Play again keeps the same character). A scripted character always opens with their start line. */
 export function rematchLine(id, random = Math.random) {
-  const list = character(id).lines.rematch;
+  const c = character(id);
+  if (c.script) return c.script.start;
+  const list = c.lines.rematch;
   return list[Math.floor(random() * list.length)];
+}
+
+// ---------- scripted characters (Milo): one canonical line per game moment ----------
+
+export const SEVERAL_MISSES_AT = 9; // "several misses": said once, on move 9
+export const LONG_TRAIL_AT = 17; // "long word trail": said once, on move 17
+export const TAKING_A_WHILE_MS = 20000; // the player has been thinking this long without playing
+
+/**
+ * Whether the player's word bridges both words in play only indirectly (one step away from each):
+ * the "particularly clever connection" for scripted characters.
+ * @param {{resolve: (word: string) => string | null, concepts: Map<string, {near: Set<string>}>}} lex
+ * @param {{prompts: string[] | null, mine: string}} round
+ */
+export function cleverBridge(lex, {prompts, mine}) {
+  if (!prompts) return false;
+  const id = lex.resolve(mine);
+  const concept = id ? lex.concepts.get(id) : null;
+  if (!concept) return false;
+  return prompts.every(word => {
+    const other = lex.resolve(word);
+    if (!other || other === id || concept.near.has(other)) return false;
+    const near = lex.concepts.get(other)?.near;
+    return Boolean(near && [...concept.near].some(n => near.has(n)));
+  });
+}
+
+/**
+ * A scripted character's reveal result line for a move that didn't match.
+ * @param {MiloScript} script
+ * @param {{strength: Strength, close: boolean, clever: boolean}} round
+ */
+export function scriptedResult(script, {strength, close, clever}) {
+  if (strength === "veryWeak") return script.farApart;
+  if (strength === "strong") return close ? script.confident : script.strong;
+  if (clever) return script.clever;
+  return script.normalMiss;
+}
+
+/**
+ * A scripted character's speech bubble on a reveal, or null. Deterministic: one line per moment.
+ * @param {MiloScript} script
+ * @param {{status: string, move: number, cantUse?: boolean, recent?: string[]}} round
+ *   cantUse: the word the character would have chosen had already been played.
+ * @returns {{when: "after", keys: string[], pool: string} | null}
+ */
+export function scriptedReaction(script, {status, move, cantUse = false, recent = []}) {
+  if (status === "MATCHED") {
+    const key = move <= EARLY_MATCH ? script.fastWin : move >= LATE_MATCH ? script.longWin : script.win;
+    return {when: "after", keys: [key], pool: "match"};
+  }
+  if (status !== "REVEALED") return null;
+  if (cantUse) return {when: "after", keys: [script.cantUse], pool: "cantUse"};
+  if (move === SEVERAL_MISSES_AT && !recent.includes(script.severalMisses)) return {when: "after", keys: [script.severalMisses], pool: "long"};
+  if (move === LONG_TRAIL_AT && !recent.includes(script.longTrail)) return {when: "after", keys: [script.longTrail], pool: "long"};
+  return null;
+}
+
+/**
+ * A scripted character's line above the word box while the player thinks.
+ * @param {MiloScript} script
+ * @param {{move: number, idle?: boolean}} turn
+ */
+export function scriptedHelp(script, {move, idle = false}) {
+  if (idle) return script.takingWhile;
+  return move <= 1 ? script.firstTurn : script.encourage;
 }
 
 /**

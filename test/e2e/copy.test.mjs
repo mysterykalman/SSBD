@@ -29,9 +29,11 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.equal(await page.locator(".hero .hero-rules").innerText(), "You each secretly pick any word. Match and you win. Miss and your two words become the next clue. Keep connecting the dots until your brains finally cooperate.");
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
-  assert.match(solo, /Play Solo\s+We heard you had no friends\.\s+So we lured Gary from Accounting over with the promise of cake\. Milo came anyway\.\s+There is no cake\./);
-  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Let’s play!");
-  assert.match(solo, /Plays offline too\. Fancy\./);
+  // The tile, exactly: title, one line, the button, and nothing else.
+  assert.equal(solo.trim().replace(/\s+/g, " "), "Friends not around? Hang out with Milo or Gary from Accounting. Choose someone");
+  assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Friends not around?");
+  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose someone");
+  assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|We heard you had no friends|There is no cake|Plays offline too/);
   assert.doesNotMatch(solo, /without internet/i);
   const together = await page.locator(".family-card").innerText();
   assert.match(together, /Play Together\s+Choose someone who claims to know you well\.\s+Time to investigate\./);
@@ -43,7 +45,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   await page.click('[data-lang="fr"]');
   assert.match(await page.locator(".hero").innerText(), /Essayez de lire dans les pensées de l’autre\./);
   assert.match(await page.locator(".hero .hero-rules").innerText(), /^Choisissez chacun un mot en secret\. Les mêmes mots[\s\u202f]\? Vous gagnez[\s\u202f]! Sinon, vos deux mots deviennent le prochain indice\. Continuez à faire des liens jusqu’à ce que vos cerveaux coopèrent enfin\.$/);
-  assert.match(await page.locator(".solo-card").innerText(), /Il n’y a pas de gâteau\./);
+  assert.match(await page.locator(".solo-card").innerText(), /^Tes amis ne sont pas là[\s\u202f]\?\s+Passe du temps avec Milo ou Gary de la comptabilité\.\s+Choisis quelqu’un$/);
   assert.match(await page.locator(".family-card").innerText(), /Jouer ensemble/);
   assert.doesNotMatch(await visibleText(page), EMOJI);
   await context.close();

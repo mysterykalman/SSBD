@@ -247,7 +247,7 @@ for (const character of ["gary", "milo"]) {
     await page.click("#lockBtn");
     await page.waitForFunction(() => document.getElementById("formHelp")?.classList.contains("error"));
     const line = (await page.locator("#formHelp").textContent()).trim();
-    assert.equal(line, character === "gary" ? "Already played. Gary checked. Twice." : "Ooh, that one's taken! Got another one?");
+    assert.equal(line, character === "gary" ? "Already played. Gary checked. Twice." : "We used that one already! Try another.");
     const game = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem("ssbd.store")).solo)[0]);
     assert.equal(game.moves.filter(m => m.words).length, 1, "nothing was played");
     await context.close();

@@ -45,5 +45,23 @@ test("the page links the favicon and touch icon, the manifest lists install icon
     return {corner: ctx.getImageData(2, 2, 1, 1).data[3], middle: ctx.getImageData(256, 256, 1, 1).data[3]};
   });
   assert.deepEqual(corner, {corner: 0, middle: 255});
+  // The tab icon is the compact mark made for small sizes (the blue | orange tile with two speech bubbles,
+  // no lettering); the home-screen and Apple icons are the full approved artwork.
+  const tab = await page.evaluate(async () => {
+    const img = new Image();
+    img.src = "/favicon-32.png";
+    await img.decode();
+    const canvas = Object.assign(document.createElement("canvas"), {width: 32, height: 32});
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const at = (x, y) => [...ctx.getImageData(x, y, 1, 1).data];
+    return {left: at(5, 26), right: at(26, 26), bubble: at(10, 13)};
+  });
+  assert.ok(tab.left[2] > 200 && tab.left[0] < 80, `blue left half ${tab.left}`);
+  assert.ok(tab.right[0] > 200 && tab.right[2] < 80, `orange right half ${tab.right}`);
+  assert.ok(tab.bubble.slice(0, 3).every(c => c > 200), `a light speech bubble ${tab.bubble}`);
+  const sizeOf = async path => (await fetch(server.url + path)).arrayBuffer().then(b => b.byteLength);
+  assert.ok(await sizeOf("/favicon-32.png") < 6000, "a simple small icon, not the full artwork squeezed down");
+  assert.ok(await sizeOf("/apple-touch-icon.png") > 20000 && await sizeOf("/icon-512.png") > 100000, "home-screen icons keep the full artwork");
   await context.close();
 });

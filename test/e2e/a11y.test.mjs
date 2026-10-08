@@ -258,7 +258,7 @@ test("language: keyboard toggle, persists across reload, updates lang, keeps the
   // Home in French: the English game is labelled as such in the list.
   await page.click("#backBtn");
   await page.waitForSelector("#startSolo");
-  assert.equal(await page.locator("#startSolo").innerText(), "On joue\u202f!");
+  assert.equal(await page.locator("#startSolo").innerText(), "Choisis quelqu’un");
   assert.match(await page.locator("#gameList").innerText(), /En anglais/);
   assert.doesNotMatch(await page.locator("body").innerText(), /\bSSBD\b/);
   assert.deepEqual(await audit(page), []);
