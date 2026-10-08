@@ -2,13 +2,14 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {CHARACTERS, CHARACTER_IDS, EARLY_MATCH, LATE_MATCH, LONG_TRAIL_AT, REACTION_CHANCE, SEVERAL_MISSES_AT, character, characterId, characterKeys, cleverBridge, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultKey, resultLines, revealKind, rotate, scriptedHelp, scriptedReaction, scriptedResult, scriptedResultPool} from "../src/client/characters.js";
+import {CHARACTERS, CHARACTER_IDS, EARLY_MATCH, LATE_MATCH, LONG_TRAIL_AT, SEVERAL_MISSES_AT, character, characterId, characterKeys, cleverBridge, connectionStrength, copyKey, rematchLine, resultLines, revealKind, rotate, scriptedHelp, scriptedReaction, scriptedResult, scriptedResultPool} from "../src/client/characters.js";
+import {garyBeats, oneOffKeys} from "../src/client/gary-narrative.js";
 import {STRINGS} from "../src/client/i18n.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {seededRandom} from "../src/shared/rules.js";
 
 // Titles, picker cards, Milo's script and each character's wording of shared Solo sentences may be longer than a quick remark.
-const LONG_OK = new Set(["garyIntroCta", "garyTitle", "garyMeetAgain", ...CHARACTER_IDS.flatMap(id => [...CHARACTERS[id].card, ...Object.values(CHARACTERS[id].copy), ...Object.values(CHARACTERS[id].results).flat(), ...Object.values(CHARACTERS[id].script || {}), ...Object.values(CHARACTERS[id].pools || {}).flat(), ...CHARACTERS[id].rating])]);
+const LONG_OK = new Set([...characterKeys("gary").filter(key => key.startsWith("gn.")), "garyIntroCta", "garyTitle", "garyMeetAgain", ...CHARACTER_IDS.flatMap(id => [...CHARACTERS[id].card, ...Object.values(CHARACTERS[id].copy), ...Object.values(CHARACTERS[id].results).flat(), ...Object.values(CHARACTERS[id].script || {}), ...Object.values(CHARACTERS[id].pools || {}).flat(), ...CHARACTERS[id].rating])]);
 
 // Milo's approved script, word for word: one fixed line per milestone moment (ordinary result
 // lines start their pools with the original line; see MILO_POOLS).
@@ -40,18 +41,8 @@ const MILO_POOLS = {
   farApart: ["Huh. I was not expecting that.", "Huh. Let’s see where that takes us."],
   general: ["Wait, okay, I can work with that.", "Ohhh, I think I see it.", "That was not where my brain went.", "Okay, this could get interesting.", "Hang on. I have an idea."]
 };
-// Gary's result pools, word for word (the first line of each is the original).
-const GARY_RESULTS = {
-  opening: ["Okay. That's a start."],
-  strong: ["That was annoyingly good.", "Annoyingly, that works.", "I was hoping that wouldn’t make sense."],
-  good: ["Okay. That actually makes sense.", "Fine. I can follow that.", "That’s more reasonable than I expected."],
-  weak: ["Gary has questions.", "I’m going to need you to explain yourself."],
-  veryWeak: ["That feels legally questionable.", "I’m going to need you to explain yourself."]
-};
-const GARY_NEW_REACTIONS = ["that’s one way to get there", "I’m writing that down for legal reasons", "sure. why not.", "I don’t remember agreeing to this", "that somehow made things worse"];
 // Milo's previous writing, which must be gone everywhere.
 const OLD_MILO = ["Hi! I'm Milo!", "I LOVE words.", "Let's go go go!", "(I'm ready.)", "Ready. Probably too ready.", "Say hi to", "Let's play, Milo!", "let's gooo", "boing", "wiggling", "thinking hat", "socks", "snack thought", "happy spin", "wheee", "SO close", "almost twins", "wavelength", "plot twist", "I love a surprise", "still going! love it", "totally do this", "already?! amazing", "PHEW", "never gave up", "same word! same word!", "best. day. ever", "I was hoping you'd say that", "I stretched", "SO fun", "again tomorrow", "Ooh, that one's taken", "Keep going!", "Let's gooo!", "super fast", "REALLY ready", "big leap", "still grinning", "What a word adventure", "Ooh, nice connection"];
-const flat = list => list.flat().filter(key => key !== "before" && key !== "after");
 
 test("Gary and Milo share one config system: id, name, card, avatar, personality, voice; Gary's pools, Milo's script", () => {
   assert.deepEqual(CHARACTER_IDS, ["gary", "milo"]);
@@ -63,11 +54,14 @@ test("Gary and Milo share one config system: id, name, card, avatar, personality
     assert.ok(c.personality);
     assert.equal(c.card.length, 2, `${id} has a two-line picker card`);
   }
+  // Gary: his branching narrative (src/client/gary-narrative.js), no random reaction pools at all.
   const gary = CHARACTERS.gary;
-  for (const pool of ["close", "strange", "earlyMatch", "lateMatch", "win", "rematch", "middle", "nearEnd"]) assert.ok(gary.lines[pool].length, `gary.${pool}`);
-  assert.ok(Object.values(gary.lines.mismatch).flat().length >= 10, "Gary has plenty of mismatch lines");
-  assert.equal(gary.lines.gameOver.length, 2);
-  assert.equal(gary.script, undefined, "Gary keeps his own script and pools");
+  assert.equal(gary.narrative, true);
+  for (const pool of ["close", "strange", "earlyMatch", "lateMatch", "win", "middle", "nearEnd", "gameOver"]) assert.deepEqual(gary.lines[pool], [], `gary.${pool} is empty`);
+  assert.deepEqual(Object.values(gary.lines.mismatch), []);
+  assert.deepEqual(gary.results, {});
+  assert.equal(gary.lines.rematch.length, 4);
+  assert.equal(gary.script, undefined);
   // Milo: a script with exactly one key per approved moment, plus his own rotating ordinary pools.
   const milo = CHARACTERS.milo;
   assert.deepEqual(Object.keys(milo.script).sort(), Object.keys(MILO_SCRIPT).sort());
@@ -103,7 +97,6 @@ test("every character line exists in English and French, short and simple; the c
   // The deliberately odd line stays odd.
   assert.equal(STRINGS.en.garyIntro2, "I do words now.");
   assert.equal(STRINGS.fr.garyIntro2, "Je fais des mots maintenant.");
-  assert.equal(STRINGS.en.garySameTime, "...same time tomorrow?");
 });
 
 test("the choice is personality, never difficulty, age or machine", () => {
@@ -113,7 +106,8 @@ test("the choice is personality, never difficulty, age or machine", () => {
       const value = STRINGS[lang][key];
       assert.doesNotMatch(value, /typing|tape un message|online|en ligne|joined|rejoint|connected|connecté|\bbot\b|robot|computer|ordinateur/i, `${lang}.${key}`);
       assert.doesNotMatch(value, /\b(AI|IA|CPU)\b/, `${lang}.${key}`);
-      assert.doesNotMatch(value, /\b(easy|hard|difficult\w*|level|kids?|child\w*|baby|facile|difficile|niveau|enfants?|bébé)\b/i, `${lang}.${key}: ${value}`);
+      // (Gary's in-game narrative may say "level of expectation"; the choice itself never mentions difficulty.)
+      if (!key.startsWith("gn.")) assert.doesNotMatch(value, /\b(easy|hard|difficult\w*|level|kids?|child\w*|baby|facile|difficile|niveau|enfants?|bébé)\b/i, `${lang}.${key}: ${value}`);
     }
     for (const value of Object.values(STRINGS[lang])) assert.doesNotMatch(value, /\bbot\b|robot|\bpip\b/i, `"bot"/"robot"/"Pip" in ${lang} copy: ${value}`);
   }
@@ -151,12 +145,13 @@ test("shared Solo copy suits both characters; each character's own wording keeps
   for (const lang of ["en", "fr"]) {
     for (const key of shared) assert.doesNotMatch(STRINGS[lang][key], /gary|milo|comptab|accounting|\b(he|his|him|il|lui)\b/i, `${lang}.${key}: ${STRINGS[lang][key]}`);
     // The homepage tile introduces both of them.
-    assert.match(STRINGS[lang].soloBody, /Gary/);
+    assert.match(STRINGS[lang].soloBody2, /Gary/);
     assert.match(STRINGS[lang].soloBody, /Milo/);
   }
-  assert.equal(STRINGS.en.soloTitle, "Friends not around?");
-  assert.equal(STRINGS.en.soloBody, "Hang out with Milo or Gary from Accounting.");
-  assert.equal(STRINGS.en.soloStart, "Choose someone");
+  assert.equal(STRINGS.en.soloTitle, "Solo Play");
+  assert.equal(STRINGS.en.soloBody, "Milo finished his homework early, so now he’s free to play.");
+  assert.equal(STRINGS.en.soloBody2, "We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building.");
+  assert.equal(STRINGS.en.soloStart, "Choose your player");
   for (const id of CHARACTER_IDS) {
     const other = CHARACTER_IDS.find(x => x !== id);
     for (const [base, own] of Object.entries(CHARACTERS[id].copy)) {
@@ -187,39 +182,27 @@ test("shared Solo copy suits both characters; each character's own wording keeps
 test("an already-played word: one plain Together message, and each character's own short line in Solo", () => {
   assert.equal(STRINGS.en.errALREADY_USED, "That word has already been played.");
   assert.equal(STRINGS.fr.errALREADY_USED, "Ce mot a déjà été joué.");
-  assert.equal(copyKey("gary", "errALREADY_USED"), "garyAlreadyUsed");
   assert.equal(copyKey("milo", "errALREADY_USED"), "miloAlreadyUsed");
-  assert.equal(STRINGS.en.garyAlreadyUsed, "Already played. Gary checked. Twice.");
   assert.equal(STRINGS.en.miloAlreadyUsed, "We used that one already! Try another.");
+  // Gary rotates through his four exact lines (see gary-narrative.test.mjs).
+  assert.deepEqual(oneOffKeys("alreadyUsed").map(key => STRINGS.en[key]), ["We already used that one. I checked.", "That word’s already been played. Unfortunately, I remember.", "We used that already. Try another one.", "Already played. I have notes."]);
   for (const lang of ["en", "fr"]) {
-    for (const key of ["errALREADY_USED", "garyAlreadyUsed", "miloAlreadyUsed"]) assert.ok(STRINGS[lang][key].length <= 50, `${lang}.${key} is short enough for gameplay`);
-    assert.doesNotMatch(STRINGS[lang].garyAlreadyUsed, /!/, "Gary does not exclaim");
+    for (const key of ["errALREADY_USED", "miloAlreadyUsed", ...oneOffKeys("alreadyUsed")]) assert.ok(STRINGS[lang][key].length <= 70, `${lang}.${key} is short enough for gameplay`);
+    for (const key of oneOffKeys("alreadyUsed")) assert.doesNotMatch(STRINGS[lang][key], /!/, "Gary does not exclaim");
     assert.match(STRINGS[lang].miloAlreadyUsed, /!/, "Milo does");
   }
 });
 
-test("Gary's reveal result follows how well the word fits", () => {
+test("connection strength (what Gary's narrative reads): opening, strong, good, weak, very weak", () => {
   const lex = getLexicon("en");
   const cases = [[null, "beach", "opening"], [["sand", "shell"], "beach", "strong"], [["sand", "shell"], "castle", "good"], [["jogging", "sea"], "sport", "weak"], [["sand", "shell"], "violin", "veryWeak"], [["sand", "shell"], "qwzzk", "veryWeak"]];
   for (const [prompts, mine, strength] of cases) assert.equal(connectionStrength(lex, {prompts, mine}), strength, `${prompts}: ${mine}`);
-  for (const [strength, texts] of Object.entries(GARY_RESULTS)) {
-    assert.deepEqual(CHARACTERS.gary.results[strength].map(key => STRINGS.en[key]), texts, strength);
-    for (let index = 0; index < 6; index++) assert.ok(texts.includes(STRINGS.en[resultKey("gary", strength, {seed: "g", index})]), strength);
-  }
-  // After "That was annoyingly good." Gary never also remarks "that's annoyingly good".
-  assert.deepEqual(resultAvoid("gary", "strong"), ["garyAnnoyinglyGood"]);
-  for (let i = 0; i < 500; i++) {
-    const pick = pickReaction({character: "gary", status: "REVEALED", move: 4, recent: resultAvoid("gary", "strong"), random: seededRandom(i)});
-    assert.notDeepEqual(pick?.keys, ["garyAnnoyinglyGood"]);
-  }
 });
 
 test("Gary's voice: dry, reluctant, understated; never excited, gloomy or mean; not all accounting jokes", () => {
   const c = CHARACTERS.gary;
   // Everything Gary himself says (system sentences in his wording included, minus their neutral instruction part).
-  const said = [...flat(Object.values(c.lines.mismatch).flat()), ...flat(c.lines.close), ...flat(c.lines.strange), ...c.lines.middle, ...c.lines.nearEnd,
-    ...flat([...c.lines.earlyMatch, ...c.lines.lateMatch, ...c.lines.win]), ...c.lines.rematch, ...c.lines.gameOver, ...Object.values(c.results).flat(),
-    ...Object.values(c.copy), ...c.intro.lines];
+  const said = [...characterKeys("gary").filter(key => key.startsWith("gn.")), ...Object.values(c.copy), ...c.intro.lines];
   for (const lang of ["en", "fr"]) {
     for (const key of said) {
       const text = STRINGS[lang][key].replace(/^(Type any word you like|Tape le mot que tu veux)\. /, "").replace(/ (Then you both reveal|Ensuite, vous révélez vos mots en même temps)[\s\u202f]?!$/, "");
@@ -235,92 +218,6 @@ test("Gary's voice: dry, reluctant, understated; never excited, gloomy or mean; 
   // Gary and Milo never share a line of dialogue.
   const milo = new Set(characterKeys("milo").map(key => STRINGS.en[key].toLowerCase()));
   for (const key of said) assert.ok(!milo.has(STRINGS.en[key].toLowerCase()), key);
-  // Win: Gary is not suddenly excited.
-  assert.ok(c.lines.win.some(([, key]) => key === "garyImpressive"));
-  assert.equal(STRINGS.en.garyImpressive, "well. that's inconveniently impressive");
-});
-
-test("Gary speaks on roughly a third of ordinary reveals, and only from his own pools", () => {
-  for (const id of ["gary"]) {
-    const own = new Set(characterKeys(id));
-    const random = seededRandom(7);
-    let spoke = 0;
-    const runs = 4000;
-    for (let i = 0; i < runs; i++) {
-      const pick = pickReaction({character: id, status: "REVEALED", move: 3, recent: [], random});
-      if (!pick) continue;
-      spoke++;
-      assert.equal(pick.pool, "mismatch");
-      for (const key of pick.keys) assert.ok(own.has(key), `${id} said ${key}`);
-    }
-    const rate = spoke / runs;
-    assert.ok(rate > 0.25 && rate < 0.35, `${id} rate ${rate} (target ${REACTION_CHANCE})`);
-  }
-});
-
-test("each moment uses Gary's own pool: close, strange, early match, match, late match, long game, rematch", () => {
-  for (const id of ["gary"]) {
-    const {lines} = CHARACTERS[id];
-    const other = CHARACTER_IDS.find(x => x !== id);
-    const foreign = new Set(characterKeys(other));
-    const random = seededRandom(5);
-    const seen = {};
-    for (let i = 0; i < 2000; i++) {
-      for (const [args, pool, expected] of [
-        [{status: "REVEALED", move: 4, kind: "close"}, "close", flat(lines.close)],
-        [{status: "REVEALED", move: 4, kind: "strange"}, "strange", flat(lines.strange)],
-        [{status: "MATCHED", move: 1}, "earlyMatch", flat(lines.earlyMatch)],
-        [{status: "MATCHED", move: EARLY_MATCH}, "earlyMatch", flat(lines.earlyMatch)],
-        [{status: "MATCHED", move: 7}, "win", flat(lines.win)],
-        [{status: "MATCHED", move: LATE_MATCH}, "lateMatch", flat(lines.lateMatch)],
-        [{status: "MATCHED", move: 20}, "lateMatch", flat(lines.lateMatch)]
-      ]) {
-        const pick = pickReaction({character: id, ...args, recent: [], random});
-        if (!pick) continue;
-        assert.equal(pick.pool, pool, `${id} ${JSON.stringify(args)}`);
-        for (const key of pick.keys) {
-          assert.ok(expected.includes(key), `${id} ${pool}: ${key}`);
-          assert.ok(!foreign.has(key), `${id} never says ${other}'s lines`);
-        }
-        seen[pool] = (seen[pool] || 0) + 1;
-      }
-    }
-    for (const pool of ["close", "strange", "earlyMatch", "win", "lateMatch"]) assert.ok(seen[pool] > 100, `${id} ${pool} used`);
-    // Matches get a line about 70% of the time, close/strange answers a bit more often than ordinary ones.
-    assert.equal(pickReaction({character: id, status: "EXHAUSTED", move: 20, recent: [], random: () => 0}), null);
-    assert.deepEqual(pickReaction({character: id, status: "REVEALED", move: 10, recent: [], random: () => 0}).keys, lines.middle);
-    assert.notDeepEqual(pickReaction({character: id, status: "REVEALED", move: 10, recent: lines.middle, random: () => 0})?.keys, lines.middle);
-    assert.deepEqual(pickReaction({character: id, status: "REVEALED", move: 18, recent: [], random: () => 0}).keys, lines.nearEnd);
-    assert.equal(pickReaction({character: id, status: "REVEALED", move: 3, recent: [], random: () => 0.99}), null);
-    assert.ok(lines.rematch.includes(rematchLine(id, () => 0)) && lines.rematch.includes(rematchLine(id, () => 0.99)));
-  }
-  // A match line is "..." then one of his win lines; no character means Gary.
-  const win = pickReaction({character: "gary", status: "MATCHED", move: 5, recent: [], random: () => 0}).keys;
-  assert.equal(win[0], "garyDots");
-  assert.ok(CHARACTERS.gary.lines.win.some(([, key]) => key === win[1]));
-  const noCharacter = pickReaction({status: "REVEALED", move: 1, recent: [], random: () => 0.1, gameId: "x"});
-  assert.deepEqual(noCharacter, pickReaction({character: "gary", status: "REVEALED", move: 1, recent: [], random: () => 0.1, gameId: "x"}), "no character means Gary");
-});
-
-test("Gary's reactions avoid recent repeats", () => {
-  for (const id of ["gary"]) {
-    const random = seededRandom(11);
-    const all = new Set(Object.values(CHARACTERS[id].lines.mismatch).flat().map(([key]) => key));
-    let recent = [];
-    let repeats = 0, said = 0;
-    for (let i = 0; i < 3000; i++) {
-      const pick = pickReaction({character: id, status: "REVEALED", move: 4, recent, random});
-      if (!pick) continue;
-      said++;
-      assert.equal(pick.keys.length, 1);
-      assert.ok(all.has(pick.keys[0]));
-      assert.ok(pick.when === "before" || pick.when === "after");
-      if (recent.includes(pick.keys[0])) repeats++;
-      recent = [...recent, ...pick.keys].slice(-6);
-    }
-    assert.ok(said > 500);
-    assert.equal(repeats, 0, `a line ${id} used recently is not picked again`);
-  }
 });
 
 test("Milo's script is wired to each game moment: fixed milestone lines, ordinary results from his pools", () => {
@@ -378,28 +275,20 @@ test("revealKind: close when the two answers are connected, strange when the pla
 });
 
 test("characters are presentation only: no game, bot, storage or network code; picks are pure", async () => {
-  for (const file of ["characters.js", "gary.js"]) {
+  for (const file of ["characters.js", "gary.js", "gary-narrative.js"]) {
     const source = await readFile(new URL(`../src/client/${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /from "\.\.\/shared\/|from "\.\/store|fetch\(|\/api\//, file);
+    // Gary's narrative stores nothing: every beat is re-derived from the game itself.
+    if (file === "gary-narrative.js") assert.doesNotMatch(source, /localStorage|sessionStorage|import /, file);
   }
-  for (const id of CHARACTER_IDS) {
-    const a = pickReaction({character: id, status: "REVEALED", move: 6, kind: "close", recent: ["garyFine"], random: seededRandom(42)});
-    const b = pickReaction({character: id, status: "REVEALED", move: 6, kind: "close", recent: ["garyFine"], random: seededRandom(42)});
-    assert.deepEqual(a, b);
-  }
+  const rounds = [{number: 1, status: "REVEALED", strength: "opening", kind: null}, {number: 2, status: "REVEALED", strength: "good", kind: "close"}];
+  assert.deepEqual(garyBeats("g", rounds), garyBeats("g", rounds));
+  const a = scriptedReaction(CHARACTERS.milo.script, {status: "REVEALED", move: 6, random: seededRandom(42), gameId: "m"});
+  const b = scriptedReaction(CHARACTERS.milo.script, {status: "REVEALED", move: 6, random: seededRandom(42), gameId: "m"});
+  assert.deepEqual(a, b);
 });
 
 // ---------- rotating reaction pools ----------
-
-test("Gary has his new general reactions in fitting pools, and several ordinary variants; so does Milo", () => {
-  const gary = CHARACTERS.gary;
-  const mismatch = Object.values(gary.lines.mismatch).flat().map(([key]) => STRINGS.en[key]);
-  for (const text of GARY_NEW_REACTIONS) assert.ok(mismatch.includes(text), text);
-  // The new ones never land in the grudging-praise mood (competitive).
-  for (const [key] of gary.lines.mismatch.competitive) assert.ok(!GARY_NEW_REACTIONS.includes(STRINGS.en[key]));
-  for (const pool of ["strong", "good"]) assert.ok(gary.results[pool].length >= 3, `gary.${pool}`);
-  assert.ok(CHARACTERS.milo.pools.general.length >= 5 && CHARACTERS.milo.pools.strong.length >= 3 && CHARACTERS.milo.pools.good.length >= 3);
-});
 
 test("rotation: no line repeats until the pool is used up, never twice in a row, and games start at different lines", () => {
   const list = ["a", "b", "c", "d", "e"];
@@ -415,38 +304,13 @@ test("rotation: no line repeats until the pool is used up, never twice in a row,
   assert.equal(rotate(["only"], {seed: "g", index: 3, avoid: ["only"]}), "only");
 });
 
-test("Gary's ordinary remarks cycle through a mood before repeating, and weak words never get grudging praise", () => {
-  for (const gameId of ["one", "two", "three"]) {
-    const counts = {};
-    const turn = pool => (counts[pool] = (counts[pool] ?? -1) + 1);
-    const said = [];
-    for (let move = 2; move < 40; move++) {
-      const pick = pickReaction({character: "gary", status: "REVEALED", move: 4, strength: "weak", recent: [], random: () => 0, gameId, turn});
-      said.push(pick.keys[0]);
-    }
-    for (let i = 1; i < said.length; i++) assert.notEqual(said[i], said[i - 1], `${gameId}: no immediate repeat`);
-    const praise = new Set(CHARACTERS.gary.lines.mismatch.competitive.map(([key]) => key));
-    assert.ok(said.every(key => !praise.has(key)), "weak → no grudging praise");
-    // Each mood's lines are all used before any of them repeats.
-    const byMood = {};
-    for (const key of said) {
-      const mood = Object.entries(CHARACTERS.gary.lines.mismatch).find(([, lines]) => lines.some(([k]) => k === key))[0];
-      (byMood[mood] ||= []).push(key);
-    }
-    for (const [mood, keys] of Object.entries(byMood)) {
-      const size = CHARACTERS.gary.lines.mismatch[mood].length;
-      assert.equal(new Set(keys.slice(0, size)).size, Math.min(size, keys.length), `${gameId} ${mood}`);
-    }
-  }
-});
-
 test("result lines: strong stays strong, weak stays weak, each pool rotates, and a reload gives the same lines", () => {
   const rounds = [
     {strength: "strong", close: false, clever: false}, {strength: "strong", close: false, clever: false}, {strength: "good", close: false, clever: false},
     {strength: "strong", close: false, clever: false}, {strength: "weak", close: false, clever: false}, {strength: "veryWeak", close: false, clever: false},
     {strength: "weak", close: false, clever: false}, {strength: "good", close: false, clever: false}, {strength: "good", close: false, clever: false}
   ];
-  for (const id of CHARACTER_IDS) {
+  for (const id of ["milo"]) { // Gary has no result pools: his narrative covers the reveal
     const c = CHARACTERS[id];
     const poolOf = round => (c.script ? scriptedResultPool(round) : round.strength);
     const listOf = round => (c.script ? c.pools[poolOf(round)] : c.results[round.strength]);
@@ -464,18 +328,18 @@ test("result lines: strong stays strong, weak stays weak, each pool rotates, and
     const weakTexts = (c.script ? [...c.pools.weak, ...c.pools.farApart] : [...c.results.weak, ...c.results.veryWeak]).map(k => STRINGS.en[k]);
     for (const text of weakTexts) assert.ok(!strongTexts.has(text), `${id}: "${text}" is both weak and strong`);
   }
-  const firsts = new Set(["g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8"].map(gameId => resultLines("gary", gameId, [rounds[0]])[0]));
+  const firsts = new Set(["g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8"].map(gameId => resultLines("milo", gameId, [rounds[0]])[0]));
   assert.ok(firsts.size >= 2, "games do not all open with the same strong line");
 });
 
 test("Gary never gets Milo's lines and Milo never gets Gary's, in every pool", () => {
   const garyKeys = new Set(characterKeys("gary")), miloKeys = new Set(characterKeys("milo"));
-  for (const key of garyKeys) assert.ok(!miloKeys.has(key) || key === "garyDots", key);
+  for (const key of garyKeys) assert.ok(!miloKeys.has(key), key);
   const garyTexts = new Set([...garyKeys].map(k => STRINGS.en[k])), miloTexts = new Set([...miloKeys].map(k => STRINGS.en[k]));
   for (const text of miloTexts) assert.ok(!garyTexts.has(text), text);
   for (let i = 0; i < 200; i++) {
-    const g = pickReaction({character: "gary", status: "REVEALED", move: 5, random: seededRandom(i), gameId: `g${i}`, turn: () => i});
-    if (g) for (const key of g.keys) assert.ok(garyKeys.has(key), key);
+    const rounds = [{number: 1, status: "REVEALED", strength: "opening", kind: null}, {number: 2, status: i % 2 ? "MATCHED" : "REVEALED", strength: "strong", kind: null}];
+    for (const beat of garyBeats(`g${i}`, rounds)) for (const key of [beat.before, beat.after, beat.extra].filter(Boolean)) assert.ok(garyKeys.has(key) && !miloKeys.has(key), key);
     const m = scriptedReaction(CHARACTERS.milo.script, {status: "REVEALED", move: 5, random: seededRandom(i), gameId: `m${i}`, turn: () => i});
     if (m) for (const key of m.keys) assert.ok(miloKeys.has(key) && !garyKeys.has(key), key);
   }

@@ -2,12 +2,10 @@
 // and the chosen character replaces every Gary label, avatar and line for that game.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, lockIn, soloRecord, startServer, startSolo} from "./helpers.mjs";
+import {botWord, garyBeat, launch, lockIn, soloRecord, startServer, startSolo} from "./helpers.mjs";
 import {CHARACTERS} from "../../src/client/characters.js";
 import {STRINGS} from "../../src/client/i18n.js";
-// Gary's ordinary remarks (which one is the game's rotation; see characters.js rotate).
-const GARY_REMARKS = Object.values(CHARACTERS.gary.lines.mismatch).flat().map(([key]) => STRINGS.en[key]);
-const isGaryRemark = text => GARY_REMARKS.includes(text.split("\n")[0].replace(/^Gary:\s*/i, "").trim());
+import {oneOffKeys} from "../../src/client/gary-narrative.js";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -25,15 +23,16 @@ const allText = page => page.evaluate(() => [document.body.textContent,
   ...[...document.querySelectorAll("[aria-label], [alt], [title]")].map(el => `${el.getAttribute("aria-label") || ""} ${el.getAttribute("alt") || ""} ${el.getAttribute("title") || ""}`)].join(" "));
 const portrait = (page, selector) => page.locator(selector).first().evaluate(el => el.querySelector("img")?.className || el.className);
 
-test("the homepage tile: 'Friends not around?', Gary and Milo side by side at the same size, 'Choose someone' opens the picker", async () => {
+test("the homepage tile: 'Solo Play', Gary and Milo side by side at the same size, 'Choose your player' opens the picker", async () => {
   for (const viewport of [{width: 390, height: 844}, {width: 1280, height: 860}]) {
     const context = await browser.newContext({viewport, reducedMotion: "reduce"});
     const page = await context.newPage();
     await page.goto(server.url);
     await page.waitForSelector("#startSolo");
-    assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Friends not around?");
-    assert.equal((await page.locator(".solo-card .start-copy").innerText()).trim(), "Hang out with Milo or Gary from Accounting.");
-    assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose someone");
+    assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play");
+    assert.deepEqual((await page.locator(".solo-card .start-copy p").allInnerTexts()).map(x => x.trim()), ["Milo finished his homework early, so now he’s free to play.",
+      "We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building."]);
+    assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your player");
     assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|Plays offline too|We heard you had no friends/);
     // Both portraits (the existing artwork), the same size, side by side, neither on top of the other.
     const pair = await page.$$eval("#soloPair .badge", badges => badges.map(b => ({art: b.querySelector("img")?.className || "", box: b.getBoundingClientRect().toJSON()})));
@@ -118,24 +117,26 @@ test("choosing Gary: the game shows Gary, exactly as before", async () => {
   await page.waitForSelector("#revealContinue");
   const garyModal = await page.locator("#revealModal").innerText();
   assert.match(garyModal, /GARY.S WORD/);
-  // Gary's reveal: his dry result line and next pair; the button stays plain.
-  assert.match(garyModal, /Okay\. That's a start\./, "move 1 has nothing to connect yet");
+  // Gary's reveal: one opening beat (before, then after the words), and his wording of the next pair.
+  const first = await garyBeat(page);
+  assert.equal(first.branch, "opening", `${first.before} / ${first.after}`);
+  assert.equal(await page.locator("#revealModal .rv-outcome").count(), 0, "his AFTER line is the reaction; no separate result line");
   assert.match(garyModal, /Fine\. Now try \S+ \+ \S+\./);
   assert.doesNotMatch(garyModal, /Nice connection|On we go/);
-  for (const line of await page.locator("#revealModal .rv-outcome, #revealModal .rv-next").allInnerTexts()) assert.doesNotMatch(line, /!/, `Gary does not exclaim: ${line}`);
+  for (const line of await page.locator("#revealModal .gary-says, #revealModal .rv-next").allInnerTexts()) assert.doesNotMatch(line, /!/, `Gary does not exclaim: ${line}`);
   assert.match(await portrait(page, "#revealModal .rv-word.gary small"), /art-gary/);
   assert.match(await portrait(page, "#garyLine"), /art-gary/);
-  assert.ok(isGaryRemark(await page.locator("#garyLine .gary-bubble").innerText()), "one of Gary's remarks");
+  assert.match(await portrait(page, "#garyBefore"), /art-gary/);
   assert.equal((await page.locator("#revealContinue").innerText()).trim(), "Keep playing");
   await page.click("#revealContinue");
   await page.waitForSelector("#revealModal", {state: "detached"});
-  // Move 2: the result line now reflects how well the word fit the pair (one of Gary's tier lines).
+  // Move 2: his beat now follows how the game is going.
   const second = await botWord(page);
   await lockIn(page, second.toLowerCase() === "violin" ? "trumpet" : "violin", {reveal: false});
   await page.waitForSelector("#revealContinue");
-  // One of Gary's result lines for a scored move (which one: how well the word fit, and the game's rotation).
-  const garyResults = ["strong", "good", "weak", "veryWeak"].flatMap(strength => CHARACTERS.gary.results[strength]).map(key => STRINGS.en[key]);
-  assert.ok(garyResults.includes((await page.locator("#revealModal .rv-outcome").innerText()).trim()));
+  // Move 2: a beat from the branch this game's direction calls for (never the opening again).
+  const second2 = await garyBeat(page);
+  assert.ok(second2.branch && second2.branch !== "opening", `${second2.before} / ${second2.after}`);
   assert.match(await portrait(page, "#garyLine"), /art-gary/, "Gary's remark on move 2 is still Gary's");
   assert.doesNotMatch(await page.locator("#garyLine .gary-bubble").innerText(), MILO_LINES);
   assert.doesNotMatch(await allText(page), /milo/i);
@@ -228,7 +229,8 @@ test("the built app: the new cards are in it; the old tile copy and Milo's old w
   }
   assert.ok(bundle.includes("We heard you had no friends, so we lured Gary over from Accounting with the promise of cake."));
   assert.ok(bundle.includes("been waiting, like, all day."), "Milo's card");
-  assert.ok(bundle.includes("Hang out with Milo or Gary from Accounting.") && bundle.includes("Friends not around?") && bundle.includes("Choose someone"));
+  assert.ok(bundle.includes("Solo Play") && bundle.includes("Choose your player") && bundle.includes("HR said this counts as team building."));
+  for (const old of ["Hang out with Milo or Gary from Accounting.", "Friends not around?", "Choose someone who claims to know you well.", "Time to investigate."]) assert.ok(!bundle.includes(old), `"${old}" is still in the app`);
 });
 
 test("the choice is remembered and preselected; Play again keeps Milo and he greets the rematch", async () => {
@@ -293,7 +295,7 @@ test("Gary's rematch: Play again keeps Gary, with one of his own greetings", asy
   await page.click("#newGameBtn");
   await page.waitForSelector("#rematchLine");
   assert.equal((await soloRecord(page)).character, "gary");
-  assert.match(await page.locator("#rematchLine").innerText(), /again\? fine\.|round two\. I brought a pen\./);
+  assert.ok(oneOffKeys("rematch").map(key => STRINGS.en[key]).includes((await page.locator("#rematchLine .gary-bubble").innerText()).replace(/^Gary:\s*/, "").trim()), "one of his four rematch lines");
   assert.match(await portrait(page, "#rematchLine"), /art-gary/);
   assert.doesNotMatch(await allText(page), /milo/i);
   await context.close();

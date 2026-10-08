@@ -5,6 +5,8 @@ import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
 import pg from "pg";
 import {botWord, launch, lockIn, noHorizontalScroll, playDistinct, startServer, startSolo} from "./helpers.mjs";
+import {pairKeys} from "../../src/client/gary-narrative.js";
+import {STRINGS} from "../../src/client/i18n.js";
 
 const TOKEN = "e2e-review-token-not-a-secret";
 let server, browser, sql;
@@ -44,12 +46,15 @@ test("Gary's and Milo's win cards: their own avatar and win line, the progress r
     assert.equal((await page.locator("#winMove").innerText()).trim(), "Matched on move 2");
     // The win line is the character's own (Milo: his fixed fast-win line; Gary: one of his early-match lines).
     const said = (await page.locator("#winReaction .wc-bubble").first().innerText()).replace(/^\w+:\s*/, "").trim();
+    const postWin = (await page.locator("#postWinLine").innerText()).replace(/^\w+:\s*/, "").trim();
     if (who === "milo") {
       assert.equal(said, "Already?! Okay, we’re good at this.");
       assert.equal((await page.locator("#postWinLine").innerText()).replace(/^Milo:\s*/, "").trim(), "That was fun. Again?");
     } else {
-      assert.equal(said, "already? huh");
-      assert.equal(await page.locator("#postWinLine").count(), 0);
+      // Gary: the AFTER line of his fast-win pair, then that same pair's POST-WIN line.
+      const fast = ["a", "b", "c"].map(p => pairKeys("fastWin", p));
+      const pair = fast.find(k => STRINGS.en[k.after] === said && STRINGS.en[k.extra] === postWin);
+      assert.ok(pair, `${said} / ${postWin}`);
     }
     // Progress rail unchanged: matched on move 2, two stones reached.
     assert.match(await page.locator(".progress").innerText(), /Matched on move 2!/);

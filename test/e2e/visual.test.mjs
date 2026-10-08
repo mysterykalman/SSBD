@@ -75,7 +75,8 @@ async function checkReveal(page, where, word) {
   const box = await page.evaluate(() => {
     const dlg = document.querySelector("dialog#revealModal[open]");
     const r = dlg && dlg.getBoundingClientRect();
-    const parts = ["rv-kicker", "rv-word", "op", "rv-outcome", "rv-continue"].filter(c => !dlg?.querySelector(`.${c}`));
+    // The result: the outcome line, or Gary's AFTER line in his speech bubble (his narrative replaces it).
+    const parts = ["rv-kicker", "rv-word", "op", "rv-outcome", "rv-continue"].filter(c => !dlg?.querySelector(c === "rv-outcome" ? ".rv-outcome, #garyLine" : `.${c}`));
     return r && {left: r.left, right: r.right, top: r.top, bottom: r.bottom, vw: document.documentElement.clientWidth, vh: innerHeight, missing: parts};
   });
   assert.ok(box, `${where}: reveal modal open`);
@@ -147,7 +148,8 @@ test("visual: the game-over screen (20 moves) is tidy, lit up and offers the thr
     assert.equal(await page.getAttribute("[role=progressbar]", "aria-valuenow"), "20");
     assert.match(await page.locator(".progress").innerText(), /All 20 moves played!/);
     assert.equal(await page.locator(".gary-end").count(), 1, "sleepy Gary rests on the Solo game-over screen");
-    assert.match(await page.locator("#garyBye").innerText(), /finally[\s\S]*same time tomorrow\?/);
+    // Gary's FOLLOW-UP from his 20-move beat (one of three exact lines).
+    assert.match(await page.locator("#garyBye").innerText(), /two people can think near each other|suspiciously close to teamwork|formally conclude whatever this was/);
     await check(page, `game over ${viewport.width}`);
     if (SHOTS) await page.screenshot({path: `${SHOTS}/visual-gameover-${viewport.width}.png`, fullPage: true});
     // View history scrolls to and focuses the trail.

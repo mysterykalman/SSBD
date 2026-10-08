@@ -1,13 +1,8 @@
-// Gary from Accounting: the Solo opponent's presentation. These tests check the character
+// Gary from Accounting: the Solo teammate's presentation. These tests check the character
 // never changes the game, never leaks into family games, and stays accessible.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, joinRoom, launch, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
-import {CHARACTERS} from "../../src/client/characters.js";
-import {STRINGS} from "../../src/client/i18n.js";
-// Gary's ordinary remarks (which one is the game's rotation; see characters.js rotate).
-const GARY_REMARKS = Object.values(CHARACTERS.gary.lines.mismatch).flat().map(([key]) => STRINGS.en[key]);
-const isGaryRemark = text => GARY_REMARKS.includes(text.split("\n")[0].replace(/^Gary:\s*/i, "").trim());
+import {botWord, garyBeat, joinRoom, launch, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -27,7 +22,8 @@ test("first Solo game introduces Gary once; the intro can be reopened from the p
   await startSolo(page);
   await page.waitForSelector("#garyIntro[open]");
   const intro = await page.locator("#garyIntro").innerText();
-  assert.match(intro, /MEET YOUR RIVAL/i);
+  assert.match(intro, /MEET YOUR TEAMMATE/i);
+  assert.doesNotMatch(intro, /rival|opponent/i);
   assert.match(intro, /Gary from Accounting/);
   assert.match(intro, /Hi\. I'm Gary\.\s+I do words now\.\s+Apparently\./);
   assert.equal(await page.getAttribute("#garyIntro", "aria-labelledby"), "garyIntroTitle");
@@ -56,7 +52,7 @@ test("first Solo game introduces Gary once; the intro can be reopened from the p
 });
 
 test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word; game state carries no Gary data", async () => {
-  const context = await browser.newContext({garyRandomValue: 0.1}); // Gary makes a remark (which one: this game's rotation)
+  const context = await browser.newContext({garyRandomValue: 0.1});
   const page = await context.newPage();
   await page.goto(server.url);
   await startSolo(page);
@@ -79,7 +75,8 @@ test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word
   const modal = await page.locator("#revealModal").innerText();
   assert.match(modal, /GARY.S WORD/);
   assert.doesNotMatch(modal, NOT_A_PERSON);
-  assert.ok(isGaryRemark(await page.locator("#garyLine").innerText()), "one of Gary's remarks");
+  const beat = await garyBeat(page);
+  assert.equal(beat.branch, "opening", `move 1 is Gary's opening pair: ${beat.before} / ${beat.after}`);
   assert.equal(await page.locator("#garyWord .typed").textContent(), hidden, "visible word is the engine's word");
   const frames = await page.evaluate(() => window.__typed);
   assert.ok(frames.length > 1, "typed in over several frames");
@@ -93,12 +90,12 @@ test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word
   const said = await page.evaluate(() => window.__said);
   assert.equal(new Set(said).size, 1, "one announcement for the reveal");
   assert.match(said[0], new RegExp(`Gary: ${hidden}`, "i"));
-  assert.ok(GARY_REMARKS.some(line => said[0].toLowerCase().includes(`gary: ${line.toLowerCase()}`)), `the remark is announced: ${said[0]}`);
+  assert.ok(said[0].includes(`Gary: ${beat.before}`) && said[0].includes(`Gary: ${beat.after}`), `both of Gary's lines are announced: ${said[0]}`);
   const store = await page.evaluate(() => localStorage.getItem("ssbd.store"));
   const game = Object.values(JSON.parse(store).solo)[0];
   // The game remembers who the player chose (that is all): none of Gary's lines are stored in it.
   assert.equal(game.character, "gary");
-  assert.doesNotMatch(JSON.stringify({...game, character: undefined}), /gary|sigh/i, "Gary's lines are never stored in the game");
+  assert.doesNotMatch(JSON.stringify({...game, character: undefined}), /gary|gn\.|suspense|suspicious|worse instructions/i, "Gary's lines are never stored in the game");
   assert.equal(game.moves[0].words.b, hidden, "the revealed word is the engine's locked word");
   await page.click("#revealContinue");
   await page.waitForSelector("#prompt");
@@ -143,7 +140,8 @@ test("reduced motion: Gary's word appears complete straight away", async () => {
   await submit(page, hidden.toLowerCase() === "acorn" ? "maple" : "acorn");
   await page.waitForSelector("#revealContinue", {timeout: 1000});
   assert.equal(await page.locator("#garyWord .typed").textContent(), hidden);
-  assert.ok(isGaryRemark(await page.locator("#garyLine").innerText()), "one of Gary's remarks");
+  const beat = await garyBeat(page);
+  assert.ok(beat.branch, "both of Gary's lines appear complete, from one pair");
   await context.close();
 });
 
@@ -172,26 +170,31 @@ test("French: Gary's copy, refresh mid-reveal keeps his word, offline Solo still
   await context.close();
 });
 
-test("game over: Gary says 'finally', then '...same time tomorrow?'; a match can get a Gary line", async () => {
+test("game over: Gary's 20-move beat and its follow-up; a fast match gets his fast-win beat", async () => {
   const context = await browser.newContext({reducedMotion: "reduce", viewport: {width: 390, height: 844}});
   const page = await context.newPage();
   await page.goto(server.url);
   await startSolo(page);
   await page.waitForSelector("#word");
   const words = ["whale", "garden", "pencil", "rocket", "banana", "violin", "jungle", "candle", "turtle", "pillow", "comet", "meadow", "pebble", "lantern", "bubble", "castle", "forest", "kitten", "carrot", "dragon", "puzzle", "sandal"];
-  let used = 0;
+  let used = 0, exhausted = null;
   for (let move = 1; move <= 20; move++) {
     const bot = (await botWord(page)).toLowerCase();
     const played = usedWords(await soloRecord(page)); // a word either side played is used up
     let mine; do { mine = words[used++]; } while (mine === bot || played.has(mine));
     await submit(page, mine);
     await page.waitForSelector("#revealContinue");
+    const beat = await garyBeat(page);
+    assert.ok(beat.branch, `move ${move}: one approved pair (${beat.before} / ${beat.after})`);
+    if (move === 1) assert.equal(beat.branch, "opening");
+    if (move === 20) { assert.equal(beat.branch, "exhausted"); exhausted = beat; }
     await page.click("#revealContinue");
     await page.waitForSelector("#revealModal", {state: "detached"});
   }
   await page.waitForSelector("#app .end.over #garyBye");
   const bye = await page.locator("#garyBye").innerText();
-  assert.match(bye, /finally[\s\S]*\.\.\.same time tomorrow\?/);
+  assert.ok(bye.includes(exhausted.extra), `the follow-up of the same 20-move pair: ${bye}`);
+  assert.doesNotMatch(bye, /finally\n|same time tomorrow/, "the old goodbye is gone");
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
   await context.close();
 
@@ -202,7 +205,7 @@ test("game over: Gary says 'finally', then '...same time tomorrow?'; a match can
   await win.waitForSelector("#word");
   await submit(win, await botWord(win));
   await win.waitForSelector("#revealContinue");
-  assert.match(await win.locator("#garyLine").innerText(), /already\? huh/, "an early match gets Gary's early-match line");
+  assert.equal((await garyBeat(win)).branch, "fastWin", "an early match gets Gary's fast-win beat");
   await win.click("#revealContinue");
   await win.waitForSelector("#app .end.win");
   await winCtx.close();

@@ -212,3 +212,21 @@ export async function progressOf(page) {
     text: (await bar.getAttribute("aria-valuetext")) || ""
   };
 }
+
+/**
+ * Gary's narrative beat in the open reveal: the BEFORE and AFTER lines as shown, and the branch of the
+ * one approved pair they come from (null when they are not a pair). Language: the page's.
+ */
+export async function garyBeat(page, language = "en") {
+  const {BRANCHES, pairKeys, pairsOf} = await import("../../src/client/gary-narrative.js");
+  const {STRINGS} = await import("../../src/client/i18n.js");
+  const read = selector => page.locator(selector).count().then(n => (n ? page.locator(selector).getAttribute("data-full") : null));
+  const before = await read("#garyBefore .gary-says"), after = await read("#garyLine .gary-says");
+  for (const branch of BRANCHES) {
+    for (const pair of pairsOf(branch)) {
+      const keys = pairKeys(branch, pair);
+      if (STRINGS[language][keys.before] === before && STRINGS[language][keys.after] === after) return {before, after, branch, pair, extra: keys.extra ? STRINGS[language][keys.extra] : null};
+    }
+  }
+  return {before, after, branch: null, pair: null, extra: null};
+}

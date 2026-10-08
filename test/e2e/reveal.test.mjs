@@ -270,7 +270,8 @@ for (const [name, viewport] of [["phone 390x844", {width: 390, height: 844}], ["
       assert.ok(layout.countGone, "countdown removed before the reveal");
       assert.ok(layout.scroll, "no horizontal overflow");
       if (move === 20) {
-        assert.match(await page.locator("#revealModal").innerText(), /No match\. Gary is pretending this was the expected outcome\./, "final reveal is shown before game over");
+        // Gary's 20-move beat: "No match." / "Not it." after the last pair (his follow-up comes on the end screen).
+        assert.match(await page.locator("#revealModal #garyLine").innerText(), /^(No match\.|Not it\.)/, "final reveal is shown before game over");
         assert.equal(await page.locator("#app .end").count(), 0, "game over waits for the final reveal");
       }
       await page.click("#revealContinue");
