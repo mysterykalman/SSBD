@@ -353,7 +353,8 @@ test("an inflected match (Gary's word, pluralised) looks exactly like a normal w
   await page.click("#revealContinue");
   await page.waitForSelector("#app .end.win");
   const end = await page.locator("#app .end").innerText();
-  assert.match(end, /YOU DID IT!\s+Matched on move 1\. Somebody cue the tiny parade\./, "standard win copy");
+  assert.match(end, /YOU DID IT!\s+Matched on move 1(?!\.)/, "standard win copy");
+  assert.doesNotMatch(end, /tiny parade/);
   assert.doesNotMatch(end, /close enough|plural|schmural|tense|variant|same idea/i);
   const trailRow = await page.locator("#app .trail-row.match").innerText();
   assert.equal((trailRow.match(new RegExp(`\\b${plural}\\b`, "gi")) || []).length, 2, "the trail shows the player's word on both sides");

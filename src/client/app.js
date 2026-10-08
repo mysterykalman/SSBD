@@ -11,11 +11,11 @@ import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
 import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
-import {garyRandom, hasMet, markMet, recentLines, rememberLines, typeInto} from "./gary.js";
-import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, cleverBridge, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultKey, revealKind, scriptedHelp, scriptedReaction, scriptedResult} from "./characters.js";
+import {garyRandom, hasMet, markMet, poolTurn, recentLines, rememberLines, typeInto} from "./gary.js";
+import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, cleverBridge, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultLines, revealKind, scriptedHelp, scriptedReaction} from "./characters.js";
 import {characterArt} from "./gary-art.js";
 import {decisionView} from "./decision-view.js";
-import {endUnfinished, logRound, startLogSync} from "./gamelog.js";
+import {endUnfinished, logRating, logRound, startLogSync} from "./gamelog.js";
 import {renderReview} from "./review.js";
 
 const store = createStore();
@@ -758,9 +758,11 @@ function startReveal(view, move) {
   const strength = solo && move.status === "REVEALED" ? revealStrength(view, move) : null;
   const recent = [...recentLines(view.id), ...(strength ? resultAvoid(view.character, strength) : [])];
   const script = solo ? soloCharacter(view).script : null;
+  // Which line of a pool: that pool's next turn in this game (stable for this move on a reload).
+  const turn = pool => poolTurn(view.id, pool, move.number);
   const reaction = !solo ? null
-    : script ? scriptedReaction(script, {status: move.status, move: move.number, cantUse: move.status === "REVEALED" && wantedUsedWord(view, move), recent: recentLines(view.id)})
-    : pickReaction({character: view.character, status: move.status, move: move.number, kind, recent, random: garyRandom});
+    : script ? scriptedReaction(script, {status: move.status, move: move.number, cantUse: move.status === "REVEALED" && wantedUsedWord(view, move), recent: recentLines(view.id), random: garyRandom, gameId: view.id, turn, pools: soloCharacter(view).pools})
+    : pickReaction({character: view.character, status: move.status, move: move.number, kind, strength, recent, random: garyRandom, gameId: view.id, turn});
   if (reaction) rememberLines(view.id, reaction.keys);
   state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token, reaction};
   const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
@@ -816,13 +818,21 @@ function revealStrength(view, move) {
   return connectionStrength(getLexicon(view.language), {prompts: move.prompts, mine: move.words[view.youSide]});
 }
 
-/** A non-matching reveal's result line: shared in family games, the character's own in Solo. */
+/**
+ * A non-matching reveal's result line: shared in family games, the character's own in Solo. Solo
+ * result lines rotate per pool through the game (see resultLines); the whole game so far is replayed,
+ * so the same move always shows the same line.
+ */
 function revealResult(view, move) {
   if (!isSoloLike(view)) return t("revealNice");
-  const script = soloCharacter(view).script;
-  if (!script) return t(resultKey(view.character, revealStrength(view, move)));
-  const lex = getLexicon(view.language), round = {prompts: move.prompts, mine: move.words[view.youSide]};
-  return t(scriptedResult(script, {strength: revealStrength(view, move), close: revealKind(lex, {...round, theirs: move.words[view.otherSide]}) === "close", clever: cleverBridge(lex, round)}));
+  const lex = getLexicon(view.language);
+  const earlier = view.moves.filter(m => m.words && m.status === "REVEALED" && m.number < move.number);
+  const rounds = [...earlier, move].map(m => {
+    const round = {prompts: m.prompts, mine: m.words[view.youSide]};
+    return {strength: connectionStrength(lex, round), close: revealKind(lex, {...round, theirs: m.words[view.otherSide]}) === "close", clever: cleverBridge(lex, round)};
+  });
+  const keys = resultLines(view.character, view.id, rounds);
+  return t(keys[keys.length - 1]);
 }
 
 /**
@@ -1037,6 +1047,7 @@ function playPanel(view, move) {
 function endPanel(view, last, fresh) {
   const matched = view.status === "MATCHED";
   const solo = isSoloLike(view);
+  if (matched && solo) return soloWinCard(view, last, fresh);
   const shownAt = performance.now();
   return h("div", {class: `end ${matched ? "win" : "over"}`},
     matched
@@ -1046,16 +1057,118 @@ function endPanel(view, last, fresh) {
     h("p", {}, matched
       ? t("winCopy", {n: last.number})
       : ct(view, "gameOverCopy")),
-    // A scripted character's post-game line ("That was fun. Again?") after a win; the game-over goodbye says it otherwise.
-    matched && solo && soloCharacter(view).script ? characterLine(view, soloCharacter(view).script.postWin, "postWinLine") : null,
-    h("div", {class: "row center end-actions"},
-      h("button", {class: "btn big", type: "button", id: "newGameBtn", disabled: !solo && !state.online && !view.rematchId, onclick: event => {
-        // A held or doubled Enter from the last word must not skip the game-over screen.
+    endActions(view, shownAt));
+}
+
+/** Play again (primary), Return home (secondary), View history (quiet). */
+function endActions(view, shownAt) {
+  const solo = isSoloLike(view);
+  return h("div", {class: "row center end-actions"},
+    h("button", {class: "btn big", type: "button", id: "newGameBtn", disabled: !solo && !state.online && !view.rematchId, onclick: event => {
+      // A held or doubled Enter from the last word must not skip the game-over screen.
+      if (event.detail === 0 && performance.now() - shownAt < 800) return;
+      playAgain(view, event.currentTarget);
+    }}, solo ? t("playAgainWith", {name: characterName(view)}) : t("rematch")),
+    h("button", {class: "btn ghost", type: "button", id: "homeBtn", onclick: () => navigate("/")}, t("returnHome")),
+    h("button", {class: "btn ghost", type: "button", id: "historyBtn", onclick: viewHistory}, t("viewHistory")));
+}
+
+/**
+ * The Solo win: one result card for every character (avatar, headline, the character's own win
+ * line in a speech bubble, the 1–5 star question, then Play again / Return home / View history).
+ * Characters differ only in tone: Gary's card is calmer (fewer decorations), Milo's brighter.
+ */
+function soloWinCard(view, last, fresh) {
+  const id = characterId(view.character);
+  const animate = fresh && !reducedMotion();
+  const shownAt = performance.now();
+  const script = soloCharacter(view).script;
+  const decor = h("div", {class: "wc-decor", "aria-hidden": "true"},
+    ...["star", "dot", "squiggle", "confetto", "dot small", ...(id === "milo" ? ["star small", "confetto alt"] : [])].map(kind => h("span", {class: `wc-piece ${kind}`})));
+  const said = winReactionText(view, last);
+  return h("div", {class: `end win win-card ${animate ? "animate" : ""}`, "data-character": id},
+    decor,
+    characterArt(id, "meh", "wc-avatar"),
+    h("h1", {id: "boardTitle", class: "board-title"}, t("winTitle")),
+    h("p", {class: "wc-move", id: "winMove"}, t("winCopy", {n: last.number})),
+    h("div", {class: "wc-says", id: "winReaction", "data-character": id},
+      h("p", {class: "gary-bubble wc-bubble"}, h("span", {class: "sr-only"}, `${characterName(view)}: `), said),
+      // A scripted character's post-win line ("That was fun. Again?") stays its own fixed beat.
+      script ? h("p", {class: "gary-bubble wc-bubble wc-after", id: "postWinLine"}, h("span", {class: "sr-only"}, `${characterName(view)}: `), t(script.postWin)) : null),
+    ratingBlock(view),
+    h("div", {class: "wc-actions end-actions"},
+      h("button", {class: "btn big wc-primary", type: "button", id: "newGameBtn", onclick: event => {
         if (event.detail === 0 && performance.now() - shownAt < 800) return;
         playAgain(view, event.currentTarget);
-      }}, solo ? t("playAgainWith", {name: characterName(view)}) : t("rematch")),
-      h("button", {class: "btn ghost", type: "button", id: "homeBtn", onclick: () => navigate("/")}, t("returnHome")),
-      h("button", {class: "btn ghost", type: "button", id: "historyBtn", onclick: viewHistory}, t("viewHistory"))));
+      }}, t("playAgainWith", {name: characterName(view)})),
+      h("div", {class: "wc-more"},
+        h("button", {class: "btn ghost wc-secondary", type: "button", id: "homeBtn", onclick: () => navigate("/")}, t("returnHome")),
+        h("button", {class: "wc-tertiary", type: "button", id: "historyBtn", onclick: viewHistory}, t("viewHistory")))));
+}
+
+/**
+ * The character's win line, chosen the same way as on the reveal: Milo's fixed line for a fast,
+ * ordinary or long win; Gary's next win line for this game (the same turn as the reveal used).
+ */
+function winReactionText(view, last) {
+  const script = soloCharacter(view).script;
+  const reaction = script
+    ? scriptedReaction(script, {status: "MATCHED", move: last.number})
+    : pickReaction({character: view.character, status: "MATCHED", move: last.number, random: () => 0, gameId: view.id, turn: pool => poolTurn(view.id, pool, last.number)});
+  return reaction.keys.filter(key => !key.endsWith("Dots")).map(key => t(key)).join(" ");
+}
+
+/**
+ * The 1–5 star question, inline on the win card: tap a star and it is saved at once (no submit, no
+ * comment box). It never blocks the buttons below it, and a rated game is never asked again.
+ */
+function ratingBlock(view) {
+  const [title, sub] = soloCharacter(view).rating;
+  const rated = store.soloGame(view.id)?.playerRating;
+  // One star shape: filled when on, an outline when off (shape, not just colour; see styles.css).
+  const stars = n => [1, 2, 3, 4, 5].map(i => h("span", {class: `wc-star-shape ${i <= n ? "on" : ""}`, "aria-hidden": "true"}, "★"));
+  if (rated) {
+    return h("div", {class: "wc-rating rated", id: "winRating"},
+      h("p", {class: "wc-stars-static", role: "img", "aria-label": t("rateYours", {n: rated})}, ...stars(rated)),
+      h("p", {class: "wc-thanks", id: "rateThanks", tabindex: "-1", role: "status"}, t("rateThanks")));
+  }
+  const buttons = [];
+  const preview = n => buttons.forEach((b, i) => b.classList.toggle("lit", i < n));
+  const block = h("div", {class: "wc-rating", id: "winRating", role: "group", "aria-labelledby": "rateTitle", "aria-describedby": "rateSub"},
+    h("p", {class: "wc-rate-title", id: "rateTitle"}, t(title)),
+    h("p", {class: "wc-rate-sub", id: "rateSub"}, t(sub)));
+  const row = h("div", {class: "wc-stars", onmouseleave: () => preview(0)});
+  for (let n = 1; n <= 5; n++) {
+    const button = h("button", {type: "button", class: "wc-star", "data-n": String(n), "aria-label": t("rateStar", {n}),
+      onmouseenter: () => preview(n), onfocus: () => preview(n), onblur: () => preview(0),
+      onclick: () => rateGame(view, n)}, h("span", {"aria-hidden": "true"}, "★"));
+    buttons.push(button);
+    row.append(button);
+  }
+  block.append(row);
+  return block;
+}
+
+/** Save a rating: on the game itself and in its log record (queued for upload). Never throws. */
+function rateGame(view, n) {
+  let game = null;
+  try {
+    game = store.soloGame(view.id);
+    if (game && !game.playerRating && game.status === "MATCHED") {
+      game = {...game, playerRating: n};
+      store.saveSolo(game);
+    }
+  } catch {}
+  try { if (game?.playerRating) logRating(game); } catch {}
+  const current = $("winRating");
+  if (!current) return;
+  const next = ratingBlock(view);
+  if (!store.soloGame(view.id)?.playerRating) {
+    // Storage failed: say thanks anyway, without pretending it is saved for good.
+    next.replaceChildren(h("p", {class: "wc-thanks", id: "rateThanks", tabindex: "-1", role: "status"}, t("rateThanks")));
+  }
+  current.replaceWith(next);
+  $("rateThanks")?.focus({preventScroll: true});
 }
 
 /** Solo game over: the character says goodbye (Gary in two beats: "finally", then "...same time tomorrow?"). */

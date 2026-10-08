@@ -10,9 +10,9 @@
  * @typedef {{
  *   id: string, name: string, title: string, card: string[], personality: string,
  *   voiceId: string | null, voiceStyle: string, art: string,
- *   intro: {kicker: string, lines: string[], aside: string, cta: string} | null, meetAgain: string | null, copy: Record<string, string>,
- *   script?: MiloScript,
- *   results: Partial<Record<Strength, string>>, resultAvoid: Partial<Record<Strength, string[]>>,
+ *   intro: {kicker: string, lines: string[], aside: string, cta: string} | null, meetAgain: string | null, rating: string[], copy: Record<string, string>,
+ *   script?: MiloScript, pools?: Record<string, string[]>, moods?: Partial<Record<Strength, string[]>>,
+ *   results: Partial<Record<Strength, string[]>>, resultAvoid: Partial<Record<Strength, string[]>>,
  *   lines: {
  *     mismatch: Record<string, [string, string][]>, close: [string, string][], strange: [string, string][],
  *     middle: string[], nearEnd: string[], earlyMatch: string[][], lateMatch: string[][], win: string[][],
@@ -20,7 +20,8 @@
  *   }
  * }} Character
  * @typedef {"opening" | "strong" | "good" | "weak" | "veryWeak"} Strength
- * A scripted character says exactly one line per game moment (keys below), never a random pick.
+ * A scripted character's milestone moments are one fixed line each (keys below). Ordinary moments
+ * (result lines, the occasional remark) rotate through `pools` (see rotate).
  * @typedef {{
  *   start: string, firstTurn: string, normalMiss: string, farApart: string, strong: string, confident: string,
  *   alreadyUsed: string, cantUse: string, takingWhile: string, severalMisses: string, longTrail: string,
@@ -41,18 +42,29 @@ export const CHARACTERS = {
     art: "gary",
     intro: {kicker: "garyMeet", lines: ["garyIntro1", "garyIntro2", "garyIntro3"], aside: "garyIntroSigh", cta: "garyIntroCta"},
     meetAgain: "garyMeetAgain",
+    rating: ["garyRate1", "garyRate2"], // the 1–5 star question on the win card
     // Shared Solo copy in this character's own words (anything not listed uses the shared key).
     copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady", revealLoose: "garyRevealLoose", revealNextStarts: "garyRevealNextStarts", gameOverAww: "garyGameOverAww", gameOverCopy: "garyGameOverCopy", errALREADY_USED: "garyAlreadyUsed"},
     // The reveal result, by how well the player's word fits the two words in play (see connectionStrength).
-    results: {opening: "garyResultStart", strong: "garyResultStrong", good: "garyResultGood", weak: "garyResultWeak", veryWeak: "garyResultVeryWeak"},
+    // Each is a pool, rotated per game (see rotate); the first line is the original one.
+    results: {
+      opening: ["garyResultStart"],
+      strong: ["garyResultStrong", "garyResultStrong2", "garyResultStrong3"],
+      good: ["garyResultGood", "garyResultGood2", "garyResultGood3"],
+      weak: ["garyResultWeak", "garyResultWeird"],
+      veryWeak: ["garyResultVeryWeak", "garyResultWeird"]
+    },
     // Remarks not to make right after a given result (the same joke twice in one reveal).
     resultAvoid: {strong: ["garyAnnoyinglyGood"]},
+    // Remark moods allowed for each result: a weak or strange word never gets the competitive
+    // (grudging praise) remarks.
+    moods: {weak: ["resigned", "dramatic", "minimal"], veryWeak: ["resigned", "dramatic", "minimal"]},
     lines: {
       mismatch: {
-        resigned: [["garySigh", "before"], ["garyFine", "before"], ["garyApparently", "before"], ["garyThisAgain", "before"], ["garyOkayThen", "before"], ["garyThere", "after"]],
+        resigned: [["garySigh", "before"], ["garyFine", "before"], ["garyApparently", "before"], ["garyThisAgain", "before"], ["garyOkayThen", "before"], ["garyThere", "after"], ["garyOneWay", "after"], ["garySureWhyNot", "after"]],
         competitive: [["garyObject", "after"], ["garyRude", "after"], ["garyWasGoingTo", "after"], ["garyAnnoyinglyGood", "after"], ["garyPleased", "after"]],
-        dramatic: [["garyNeedMinute", "after"], ["garyConcerns", "after"], ["garyUnnecessary", "after"], ["garyDoneNow", "after"], ["garyHappy", "after"]],
-        minimal: [["garyUgh", "before"], ["garyReally", "before"], ["garyWow", "after"], ["garyNoted", "after"]]
+        dramatic: [["garyNeedMinute", "after"], ["garyConcerns", "after"], ["garyUnnecessary", "after"], ["garyDoneNow", "after"], ["garyHappy", "after"], ["garyNotAgreed", "after"], ["garyMadeWorse", "after"]],
+        minimal: [["garyUgh", "before"], ["garyReally", "before"], ["garyWow", "after"], ["garyNoted", "after"], ["garyLegalReasons", "after"]]
       },
       close: [["garyClose", "after"], ["garyNearlyAgree", "after"], ["garyAlmost", "after"]],
       strange: [["garyBold", "after"], ["garyAllowIt", "after"], ["garyForTheFile", "after"]],
@@ -76,6 +88,7 @@ export const CHARACTERS = {
     art: "milo",
     intro: null, // the picker card is his introduction; "Okay, I'm ready." opens each game
     meetAgain: null,
+    rating: ["miloRate1", "miloRate2"], // the 1–5 star question on the win card
     copy: {revealLoose: "miloOddGuess", errALREADY_USED: "miloAlreadyUsed", errSAME_AS_LAST: "miloAlreadyUsed"},
     results: {},
     resultAvoid: {},
@@ -86,6 +99,14 @@ export const CHARACTERS = {
       takingWhile: "miloTakingWhile", severalMisses: "miloSeveralMisses", longTrail: "miloLongTrail", clever: "miloClever",
       oddGuess: "miloOddGuess", win: "miloWin", postWin: "miloPostWin", fastWin: "miloFastWin", longWin: "miloLongWin",
       encourage: "miloEncourage"
+    },
+    // Ordinary moments rotate (milestones above stay fixed). Result pools start with the original line.
+    pools: {
+      strong: ["miloStrong", "miloStrong2", "miloStrong3"],
+      good: ["miloNormalMiss", "miloGood2", "miloGood3"],
+      weak: ["miloWeird", "miloNormalMiss"],
+      farApart: ["miloFarApart", "miloWeird"],
+      general: ["miloWorkWith", "miloSeeIt", "miloNotMyBrain", "miloInteresting", "miloIdea"]
     },
     lines: {mismatch: {}, close: [], strange: [], middle: [], nearEnd: [], earlyMatch: [], lateMatch: [], win: [], rematch: [], gameOver: ["miloPostWin"]}
   }
@@ -108,8 +129,8 @@ export const LATE_MATCH = 12; // matched on move 12 or later
 /** Every i18n key a character uses (for tests). */
 export function characterKeys(id) {
   const c = character(id);
-  const keys = new Set([c.name, c.title, ...c.card, ...(c.intro ? [c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta] : []), ...(c.meetAgain ? [c.meetAgain] : []),
-    ...Object.values(c.copy), ...Object.values(c.results), ...Object.values(c.script || {})]);
+  const keys = new Set([c.name, c.title, ...c.card, ...c.rating, ...(c.intro ? [c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta] : []), ...(c.meetAgain ? [c.meetAgain] : []),
+    ...Object.values(c.copy), ...Object.values(c.results).flat(), ...Object.values(c.script || {}), ...Object.values(c.pools || {}).flat()]);
   for (const value of Object.values(c.lines)) {
     const lists = Array.isArray(value) ? [value] : Object.values(value);
     for (const list of lists) for (const item of list) for (const key of [item].flat()) if (key !== "before" && key !== "after") keys.add(key);
@@ -117,26 +138,55 @@ export function characterKeys(id) {
   return [...keys];
 }
 
-const pickFrom = (list, used, random, keyOf) => {
-  const fresh = list.filter(item => !keyOf(item).some(key => used.has(key) && !key.endsWith("Dots") && key !== "miloYay"));
-  const pool = fresh.length ? fresh : list;
-  return pool[Math.floor(random() * pool.length)];
-};
+// ---------- rotating line pools ----------
+
+/** Small stable string hash (FNV-1a), so each game starts every pool at its own offset. */
+function hash(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+
+/**
+ * The `index`-th line of a rotating pool for one game. The game (`seed`) fixes a starting offset,
+ * then the pool cycles in order: no line repeats before the whole pool has been used, the same
+ * line never comes twice in a row (also across a wrap, since the cycle order never changes), and
+ * different games start at different lines. Lines in `avoid` are skipped when anything else is left.
+ * @template T
+ * @param {T[]} list
+ * @param {{seed?: string, index?: number, avoid?: Iterable<string>, keyOf?: (item: T) => string[]}} [options]
+ * @returns {T | null}
+ */
+export function rotate(list, {seed = "", index = 0, avoid = [], keyOf = item => [item].flat().map(String)} = {}) {
+  if (!list.length) return null;
+  const skip = new Set(avoid);
+  const offset = hash(seed) % list.length;
+  for (let step = 0; step < list.length; step++) {
+    const item = list[(offset + index + step) % list.length];
+    if (!keyOf(item).some(key => skip.has(key) && !key.endsWith("Dots"))) return item;
+  }
+  return list[(offset + index) % list.length];
+}
 
 /**
  * Decide whether the character says something on this reveal. Pure: same inputs, same answer.
- * @param {{character?: string, status: string, move: number, kind?: "close" | "strange" | null, recent?: string[], random?: () => number}} options
+ * Whether to speak is a chance roll (`random`); which line is the next one of that pool's rotation
+ * for this game (`turn(pool)` = how many times this game has used the pool before this reveal).
+ * @param {{character?: string, status: string, move: number, kind?: "close" | "strange" | null, strength?: Strength | null, recent?: string[],
+ *   random?: () => number, gameId?: string, turn?: (pool: string) => number}} options
  *   status: the revealed move's status (REVEALED, MATCHED, EXHAUSTED); kind: how the player's word related
- *   to the round (see revealKind); recent: keys this character used lately in this game.
+ *   to the round (see revealKind); strength: the result (see connectionStrength); recent: keys to avoid.
  * @returns {{when: "before" | "after", keys: string[], pool: string} | null}
  */
-export function pickReaction({character: id, status, move, kind = null, recent = [], random = Math.random}) {
-  const {lines} = character(id);
+export function pickReaction({character: id, status, move, kind = null, strength = null, recent = [], random = Math.random, gameId = "", turn = () => 0}) {
+  const c = character(id);
+  const {lines} = c;
   const used = new Set(recent);
+  const next = (pool, list, keyOf) => rotate(list, {seed: `${gameId}:${c.id}:${pool}`, index: turn(pool), avoid: used, keyOf});
   if (status === "MATCHED") {
     if (random() >= MATCH_CHANCE) return null;
     const pool = move <= EARLY_MATCH ? "earlyMatch" : move >= LATE_MATCH ? "lateMatch" : "win";
-    return {when: "after", keys: [...pickFrom(lines[pool], used, random, item => item)], pool};
+    return {when: "after", keys: [...next(pool, lines[pool])], pool};
   }
   if (status === "EXHAUSTED") return null; // the game-over beat says goodbye instead
   // Rare one-off lines around the middle and near the end of a long game.
@@ -144,26 +194,32 @@ export function pickReaction({character: id, status, move, kind = null, recent =
   if (move >= 17 && move <= 19 && !lines.nearEnd.some(key => used.has(key)) && random() < SPECIAL_CHANCE) return {when: "after", keys: [lines.nearEnd[0]], pool: "long"};
   if (kind === "close" || kind === "strange") {
     if (random() < KIND_CHANCE) {
-      const [key, when] = pickFrom(lines[kind], used, random, ([key]) => [key]);
+      const [key, when] = next(kind, lines[kind], ([key]) => [key]);
       return {when: /** @type {"before" | "after"} */ (when), keys: [key], pool: kind};
     }
     return null;
   }
   if (random() >= REACTION_CHANCE) return null;
-  const categories = Object.keys(lines.mismatch);
-  const category = categories[Math.floor(random() * categories.length)];
-  let pool = lines.mismatch[category].filter(([key]) => !used.has(key));
-  if (!pool.length) pool = Object.values(lines.mismatch).flat().filter(([key]) => !used.has(key));
-  if (!pool.length) pool = lines.mismatch[category];
-  const [key, when] = pool[Math.floor(random() * pool.length)];
+  const moods = (strength && c.moods?.[strength]) || Object.keys(lines.mismatch);
+  const mood = next("mismatch", moods.filter(m => lines.mismatch[m]?.length), m => [m]);
+  const [key, when] = next(`mismatch:${mood}`, lines.mismatch[mood], ([key]) => [key]);
   return {when: /** @type {"before" | "after"} */ (when), keys: [key], pool: "mismatch"};
 }
 
 /** The i18n key for a shared Solo string in this character's own words (or the shared key). */
 export const copyKey = (id, key) => character(id).copy[key] ?? key;
 
-/** The reveal result line's key for a connection strength: the character's own, else their usual line. */
-export const resultKey = (id, strength) => character(id).results[strength] ?? copyKey(id, "revealNice");
+/**
+ * The reveal result line's key for a connection strength: the next line of the character's own
+ * pool for it (rotated per game, see resultLines), else their usual line.
+ * @param {string} id
+ * @param {Strength} strength
+ * @param {{seed?: string, index?: number, avoid?: string[]}} [rotation]
+ */
+export const resultKey = (id, strength, rotation = {}) => {
+  const list = character(id).results[strength];
+  return list?.length ? rotate(list, {...rotation, seed: `${rotation.seed || ""}:${characterId(id)}:${strength}`}) : copyKey(id, "revealNice");
+};
 /** Remarks to skip right after that result line. */
 export const resultAvoid = (id, strength) => character(id).resultAvoid[strength] ?? [];
 
@@ -199,7 +255,7 @@ export function rematchLine(id, random = Math.random) {
   return list[Math.floor(random() * list.length)];
 }
 
-// ---------- scripted characters (Milo): one canonical line per game moment ----------
+// ---------- scripted characters (Milo): fixed milestone lines, rotating ordinary ones ----------
 
 export const SEVERAL_MISSES_AT = 9; // "several misses": said once, on move 9
 export const LONG_TRAIL_AT = 17; // "long word trail": said once, on move 17
@@ -225,25 +281,66 @@ export function cleverBridge(lex, {prompts, mine}) {
 }
 
 /**
- * A scripted character's reveal result line for a move that didn't match.
- * @param {MiloScript} script
+ * Which result pool a scripted character uses for a move that didn't match: farApart (unknown or
+ * unrelated), strong, confident (strong and close to the character's word: a fixed milestone line),
+ * clever (fixed), good, or weak.
  * @param {{strength: Strength, close: boolean, clever: boolean}} round
  */
-export function scriptedResult(script, {strength, close, clever}) {
-  if (strength === "veryWeak") return script.farApart;
-  if (strength === "strong") return close ? script.confident : script.strong;
-  if (clever) return script.clever;
-  return script.normalMiss;
+export function scriptedResultPool({strength, close, clever}) {
+  if (strength === "veryWeak") return "farApart";
+  if (strength === "strong") return close ? "confident" : "strong";
+  if (clever) return "clever";
+  return strength === "weak" ? "weak" : "good";
 }
 
 /**
- * A scripted character's speech bubble on a reveal, or null. Deterministic: one line per moment.
+ * A scripted character's reveal result line for a move that didn't match: a fixed line for the
+ * milestone pools (confident, clever), else the next line of that pool's rotation for this game.
  * @param {MiloScript} script
- * @param {{status: string, move: number, cantUse?: boolean, recent?: string[]}} round
+ * @param {{strength: Strength, close: boolean, clever: boolean}} round
+ * @param {{seed?: string, index?: number, avoid?: string[], pools?: Record<string, string[]>}} [rotation]
+ */
+export function scriptedResult(script, round, {seed = "", index = 0, avoid = [], pools = CHARACTERS.milo.pools} = {}) {
+  const pool = scriptedResultPool(round);
+  if (pool === "confident") return script.confident;
+  if (pool === "clever") return script.clever;
+  const list = pools?.[pool];
+  if (!list?.length) return pool === "farApart" ? script.farApart : pool === "strong" ? script.strong : script.normalMiss;
+  return rotate(list, {seed: `${seed}:result:${pool}`, index, avoid});
+}
+
+/**
+ * The result line of every revealed, non-matching move of a game, in order (pure, so a reload shows
+ * the same lines). Each pool rotates separately and a line is never the same as the line before it.
+ * @param {string} id the character
+ * @param {string} gameId
+ * @param {{strength: Strength, close: boolean, clever: boolean}[]} rounds
+ * @returns {string[]}
+ */
+export function resultLines(id, gameId, rounds) {
+  const c = character(id);
+  const counts = new Map();
+  const out = [];
+  for (const round of rounds) {
+    const pool = c.script ? scriptedResultPool(round) : round.strength;
+    const index = counts.get(pool) || 0;
+    counts.set(pool, index + 1);
+    const avoid = out.length ? [out[out.length - 1]] : [];
+    out.push(c.script ? scriptedResult(c.script, round, {seed: gameId, index, avoid, pools: c.pools}) : resultKey(id, round.strength, {seed: gameId, index, avoid}));
+  }
+  return out;
+}
+
+/**
+ * A scripted character's speech bubble on a reveal, or null. Milestones (wins, a used word, several
+ * misses, a long trail) are fixed lines; an ordinary reveal sometimes gets the next general line.
+ * @param {MiloScript} script
+ * @param {{status: string, move: number, cantUse?: boolean, recent?: string[], random?: () => number, gameId?: string,
+ *   turn?: (pool: string) => number, pools?: Record<string, string[]>}} round
  *   cantUse: the word the character would have chosen had already been played.
  * @returns {{when: "after", keys: string[], pool: string} | null}
  */
-export function scriptedReaction(script, {status, move, cantUse = false, recent = []}) {
+export function scriptedReaction(script, {status, move, cantUse = false, recent = [], random = () => 1, gameId = "", turn = () => 0, pools = CHARACTERS.milo.pools}) {
   if (status === "MATCHED") {
     const key = move <= EARLY_MATCH ? script.fastWin : move >= LATE_MATCH ? script.longWin : script.win;
     return {when: "after", keys: [key], pool: "match"};
@@ -252,7 +349,9 @@ export function scriptedReaction(script, {status, move, cantUse = false, recent 
   if (cantUse) return {when: "after", keys: [script.cantUse], pool: "cantUse"};
   if (move === SEVERAL_MISSES_AT && !recent.includes(script.severalMisses)) return {when: "after", keys: [script.severalMisses], pool: "long"};
   if (move === LONG_TRAIL_AT && !recent.includes(script.longTrail)) return {when: "after", keys: [script.longTrail], pool: "long"};
-  return null;
+  // An ordinary reveal: now and then, the next line of the general pool.
+  if (!pools?.general?.length || random() >= REACTION_CHANCE) return null;
+  return {when: "after", keys: [rotate(pools.general, {seed: `${gameId}:general`, index: turn("general"), avoid: recent})], pool: "general"};
 }
 
 /**

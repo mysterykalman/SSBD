@@ -2,7 +2,7 @@
 // these two words!"), and finished rows are quiet history that never reads as something to play.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, lockIn, startServer, startSolo} from "./helpers.mjs";
+import {botWord, launch, lockIn, playDistinct, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -25,10 +25,8 @@ test("the NOW PLAYING row says to match its two words; finished rows are history
     await page.waitForSelector("#trailNow");
     // Move 1 has no two words yet, so no instruction about them.
     assert.equal(await page.locator("#trailNow #nowHint").count(), 0);
-    for (const word of ["garden", "violin", "candle"]) {
-      const bot = await botWord(page);
-      await lockIn(page, bot.toLowerCase() === word ? "rocket" : word);
-    }
+    // Three moves without a match (skipping any word already played by either side).
+    await playDistinct(page, 3);
     await page.waitForSelector("#trailNow #nowHint");
     const now = await page.locator("#trailNow").innerText();
     assert.match(now, /NOW PLAYING/i);

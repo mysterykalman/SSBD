@@ -82,6 +82,8 @@ function newerGame(a, b) {
     if (pa[i] > pb[i]) return a;
     if (pa[i] < pb[i]) return b;
   }
+  // Same progress: a rating given after the win (in another tab, say) is never lost.
+  if (!a.playerRating && b.playerRating) return b;
   return a;
 }
 

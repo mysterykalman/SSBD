@@ -166,7 +166,7 @@ test("an inflected Family match looks like a normal win, each player seeing thei
     await page.click("#revealContinue");
     await page.waitForSelector("#app .end.win");
     const end = await page.locator("#app .end").innerText();
-    assert.match(end, /YOU DID IT!\s+Matched on move 1\. Somebody cue the tiny parade\./);
+    assert.match(end, /YOU DID IT!\s+Matched on move 1(?!\.)/);
     assert.doesNotMatch(end, /close enough|plural|schmural|tense|variant/i);
     assert.doesNotMatch(await visibleText(page), EMOJI);
   }

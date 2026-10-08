@@ -18,6 +18,29 @@ export function rememberLines(gameId, keys) {
   } catch {}
 }
 
+// Rotating line pools: which turn of each pool a game's move used (see characters.js rotate).
+// Keyed by move, so showing the same reveal again (a reload) gives the same line.
+const TURNS_KEY = "ssbd.lines";
+const TURNS_GAMES = 30;
+export function poolTurn(gameId, pool, move) {
+  try {
+    const all = JSON.parse(localStorage.getItem(TURNS_KEY) || "{}");
+    const game = all[gameId] || {};
+    const moves = game[pool] || [];
+    let index = moves.indexOf(move);
+    if (index < 0) { moves.push(move); index = moves.length - 1; }
+    game[pool] = moves;
+    delete all[gameId];
+    all[gameId] = game; // most recent last
+    const ids = Object.keys(all);
+    for (const id of ids.slice(0, Math.max(0, ids.length - TURNS_GAMES))) delete all[id];
+    localStorage.setItem(TURNS_KEY, JSON.stringify(all));
+    return index;
+  } catch {
+    return move; // storage blocked: still cycles, one step per move
+  }
+}
+
 // Whether the player has met a character (each intro shows once). Gary's key predates Milo.
 const metKey = id => `ssbd_${id}_met`;
 export function hasMet(id = "gary") {

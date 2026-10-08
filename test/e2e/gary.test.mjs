@@ -3,6 +3,11 @@
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
 import {botWord, joinRoom, launch, soloRecord, startServer, startSolo, usedWords} from "./helpers.mjs";
+import {CHARACTERS} from "../../src/client/characters.js";
+import {STRINGS} from "../../src/client/i18n.js";
+// Gary's ordinary remarks (which one is the game's rotation; see characters.js rotate).
+const GARY_REMARKS = Object.values(CHARACTERS.gary.lines.mismatch).flat().map(([key]) => STRINGS.en[key]);
+const isGaryRemark = text => GARY_REMARKS.includes(text.split("\n")[0].replace(/^Gary:\s*/i, "").trim());
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -51,7 +56,7 @@ test("first Solo game introduces Gary once; the intro can be reopened from the p
 });
 
 test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word; game state carries no Gary data", async () => {
-  const context = await browser.newContext({garyRandomValue: 0.1}); // pins a remark: "sigh" before his word
+  const context = await browser.newContext({garyRandomValue: 0.1}); // Gary makes a remark (which one: this game's rotation)
   const page = await context.newPage();
   await page.goto(server.url);
   await startSolo(page);
@@ -74,7 +79,7 @@ test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word
   const modal = await page.locator("#revealModal").innerText();
   assert.match(modal, /GARY.S WORD/);
   assert.doesNotMatch(modal, NOT_A_PERSON);
-  assert.match(await page.locator("#garyLine").innerText(), /sigh/);
+  assert.ok(isGaryRemark(await page.locator("#garyLine").innerText()), "one of Gary's remarks");
   assert.equal(await page.locator("#garyWord .typed").textContent(), hidden, "visible word is the engine's word");
   const frames = await page.evaluate(() => window.__typed);
   assert.ok(frames.length > 1, "typed in over several frames");
@@ -88,7 +93,7 @@ test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word
   const said = await page.evaluate(() => window.__said);
   assert.equal(new Set(said).size, 1, "one announcement for the reveal");
   assert.match(said[0], new RegExp(`Gary: ${hidden}`, "i"));
-  assert.match(said[0], /Gary: sigh/i);
+  assert.ok(GARY_REMARKS.some(line => said[0].toLowerCase().includes(`gary: ${line.toLowerCase()}`)), `the remark is announced: ${said[0]}`);
   const store = await page.evaluate(() => localStorage.getItem("ssbd.store"));
   const game = Object.values(JSON.parse(store).solo)[0];
   // The game remembers who the player chose (that is all): none of Gary's lines are stored in it.
@@ -138,7 +143,7 @@ test("reduced motion: Gary's word appears complete straight away", async () => {
   await submit(page, hidden.toLowerCase() === "acorn" ? "maple" : "acorn");
   await page.waitForSelector("#revealContinue", {timeout: 1000});
   assert.equal(await page.locator("#garyWord .typed").textContent(), hidden);
-  assert.match(await page.locator("#garyLine").innerText(), /sigh/);
+  assert.ok(isGaryRemark(await page.locator("#garyLine").innerText()), "one of Gary's remarks");
   await context.close();
 });
 

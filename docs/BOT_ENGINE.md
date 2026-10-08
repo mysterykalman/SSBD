@@ -1,6 +1,6 @@
 # Solo bot engine, game logs and review
 
-This covers how Gary and Milo choose their word (engine-2.0, dataset lexicon-2), how Solo games are logged, how to review them, and how to replay decisions.
+This covers how Gary and Milo choose their word (engine-2.1, dataset lexicon-2), how Solo games are logged, how to review them, and how to replay decisions.
 
 ## 1. Why the old choices were poor (engine-1 on lexicon-1)
 
@@ -19,7 +19,7 @@ There were three causes:
 2. **The ranking favoured "what a person would say about either word" over "what links both".** A strong link to one word could outweigh a weak link to the other.
 3. **No penalties for generic words or one-sided links.** The fallback was a single "tier" ladder, with no record of why a stage was used.
 
-## 2. Engine-2.0 (`src/shared/engine.js`)
+## 2. Engine-2.1 (`src/shared/engine.js`)
 
 `selectBotWord({pair, blocked, language, character, seed, config})` → `{word, quality, decision}`
 
@@ -79,7 +79,59 @@ The final score is built from these terms:
 | unknown-input / no-known-input | one or both inputs are not in the vocabulary | yes |
 | opening | round 1 (there is no pair yet) | — |
 
-Within the first stage that has candidates, the strong pool is every word within 0.03 of the best score, up to 3 words. One is picked with the seeded random generator. Randomness never reaches a weaker word, and a word is never empty, blocked, or a repeat.
+In stages 1–3 the word is drawn from the neighbourhood bands below. In low-quality stages, the strong pool is every word within 0.06 of the best score, up to 3 words. Every draw uses the seeded random generator, so the same game and move always give the same word. A word is never empty, blocked, or a repeat.
+
+### Fairness audit (2026-10)
+
+Playtesters reported that Gary seemed to match unrealistically fast, as if he could see the player's answer. The full decision path was audited:
+
+- `lockBotWord` in `src/shared/solo.js` is the only place a Solo bot word is chosen.
+- It runs at game start and immediately after each reveal, so the next round's word is committed before the player's next word exists.
+- Its only inputs are:
+  - the pair both players just saw;
+  - the revealed words;
+  - language, character and the move seed.
+- The committed word is stored in the saved game (`hidden`), so a reload reveals the same word. A rejected attempt doesn't change it.
+- `submitSoloWord` re-chooses only when the stored word is missing or already used. It reads revealed words only, never the word being submitted.
+
+`test/fairness.test.mjs` guards all of this, including a source check of the engine call.
+
+**The real cause was predictability, not leaked information.** Engine-2.0 almost always played the single strongest bridge. Any player who thinks "most obvious link" therefore matched it almost immediately.
+
+### Neighbourhood sampling (stages 1–3)
+
+The engine now draws its word from bands of the credible neighbourhood (`ENGINE_CONFIG.sampling`):
+
+| Band | Share | What it holds |
+|---|---|---|
+| strongest | 20% | the top word of the reached stage (what engine-2.0 always played) |
+| strong | 35% | up to 3 more stage-1/2 words within 0.20 of the top, linked to both (weak side ≥ 0.30) |
+| reasonable | 30% | up to 4 words linked to both (weak side ≥ 0.30) within 0.35 |
+| lateral | 15% | up to 5 further down (within 0.50), still linked to both (weak side ≥ 0.30) |
+
+Rules for the bands:
+
+- Generic words, pieces of an input, and anything scoring under 0.35 are never sampled.
+- An empty band's share moves to the next band below it.
+- The lateral band's share is capped at 30%; the rest goes back to the strongest word.
+- Low-quality stages (4+) and unknown inputs keep the strong pool (within 0.06 of the best, at most 3).
+- Gary and Milo use exactly the same engine.
+
+**Convergence** (`node scripts/convergence.mjs`). This plays simulated games through the real Solo lifecycle against stand-ins that share the bot's vocabulary, so treat the results as an upper bound.
+
+| Stand-in (EN, 300 games) | engine-2.0 ≤3 / ≤5 / ≤10, median | engine-2.1 ≤3 / ≤5 / ≤10, median |
+|---|---|---|
+| always the strongest bridge | 99% / 100% / 100%, 2 | 80% / 92% / 100%, 2 |
+| engine-1 human-prediction model | 83% / 96% / 100%, 2 | 67% / 84% / 98%, 3 |
+
+The remaining speed is mostly structural. For many pairs the 669-word graph has only one balanced bridge, and a stand-in that knows the same graph finds it too. Real players use far more words, so live numbers should be slower.
+
+Compare live behaviour against the targets in `/review`:
+- match within 5 moves: 30–45%
+- match within 10 moves: 65–80%
+- median moves to match: 6–8
+
+Filter by engine version (`engine-2.1`) to see only games played on the new engine. If live play is still too fast, expanding the vocabulary (more bridges per pair) is the next lever. Weakening the bot further is not.
 
 ### Dataset (lexicon-2, `src/shared/lexicon/additions.js`)
 
@@ -103,7 +155,7 @@ Neither was imported. Importing any external dataset needs a licence review firs
 
 | Record | Fields |
 |---|---|
-| Game | id (the game's own random id), mode, character, language, started / last activity / ended timestamps, status (`in_progress`, `matched`, `exhausted` = 20 moves without a match, `ended` = player started another game; `abandoned` is inferred at read time after 24 h of inactivity), rounds, app version, engine version, dataset version, config, seed |
+| Game | id (the game's own random id), mode, character, language, started / last activity / ended timestamps, player rating (1–5, won games only, once), status (`in_progress`, `matched`, `exhausted` = 20 moves without a match, `ended` = player started another game; `abandoned` is inferred at read time after 24 h of inactivity), rounds, app version, engine version, dataset version, config, seed |
 | Round | the pair the bot answered, user word, bot word, normalised keys, match, reveal time, decision time (ms), stage, low-quality flag, and the full decision (inputs, sources, candidates with A/B relations, weaker side, every score component, final score and rank, rejections, pool, selected word, config) |
 
 No names, player ids, emails or IP addresses are stored.
@@ -115,9 +167,21 @@ No names, player ids, emails or IP addresses are stored.
 - **On the server.** Uploads are idempotent: rounds are keyed by game id + round and never overwritten; a game's status only moves forward.
 - **Central tables.** Supabase `bot_games`, `bot_rounds` and `bot_reviews`. Row-level security is on and there is no anon or authenticated access; only the server writes.
 
+### Player rating
+
+After a Solo win, the card asks for 1–5 stars, inline, with no submit button.
+
+- The rating is saved at once on the game (`playerRating`) and on its log record (`player_rating`), then queued as `pending.ratings`.
+- It leaves that queue only when the server lists the game in `rated`. This works whether the game was already uploaded (it is updated in place) or not (the rating travels with it).
+- The server writes a rating once and never overwrites it.
+- A rated game never asks again.
+
 ### Setup
 
-The **migration `supabase/migrations/20261009120000_bot_game_logs.sql` must be applied to the production database.** Until it is, uploads fail and stay queued on each device (harmlessly).
+Apply these migrations to the production database:
+
+- **`supabase/migrations/20261009120000_bot_game_logs.sql`** (game logs). Until it is applied, uploads fail and stay queued on each device, which does no harm.
+- **`supabase/migrations/20261010120000_bot_games_player_rating.sql`** (rating column). Until it is applied, games and rounds still log normally; ratings stay queued on each device and upload once the column exists.
 
 ## 4. Private review screen (`/review`)
 
@@ -127,6 +191,7 @@ The **migration `supabase/migrations/20261009120000_bot_game_logs.sql` must be a
    - **Filters:** character, language, outcome, engine version, dates, and "flagged or low quality".
    - **Rounds table:** Round | Previous pair | User | Gary/Milo | Match | Automated | Human flags. Expand a round for the full decision.
    - **Human flags** (weak, one-sided, too obscure, too generic, good connection) and a note. They are stored apart from the automated low-quality indicator.
+   - **Player rating:** a column in the games list, on the game header, as `player_rating` in JSON, as the last CSV column, and as a metrics row (mean, with rated/won counts).
    - **Exports:** CSV (one row per round; cells are quoted, and cells starting with `= + - @` are neutralised against spreadsheet formulas) and JSON (with full decisions).
    - **Metrics** (each with its denominator): match within 5 and within 10 moves, median moves to a match, ended/abandoned by round, the rates of reviewed weak, one-sided and good rounds, fallback rate, low-quality rate, repeated/invalid bot words (should be 0), and decision latency. They are shown overall and per character × engine version, and can be filtered by language.
 

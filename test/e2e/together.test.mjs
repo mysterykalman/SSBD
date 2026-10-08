@@ -160,7 +160,7 @@ for (const order of ["host first", "friend first"]) {
     await continueBoth(host, friend);
     for (const page of [host, friend]) {
       await page.waitForSelector("#app .end.win");
-      assert.match(await page.locator("#app .end").innerText(), /YOU DID IT!\s+Matched on move 2\./);
+      assert.match(await page.locator("#app .end").innerText(), /YOU DID IT!\s+Matched on move 2(?!\.)/);
       assert.equal((await page.locator("#newGameBtn").innerText()).trim(), "Rematch");
       assert.ok(await page.locator("#homeBtn").isVisible());
       assert.equal(await page.evaluate(() => window.__confetti), 1, "confetti exactly once");
