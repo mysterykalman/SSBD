@@ -202,33 +202,37 @@ main:focus { outline: none; }
 
 /* ---------- game ---------- */
 .game-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 0 16px; }
+/* Quit / Leave: easy to find, never a main action. */
+.quit-link { margin-left: auto; min-width: 44px; min-height: 44px; padding: 6px 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: .92rem; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.quit-link:hover, .quit-link:focus-visible { color: var(--ink); }
+.quit-dialog .dialog-body { text-align: center; }
+.quit-dialog h2 { margin: 0; font-size: 1.35rem; }
+.quit-actions { flex-wrap: wrap; gap: 10px; }
 .board { text-align: center; overflow: hidden; }
 .board::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 8px; background: var(--stripes); border-bottom: 2px solid var(--ink); }
 .mode-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 999px; background: var(--peach); box-shadow: 0 3px 0 var(--ink); font-size: .92rem; font-weight: 900; line-height: 1.2; max-width: 100%; overflow-wrap: anywhere; }
 .mode-chip .badge { margin-left: -6px; }
 
-/* progress: 20 stepping stones along a path */
+/* progress: one stepping stone per move so far (open-ended: no total is ever shown) */
 .progress { display: grid; gap: 10px; margin-top: 6px; }
 .progress-labels { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 14px; text-align: left; line-height: 1.3; }
 .move-count { font-size: 1.05rem; font-weight: 900; }
 .progress-sub { color: var(--muted); font-size: .95rem; font-weight: 800; }
 .stones {
-  display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); align-items: center; gap: 6px;
-  padding: 8px 10px; border: 3px solid var(--ink); border-radius: 999px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 8px 10px; border: 3px solid var(--ink); border-radius: 22px;
   background: repeating-linear-gradient(90deg, #f5dcc4 0 10px, #f9e6d3 10px 20px);
 }
 .stone {
-  display: grid; place-items: center; min-width: 0; aspect-ratio: 1; max-height: 34px;
+  display: grid; place-items: center; flex: none; width: clamp(20px, 6.4vw, 30px); aspect-ratio: 1;
   border: 2px solid var(--ink); border-radius: 50%; background: var(--paper); color: var(--ink);
-  font-size: min(clamp(.62rem, 1.5vw, .85rem), 1.7vw); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; overflow: hidden;
+  font-size: clamp(.62rem, 2.2vw, .8rem); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; overflow: hidden;
 }
-.stone.todo { border: 2px dashed #8a7180; background: rgba(255, 251, 243, .7); }
 .stone.done { background: var(--teal); }
 .stone.now { background: var(--coral); box-shadow: 0 3px 0 var(--ink); transform: scale(1.18); position: relative; z-index: 1; }
 .stone.now.pop { animation: stonePop .6s cubic-bezier(.2, 1.6, .4, 1) 1 both; }
 .finale .stones { background: repeating-linear-gradient(90deg, var(--sun-soft) 0 10px, #fff6dc 10px 20px); }
 .stone.lit { background: var(--sun); }
-.stone.spare { background: var(--sun-soft); color: var(--coral-dark); border-style: solid; }
 .stone.final { background: var(--teal); box-shadow: 0 3px 0 var(--ink); transform: scale(1.25); position: relative; z-index: 1; }
 .board-title { margin-top: 18px; font-size: clamp(1.6rem, 5vw, 2.6rem); font-weight: 900; text-wrap: balance; }
 .instruction { max-width: 560px; margin: 8px auto 0; color: var(--muted); font-size: 1.05rem; text-wrap: pretty; }
@@ -436,8 +440,7 @@ main:focus { outline: none; }
 }
 @media (max-width: 600px) {
   /* Two rows of ten stepping stones on phones. */
-  .stones { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px 5px; padding: 8px; border-radius: 22px; }
-  .stone { max-height: 30px; font-size: min(clamp(.62rem, 2.6vw, .85rem), 3.2vw); }
+  .stones { gap: 6px 5px; padding: 8px; }
 }
 @media (max-width: 480px) {
   body { font-size: 17px; }
@@ -553,7 +556,12 @@ main:focus { outline: none; }
 .rv-word.gary .tiny { width: 26px; height: 26px; }
 .rv-word .chip-word .ghost { visibility: hidden; }
 /* Gary's reaction: his avatar, then a speech bubble whose tail points at him. */
-.gary-reaction { display: inline-flex; align-items: flex-end; gap: 10px; max-width: 100%; margin: 0; }
+/* Character commentary (Gary and Milo alike): one fixed, responsive width that never depends on the
+   text, so the typewriter never resizes the bubble (text wraps inside it; only the height grows) and
+   the avatar stays anchored. Never wider than the screen. */
+.gary-reaction { --says-width: 520px; display: flex; align-items: flex-end; gap: 10px; width: min(100%, var(--says-width)); max-width: 100%; margin: 0 auto; box-sizing: border-box; }
+.gary-reaction > .gary-bubble { flex: 1 1 0; min-width: 0; }
+.gary-reaction > .gary-reaction-art { flex: none; }
 .gary-reaction[hidden] { display: none; }
 .gary-reaction .gary-reaction-art { width: 40px; height: 40px; }
 .gary-bubble { position: relative; min-width: 0; margin: 0; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 14px 14px 14px 4px; background: var(--paper); font-weight: 800; font-size: 1rem; line-height: 1.3; text-align: left; overflow-wrap: anywhere; }
@@ -737,7 +745,7 @@ main:focus { outline: none; }
 }
 
 /* Gary's narrative beats in the reveal: BEFORE (under the title, during the countdown) and AFTER. */
-.reveal-modal .gary-before, .reveal-modal .gary-aside { display: flex; justify-content: center; margin: 4px auto 8px; max-width: 520px; }
+.reveal-modal .gary-before, .reveal-modal .gary-aside { margin: 4px auto 8px; }
 .reveal-modal .gary-before .gary-bubble, .reveal-modal .gary-aside .gary-bubble { font-size: .98rem; }
 .reveal-modal .gary-aside .gary-bubble { font-weight: 700; }
-.reveal-modal #garyLine { margin: 6px auto 4px; max-width: 520px; }
+.reveal-modal #garyLine { margin: 6px auto 4px; }

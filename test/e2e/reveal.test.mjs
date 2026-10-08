@@ -25,7 +25,7 @@ async function watchForDuplicates(page, words) {
     window.__phases = [];
     const norm = s => s.toLowerCase();
     const moveNow = () => (document.getElementById("moveLabel")?.textContent.match(/\d+/) || [""])[0];
-    const frozen = {move: moveNow(), stones: document.querySelector("#app .stones")?.getAttribute("aria-valuenow"), rows: document.querySelectorAll("#app .trail-row").length};
+    const frozen = {move: moveNow(), stones: document.getElementById("progress")?.getAttribute("data-move"), rows: document.querySelectorAll("#app .trail-row").length};
     const fail = what => { if (!window.__violations.includes(what)) window.__violations.push(what); };
     const check = () => {
       const phase = document.getElementById("app")?.dataset.phase;
@@ -37,7 +37,7 @@ async function watchForDuplicates(page, words) {
       const board = tiles.concat(trail);
       if (board.includes(norm(a)) && board.includes(norm(b))) { window.__dupFrames++; fail("pending pair on the board"); }
       if (moveNow() !== frozen.move) fail("move counter advanced");
-      if (document.querySelector("#app .stones")?.getAttribute("aria-valuenow") !== frozen.stones) fail("progress trail advanced");
+      if (document.getElementById("progress")?.getAttribute("data-move") !== frozen.stones) fail("progress trail advanced");
       if (document.querySelectorAll("#app .trail-row").length !== frozen.rows) fail("trail row added");
       const result = document.getElementById("revealResult"), count = document.getElementById("revealCount");
       if (result && !result.hidden && count && (!count.hidden || count.offsetParent !== null)) fail("countdown visible during reveal");
@@ -70,7 +70,7 @@ test("When the reveal modal is open, the pending next pair is not rendered in th
   await page.waitForFunction(() => document.getElementById("app").dataset.phase === "countdown");
   assert.match(await page.locator("#revealCount").innerText(), /^(3|2|1|SAME TIME!)$/i);
   assert.equal(await page.locator("#app #prompt").count(), 0, "board must not show the new pair during the countdown");
-  assert.match(await page.locator("#moveLabel").innerText(), /Move 1 of 20/);
+  assert.match(await page.locator("#moveLabel").innerText(), /^Move 1$/);
   assert.equal(await page.locator("#app .trail-row").count(), 0, "trail stays pre-reveal");
   assert.match(await page.locator("#app .notice.pending").innerText(), new RegExp(`locked in ${mine}`, "i"));
   assert.doesNotMatch(await page.locator("#app").innerText(), /waiting/i, "Solo never waits for anyone");
@@ -108,13 +108,13 @@ test("After Keep playing is pressed, the modal disappears and the pending pair b
     await page.waitForSelector("#revealContinue");
     // Still the previous turn underneath.
     assert.deepEqual(await page.locator("#app #prompt .tile").allTextContents(), before);
-    assert.match(await page.locator("#moveLabel").innerText(), new RegExp(`Move ${move} of 20`));
+    assert.match(await page.locator("#moveLabel").innerText(), new RegExp(`^Move ${move}$`));
     await page.click("#revealContinue");
     await page.waitForSelector("#revealModal", {state: "detached"});
     assert.equal(await page.locator("dialog[open]").count(), 0);
     assert.deepEqual((await page.locator("#app #prompt .tile").allTextContents()).map(s => s.toLowerCase()), [mine, bot.toLowerCase()]);
     assert.equal(await page.locator("#app #prompt").count(), 1, "one active pair");
-    assert.match(await page.locator("#moveLabel").innerText(), new RegExp(`Move ${move + 1} of 20`));
+    assert.match(await page.locator("#moveLabel").innerText(), new RegExp(`^Move ${move + 1}$`));
     assert.equal(await page.locator("#app .trail-row").count(), move, "one trail row per revealed move, newest first");
     assert.equal(await page.getAttribute(".trail-row >> nth=0", "data-move"), String(move));
     assert.equal(await page.inputValue("#word"), "");
@@ -125,7 +125,7 @@ test("After Keep playing is pressed, the modal disappears and the pending pair b
     await page.click('[data-lang="fr"]');
     await page.click('[data-lang="en"]');
     assert.equal(await page.locator("#revealModal").count(), 0);
-    assert.match(await page.locator("#moveLabel").innerText(), new RegExp(`Move ${move + 1} of 20`));
+    assert.match(await page.locator("#moveLabel").innerText(), new RegExp(`^Move ${move + 1}$`));
   }
   await context.close();
 });
@@ -144,7 +144,7 @@ test("one-letter word, refresh during the reveal, Escape and FR copy", async () 
   await page.reload();
   await page.waitForSelector("#revealModal[open]");
   assert.equal(await page.locator("#app #prompt").count(), 0);
-  assert.match(await page.locator("#moveLabel").innerText(), /Coup 1 sur 20/);
+  assert.match(await page.locator("#moveLabel").innerText(), /^Coup 1$/);
   await page.keyboard.press("Escape"); // ignored until the reveal is ready
   await page.waitForSelector("#revealContinue");
   assert.equal(await page.locator("#revealModal[open]").count(), 1);
@@ -278,17 +278,18 @@ for (const [name, viewport] of [["phone 390x844", {width: 390, height: 844}], ["
       await page.waitForSelector("#revealModal", {state: "detached"});
       assert.deepEqual(await violations(page), [], `frozen until Keep playing (move ${move})`);
       if (move < 20) {
-        assert.match(await page.locator("#moveLabel").innerText(), new RegExp(`Move ${move + 1} of 20`));
-        assert.equal(await page.getAttribute("#app .stones", "aria-valuenow"), String(move + 1));
+        assert.match(await page.locator("#moveLabel").innerText(), new RegExp(`^Move ${move + 1}$`));
+        assert.equal(await page.getAttribute("#progress", "data-move"), String(move + 1));
         assert.deepEqual((await page.locator("#app #prompt .tile").allTextContents()).map(x => x.toLowerCase()), [mine, bot]);
       }
       assert.equal(await page.locator("#app .trail-row").count(), move);
     }
     await page.waitForSelector("#app .end.over");
-    assert.match(await page.locator("#app .end").innerText(), /Game over!/);
+    assert.match(await page.locator("#app .end").innerText(), /That one got away from us\./);
+    assert.doesNotMatch(await page.locator("main").innerText(), /20 moves|out of moves|you lost|last chance|of 20/i, "the internal cap is never mentioned");
     assert.equal(await page.locator("#word").count(), 0, "no input after game over");
     assert.equal(await page.locator("#lockBtn").count(), 0);
-    assert.equal(await page.getAttribute("#app .stones", "aria-valuenow"), "20");
+    assert.equal(await page.getAttribute("#progress", "data-move"), "20");
     assert.equal(await page.getAttribute(".trail-row >> nth=0", "data-move"), "20", "newest first");
     for (const id of ["#newGameBtn", "#homeBtn", "#historyBtn"]) assert.ok(await page.isVisible(id), id);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
@@ -301,7 +302,7 @@ for (const [name, viewport] of [["phone 390x844", {width: 390, height: 844}], ["
     await page.waitForSelector("#word");
     assert.equal(await page.locator("#app #prompt").count(), 0);
     assert.equal(await page.locator("#app .trail-row").count(), 0);
-    assert.match(await page.locator("#moveLabel").innerText(), /Move 1 of 20/);
+    assert.match(await page.locator("#moveLabel").innerText(), /^Move 1$/);
     assert.deepEqual(errors, []);
     await context.close();
   });

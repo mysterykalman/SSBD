@@ -35,7 +35,7 @@ test("the approved script: the right branches and pair counts, word for word whe
   assert.equal(en(pairKeys("normal", "e").after), "Not the same. Apparently we're continuing.");
   assert.deepEqual(Object.values(pairKeys("veryLateWin", "a")).map(en), ["If this isn’t it, I’m filing for overtime.", "...finally. We got it.",
     "I would like the record to show that I never stopped believing in us. Please ignore the previous seventeen rounds."]);
-  assert.deepEqual(Object.values(pairKeys("exhausted", "c")).map(en), ["Move twenty. I have nothing useful to add to that.", "No match.", "I would like to formally conclude whatever this was."]);
+  assert.deepEqual(Object.values(pairKeys("exhausted", "c")).map(en), ["I have a word. I have nothing useful to add to that.", "No match.", "I would like to formally conclude whatever this was."]);
   assert.deepEqual(oneOffKeys("rematch").map(en), ["Again? Fine. We have established a process.", "Round two. I brought a pen.", "All right. Apparently one successful collaboration was not enough.", "Fine. But this time I’m managing expectations from the beginning."]);
   assert.deepEqual(oneOffKeys("typo").map(en), ["Good. That makes more sense.", "Right. That’s the word I thought you meant.", "Okay. Administrative issue resolved."]);
   assert.deepEqual(oneOffKeys("waiting").map(en), ["No rush. I’m pretending not to watch the clock.", "Take your time. I’ve already committed to mine, so now I just sit here.", "I’m still here. Against several expectations.", "This is fine. I have nowhere else I’m required to be in this fictional scenario."]);

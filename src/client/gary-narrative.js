@@ -7,7 +7,9 @@
 // locks in, before the reveal) and an AFTER line (once both words are visible); wins add a POST-WIN
 // line, a 20-move miss a FOLLOW-UP. Lines from different pairs are never combined.
 //
-// The English copy is the approved script, word for word. French is a faithful translation.
+// The English copy is the approved script, word for word, except the lines that revealed the
+// internal move cap (the game never mentions it), which were rewritten in the same voice.
+// French is a faithful translation.
 // The branch selection and rotation are shared with Milo (src/client/narrative.js).
 
 import {createNarrative, levelOf, trendOf} from "./narrative.js";
@@ -171,10 +173,10 @@ const SCRIPT = {
       fr: ["On a investi trop de temps là-dedans pour devenir raisonnables d’un coup.", "Non. Encore."]},
     c: {en: ["At this point I’m emotionally invested, which was not part of the original agreement.", "Still not it. This has become personal in a very administrative way."],
       fr: ["À ce stade, je suis émotionnellement impliqué, ce qui ne faisait pas partie de l’accord initial.", "Toujours pas ça. C’est devenu personnel, d’une façon très administrative."]},
-    d: {en: ["I would like to remind the game that twenty is a finite number.", "It appears to be using all of them."],
-      fr: ["J’aimerais rappeler au jeu que vingt est un nombre fini.", "Il semble les utiliser tous."]},
-    e: {en: ["We’re running out of moves. I’m remaining calm because one of us should.", "Not it. I’m revising the calm part."],
-      fr: ["On arrive à court de coups. Je reste calme parce qu’il faut bien que l’un de nous le soit.", "Pas ça. Je révise la partie « calme »."]}
+    d: {en: ["I would like to remind the game that my patience is a finite resource.", "It appears to be testing that theory."],
+      fr: ["J’aimerais rappeler au jeu que ma patience est une ressource limitée.", "Il semble vouloir vérifier cette théorie."]},
+    e: {en: ["We’ve been at this for a while. I’m remaining calm because one of us should.", "Not it. I’m revising the calm part."],
+      fr: ["Ça fait un moment qu’on y est. Je reste calme parce qu’il faut bien que l’un de nous le soit.", "Pas ça. Je révise la partie « calme »."]}
   },
   fastWin: {
     a: {en: ["I have a good feeling about this, which is concerning because I usually don’t.", "...we got it already.", "I had prepared significantly more complaining."],
@@ -217,12 +219,12 @@ const SCRIPT = {
       fr: ["Je vais le dire une fois : je crois qu’on l’a.", "...enfin.", "Ça a pris exactement le temps que je craignais."]}
   },
   exhausted: {
-    a: {en: ["This is the last one. I assume someone has verified that.", "No match.", "Twenty moves. We have successfully proven that two people can think near each other for quite a while."],
-      fr: ["C’est le dernier. Je suppose que quelqu’un l’a vérifié.", "Pas le même mot.", "Vingt coups. Nous avons prouvé avec succès que deux personnes peuvent penser à côté l’une de l’autre pendant un bon moment."]},
-    b: {en: ["Last chance. No pressure, except the very specific pressure created by this being the last chance.", "Not it.", "Fine. We didn’t get there. I’m still counting this as suspiciously close to teamwork."],
-      fr: ["Dernière chance. Aucune pression, à part la pression très précise de la dernière chance.", "Pas ça.", "Bon. On n’y est pas arrivés. Je compte quand même ça comme étrangement proche du travail d’équipe."]},
-    c: {en: ["Move twenty. I have nothing useful to add to that.", "No match.", "I would like to formally conclude whatever this was."],
-      fr: ["Coup vingt. Je n’ai rien d’utile à ajouter.", "Pas le même mot.", "J’aimerais conclure officiellement ce que c’était."]}
+    a: {en: ["I have a word. I’ve stopped predicting how this goes.", "No match.", "Well. We have successfully proven that two people can think near each other for quite a while."],
+      fr: ["J’ai un mot. J’ai arrêté de prédire comment ça va tourner.", "Pas le même mot.", "Bon. Nous avons prouvé avec succès que deux personnes peuvent penser à côté l’une de l’autre pendant un bon moment."]},
+    b: {en: ["Here’s mine. No pressure, except the very specific pressure I have now put on it.", "Not it.", "Fine. We didn’t get there. I’m still counting this as suspiciously close to teamwork."],
+      fr: ["Voilà le mien. Aucune pression, à part la pression très précise que je viens de lui mettre.", "Pas ça.", "Bon. On n’y est pas arrivés. Je compte quand même ça comme étrangement proche du travail d’équipe."]},
+    c: {en: ["I have a word. I have nothing useful to add to that.", "No match.", "I would like to formally conclude whatever this was."],
+      fr: ["J’ai un mot. Je n’ai rien d’utile à ajouter.", "Pas le même mot.", "J’aimerais conclure officiellement ce que c’était."]}
   }
 };
 

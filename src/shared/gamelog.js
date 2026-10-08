@@ -21,7 +21,7 @@ const MAX_WORD = 60;
 
 /** @param {{status: string}} game */
 export function gameStatus(game) {
-  return game.status === "MATCHED" ? "matched" : game.status === "EXHAUSTED" ? "exhausted" : "in_progress";
+  return game.status === "MATCHED" ? "matched" : game.status === "EXHAUSTED" ? "exhausted" : game.status === "ENDED" ? "ended" : "in_progress";
 }
 
 /**

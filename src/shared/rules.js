@@ -25,12 +25,13 @@ import {validateWord, wordKey} from "./words.js";
  * @typedef {import("./types.js").WordCheck} WordCheck
  */
 
+/** An internal safety cap, never shown to players: the game stays open-ended for them. */
 export const MAX_MOVES = 20;
 export const SCHEMA_VERSION = 2;
 /** @type {readonly Side[]} */
 export const SIDES = ["a", "b"];
 /** @type {ReadonlySet<string>} */
-export const FINISHED = new Set(["MATCHED", "EXHAUSTED"]);
+export const FINISHED = new Set(["MATCHED", "EXHAUSTED", "ENDED"]);
 
 /**
  * The status a move gets when it is revealed with these two words.

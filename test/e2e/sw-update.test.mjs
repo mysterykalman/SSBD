@@ -122,7 +122,9 @@ test("old worker and cache from the previous release, then this deployment: the 
     assert.equal((await frontend(page)).version, version, "offline reload: the new cached shell");
     await page.locator("#gameList a, #gameList button").first().click();
     await page.waitForSelector(".trail-row");
-    assert.deepEqual(await page.locator(".trail-row").allInnerTexts(), trail, "the Solo game survived the update");
+    // (This release stopped showing the internal move cap: "Move 1 of 20" became "Move 1".)
+    const uncapped = rows => rows.map(row => row.replace(/ of 20\b/g, ""));
+    assert.deepEqual(uncapped(await page.locator(".trail-row").allInnerTexts()), uncapped(trail), "the Solo game survived the update");
     await context.setOffline(false);
   } finally {
     await context.close();

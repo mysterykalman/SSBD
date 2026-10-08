@@ -167,7 +167,7 @@ async function activeFamily() {
   return g;
 }
 
-const VIEW_KEYS = ["kind", "id", "joinCode", "language", "status", "waitingForPlayer", "createdAt", "updatedAt", "maxMoves", "you", "opponent", "rematchId", "moves"].sort();
+const VIEW_KEYS = ["kind", "id", "joinCode", "language", "status", "waitingForPlayer", "leftBy", "createdAt", "updatedAt", "maxMoves", "you", "opponent", "rematchId", "moves"].sort();
 const MOVE_KEYS = ["number", "prompts", "status", "openedAt", "revealedAt", "words", "botQuality", "mine", "otherLocked"].sort();
 
 test("view shape: family and legacy-solo kinds carry the fields the client reads", async () => {
@@ -178,6 +178,7 @@ test("view shape: family and legacy-solo kinds carry the fields the client reads
   assert.equal(fam.kind, "family");
   assert.equal(fam.maxMoves, 20);
   assert.equal(fam.waitingForPlayer, false);
+  assert.equal(fam.leftBy, null, "nobody left");
   assert.deepEqual(fam.you, {side: "b", name: "Ben"});
   assert.deepEqual(fam.opponent, {side: "a", bot: false, name: "Ana", joined: true});
   assert.equal(fam.moves[0].prompts, null);

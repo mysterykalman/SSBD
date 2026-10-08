@@ -13,7 +13,10 @@
  * @typedef {"OPEN" | "REVEALED" | "MATCHED" | "EXHAUSTED"} MoveStatus
  */
 
-/** @typedef {"ACTIVE" | "MATCHED" | "EXHAUSTED"} GameStatus */
+/**
+ * ENDED: a player quit (Solo) or left (Together). Never a win or a loss.
+ * @typedef {"ACTIVE" | "MATCHED" | "EXHAUSTED" | "ENDED"} GameStatus
+ */
 
 /** Game status as the API reports it; WAITING is a family game with one player. */
 /** @typedef {GameStatus | "WAITING"} ViewStatus */
@@ -107,6 +110,7 @@
  * @property {Language} language
  * @property {ViewStatus} status
  * @property {boolean} waitingForPlayer
+ * @property {"you" | "other" | null} leftBy who left a game that ended early (status ENDED)
  * @property {string} createdAt
  * @property {string} updatedAt
  * @property {number} maxMoves
@@ -126,7 +130,7 @@
  * @property {string | null} revealedAt
  */
 
-/** @typedef {"YOUR_TURN" | "READY_TO_REVEAL" | "PLAYER_JOINED" | "GAME_COMPLETE" | "GAME_EXHAUSTED" | "REMATCH"} NotificationKind */
+/** @typedef {"YOUR_TURN" | "READY_TO_REVEAL" | "PLAYER_JOINED" | "GAME_COMPLETE" | "GAME_EXHAUSTED" | "REMATCH" | "PLAYER_LEFT"} NotificationKind */
 
 /**
  * `GET /api/notifications` item. Ids are deterministic (`${gameId}:${key}:${playerId}`).
