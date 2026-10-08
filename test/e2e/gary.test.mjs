@@ -73,7 +73,7 @@ test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word
   await submit(page, hidden.toLowerCase() === "tulip" ? "daisy" : "tulip");
   await page.waitForSelector("#revealContinue");
   const modal = await page.locator("#revealModal").innerText();
-  assert.match(modal, /GARY.S WORD/);
+  assert.deepEqual((await page.locator("#revealModal .rv-word small").allInnerTexts()).map(x => x.trim()), ["YOU", "GARY"]);
   assert.doesNotMatch(modal, NOT_A_PERSON);
   const beat = await garyBeat(page);
   assert.equal(beat.branch, "opening", `move 1 is Gary's opening pair: ${beat.before} / ${beat.after}`);
@@ -95,7 +95,10 @@ test("Solo shows Gary (never 'Bot'); his typed word is exactly the engine's word
   const game = Object.values(JSON.parse(store).solo)[0];
   // The game remembers who the player chose (that is all): none of Gary's lines are stored in it.
   assert.equal(game.character, "gary");
-  assert.doesNotMatch(JSON.stringify({...game, character: undefined}), /gary|gn\.|suspense|suspicious|worse instructions/i, "Gary's lines are never stored in the game");
+  // (The committed engine decision names the profile that chose the word: "character":"gary" and the
+  // config's "gary" profile. Those are engine facts, not dialogue.)
+  const stored = JSON.stringify({...game, character: undefined}).replace(/"character":"gary"|"gary":\{/g, "");
+  assert.doesNotMatch(stored, /gary|gn\.|suspense|suspicious|worse instructions/i, "Gary's lines are never stored in the game");
   assert.equal(game.moves[0].words.b, hidden, "the revealed word is the engine's locked word");
   await page.click("#revealContinue");
   await page.waitForSelector("#prompt");
@@ -162,7 +165,7 @@ test("French: Gary's copy, refresh mid-reveal keeps his word, offline Solo still
   await page.waitForSelector("#revealModal[open]");
   await page.reload();
   await page.waitForSelector("#revealContinue");
-  assert.match(await page.locator("#revealModal").innerText(), /MOT DE GARY/);
+  assert.deepEqual((await page.locator("#revealModal .rv-word small").allInnerTexts()).map(x => x.trim()), ["TOI", "GARY"]);
   assert.equal(await page.locator("#garyWord .typed").textContent(), hidden, "same word after a refresh");
   await page.click("#revealContinue");
   await page.waitForSelector("#prompt");

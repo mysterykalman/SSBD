@@ -248,7 +248,7 @@ for (const character of ["gary", "milo"]) {
     await page.waitForFunction(() => document.getElementById("formHelp")?.classList.contains("error"));
     const line = (await page.locator("#formHelp").textContent()).trim();
     if (character === "gary") assert.ok(["We already used that one. I checked.", "That word’s already been played. Unfortunately, I remember.", "We used that already. Try another one.", "Already played. I have notes."].includes(line), line);
-    else assert.equal(line, "We used that one already! Try another.");
+    else assert.ok(["We used that one already! Pick another.", "Already played. My memory works sometimes.", "That one’s taken. Try another."].includes(line), line);
     const game = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem("ssbd.store")).solo)[0]);
     assert.equal(game.moves.filter(m => m.words).length, 1, "nothing was played");
     await context.close();

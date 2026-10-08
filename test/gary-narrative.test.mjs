@@ -186,19 +186,21 @@ test("15: a reload shows the same dialogue: earlier beats never change as the ga
   assert.equal(oneOffLine("waiting", "reload", 2), oneOffLine("waiting", "reload", 2));
 });
 
-test("16 / 17: Gary's dialogue has no say in the game: same words for Gary and Milo; the engine never sees it", async () => {
+test("16 / 17: the dialogue has no say in the game: the engine never sees it, and replaying a game gives the same words", async () => {
   for (let seed = 1; seed <= 10; seed++) {
-    let gary = startSoloGame({id: `same-${seed}`, seed, character: "gary"});
-    let milo = startSoloGame({id: `same-${seed}`, seed, character: "milo"});
+    let one = startSoloGame({id: `same-${seed}`, seed, character: "gary"});
+    let two = startSoloGame({id: `same-${seed}`, seed, character: "gary"});
     for (const word of ["garden", "violin", "rocket", "pencil"]) {
-      assert.equal(currentMove(gary).hidden.b, currentMove(milo).hidden.b);
-      const a = submitSoloWord(gary, word), b = submitSoloWord(milo, word);
+      assert.equal(currentMove(one).hidden.b, currentMove(two).hidden.b);
+      // Working out the dialogue for the game so far changes nothing.
+      garyBeats(one.id, one.moves.filter(m => m.words).map(m => ({number: m.number, status: m.status, strength: "good", kind: null})));
+      const a = submitSoloWord(one, word), b = submitSoloWord(two, word);
       if (!a.ok || a.game.status !== "ACTIVE") break;
-      gary = a.game; milo = b.game;
+      one = a.game; two = b.game;
     }
   }
   for (const file of ["../src/shared/engine.js", "../src/shared/solo.js", "../src/shared/rules.js", "../src/shared/understand.js"]) {
     const source = await readFile(new URL(file, import.meta.url), "utf8");
-    assert.doesNotMatch(source, /gary-narrative|characters\.js|i18n/, `${file} never reads character dialogue`);
+    assert.doesNotMatch(source, /narrative|characters\.js|i18n/, `${file} never reads character dialogue`);
   }
 });

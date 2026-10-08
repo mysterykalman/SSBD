@@ -34,7 +34,9 @@ const clock = () => (typeof performance !== "undefined" ? performance.now() : Da
 /**
  * Lock the bot's word for the open move, before the player answers it. The engine's only input is
  * what both players can already see: the latest revealed pair, every word revealed so far (blocked
- * for both sides), the language, the character and the move's seed. Never the player's word.
+ * for both sides, and as the revealed rounds for the style and near-miss tie-breakers), the
+ * language, the character (Milo's and Gary's difficulty profiles) and the move's seed. Never the
+ * player's word for the open move.
  * @param {GameState} game
  * @returns {GameState}
  */
@@ -42,8 +44,9 @@ function lockBotWord(game) {
   if (isFinished(game)) return game;
   const move = currentMove(game);
   const blocked = game.moves.flatMap(m => (m.words ? [m.words.a, m.words.b] : []));
+  const history = game.moves.flatMap(m => (m.words ? [{a: m.words.a, b: m.words.b}] : []));
   const started = clock();
-  const pick = selectBotWord({pair: move.prompts, blocked, language: game.language, character: game.character || "gary", seed: moveSeed(game, move.number)});
+  const pick = selectBotWord({pair: move.prompts, blocked, history, language: game.language, character: game.character || "gary", seed: moveSeed(game, move.number)});
   const ms = Math.round((clock() - started) * 10) / 10;
   const {hidden: _previous, ...rest} = move;
   /** @type {Move} */
@@ -57,7 +60,7 @@ function lockBotWord(game) {
  */
 export function startSoloGame({id, language = "en", seed, character, rematch = false, now = new Date().toISOString()}) {
   const game = createGame({id, mode: "solo", language, seed: seed ?? Math.floor(Math.random() * 2 ** 32), now});
-  // Who the player chose to play with (presentation only: the engine never reads it), and whether
+  // Who the player chose to play with (their difficulty profile and how they talk), and whether
   // this game is a "Play again" of the previous one. Older games have neither, and are Gary's.
   return lockBotWord({...game, ...(character ? {character: String(character)} : {}), ...(rematch ? {rematch: true} : {})});
 }

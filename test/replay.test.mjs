@@ -26,7 +26,7 @@ test("fixtures are versioned and every case keeps the full engine input and its 
     assert.ok(["pass", "known-gap"].includes(c.status), c.id);
     if (c.status === "known-gap") assert.ok(c.gap, `${c.id} explains its gap`);
   }
-  for (const needed of ["reference game", "familiar connection", "unrelated pair", "ambiguous word", "sparse vocabulary", "heavy blocking", "compound", "broad vs specific", "French"]) {
+  for (const needed of ["reported game", "reference game", "familiar connection", "unrelated pair", "ambiguous word", "sparse vocabulary", "heavy blocking", "compound", "broad vs specific", "French"]) {
     assert.ok(categories.has(needed), `covers ${needed}`);
   }
 });
@@ -69,7 +69,9 @@ test("logged rounds become replay cases with the input the bot actually had", ()
   assert.deepEqual(cases[0].flags, ["good"]);
   assert.deepEqual(cases[1].blocked, ["lamp", "restaurant", "table", "dinner"]);
   // Replaying a logged round reproduces the engine's choice exactly (same input, same seed).
-  const live = selectBotWord({pair: cases[1].pair, blocked: cases[1].blocked, language: "en", seed: cases[1].seed});
+  assert.deepEqual(cases[1].history, [{a: "lamp", b: "restaurant"}, {a: "table", b: "dinner"}], "the revealed rounds, for the tie-breakers");
+  assert.equal(cases[1].character, "milo");
+  const live = selectBotWord({pair: cases[1].pair, blocked: cases[1].blocked, history: cases[1].history, character: "milo", language: "en", seed: cases[1].seed});
   assert.equal(replayCase(cases[1]).current, live.word);
   for (const k of lemmaKeys(live.word, "en")) assert.ok(!["table", "dinner", "lamp", "restaurant"].includes(k));
 });

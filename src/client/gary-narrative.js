@@ -8,6 +8,9 @@
 // line, a 20-move miss a FOLLOW-UP. Lines from different pairs are never combined.
 //
 // The English copy is the approved script, word for word. French is a faithful translation.
+// The branch selection and rotation are shared with Milo (src/client/narrative.js).
+
+import {createNarrative, levelOf, trendOf} from "./narrative.js";
 
 /** A beat's lines by language: [before, after, extra?]. Keys: `${branch}.${pair}`. */
 const SCRIPT = {
@@ -235,137 +238,27 @@ const LINES = {
     fr: ["Encore ? Bon. On a établi une procédure.", "Deuxième manche. J’ai apporté un stylo.", "Bon. Apparemment, une collaboration réussie ne suffisait pas.", "Bon. Mais cette fois, je gère les attentes dès le départ."]}
 };
 
-export const BRANCHES = Object.keys(SCRIPT);
-export const ONE_OFF = Object.keys(LINES);
+const gary = createNarrative({
+  prefix: "gn",
+  script: SCRIPT,
+  lines: LINES,
+  // Joke concepts: two pairs leaning on the same one are not clustered (a fresh pair is preferred).
+  concepts: {
+    confidence: /confiden/i, project: /\bproject\b/i, investment: /invest/i, overtime: /overtime/i,
+    probability: /probabilit|statistic/i, record: /\bthe record\b|noted/i, administrative: /administrativ/i
+  },
+  // Wins: fast on moves 2–3, normal 4–11, late 12–16, very late 17–20. Long-game variants from
+  // move 10, very long from move 16.
+  wins: {fast: 3, normal: 11, late: 16},
+  long: {from: 10, veryLongFrom: 16}
+});
 
+export const BRANCHES = gary.BRANCHES;
+export const ONE_OFF = gary.ONE_OFF;
 /** i18n keys for every Gary narrative line: `gn.${branch}.${pair}.${0|1|2}` and `gn.${kind}.${index}`. */
-export const GARY_NARRATIVE_STRINGS = Object.fromEntries(["en", "fr"].map(lang => [lang, Object.fromEntries([
-  ...Object.entries(SCRIPT).flatMap(([branch, pairs]) => Object.entries(pairs).flatMap(([pair, text]) => text[lang].map((line, i) => [`gn.${branch}.${pair}.${i}`, line]))),
-  ...Object.entries(LINES).flatMap(([kind, text]) => text[lang].map((line, i) => [`gn.${kind}.${i}`, line]))
-])]));
-
-/** The keys of one pair: {before, after, extra?} (extra = post-win line, or a 20-move miss's follow-up). */
-export function pairKeys(branch, pair) {
-  const lines = SCRIPT[branch][pair].en;
-  return {before: `gn.${branch}.${pair}.0`, after: `gn.${branch}.${pair}.1`, ...(lines[2] ? {extra: `gn.${branch}.${pair}.2`} : {})};
-}
-export const pairsOf = branch => Object.keys(SCRIPT[branch]);
-export const oneOffKeys = kind => LINES[kind].en.map((_, i) => `gn.${kind}.${i}`);
-export const englishOf = key => GARY_NARRATIVE_STRINGS.en[key];
-
-// Joke concepts: two pairs leaning on the same one are not clustered (a fresh pair is preferred).
-const CONCEPTS = {
-  confidence: /confiden/i, project: /\bproject\b/i, investment: /invest/i, overtime: /overtime/i,
-  probability: /probabilit|statistic/i, record: /\bthe record\b|noted/i, administrative: /administrativ/i
-};
-const conceptCache = new Map();
-/** The joke concepts a pair relies on (from its English lines). */
-export function conceptsOf(branch, pair) {
-  const id = `${branch}.${pair}`;
-  if (!conceptCache.has(id)) conceptCache.set(id, Object.keys(CONCEPTS).filter(c => SCRIPT[branch][pair].en.some(line => CONCEPTS[c].test(line))));
-  return conceptCache.get(id);
-}
-
-/** Small stable string hash (FNV-1a): each game starts every branch at its own offset. */
-function hash(text) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-  return h >>> 0;
-}
-
-// ---------- reading the game's direction ----------
-
-/** Connection quality of a completed, non-matching round: veryWeak 0, weak 1, good 2, strong 3, close 4. */
-export function levelOf(round) {
-  if (round.kind === "close") return 4;
-  return {veryWeak: 0, weak: 1, good: 2, strong: 3}[round.strength] ?? 1;
-}
-
-/**
- * The game's direction from the completed rounds so far (oldest first, opening excluded):
- *   improving  the last two rounds each got better, or this one is close after a good/strong one
- *   drifting   the last two rounds each got worse, or a good/strong round then two weak/very weak ones
- *   stuck      three weak/very weak rounds in a row, or four rounds in a row without a strong/close one
- *   stable     none of these
- * @param {{strength: string, kind: string | null}[]} rounds
- * @returns {"improving" | "drifting" | "stuck" | "stable"}
- */
-export function trendOf(rounds) {
-  const l = rounds.map(levelOf), n = l.length;
-  const last = rounds[n - 1];
-  if ((n >= 3 && l[n - 3] < l[n - 2] && l[n - 2] < l[n - 1]) || (n >= 2 && last.kind === "close" && l[n - 2] >= 2 && l[n - 2] <= 3)) return "improving";
-  if (n >= 3 && ((l[n - 3] > l[n - 2] && l[n - 2] > l[n - 1]) || (l[n - 3] >= 2 && l[n - 3] <= 3 && l[n - 2] <= 1 && l[n - 1] <= 1))) return "drifting";
-  if ((n >= 3 && l.slice(-3).every(x => x <= 1)) || (n >= 4 && l.slice(-4).every(x => x <= 2))) return "stuck";
-  return "stable";
-}
-
-/**
- * Which branch a completed move gets (exact precedence: match, close, recovery, improving, drifting,
- * stuck, strange, strong, good, weak, very weak, normal; long-game variants only replace stuck, weak,
- * very weak and normal, from move 10 and 16).
- * @param {{number: number, status: string, strength: string | null, kind: string | null}} round
- * @param {{strength: string, kind: string | null}[]} before completed non-opening rounds before this one
- */
-export function branchFor(round, before) {
-  const move = round.number;
-  if (round.status === "MATCHED") return move <= 3 ? "fastWin" : move <= 11 ? "normalWin" : move <= 16 ? "lateWin" : "veryLateWin";
-  if (round.status === "EXHAUSTED") return "exhausted";
-  if (move <= 1 || round.strength === "opening" || !round.strength) return "opening";
-  const long = fallback => (move >= 16 ? "veryLong" : move >= 10 ? "long" : fallback);
-  if (round.kind === "close") return "close";
-  const now = [...before, round];
-  const previous = before.length ? trendOf(before) : "stable";
-  if ((previous === "drifting" || previous === "stuck") && (round.strength === "strong" || round.strength === "good")) return "recovery";
-  const trend = trendOf(now);
-  if (trend === "improving") return "improving";
-  if (trend === "drifting") return "drifting";
-  if (trend === "stuck") return long("stuck");
-  if (round.kind === "strange") return "strange";
-  if (round.strength === "strong") return "strong";
-  if (round.strength === "good") return "good";
-  if (round.strength === "weak") return long("weak");
-  if (round.strength === "veryWeak") return long("veryWeak");
-  return long("normal");
-}
-
-/**
- * Gary's beat for every revealed move of a game, in order. Pure: the same game always gives the same
- * beats, so a reload shows exactly what was shown before.
- *   - each branch cycles through all its pairs (from a per-game offset) before any repeats
- *   - a pair whose joke concept was already used this game is skipped while a fresh one is left
- *   - never the same before or after line twice in a row
- * @param {string} gameId
- * @param {{number: number, status: string, strength: string | null, kind: string | null}[]} rounds revealed moves, oldest first
- * @returns {{number: number, branch: string, pair: string, before: string, after: string, extra?: string, concepts: string[]}[]}
- */
-export function garyBeats(gameId, rounds) {
-  const cycles = new Map(); // branch → pairs already used in the current cycle
-  const concepts = new Set();
-  const beats = [];
-  const history = [];
-  for (const round of rounds) {
-    const branch = branchFor(round, history);
-    const pairs = pairsOf(branch);
-    if (!cycles.has(branch)) cycles.set(branch, new Set());
-    let used = cycles.get(branch);
-    if (used.size >= pairs.length) { used = new Set(); cycles.set(branch, used); }
-    const offset = hash(`${gameId}:${branch}`) % pairs.length;
-    const order = pairs.map((_, i) => pairs[(offset + used.size + i) % pairs.length]).filter(p => !used.has(p));
-    const previous = beats[beats.length - 1];
-    const keysOf = p => pairKeys(branch, p);
-    const repeatsLine = p => previous && (englishOf(keysOf(p).before) === englishOf(previous.before) || englishOf(keysOf(p).after) === englishOf(previous.after));
-    const pair = order.find(p => !repeatsLine(p) && !conceptsOf(branch, p).some(c => concepts.has(c)))
-      ?? order.find(p => !repeatsLine(p)) ?? order[0];
-    used.add(pair);
-    for (const c of conceptsOf(branch, pair)) concepts.add(c);
-    beats.push({number: round.number, branch, pair, ...keysOf(pair), concepts: conceptsOf(branch, pair)});
-    if (round.status === "REVEALED" && round.number > 1 && round.strength && round.strength !== "opening") history.push(round);
-  }
-  return beats;
-}
-
-/** The `index`-th line of a one-off pool for a game (stable per-game offset, cycles in order). */
-export function oneOffLine(kind, gameId, index) {
-  const keys = oneOffKeys(kind);
-  return keys[(hash(`${gameId}:${kind}`) + index) % keys.length];
-}
+export const GARY_NARRATIVE_STRINGS = gary.STRINGS;
+export const {pairKeys, pairsOf, oneOffKeys, englishOf, conceptsOf, branchFor, oneOffLine} = gary;
+export {levelOf, trendOf};
+/** Gary's beat for every revealed move of a game, in order (see createNarrative in narrative.js). */
+export const garyBeats = gary.beats;
+export const GARY_NARRATIVE = gary;

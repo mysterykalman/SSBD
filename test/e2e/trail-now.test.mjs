@@ -30,7 +30,8 @@ test("the NOW PLAYING row says to match its two words; finished rows are history
     await page.waitForSelector("#trailNow #nowHint");
     const now = await page.locator("#trailNow").innerText();
     assert.match(now, /NOW PLAYING/i);
-    assert.match(now, /Match these two words!\s+Old rows are just your history\./);
+    assert.match(now, /Match these two/);
+    assert.doesNotMatch(now, /Old rows are just your history/);
     // The two words to match are the current prompts, and the biggest words in the trail.
     const prompts = await page.evaluate(() => {
       const data = JSON.parse(localStorage.getItem("ssbd.store"));
@@ -64,7 +65,7 @@ test("French, and the end of a game: the same rule, and no instruction once noth
   const bot = await botWord(page);
   await lockIn(page, bot.toLowerCase() === "jardin" ? "fusée" : "jardin");
   await page.waitForSelector("#trailNow #nowHint");
-  assert.match(await page.locator("#trailNow #nowHint").innerText(), /Trouve un mot pour ces deux-là\s?!\s+Les lignes du dessous, c’est juste ton histoire\./);
+  assert.equal((await page.locator("#trailNow #nowHint").innerText()).trim(), "Relie ces deux-là");
   assert.match(await page.locator("#app .history-label").innerText(), /Coups d’avant/i);
   // Win: the game is over, so there is no current row and no instruction.
   await lockIn(page, await botWord(page));

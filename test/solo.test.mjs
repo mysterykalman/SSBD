@@ -88,7 +88,7 @@ test("openings vary between new games; a response to the same pair only varies w
     r.decision.pool.forEach(w => pool.add(w));
   }
   for (const w of responses) assert.ok(pool.has(w), `sun + moon gave ${w}, outside its quality window`);
-  assert.ok(pool.size <= ENGINE_CONFIG.window.size);
+  assert.ok(pool.size <= ENGINE_CONFIG.profiles.gary.window.size);
   // And the same seed always gives the same word.
   for (let seed = 1; seed <= 10; seed++) assert.equal(selectBotWord({pair: ["sun", "moon"], seed}).word, selectBotWord({pair: ["sun", "moon"], seed}).word);
 });
@@ -158,10 +158,11 @@ test("each bot word comes from the exact current prompts, one word per move", ()
         assert.equal(typeof hidden, "string");
         assert.ok(hidden.split(" ").length <= 3, hidden);
         if (move.prompts) {
-          // Recomputing from exactly the engine's inputs (this move's prompts, the revealed words, the
-          // language, the character and the move's seed) gives the same word.
+          // Recomputing from exactly the engine's inputs (this move's prompts, the revealed words and
+          // rounds, the language, the character and the move's seed) gives the same word.
           const blocked = game.moves.flatMap(m => (m.words ? [m.words.a, m.words.b] : []));
-          const again = selectBotWord({pair: move.prompts, blocked, language, character: "gary", seed: moveSeed(game, move.number)});
+          const history = game.moves.flatMap(m => (m.words ? [{a: m.words.a, b: m.words.b}] : []));
+          const again = selectBotWord({pair: move.prompts, blocked, history, language, character: "gary", seed: moveSeed(game, move.number)});
           assert.equal(again.word, hidden, `move ${move.number}`);
           assert.deepEqual(again.decision, move.hidden.decision, "the stored decision is the one that chose the word");
         }

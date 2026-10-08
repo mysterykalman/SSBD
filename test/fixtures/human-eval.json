@@ -1,0 +1,29 @@
+{
+ "schema": 1,
+ "version": "human-eval-1",
+ "about": "Human-first evaluation of the Solo engine (engine-2.3). Each case lists what an ordinary person would accept as a quick, obvious answer for BOTH words (`accept`), answers that are fine but less obvious (`alternate`), and answers that would need explaining (`reject`). Tests check the character of the output, not one exact word: Milo must play an `accept` word, Gary an `accept` or `alternate` word, and neither may ever play a `reject` word. Cases with `recovery: true` have no good shared answer in the data: the bot must say so (a logged recovery round) and still avoid the rejected words. The first group comes from the Solo games players flagged (\"not having any fun\"); the exported game files were not available offline, so the rounds are rebuilt from the words quoted in the report.",
+ "cases": [
+  {"id": "he-microwave-oven", "source": "reported", "pair": ["microwave", "oven"], "accept": ["hot", "heat", "cook", "kitchen"], "alternate": ["food", "warm"], "reject": ["cake", "spoon", "pizza", "bake", "plate"]},
+  {"id": "he-bed-moon", "source": "reported", "pair": ["bed", "moon"], "accept": ["dream", "night", "sleep"], "alternate": ["pillow", "star", "bedtime"], "reject": ["light", "sky", "evening"]},
+  {"id": "he-paw-fish", "source": "reported", "pair": ["paw", "fish"], "accept": ["pet", "cat"], "alternate": [], "reject": ["dog", "bear", "animal"]},
+  {"id": "he-trees-bird", "source": "reported", "pair": ["trees", "bird"], "accept": ["nest", "branch"], "alternate": ["owl", "leaf", "twig", "sparrow", "forest", "woodpecker"], "reject": []},
+  {"id": "he-chicken-sea", "source": "reported", "pair": ["chicken", "sea"], "accept": ["fish", "bird"], "alternate": ["egg", "seagull"], "reject": ["horse", "shark", "tuna"]},
+  {"id": "he-vacation-farm", "source": "reported", "pair": ["vacation", "farm"], "accept": [], "alternate": [], "reject": ["turkey", "halloween", "pumpkin"], "recovery": true},
+  {"id": "he-potatoes-christmas", "source": "reported", "pair": ["potatoes", "christmas"], "accept": ["dinner"], "alternate": ["turkey", "gravy", "roast"], "reject": ["soup", "farm", "oven"]},
+  {"id": "he-sun-beach", "pair": ["sun", "beach"], "accept": ["summer", "sand", "hot", "vacation"], "alternate": ["sunscreen", "sunglasses", "towel"], "reject": ["sky"]},
+  {"id": "he-warm-hot", "pair": ["warm", "hot"], "accept": ["sun", "heat", "fire", "summer"], "alternate": ["heater", "oven"], "reject": []},
+  {"id": "he-pizza-music", "pair": ["pizza", "music"], "accept": ["party"], "alternate": ["birthday", "song"], "reject": []},
+  {"id": "he-snow-party", "pair": ["snow", "party"], "accept": ["christmas", "winter"], "alternate": [], "reject": ["clothes", "santa", "ball"]},
+  {"id": "he-rain-movie", "pair": ["rain", "movie"], "accept": ["cozy", "tv", "popcorn", "home", "night"], "alternate": ["umbrella"], "reject": ["fairy", "plane", "cowboy", "book"]},
+  {"id": "he-dog-school", "pair": ["dog", "school"], "accept": ["homework", "bus", "teacher", "park"], "alternate": [], "reject": ["glue", "stick", "kid"]},
+  {"id": "he-business-cubicle", "pair": ["business", "cubicle"], "accept": ["office", "work", "boss", "job", "meeting"], "alternate": ["suit", "desk"], "reject": []},
+  {"id": "he-lamp-restaurant", "pair": ["lamp", "restaurant"], "accept": ["table", "light", "dinner"], "alternate": [], "reject": ["christmas"]},
+  {"id": "he-bread-butter", "pair": ["bread", "butter"], "accept": ["toast"], "alternate": ["jam", "sandwich", "knife", "croissant"], "reject": []},
+  {"id": "he-cat-dog", "pair": ["cat", "dog"], "accept": ["pet", "animal"], "alternate": ["paw", "tail", "fur", "vet"], "reject": []},
+  {"id": "he-gravy-squash", "pair": ["gravy", "squash"], "accept": ["Thanksgiving", "dinner", "soup"], "alternate": ["potato", "autumn"], "reject": []},
+  {"id": "he-liquid-crate", "pair": ["liquid", "crate"], "accept": ["bottle", "box"], "alternate": ["juice", "water"], "reject": []},
+  {"id": "he-nap-sunny", "pair": ["nap", "sunny"], "accept": ["beach", "summer", "cat", "afternoon", "warm"], "alternate": ["relax", "sun"], "reject": []},
+  {"id": "he-destination-plane", "pair": ["destination", "plane"], "accept": ["travel", "trip", "airport", "vacation"], "alternate": ["ticket", "passport", "suitcase", "pilot"], "reject": []},
+  {"id": "he-roasted-gravy", "pair": ["roasted", "gravy"], "accept": ["dinner", "meat", "chicken", "turkey", "potato"], "alternate": ["roast", "oven"], "reject": []}
+ ]
+}

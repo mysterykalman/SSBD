@@ -4,7 +4,7 @@
 import {test, beforeEach, afterEach} from "node:test";
 import assert from "node:assert/strict";
 import {handleApi} from "../src/server/api.js";
-import {ABANDON_AFTER_MS, CSV_COLUMNS, cleanGame, cleanRound, computeMetrics, csvCell, gameRecord, reportedStatus, roundRecord, toCsv} from "../src/shared/gamelog.js";
+import {ABANDON_AFTER_MS, CSV_COLUMNS, cleanGame, cleanRound, computeMetrics, csvCell, firstBadRound, gameHighlights, gameRecord, reportedStatus, roundQuality, roundRecord, toCsv} from "../src/shared/gamelog.js";
 import {ENGINE_CONFIG, ENGINE_VERSION} from "../src/shared/engine.js";
 import {DATASET_VERSION} from "../src/shared/lexicon/index.js";
 import {currentMove} from "../src/shared/rules.js";
@@ -56,7 +56,7 @@ test("records: one per revealed round, the decision committed before the reveal,
   assert.equal(record.ended_at, null);
   // No names, player ids, emails or addresses anywhere in what is logged.
   const text = JSON.stringify({record, rounds});
-  assert.doesNotMatch(text, /player(?!_rating|_input)|display_name|email|recovery|"ip"|address/i, "the only player-anything is the anonymous star rating and how their word was read");
+  assert.doesNotMatch(text, /player(?!_rating|_input)|display_name|email|account.?recovery|password|"ip"|address/i, "the only player-anything is the anonymous star rating and how their word was read");
   // The open (unrevealed) move is never logged.
   assert.ok(!rounds.some(r => r.bot_word === currentMove(game).hidden.b && r.round === currentMove(game).number));
 });
@@ -248,7 +248,7 @@ test("rating: without the rating column (migration not applied) games and rounds
   assert.equal(await db.count("SELECT COUNT(*) AS n FROM bot_rounds WHERE game_id = ?", "rate-nocol"), 1, "and its round");
 });
 
-test("rating: review shows it on the game, in JSON and CSV exports (last column), and in the metrics", async () => {
+test("rating: review shows it on the game, in JSON and CSV exports (after the original columns), and in the metrics", async () => {
   const {game, round} = wonGame("rate-review");
   await api("/api/log/batch", {body: {games: [gameRecord({...game, playerRating: 4}, meta)], rounds: [round]}});
   const list = await api("/api/review/games", {token: TOKEN});
@@ -259,9 +259,10 @@ test("rating: review shows it on the game, in JSON and CSV exports (last column)
   assert.equal(json.data.games.find(g => g.game_id === "rate-review").player_rating, 4);
   const csv = await api("/api/review/export?format=csv", {token: TOKEN});
   const [header, ...rows] = csv.data.trim().split("\r\n");
-  assert.equal(header.split(",").at(-1), "player_rating");
-  assert.deepEqual(header.split(",").slice(0, CSV_COLUMNS.length - 1), CSV_COLUMNS.slice(0, -1), "older columns keep their positions");
-  assert.equal(rows.find(r => r.startsWith("rate-review,")).split(",").at(-1), "4");
+  const at = CSV_COLUMNS.indexOf("player_rating");
+  assert.equal(header.split(",")[at], "player_rating");
+  assert.deepEqual(header.split(",").slice(0, at), CSV_COLUMNS.slice(0, at), "older columns keep their positions");
+  assert.equal(rows.find(r => r.startsWith("rate-review,")).split(",")[at], "4");
   const metrics = await api("/api/review/metrics", {token: TOKEN});
   assert.deepEqual({mean: metrics.data.overall.playerRating.mean, n: metrics.data.overall.playerRating.n}, {mean: 4, n: 1});
 });
@@ -282,4 +283,58 @@ test("player input diagnostics: how the word was read is logged with the round (
   assert.equal(stored.playerInput.original, "chikcen");
   assert.equal(stored.playerInput.suggestion_accepted, true);
   assert.equal(stored.selected, round.bot_word, "the bot's decision record is unchanged");
+});
+
+test("engine-2.3 quality: recovery, unresolved input, threshold, near-match, plausibility and weak side are logged and measured", async () => {
+  const {record, rounds} = playLogged("quality-1", ["garden", "zorblax", "violin", "rocket", "pencil", "turtle"], "gary");
+  // Every round record carries the facts the review needs, from the committed decision.
+  for (const r of rounds.filter(r => r.pair)) {
+    assert.equal(typeof r.decision.recovery, "boolean");
+    assert.equal(typeof r.decision.highQuality, "boolean");
+    assert.equal(r.decision.profile, "harder");
+    assert.equal(typeof r.decision.unresolvedInputs, "number");
+  }
+  // "zorblax" is not understood: the next round's pair holds it.
+  assert.ok(rounds.some(r => roundQuality(r).unresolved), "an unresolved input is detected");
+  await api("/api/log/batch", {body: {games: [record], rounds}});
+  const list = await api("/api/review/games", {token: TOKEN});
+  const listed = list.data.games.find(g => g.game_id === "quality-1");
+  assert.ok(Array.isArray(listed.highlights));
+  assert.ok(listed.highlights.some(h => /unresolved input/.test(h)), listed.highlights.join("; "));
+  assert.ok(Number.isInteger(listed.first_bad_round));
+  const m = (await api("/api/review/metrics", {token: TOKEN})).data.overall;
+  for (const key of ["recoveryRate", "unresolvedRate", "belowHighQualityRate", "nearMatchRate", "styleTieBreakRate", "highlighted"]) assert.ok(m[key] && Number.isInteger(m[key].d), key);
+  assert.ok(m.unresolvedRate.n >= 1);
+  assert.equal(m.unresolvedRate.d, rounds.filter(r => r.pair).length, "denominator: rounds with a pair");
+  assert.ok(m.avgPlausibility.n >= 1 && m.avgPlausibility.value > 0 && m.avgPlausibility.value <= 1);
+  assert.ok(m.avgWeakSide.n >= 1);
+  // The same numbers from the full records (device review) and from the server's compact projection.
+  assert.deepEqual(computeMetrics([{...record, rounds_list: rounds.map(r => ({...r, pair_a: r.pair?.[0] ?? null, pair_b: r.pair?.[1] ?? null}))}]).unresolvedRate, m.unresolvedRate);
+  // CSV: the new per-round columns come after the original ones.
+  const csv = (await api("/api/review/export?format=csv", {token: TOKEN})).data;
+  const header = csv.split("\r\n")[0].split(",");
+  for (const c of ["difficulty_profile", "recovery", "unresolved_input", "high_quality", "pick_rank", "pick_plausibility", "pick_weak_side", "near_match", "style_tie_break"]) assert.ok(header.indexOf(c) > header.indexOf("player_rating"), c);
+  // Highlights filter.
+  const highlighted = await api("/api/review/games?flagged=highlighted", {token: TOKEN});
+  assert.ok(highlighted.data.games.some(g => g.game_id === "quality-1"));
+});
+
+test("highlights and the first bad round: recovery > 25 %, unresolved > 10 %, repeated low quality, a 1–2 star rating", () => {
+  const round = (n, extra = {}) => ({round: n, pair_a: n > 1 ? "a" : null, pair_b: n > 1 ? "b" : null, stage: "shared-direct", low_quality: false, flags: [], decision: {recovery: false, highQuality: true, unresolvedInputs: 0, pair: n > 1 ? ["a", "b"] : null}, ...extra});
+  const fine = {rounds_list: [1, 2, 3, 4, 5].map(n => round(n)), player_rating: 5};
+  assert.deepEqual(gameHighlights(fine), []);
+  assert.equal(firstBadRound(fine), null);
+  const rec = n => round(n, {stage: "recovery", low_quality: true, decision: {recovery: true, highQuality: false, unresolvedInputs: 0, pair: ["a", "b"]}});
+  const bad = {rounds_list: [round(1), round(2), rec(3), rec(4), round(5)], player_rating: 2};
+  const reasons = gameHighlights(bad);
+  assert.ok(reasons.some(r => /recovery in 50%/.test(r)), reasons.join("; "));
+  assert.ok(reasons.some(r => /2 low-quality rounds in a row/.test(r)));
+  assert.ok(reasons.some(r => /rated 2\/5/.test(r)));
+  assert.equal(firstBadRound(bad), 3);
+  const unresolved = {rounds_list: [round(1), round(2, {decision: {recovery: true, highQuality: false, unresolvedInputs: 1, pair: ["a", "zz"]}}), round(3), round(4), round(5)]};
+  assert.ok(gameHighlights(unresolved).some(r => /unresolved input in 25%/.test(r)));
+  // Older engines: recovery and the threshold come from the stage.
+  assert.equal(roundQuality({pair_a: "a", stage: "weak-fallback"}).recovery, false);
+  assert.equal(roundQuality({pair_a: "a", stage: "unknown-input"}).recovery, true);
+  assert.equal(roundQuality({pair_a: "a", stage: "indirect-both"}).highQuality, false);
 });

@@ -1,8 +1,8 @@
-// Bot engine v2 (src/shared/engine.js): fair inputs, balanced associations, explicit fallback stages,
-// the shared used-word rule, deterministic seeded replay, and a complete decision record.
+// Bot engine (src/shared/engine.js): fair inputs, the human-first quality floor, explicit anchored
+// and recovery tiers, the shared used-word rule, deterministic seeded replay, and a complete record.
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {ENGINE_CONFIG, ENGINE_VERSION, STAGE_NAMES, plausibility, relation, selectBotWord} from "../src/shared/engine.js";
+import {ENGINE_CONFIG, ENGINE_VERSION, isAnchored, plausibility, relation, selectBotWord} from "../src/shared/engine.js";
 import {DATASET_VERSION, getLexicon} from "../src/shared/lexicon/index.js";
 import {lemmaKeys} from "../src/shared/morph.js";
 import {checkWord, currentMove, seededRandom} from "../src/shared/rules.js";
@@ -18,21 +18,32 @@ function randomPairs(seed, count) {
   }
   return out;
 }
+/** Two words tied to the same everyday word (what real games produce: each pair comes from the last answers). */
+const hubs = [...lex.concepts.values()].filter(c => c.links.size >= 10 && !c.label.includes(" "));
+function relatedPairs(seed, count) {
+  const rnd = seededRandom(seed), out = [];
+  while (out.length < count) {
+    const hub = hubs[Math.floor(rnd() * hubs.length)];
+    const near = [...hub.links].map(id => lex.concepts.get(id)).filter(c => !c.label.includes(" "));
+    const a = near[Math.floor(rnd() * near.length)], b = near[Math.floor(rnd() * near.length)];
+    if (a && b && a !== b) out.push([a.label, b.label]);
+  }
+  return out;
+}
 const sameWord = (x, y, language = "en") => [...lemmaKeys(x, language)].some(k => lemmaKeys(y, language).has(k));
 
-test("the selection input is explicit: pair, blocked words, language, character, seed (nothing else)", () => {
+test("the selection input is explicit: pair, blocked words, revealed rounds, language, character, seed (nothing else)", () => {
   assert.equal(selectBotWord.length, 1);
-  const input = {pair: ["sun", "beach"], blocked: ["sea"], language: "en", character: "milo", seed: 7};
+  const input = {pair: ["sun", "beach"], blocked: ["sea"], history: [{a: "sea", b: "wave"}], language: "en", character: "milo", seed: 7};
   const a = selectBotWord(input), b = selectBotWord({...input});
   assert.deepEqual(a, b, "same input, same word and the same decision record");
   assert.equal(a.decision.engine, ENGINE_VERSION);
   assert.equal(a.decision.dataset, DATASET_VERSION);
   assert.deepEqual(a.decision.config, ENGINE_CONFIG, "the configuration needed to replay it is in the record");
-  // Gary and Milo share one baseline: the character never changes the word.
-  for (const [x, y] of randomPairs(3, 60)) {
-    const g = selectBotWord({pair: [x, y], seed: 11, character: "gary"}), m = selectBotWord({pair: [x, y], seed: 11, character: "milo"});
-    assert.equal(g.word, m.word, `${x}+${y}`);
-  }
+  assert.equal(a.decision.character, "milo");
+  assert.equal(a.decision.profile, "easier");
+  assert.equal(selectBotWord({...input, character: "gary"}).decision.profile, "harder");
+  assert.equal(selectBotWord({...input, character: undefined}).decision.character, "gary", "older games are Gary's");
 });
 
 test("fair play: the bot's word is committed before the reveal and never depends on the player's answer", () => {
@@ -84,55 +95,73 @@ test("shared used words: no revealed word (or a case/spacing/accent/plural varia
   }
 });
 
-const WINDOW = ENGINE_CONFIG.window;
-/** Every word the engine may vary between: within the quality window of the best answer. */
-const inWindow = (c, d) => c.word === d.candidates[0]?.word || (c.final >= d.window.minFinal - 1e-9 && c.plausibility >= d.window.minPlausibility - 1e-9 && !c.generic && !c.piece);
+const DIRECT = ["category", "compound", "curated", "member", "link"];
+/** Every word a character may vary between: within its near-best range of the top answer. */
+const inWindow = (c, d) => c.word === d.pool[0] || c.word === d.candidates[0]?.word
+  || (c.profileScore >= d.window.minFinal - 1e-9 && c.plausibility >= d.window.minPlausibility - 1e-9 && !c.generic && !c.piece);
 
-test("balanced associations: the answer links to both inputs whenever a word does (no one-sided picks)", t => {
-  let stage1 = 0, total = 0;
-  for (const [a, b] of randomPairs(21, 500)) {
-    const {word, decision} = selectBotWord({pair: [a, b], seed: 1});
-    total++;
-    const picked = decision.candidates.find(c => c.word === word);
-    assert.ok(picked || decision.stage === "no-candidates", `${a}+${b} → ${word} is in the decision record`);
-    const reached = Number(Object.keys(STAGE_NAMES).find(k => STAGE_NAMES[k] === decision.stage));
-    if (decision.stage === "shared-direct") {
-      stage1++;
-      assert.ok(Math.min(picked.relA, picked.relB) >= ENGINE_CONFIG.stages.sharedDirect, `${a}+${b} → ${word}`);
+test("human-first quality floor: whenever an answer is direct on both sides, the pick is one of them (both characters)", t => {
+  let high = 0, anchored = 0, recovery = 0, total = 0;
+  for (const [a, b] of randomPairs(21, 400)) {
+    for (const character of ["milo", "gary"]) {
+      const {word, decision} = selectBotWord({pair: [a, b], seed: 1, character});
+      total++;
+      const picked = decision.candidates.find(c => c.word === word);
+      assert.ok(picked || decision.stage === "no-candidates", `${a}+${b} → ${word} is in the decision record`);
+      if (decision.candidates.some(c => c.highQuality)) {
+        high++;
+        assert.ok(picked.highQuality, `${character}: ${a}+${b} → ${word} is below the floor while a high-quality answer existed`);
+        assert.equal(decision.stage, "shared-direct");
+        assert.equal(decision.recovery, false);
+        assert.equal(decision.highQuality, true);
+        assert.ok(DIRECT.includes(picked.kindA) && DIRECT.includes(picked.kindB), `${a}+${b} → ${word}: both sides direct`);
+        assert.ok(picked.plausibility >= ENGINE_CONFIG.floor.plausibility && picked.weak >= ENGINE_CONFIG.floor.weak);
+      } else if (decision.stage === "anchored") {
+        anchored++;
+        assert.ok(isAnchored(picked), `${a}+${b} → ${word}`);
+        assert.equal(decision.recovery, false);
+        assert.equal(decision.highQuality, false, "anchored answers are logged as below the high-quality threshold");
+      } else {
+        recovery++;
+        assert.equal(decision.recovery, true, `${a}+${b} → ${word} (${decision.stage}) is marked as recovery`);
+        assert.ok(decision.recoveryReason, "and says why");
+      }
     }
-    // Never a lower stage when a higher one had a valid candidate, and the pick is from the reached stage.
-    for (const c of decision.candidates) assert.ok(c.stage >= reached, `${a}+${b}: ${c.word} (stage ${c.stage}) was available above ${decision.stage}`);
-    if (picked && reached <= 3) assert.equal(picked.stage, reached, `${a}+${b} → ${word}`);
   }
-  t.diagnostic(`${stage1}/${total} random pairs had a word directly linked to both`);
+  t.diagnostic(`${total} decisions: ${high} high quality, ${anchored} anchored, ${recovery} recovery`);
 });
 
-test("broad words lose to a specific shared bridge; familiar words beat obscure ones on a tie", () => {
+test("broad words lose to a specific shared bridge: a generic word only wins when nothing specific is as good", () => {
   for (const [a, b] of randomPairs(33, 400)) {
     const {word, decision} = selectBotWord({pair: [a, b], seed: 2});
     const pick = decision.candidates.find(c => c.word === word);
     if (!pick?.generic) continue;
-    // A generic word only wins when nothing specific in the same stage connects as well.
-    const specific = decision.candidates.filter(c => c.stage === pick.stage && !c.generic && c.connection >= pick.connection);
-    assert.deepEqual(specific.map(c => c.word), [], `${a}+${b} → ${word}`);
+    // A generic word is marked down: any specific answer in the same tier that scores as well wins.
+    const specific = decision.candidates.filter(c => !c.generic && Boolean(c.highQuality) === Boolean(pick.highQuality) && c.final >= pick.final);
+    if (pick.highQuality) assert.deepEqual(specific.map(c => c.word), [], `${a}+${b} → ${word}`);
+    else assert.ok(decision.recovery || decision.stage === "anchored", `${a}+${b} → ${word}`);
   }
   // Pizza + cake: dessert-specific bridges beat FOOD.
   const pc = selectBotWord({pair: ["pizza", "cake"], seed: 1});
   assert.notEqual(pc.word, "food", JSON.stringify(pc.decision.candidates.slice(0, 4).map(c => [c.word, c.final])));
 });
 
-test("quality-constrained variety: only answers inside the quality window are ever chosen", () => {
-  for (const [a, b] of randomPairs(41, 80)) {
-    for (let seed = 1; seed <= 25; seed++) {
-      const r = selectBotWord({pair: [a, b], seed});
-      if (!r.decision.window) continue;
-      assert.ok(r.decision.pool.includes(r.word), `${a}+${b}: ${r.word} was drawn from its window`);
-      assert.deepEqual(selectBotWord({pair: [a, b], seed}), r, "the same seed gives the same word");
-      assert.ok(r.decision.pool.length <= WINDOW.size);
-      assert.equal(r.decision.window.size, r.decision.pool.length);
-      for (const w of r.decision.pool) {
-        const c = r.decision.candidates.find(x => x.word === w);
-        assert.ok(c && inWindow(c, r.decision), `${a}+${b}: ${w} is outside the quality window`);
+test("quality-constrained variety: only answers inside the character's near-best range are ever chosen", () => {
+  for (const character of ["milo", "gary"]) {
+    const w = ENGINE_CONFIG.profiles[character].window;
+    for (const [a, b] of randomPairs(41, 60)) {
+      for (let seed = 1; seed <= 20; seed++) {
+        const r = selectBotWord({pair: [a, b], seed, character});
+        if (!r.decision.window) continue;
+        assert.ok(r.decision.pool.includes(r.word), `${a}+${b}: ${r.word} was drawn from its range`);
+        assert.deepEqual(selectBotWord({pair: [a, b], seed, character}), r, "the same seed gives the same word");
+        assert.ok(r.decision.pool.length <= (r.decision.recovery || r.decision.stage === "anchored" ? 1 : w.size));
+        assert.equal(r.decision.window.size, r.decision.pool.length);
+        for (const word of r.decision.pool) {
+          const c = r.decision.candidates.find(x => x.word === word);
+          assert.ok(c && inWindow(c, r.decision), `${character} ${a}+${b}: ${word} is outside the near-best range`);
+          if (!r.decision.recovery && r.decision.stage === "shared-direct") assert.ok(c.highQuality, `${character} ${a}+${b}: ${word} is in the range but below the floor`);
+        }
       }
     }
   }
@@ -146,7 +175,7 @@ test("one clear best answer is always chosen; several equally good answers can v
   assert.ok(!words.has("dog"));
   // A pair with several near-equal shared answers varies between them only.
   let varied = 0;
-  for (const [a, b] of randomPairs(77, 60)) {
+  for (const [a, b] of relatedPairs(77, 60)) {
     const seen = new Set(), windows = new Set();
     for (let seed = 1; seed <= 20; seed++) { const r = selectBotWord({pair: [a, b], seed}); seen.add(r.word); r.decision.pool.forEach(w => windows.add(w)); }
     for (const w of seen) assert.ok(windows.has(w));
@@ -171,6 +200,7 @@ test("explicit, safe fallback: unknown inputs, heavy blocking and sparse options
   const tight = selectBotWord({pair: ["sun", "moon"], blocked, seed: 4});
   assert.ok(tight.word && !blocked.some(w => sameWord(w, tight.word)), tight.word);
   assert.ok(tight.decision.stage !== "shared-direct");
+  assert.ok(tight.decision.recovery || tight.decision.stage === "anchored", "and says it is not a high-quality answer");
   // Almost the whole vocabulary blocked: still one valid, unblocked word.
   const most = [...lex.concepts.values()].map(c => c.label).filter((_, i) => i % 40 !== 0);
   const sparse = selectBotWord({pair: ["dog", "cat"], blocked: most, seed: 5});
