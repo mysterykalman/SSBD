@@ -36,7 +36,10 @@ export function decisionView(d, options = {}) {
     ["Inputs", inputs || "(none)"],
     ["Stage", `${d.stage}${d.lowQuality ? " · LOW QUALITY (automated indicator)" : ""}`],
     ["Selected word", String(d.selected).toUpperCase()],
-    ["Strong pool", (d.pool || []).map(w => w.toUpperCase()).join(", ") || "(none)"],
+    d.bands
+      ? ["Neighbourhood", Object.entries(d.bands).map(([band, words]) => `${band}: ${words.map(w => w.toUpperCase()).join(", ") || "—"}`).join(" · ")]
+      : ["Strong pool", (d.pool || []).map(w => w.toUpperCase()).join(", ") || "(none)"],
+    d.band ? ["Band drawn", `${d.band} (shares ${Object.entries(d.config?.sampling?.shares || {}).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(", ")})`] : null,
     ["Blocked words", String(d.blockedCount ?? "")],
     ["Candidates generated", String(d.generated ?? "")],
     ["Seed", String(d.seed ?? "")]
@@ -46,9 +49,9 @@ export function decisionView(d, options = {}) {
   const table = (d.candidates || []).length
     ? el("table", {class: "dv-candidates gd-candidates"},
       el("caption", {}, `Candidate words (reached: ${d.stage}; stage 1 = linked to both words … 6 = only one word). ${formulaLine(d.config)}`),
-      el("thead", {}, el("tr", {}, ...["#", "word", "stage", "sources", `→ ${a}`, `→ ${b}`, "weaker", "connection", "familiarity", "cue", "penalties", "final"].map(x => el("th", {scope: "col"}, x)))),
+      el("thead", {}, el("tr", {}, ...["#", "word", "stage", "band", "sources", `→ ${a}`, `→ ${b}`, "weaker", "connection", "familiarity", "cue", "penalties", "final"].map(x => el("th", {scope: "col"}, x)))),
       el("tbody", {}, ...d.candidates.map(c => el("tr", {class: c.word === d.selected ? "gd-pick" : null},
-        el("td", {}, String(c.rank)), el("td", {}, c.word), el("td", {}, String(c.stage)), el("td", {}, (c.sources || []).join(", ")),
+        el("td", {}, String(c.rank)), el("td", {}, c.word), el("td", {}, String(c.stage)), el("td", {}, c.band || ""), el("td", {}, (c.sources || []).join(", ")),
         el("td", {}, `${n2(c.relA)} ${c.kindA}`), el("td", {}, `${n2(c.relB)} ${c.kindB}`), el("td", {}, n2(c.weak)),
         el("td", {}, n3(c.connection)), el("td", {}, n2(c.familiarity)), el("td", {}, n2(c.cue)),
         el("td", {}, [c.oneSided ? `one-sided −${n2(c.oneSided)}` : "", c.generic ? `generic −${n2(c.generic)}` : "", c.piece ? `piece −${n2(c.piece)}` : ""].filter(Boolean).join(", ") || "—"),

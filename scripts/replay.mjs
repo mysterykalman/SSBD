@@ -13,7 +13,7 @@
 import {readFileSync, writeFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 import {chooseResponse} from "../src/shared/bot.js";
-import {ENGINE_VERSION, STAGE_NAMES, selectBotWord} from "../src/shared/engine.js";
+import {ENGINE_CONFIG, ENGINE_VERSION, STAGE_NAMES, selectBotWord} from "../src/shared/engine.js";
 import {lemmaKeys} from "../src/shared/morph.js";
 import {wordKey} from "../src/shared/words.js";
 import {csvCell} from "../src/shared/gamelog.js";
@@ -38,24 +38,28 @@ const same = (a, b) => wordKey(String(a || "")) === wordKey(String(b || ""));
 /**
  * Run one case through both engines and check it against its expectations.
  * @returns {{id: string, category: string, language: string, pair: string[], blocked: number, original: string | null,
- *   old: string, current: string, stage: string, lowQuality: boolean, pool: string[], ms: number, verdict: string, problems: string[]}}
+ *   old: string, top: string, current: string, band: string | null, stage: string, lowQuality: boolean, pool: string[], ms: number, verdict: string, problems: string[]}}
  */
 export function replayCase(c) {
+  const input = {pair: c.pair, blocked: c.blocked || [], language: c.language, seed: c.seed ?? 0};
   const t0 = performance.now();
-  const {word, decision} = selectBotWord({pair: c.pair, blocked: c.blocked || [], language: c.language, seed: c.seed ?? 0});
+  const {word, decision} = selectBotWord(input);
   const ms = performance.now() - t0;
+  // The single strongest answer (no sampling): what `acceptable` describes.
+  const top = selectBotWord({...input, config: {...ENGINE_CONFIG, sampling: null}}).word;
   const expect = c.expect || {};
   const problems = [];
   const blockedKeys = new Set([...(c.blocked || []), ...c.pair].flatMap(w => [...lemmaKeys(w, c.language)]));
   if (!word || !String(word).trim()) problems.push("no word");
   if ([...lemmaKeys(word, c.language)].some(k => blockedKeys.has(k))) problems.push("blocked or input word returned");
-  if (expect.reject?.some(w => same(w, word))) problems.push(`rejected answer ${word}`);
-  if (expect.acceptable && !expect.acceptable.some(w => same(w, word))) problems.push(`${word} is not among the acceptable answers`);
+  if (!decision.pool.some(w => same(w, word))) problems.push(`${word} is outside the pool it was drawn from`);
+  for (const w of [word, top]) if (expect.reject?.some(r => same(r, w))) problems.push(`rejected answer ${w}`);
+  if (expect.acceptable && !expect.acceptable.some(w => same(w, top))) problems.push(`strongest answer ${top} is not among the acceptable answers`);
   if (expect.maxStage && stageNumber(decision.stage) > expect.maxStage) problems.push(`stage ${decision.stage} is weaker than stage ${expect.maxStage}`);
   if (expect.lowQuality !== undefined && Boolean(decision.lowQuality) !== expect.lowQuality) problems.push(`low-quality indicator ${decision.lowQuality} (expected ${expect.lowQuality})`);
   const verdict = problems.length ? (c.status === "known-gap" ? "known gap" : "FAIL") : "ok";
   return {id: c.id, category: c.category || "", language: c.language, pair: c.pair, blocked: (c.blocked || []).length,
-    original: c.original?.word || null, old: oldEngine(c), current: word, stage: decision.stage, lowQuality: Boolean(decision.lowQuality),
+    original: c.original?.word || null, old: oldEngine(c), top, current: word, band: decision.band || null, stage: decision.stage, lowQuality: Boolean(decision.lowQuality),
     pool: decision.pool, ms: Math.round(ms * 10) / 10, verdict, problems};
 }
 
@@ -77,12 +81,12 @@ export function casesFromLog(exported) {
   return cases;
 }
 
-const COLUMNS = ["id", "category", "language", "pair", "blocked", "original", "old", "current", "stage", "lowQuality", "pool", "ms", "verdict", "problems"];
+const COLUMNS = ["id", "category", "language", "pair", "blocked", "original", "old", "top", "current", "band", "stage", "lowQuality", "pool", "ms", "verdict", "problems"];
 const cell = (row, key) => (Array.isArray(row[key]) ? row[key].join(key === "pair" ? " + " : "; ") : row[key] ?? "");
 
 export function toTable(rows) {
-  const lines = [["case", "pair", "original", "old engine", ENGINE_VERSION, "stage", "verdict"]];
-  for (const r of rows) lines.push([r.id, `${r.pair.join(" + ")}${r.blocked ? ` (−${r.blocked})` : ""}`, r.original || "", r.old, r.current, `${r.stage}${r.lowQuality ? " LOW" : ""}`, `${r.verdict}${r.problems.length ? `: ${r.problems.join("; ")}` : ""}`]);
+  const lines = [["case", "pair", "original", "old engine", "strongest", `${ENGINE_VERSION} pick`, "stage", "verdict"]];
+  for (const r of rows) lines.push([r.id, `${r.pair.join(" + ")}${r.blocked ? ` (−${r.blocked})` : ""}`, r.original || "", r.old, r.top, `${r.current}${r.band ? ` (${r.band})` : ""}`, `${r.stage}${r.lowQuality ? " LOW" : ""}`, `${r.verdict}${r.problems.length ? `: ${r.problems.join("; ")}` : ""}`]);
   const widths = lines[0].map((_, i) => Math.min(40, Math.max(...lines.map(l => String(l[i]).length))));
   return lines.map(l => l.map((v, i) => String(v).padEnd(widths[i])).join("  ").trimEnd()).join("\n");
 }

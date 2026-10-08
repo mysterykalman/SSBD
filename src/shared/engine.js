@@ -32,15 +32,21 @@
 //   6 one-input-only         nothing connects both: best for the stronger input → lowQuality
 //   unknown-input            one input is not in the graph: answered from the other → lowQuality
 //   no-known-input / opening a friendly familiar word
-// Randomness: only among the strong pool (final within POOL_MARGIN of the best, at most POOL_SIZE),
-// from a seeded generator, after validity and the stage's minimum quality have been checked.
+// Randomness (seeded; the same game and move always give the same word), after validity and the
+// stage's minimum quality have been checked:
+//   stages 1-3: a band of the credible neighbourhood (ENGINE_CONFIG.sampling): the strongest bridge
+//     20%, a strong but less obvious bridge 35%, a reasonable association 30%, a lateral but
+//     defensible one (still linked to both inputs) 15%. People rarely all say the single most
+//     convergent word, so a bot that always does matches unrealistically fast.
+//   low-quality stages and unknown inputs: only the strong pool (final within POOL_MARGIN of the
+//     best, at most POOL_SIZE), so a weak situation never gets a weaker word on purpose.
 
 import {getLexicon, DATASET_VERSION} from "./lexicon/index.js";
 import {lemmaKeys} from "./morph.js";
 import {wordKey} from "./words.js";
 import {hashString, seededRandom} from "./rules.js";
 
-export const ENGINE_VERSION = "engine-2.0";
+export const ENGINE_VERSION = "engine-2.1";
 
 /** Everything that shapes a decision (logged with it, so a decision can be replayed exactly). */
 export const ENGINE_CONFIG = Object.freeze({
@@ -50,10 +56,22 @@ export const ENGINE_CONFIG = Object.freeze({
   genericPenalty: 0.10,
   piecePenalty: 0.10,
   stages: {sharedDirect: 0.70, indirect: 0.30, strongSide: 0.70, weak: 0.12},
-  poolMargin: 0.03,
+  poolMargin: 0.06,
   poolSize: 3,
+  // How a word is picked once the stage is known (stages 1-3 only; low-quality stages keep the
+  // strong pool above). People do not always say the single most convergent bridge, so the pick is
+  // drawn from bands of the credible neighbourhood (every candidate linked to both inputs, weak ≥
+  // 0.30, never a generic word outside the top). Band shares sum to 1; an empty band's share goes to
+  // the next stronger band, so a sparse neighbourhood never makes a weaker word more likely.
+  sampling: {
+    shares: {strongest: 0.20, strong: 0.35, reasonable: 0.30, lateral: 0.15},
+    strong: {count: 3, margin: 0.20},
+    reasonable: {count: 4, margin: 0.35},
+    lateral: {count: 5, margin: 0.50, floor: 0.35, minWeak: 0.30, cap: 0.30}
+  },
   logCandidates: 8
 });
+export const BANDS = ["strongest", "strong", "reasonable", "lateral"];
 
 /** Broad words: fine when nothing better connects, but a more specific shared bridge should win. */
 const GENERIC = new Set(["food", "thing", "stuff", "animal", "people", "person", "place", "fun", "good", "nice", "big", "small", "color", "toy", "eat", "drink", "happy", "new", "time"]);
@@ -132,10 +150,11 @@ export const STAGE_NAMES = {1: "shared-direct", 2: "direct-plus-indirect", 3: "i
 
 /**
  * @typedef {{word: string, rank: number, stage: number, sources: string[], relA: number, relB: number, kindA: string, kindB: string,
- *   weak: number, strong: number, connection: number, familiarity: number, cue: number, oneSided: number, generic: number, piece: number, final: number}} ScoredWord
+ *   weak: number, strong: number, connection: number, familiarity: number, cue: number, oneSided: number, generic: number, piece: number, final: number, band?: string}} ScoredWord
  * @typedef {{engine: string, dataset: string, config: typeof ENGINE_CONFIG, seed: number, language: string,
  *   pair: string[] | null, inputs: {word: string, ids: string[], known: boolean}[], blockedCount: number, stage: string, lowQuality: boolean,
- *   candidates: ScoredWord[], rejected: {word: string, reason: string}[], pool: string[], selected: string, quality: string, generated: number}} EngineDecision
+ *   candidates: ScoredWord[], rejected: {word: string, reason: string}[], pool: string[], selected: string, quality: string, generated: number,
+ *   band?: string, bands?: Record<string, string[]>}} EngineDecision
  */
 
 /**
@@ -249,9 +268,21 @@ export function selectBotWord({pair, blocked = [], language = "en", character = 
       return finish(pick.label, "loose", "no-candidates", true);
     }
     const top = ranked[0].final;
-    const strongPool = ranked.filter(s => s.final >= top - config.poolMargin).slice(0, config.poolSize);
-    const pick = strongPool[Math.floor(rng() * strongPool.length)];
-    decision.candidates = everything.slice(0, config.logCandidates).map(({concept: _c, ...rest}) => rest);
+    let strongPool = ranked.filter(s => s.final >= top - config.poolMargin).slice(0, config.poolSize);
+    let pick = strongPool[Math.floor(rng() * strongPool.length)];
+    const bands = config.sampling && !lowQuality && stage !== "unknown-input" ? neighbourhood(all, ranked[0], config.sampling) : null;
+    if (bands) {
+      const roll = rng();
+      const band = pickBand(bands, config.sampling.shares, roll, config.sampling.lateral.cap);
+      pick = bands[band][Math.floor(rng() * bands[band].length)];
+      strongPool = BANDS.flatMap(b => bands[b]);
+      decision.band = band;
+      decision.bands = Object.fromEntries(BANDS.map(b => [b, bands[b].map(s => s.word)]));
+    }
+    // The leading candidates, plus every word the pick was drawn from (each tagged with its band).
+    if (bands) for (const b of BANDS) for (const member of bands[b]) member.band = b;
+    const logged = everything.filter((s, i) => i < config.logCandidates || s.band);
+    decision.candidates = logged.map(({concept: _c, ...rest}) => rest);
     // Notable rejections: blocked or lazy words that would otherwise have ranked near the top.
     decision.rejected = rejected.filter(r => r.final >= top - 0.15).sort((x, y) => y.final - x.final).slice(0, 6).map(({word, reason}) => ({word, reason}));
     // Also note strong one-sided words that lost to the balanced pick (why the obvious word was not chosen).
@@ -262,4 +293,50 @@ export function selectBotWord({pair, blocked = [], language = "en", character = 
     decision.pool = strongPool.map(s => s.word);
     return finish(pick.word, lowQuality ? "loose" : "strong", stage, lowQuality);
   }
+}
+
+/**
+ * The credible neighbourhood of the best word, split into bands (best first within each band).
+ *   strong:     linked to both directly or almost (stage ≤ 2), close to the best
+ *   reasonable: linked to both, at least through shared neighbours (stage ≤ 3)
+ *   lateral:    further down the same list: a less expected word that still links to both
+ * Every sampled word links to BOTH inputs (weak side ≥ 0.30), and is never a generic word, a piece
+ * of an input, or under the score floor: variety never brings back a word that fits only one input.
+ * The lateral share is capped (sampling.lateral.cap).
+ * @param {any[]} all every valid scored candidate
+ * @param {any} best the top word of the reached stage
+ * @param {typeof ENGINE_CONFIG.sampling} cfg
+ */
+function neighbourhood(all, best, cfg) {
+  const top = best.final;
+  const rest = all.filter(s => s !== best && !s.generic && !s.piece && s.final >= cfg.lateral.floor)
+    .sort((x, y) => y.final - x.final || x.word.localeCompare(y.word));
+  const take = (list, count, test) => { const out = []; for (const s of list) if (out.length < count && test(s)) out.push(s); return out; };
+  const strong = take(rest, cfg.strong.count, s => s.stage <= 2 && s.weak >= cfg.lateral.minWeak && s.final >= top - cfg.strong.margin);
+  const left1 = rest.filter(s => !strong.includes(s));
+  const reasonable = take(left1, cfg.reasonable.count, s => s.weak >= cfg.lateral.minWeak && s.final >= top - cfg.reasonable.margin);
+  const left2 = left1.filter(s => !reasonable.includes(s));
+  const lateral = take(left2, cfg.lateral.count, s => s.weak >= cfg.lateral.minWeak && s.final >= top - cfg.lateral.margin);
+  return {strongest: [best], strong, reasonable, lateral};
+}
+
+/**
+ * Which band to draw from. Each band keeps its share; an empty band's share moves to the nearest
+ * non-empty band below it (or above, when nothing below is left), so a sparse neighbourhood does not
+ * collapse back onto the single most obvious word. The lateral band never gets more than `capOf`;
+ * the rest goes to the strongest band, which is never empty.
+ */
+export function pickBand(bands, shares, roll, capOf = 1) {
+  const effective = Object.fromEntries(BANDS.map(b => [b, bands[b].length ? shares[b] || 0 : 0]));
+  BANDS.forEach((b, i) => {
+    if (bands[b].length || !shares[b]) return;
+    const up = BANDS.slice(0, i).reverse().find(x => bands[x].length);
+    const down = BANDS.slice(i + 1).find(x => bands[x].length);
+    effective[down || up || "strongest"] += shares[b];
+  });
+  const cap = typeof capOf === "number" ? capOf : 1;
+  if (effective.lateral > cap) { effective.strongest += effective.lateral - cap; effective.lateral = cap; }
+  let acc = 0;
+  for (const b of BANDS) { acc += effective[b]; if (roll < acc) return b; }
+  return "strongest";
 }

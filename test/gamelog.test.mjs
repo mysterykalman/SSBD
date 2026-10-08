@@ -4,7 +4,7 @@
 import {test, beforeEach, afterEach} from "node:test";
 import assert from "node:assert/strict";
 import {handleApi} from "../src/server/api.js";
-import {ABANDON_AFTER_MS, CSV_COLUMNS, computeMetrics, csvCell, gameRecord, reportedStatus, roundRecord, toCsv} from "../src/shared/gamelog.js";
+import {ABANDON_AFTER_MS, CSV_COLUMNS, cleanGame, computeMetrics, csvCell, gameRecord, reportedStatus, roundRecord, toCsv} from "../src/shared/gamelog.js";
 import {ENGINE_CONFIG, ENGINE_VERSION} from "../src/shared/engine.js";
 import {DATASET_VERSION} from "../src/shared/lexicon/index.js";
 import {currentMove} from "../src/shared/rules.js";
@@ -49,13 +49,14 @@ test("records: one per revealed round, the decision committed before the reveal,
     assert.ok(r.stage && typeof r.low_quality === "boolean" && Number.isFinite(r.decision_ms));
     assert.equal(r.decision.config, undefined, "the engine configuration is logged once, with the game");
   }
-  assert.deepEqual(Object.keys(record).sort(), ["app_version", "character", "config", "dataset_version", "engine_version", "ended_at", "game_id", "language", "last_activity_at", "mode", "rounds", "schema", "seed", "started_at", "status"].sort());
+  assert.deepEqual(Object.keys(record).sort(), ["app_version", "character", "config", "dataset_version", "engine_version", "ended_at", "game_id", "language", "last_activity_at", "mode", "player_rating", "rounds", "schema", "seed", "started_at", "status"].sort());
+  assert.equal(record.player_rating, null, "no rating unless the player won and rated");
   assert.equal(record.character, "milo");
   assert.equal(record.status, "in_progress");
   assert.equal(record.ended_at, null);
   // No names, player ids, emails or addresses anywhere in what is logged.
   const text = JSON.stringify({record, rounds});
-  assert.doesNotMatch(text, /player|display_name|email|recovery|"ip"|address/i);
+  assert.doesNotMatch(text, /player(?!_rating)|display_name|email|recovery|"ip"|address/i, "the only player-anything is the anonymous star rating");
   // The open (unrevealed) move is never logged.
   assert.ok(!rounds.some(r => r.bot_word === currentMove(game).hidden.b && r.round === currentMove(game).number));
 });
@@ -184,4 +185,83 @@ test("metrics: explicit denominators; unfinished games are not losses; automated
   assert.equal(api7.data.overall.games, 1);
   assert.deepEqual(api7.data.byCharacter.map(g => [g.key, g.games]), [["milo", 1]]);
   assert.deepEqual(api7.data.byEngine.map(g => [g.key, g.games]), [[ENGINE_VERSION, 1]]);
+});
+
+// ---------- player rating (1–5 stars after a Solo win) ----------
+
+/** A won game: the player types the bot's committed word. */
+function wonGame(id) {
+  let game = startSoloGame({id, seed: 5, character: "gary", now: "2026-03-02T10:00:00.000Z"});
+  const r = submitSoloWord(game, currentMove(game).hidden.b, "2026-03-02T10:00:20.000Z");
+  game = r.game;
+  return {game, round: roundRecord(game, r.move, r.decision, r.decisionMs)};
+}
+const meta = {appVersion: "test-app", engineVersion: ENGINE_VERSION, datasetVersion: DATASET_VERSION, config: ENGINE_CONFIG};
+const ratingOf = async id => (await db.store.query("SELECT player_rating FROM bot_games WHERE game_id = $1", [id])).rows[0]?.player_rating ?? null;
+
+test("rating: part of the won game's own record, 1–5 only, never for an unfinished game", () => {
+  const {game} = wonGame("rate-shape");
+  assert.equal(game.status, "MATCHED");
+  assert.equal(gameRecord(game, meta).player_rating, null);
+  assert.equal(gameRecord({...game, playerRating: 4}, meta).player_rating, 4);
+  for (const bad of [0, 6, 2.5, "4", null]) assert.equal(gameRecord({...game, playerRating: bad}, meta).player_rating, null, String(bad));
+  const playing = startSoloGame({id: "rate-open", seed: 1});
+  assert.equal(gameRecord({...playing, playerRating: 5}, meta).player_rating, null, "only a won game carries a rating");
+  assert.equal(cleanGame({...gameRecord({...game, playerRating: 3}, meta)}).player_rating, 3);
+  assert.equal(cleanGame({...gameRecord({...game, playerRating: 3}, meta), player_rating: 9}).player_rating, null);
+  assert.equal(cleanGame({...gameRecord(playing, meta), player_rating: 3}).player_rating, null);
+});
+
+test("rating: a game not uploaded yet carries its rating in the same upload; the server confirms it", async () => {
+  const {game, round} = wonGame("rate-pending");
+  const record = gameRecord({...game, playerRating: 4}, meta);
+  const res = await api("/api/log/batch", {body: {games: [record], rounds: [round]}});
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.data.rated, ["rate-pending"]);
+  assert.equal(await ratingOf("rate-pending"), 4);
+  assert.equal(await db.count("SELECT COUNT(*) AS n FROM bot_rounds WHERE game_id = ?", "rate-pending"), 1);
+});
+
+test("rating: a game already uploaded is updated in place (no duplicate game), once", async () => {
+  const {game, round} = wonGame("rate-later");
+  await api("/api/log/batch", {body: {games: [gameRecord(game, meta)], rounds: [round]}});
+  assert.equal(await ratingOf("rate-later"), null);
+  const res = await api("/api/log/batch", {body: {games: [gameRecord({...game, playerRating: 2}, meta)]}});
+  assert.deepEqual(res.data.rated, ["rate-later"]);
+  assert.equal(await ratingOf("rate-later"), 2);
+  assert.equal(await db.count("SELECT COUNT(*) AS n FROM bot_games WHERE game_id = ?", "rate-later"), 1);
+  assert.equal(await db.count("SELECT COUNT(*) AS n FROM bot_rounds WHERE game_id = ?", "rate-later"), 1);
+  // A rating is given once: a later, different value never replaces it (but is still confirmed).
+  const again = await api("/api/log/batch", {body: {games: [gameRecord({...game, playerRating: 5}, meta)]}});
+  assert.deepEqual(again.data.rated, ["rate-later"]);
+  assert.equal(await ratingOf("rate-later"), 2);
+});
+
+test("rating: without the rating column (migration not applied) games and rounds still log; the rating is not confirmed", async () => {
+  await db.store.query("ALTER TABLE bot_games DROP COLUMN player_rating");
+  const {game, round} = wonGame("rate-nocol");
+  const res = await api("/api/log/batch", {body: {games: [gameRecord({...game, playerRating: 5}, meta)], rounds: [round]}});
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.data.rated, [], "not confirmed, so the device keeps it queued");
+  assert.equal(res.data.ratingUnavailable, true);
+  assert.equal(await db.count("SELECT COUNT(*) AS n FROM bot_games WHERE game_id = ?", "rate-nocol"), 1, "the game is stored");
+  assert.equal(await db.count("SELECT COUNT(*) AS n FROM bot_rounds WHERE game_id = ?", "rate-nocol"), 1, "and its round");
+});
+
+test("rating: review shows it on the game, in JSON and CSV exports (last column), and in the metrics", async () => {
+  const {game, round} = wonGame("rate-review");
+  await api("/api/log/batch", {body: {games: [gameRecord({...game, playerRating: 4}, meta)], rounds: [round]}});
+  const list = await api("/api/review/games", {token: TOKEN});
+  assert.equal(list.data.games.find(g => g.game_id === "rate-review").player_rating, 4);
+  const detail = await api("/api/review/game?id=rate-review", {token: TOKEN});
+  assert.equal(detail.data.game.player_rating, 4);
+  const json = await api("/api/review/export?format=json", {token: TOKEN});
+  assert.equal(json.data.games.find(g => g.game_id === "rate-review").player_rating, 4);
+  const csv = await api("/api/review/export?format=csv", {token: TOKEN});
+  const [header, ...rows] = csv.data.trim().split("\r\n");
+  assert.equal(header.split(",").at(-1), "player_rating");
+  assert.deepEqual(header.split(",").slice(0, CSV_COLUMNS.length - 1), CSV_COLUMNS.slice(0, -1), "older columns keep their positions");
+  assert.equal(rows.find(r => r.startsWith("rate-review,")).split(",").at(-1), "4");
+  const metrics = await api("/api/review/metrics", {token: TOKEN});
+  assert.deepEqual({mean: metrics.data.overall.playerRating.mean, n: metrics.data.overall.playerRating.n}, {mean: 4, n: 1});
 });

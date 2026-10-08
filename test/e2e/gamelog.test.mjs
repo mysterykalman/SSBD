@@ -73,7 +73,7 @@ test("rounds are kept on the device while uploads fail, survive a reload, then s
   const {rows: [game]} = await sql.query("SELECT * FROM bot_games WHERE game_id = $1", [id]);
   assert.equal(game.rounds, 2);
   assert.equal(game.status, "in_progress");
-  assert.equal(game.engine_version, "engine-2.0");
+  assert.match(game.engine_version, /^engine-2\.\d+$/);
   const {rows: [round]} = await sql.query("SELECT * FROM bot_rounds WHERE game_id = $1 AND round = 2", [id]);
   assert.ok(round.decision && round.decision.stage, "the bot's decision is stored with the round");
   assert.equal(round.pair_a !== null && round.pair_b !== null, true, "round 2 records the pair the bot answered");
@@ -169,5 +169,62 @@ test("review screen: token gate, game list, round diagnostics, human flags and C
   // Forget the token: back to the gate.
   await page.click("button:has-text('Forget token')");
   await page.waitForSelector("#reviewToken");
+  await context.close();
+});
+
+test("review screen with nothing yet: no stray \"null\", no empty red error bar; errors still show when they happen", async () => {
+  const context = await browser.newContext({reducedMotion: "reduce"});
+  const page = await context.newPage();
+  await page.goto(`${server.url}/review`);
+  await page.waitForSelector("#reviewToken");
+  const device = await page.locator("section[aria-labelledby=rvDevice]").innerText();
+  assert.match(device, /Solo games logged in this browser: 0/);
+  assert.doesNotMatch(device, /\bnull\b|\bundefined\b/, "zero device games: nothing printed after the controls");
+  assert.equal(await page.locator("section[aria-labelledby=rvDevice] .rv-metrics").count(), 0);
+  assert.doesNotMatch(await page.locator(".review").innerText(), /\bnull\b|\bundefined\b/);
+  // The token form starts without any error UI (no blank red pill, no gap).
+  assert.equal(await page.locator("#reviewTokenError").isVisible(), false);
+  assert.equal(await page.locator("#reviewTokenError").evaluate(el => el.getBoundingClientRect().height), 0);
+  // A wrong token: the error appears, as an alert.
+  await page.fill("#reviewToken", "wrong-token");
+  await page.click(".rv-token button[type=submit]");
+  await page.waitForSelector("#reviewTokenError:not([hidden])");
+  assert.equal(await page.locator("#reviewTokenError").getAttribute("role"), "alert");
+  assert.match(await page.locator("#reviewTokenError").innerText(), /not accepted/);
+  // The right token: review loads, and no error styling is left behind.
+  await page.fill("#reviewToken", TOKEN);
+  await page.click(".rv-token button[type=submit]");
+  await page.waitForSelector(".rv-status");
+  assert.equal(await page.locator("#reviewTokenError").count(), 0);
+  await context.close();
+});
+
+test("review screen without REVIEW_TOKEN on the server: the missing setup is explained", async () => {
+  const bare = await startServer();
+  const context = await browser.newContext({reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    await page.goto(`${bare.url}/review`);
+    await page.fill("#reviewToken", "anything");
+    await page.click(".rv-token button[type=submit]");
+    await page.waitForSelector("#reviewTokenError:not([hidden])");
+    assert.match(await page.locator("#reviewTokenError").innerText(), /not enabled on this server/);
+  } finally {
+    await context.close();
+    await bare.stop();
+  }
+});
+
+test("device metrics render once this browser has logged games", async () => {
+  const context = await browser.newContext({reducedMotion: "reduce"});
+  const page = await context.newPage();
+  await page.goto(server.url);
+  await startSolo(page);
+  await page.waitForSelector("#word");
+  await playDistinct(page, 1);
+  await page.goto(`${server.url}/review`);
+  await page.waitForSelector("section[aria-labelledby=rvDevice] .rv-metrics");
+  assert.match(await page.locator("section[aria-labelledby=rvDevice] .rv-metrics").innerText(), /Match within 5 moves/);
+  assert.doesNotMatch(await page.locator("section[aria-labelledby=rvDevice]").innerText(), /\bnull\b/);
   await context.close();
 });

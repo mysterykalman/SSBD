@@ -878,3 +878,11 @@ See `docs/BOT_ENGINE.md` for the details: root causes, formula, stages, licensin
   - Apply `supabase/migrations/20261009120000_bot_game_logs.sql` (not applied by Claude).
   - Set `REVIEW_TOKEN` in Vercel to open `/review` (not set by Claude). Without it, the review API answers 404.
 - **Replay.** `node scripts/replay.mjs` compares engine-1 and the current engine on `test/fixtures/bot-replay.json`. `--log <export.json>` replays reviewed rounds.
+
+## Status update: fair-play audit, neighbourhood sampling, reaction pools, win card and rating (2026-10-08)
+
+- **Bot (engine-2.1).** The audit confirmed the bot commits its word before the player's answer exists (`test/fairness.test.mjs`). It now samples a credible neighbourhood (20/35/30/15 bands) instead of always the strongest bridge. See `docs/BOT_ENGINE.md` and `node scripts/convergence.mjs`.
+- **Reaction pools.** Gary's and Milo's lines rotate per game (`rotate` in `src/client/characters.js`): a stable offset per game, no repeat until the pool is used up, never twice in a row. Pools are per context: strong, good, weak, strange, win and so on. A weak word never gets grudging praise. Milo's milestone lines stay fixed.
+- **Win card.** A single Solo win card with the avatar, a speech bubble, inline stars, and a primary / secondary / tertiary button hierarchy.
+- **Rating.** Stored in `player_rating`. **Apply `supabase/migrations/20261010120000_bot_games_player_rating.sql`.** Until then, ratings stay queued on devices.
+- **Review fixes.** `/review` no longer prints "null" when there are no device games, and no longer shows an empty error bar on the token form.

@@ -2,7 +2,7 @@
 // the shared used-word rule, deterministic seeded replay, and a complete decision record.
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {ENGINE_CONFIG, ENGINE_VERSION, STAGE_NAMES, relation, selectBotWord} from "../src/shared/engine.js";
+import {BANDS, ENGINE_CONFIG, ENGINE_VERSION, STAGE_NAMES, pickBand, relation, selectBotWord} from "../src/shared/engine.js";
 import {DATASET_VERSION, getLexicon} from "../src/shared/lexicon/index.js";
 import {lemmaKeys} from "../src/shared/morph.js";
 import {checkWord, currentMove, seededRandom} from "../src/shared/rules.js";
@@ -84,21 +84,32 @@ test("shared used words: no revealed word (or a case/spacing/accent/plural varia
   }
 });
 
-test("balanced associations: when a word links to both inputs, the pick links to both (no one-sided picks)", t => {
+const SAMPLING = ENGINE_CONFIG.sampling;
+/** A word the engine may sample from the neighbourhood: linked to both inputs (weak side ≥ 0.30). */
+const credible = c => c.weak >= SAMPLING.lateral.minWeak;
+
+test("balanced associations: the strongest answer links to both inputs; every sampled word stays credible", t => {
   let stage1 = 0, total = 0;
   for (const [a, b] of randomPairs(21, 500)) {
     const {word, decision} = selectBotWord({pair: [a, b], seed: 1});
     total++;
     const picked = decision.candidates.find(c => c.word === word);
+    assert.ok(picked || decision.lowQuality || decision.stage === "opening", `${a}+${b} → ${word} is in the decision record`);
+    const reached = Number(Object.keys(STAGE_NAMES).find(k => STAGE_NAMES[k] === decision.stage));
     if (decision.stage === "shared-direct") {
       stage1++;
-      assert.ok(Math.min(picked.relA, picked.relB) >= ENGINE_CONFIG.stages.sharedDirect, `${a}+${b} → ${word}`);
+      // The strongest band is always the best word of the reached stage.
+      const top = decision.candidates.find(c => c.word === decision.bands.strongest[0]);
+      assert.ok(Math.min(top.relA, top.relB) >= ENGINE_CONFIG.stages.sharedDirect, `${a}+${b} → ${top.word}`);
     }
-    // Never a lower stage when a higher one had a valid candidate.
-    const reached = Number(Object.keys(STAGE_NAMES).find(k => STAGE_NAMES[k] === decision.stage));
-    for (const c of decision.candidates) assert.ok(c.stage >= reached, `${a}+${b}: ${c.word} (stage ${c.stage}) was available above ${decision.stage}`);
-    // The pick is never a near-zero side when anything better connected both.
-    if (picked && ["shared-direct", "direct-plus-indirect", "indirect-both"].includes(decision.stage)) assert.ok(picked.weak >= ENGINE_CONFIG.stages.indirect);
+    // Never a lower stage when a higher one had a valid candidate (the stage is the best one reached).
+    for (const c of decision.candidates) if (!c.band) assert.ok(c.stage >= reached, `${a}+${b}: ${c.word} (stage ${c.stage}) was available above ${decision.stage}`);
+    // Whatever band it came from, the pick is never a near-zero side, a generic word or a piece of an input.
+    if (picked && decision.band && decision.band !== "strongest") {
+      assert.ok(credible(picked), `${a}+${b} → ${word} (${picked.relA}/${picked.relB}, ${decision.band})`);
+      assert.ok(!picked.generic && !picked.piece, `${a}+${b} → ${word}`);
+      assert.ok(picked.final >= SAMPLING.lateral.floor, `${a}+${b} → ${word}`);
+    }
   }
   t.diagnostic(`${stage1}/${total} random pairs had a word directly linked to both`);
 });
@@ -117,24 +128,47 @@ test("broad words lose to a specific shared bridge; familiar words beat obscure 
   assert.notEqual(pc.word, "food", JSON.stringify(pc.decision.candidates.slice(0, 4).map(c => [c.word, c.final])));
 });
 
-test("randomness stays inside the strong pool and never bypasses validity", () => {
+test("randomness: a seeded draw from the credible neighbourhood (bands), never outside it, never invalid", () => {
   for (const [a, b] of randomPairs(41, 80)) {
-    const seen = new Set();
-    let pool;
     for (let seed = 1; seed <= 25; seed++) {
       const r = selectBotWord({pair: [a, b], seed});
-      pool ??= r.decision.pool;
-      seen.add(r.word);
-      assert.ok(r.decision.pool.includes(r.word));
-      assert.ok(r.decision.pool.length <= ENGINE_CONFIG.poolSize);
-      const top = r.decision.candidates.find(c => c.word === r.decision.pool[0]);
-      for (const w of r.decision.pool) {
-        const c = r.decision.candidates.find(x => x.word === w);
-        if (c && top) assert.ok(c.final >= top.final - ENGINE_CONFIG.poolMargin - 1e-9, `${a}+${b}: ${w} is not in the strong pool`);
+      assert.ok(r.decision.pool.includes(r.word), `${a}+${b}: ${r.word} was drawn from its pool`);
+      assert.deepEqual(selectBotWord({pair: [a, b], seed}), r, "the same seed gives the same word");
+      if (r.decision.bands) {
+        assert.deepEqual(r.decision.pool, BANDS.flatMap(x => r.decision.bands[x]));
+        assert.ok(r.decision.bands[r.decision.band].includes(r.word));
+        for (const w of r.decision.pool) assert.ok(credible(r.decision.candidates.find(c => c.word === w)), `${a}+${b}: ${w}`);
+      } else {
+        // Low-quality stages: only the strong pool around the best word.
+        assert.ok(r.decision.pool.length <= ENGINE_CONFIG.poolSize);
+        const top = r.decision.candidates.find(c => c.word === r.decision.pool[0]);
+        for (const w of r.decision.pool) {
+          const c = r.decision.candidates.find(x => x.word === w);
+          if (c && top) assert.ok(c.final >= top.final - ENGINE_CONFIG.poolMargin - 1e-9, `${a}+${b}: ${w} is not in the strong pool`);
+        }
       }
     }
-    assert.ok(seen.size <= ENGINE_CONFIG.poolSize);
   }
+});
+
+test("band shares: about 20 / 35 / 30 / 15 when every band has words; empty bands pass their share down, lateral is capped", () => {
+  const full = {strongest: ["a"], strong: ["b"], reasonable: ["c"], lateral: ["d"]};
+  const count = bands => {
+    const n = Object.fromEntries(BANDS.map(b => [b, 0]));
+    for (let i = 0; i < 1000; i++) n[pickBand(bands, SAMPLING.shares, (i + 0.5) / 1000, SAMPLING.lateral.cap)]++;
+    return n;
+  };
+  assert.deepEqual(count(full), {strongest: 200, strong: 350, reasonable: 300, lateral: 150});
+  // No strong word: its share goes to the reasonable band, not back to the obvious word.
+  assert.deepEqual(count({...full, strong: []}), {strongest: 200, strong: 0, reasonable: 650, lateral: 150});
+  // Only the obvious word and a lateral one: lateral is capped, the rest stays on the obvious word.
+  assert.deepEqual(count({...full, strong: [], reasonable: []}), {strongest: 700, strong: 0, reasonable: 0, lateral: 300});
+  assert.deepEqual(count({strongest: ["a"], strong: [], reasonable: [], lateral: []}), {strongest: 1000, strong: 0, reasonable: 0, lateral: 0});
+  // Over many seeds, a rich pair really does vary (and mostly not on the single most obvious word).
+  const words = new Map();
+  for (let seed = 1; seed <= 400; seed++) { const w = selectBotWord({pair: ["sun", "beach"], seed}).word; words.set(w, (words.get(w) || 0) + 1); }
+  assert.ok(words.size >= 6, [...words.keys()].join(","));
+  assert.ok((words.get("summer") || 0) < 0.35 * 400, `summer ${words.get("summer")}/400`);
 });
 
 test("explicit, safe fallback: unknown inputs, heavy blocking and sparse options never loop or return invalid words", () => {
@@ -178,12 +212,16 @@ test("the reference game: each round's choice now connects both words of the lat
     const pick = r.decision.candidates.find(c => c.word === r.word);
     assert.ok(r.decision.inputs.every(i => i.known), `${pair}: both words are known now`);
     assert.ok(!r.decision.lowQuality, `${pair} → ${r.word} (${r.decision.stage})`);
-    assert.ok(pick.weak >= 0.3, `${pair} → ${r.word} connects both (${pick.relA} / ${pick.relB})`);
+    assert.ok(credible(pick), `${pair} → ${r.word} connects both (${pick.relA} / ${pick.relB}, ${r.decision.band})`);
+    // The single strongest answer connects both words directly or through shared neighbours.
+    const top = r.decision.candidates.find(c => c.word === r.decision.bands.strongest[0]);
+    assert.ok(top.weak >= 0.3, `${pair}: strongest ${top.word} (${top.relA} / ${top.relB})`);
     blocked.push(...pair);
   }
   // Lamp + Restaurant → TABLE, ahead of CHRISTMAS (which barely relates to a restaurant).
   const first = selectBotWord({pair: ["lamp", "restaurant"], seed: 1});
-  assert.equal(first.word, "table");
+  assert.equal(first.decision.bands.strongest[0], "table");
+  assert.ok(!first.decision.pool.includes("christmas"));
   // Gifts + Dinner: PIZZA (one-sided: dinner only) no longer wins.
   assert.notEqual(selectBotWord({pair: ["gifts", "dinner"], blocked: ["lamp", "restaurant", "tables", "christmas"], seed: 1}).word, "pizza");
   // Presents + Pizza: FOOD (pizza only) no longer wins; PRESENTS is understood as GIFT.

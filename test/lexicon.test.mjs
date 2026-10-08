@@ -4,7 +4,7 @@ import {CONCEPTS, PHRASES, TAGS} from "../src/shared/lexicon/data.js";
 import {EXTRA_WORDS} from "../src/shared/lexicon/vocab.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {chooseOpening, chooseResponse, wordForms, rankCandidates} from "../src/shared/bot.js";
-import {selectBotWord} from "../src/shared/engine.js";
+import {ENGINE_CONFIG, selectBotWord} from "../src/shared/engine.js";
 import {createSpeller, validateWord, wordKey} from "../src/shared/words.js";
 
 // Local seeded RNG so these tests do not depend on rules.js.
@@ -289,17 +289,22 @@ function judgeSide(lex, promptId, pickId) {
 }
 const isUsed = (used, key) => [...wordForms(key)].some(form => used.has(form));
 const BRIDGE_STAGES = new Set(["shared-direct", "direct-plus-indirect", "indirect-both", "weak-fallback"]);
+/** The engine's strongest answer for an input (sampling off). */
+const strongestWord = input => selectBotWord({...input, config: {...ENGINE_CONFIG, sampling: null}}).word;
 
 test("bot quality in simulated games and random pairs (EN and FR)", t => {
   for (const lang of ["en", "fr"]) {
     const lex = getLexicon(lang);
     const all = [...lex.concepts.values()];
     const records = [];
-    const judge = (prompts, used, word, source, stage) => {
+    const judge = (prompts, used, word, source, stage, top) => {
       const [a, b] = prompts.map(p => lex.resolve(p));
       const c = lex.resolve(word);
       assert.ok(c, `${lang}: ${word} is a lexicon word`);
       const sa = judgeSide(lex, a, c), sb = judgeSide(lex, b, c);
+      // The engine's single strongest answer (before sampling the neighbourhood).
+      const t = lex.resolve(top);
+      const ta = judgeSide(lex, a, t), tb = judgeSide(lex, b, t);
       let strongPossible = false;
       for (const x of all) {
         if (x.id === a || x.id === b || isUsed(used, x.key)) continue;
@@ -308,7 +313,7 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
       // Was a meaningful two-sided word available at all (engine stages 1-4)? The engine logs the
       // stage it reached; a lazy piece of a prompt (BASKET for BASKETBALL) is never counted as a bridge.
       const bridgeable = BRIDGE_STAGES.has(stage);
-      records.push({prompts, word, sa, sb, strongPossible, source, bridgeable});
+      records.push({prompts, word, sa, sb, ta, tb, strongPossible, source, bridgeable});
     };
     // Realistic games: the "player" answers with a word related to one or both prompts.
     for (let g = 0; g < 60; g++) {
@@ -320,10 +325,11 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
         used.add(wordKey(player));
         used.add(wordKey(bot));
         const prompts = [player, bot];
-        const pick = selectBotWord({pair: prompts, blocked: [...used], language: lang, seed: Math.floor(botRng() * 1e9)});
+        const input = {pair: prompts, blocked: [...used], language: lang, seed: Math.floor(botRng() * 1e9)};
+        const pick = selectBotWord(input);
         const next = pick.word;
         assert.ok(!isUsed(used, wordKey(next)), `${lang}: reused ${next}`);
-        judge(prompts, used, next, "game", pick.decision.stage);
+        judge(prompts, used, next, "game", pick.decision.stage, strongestWord(input));
         const ids = prompts.map(p => lex.resolve(p));
         const pool = all.filter(x => !isUsed(used, x.key) && ids.some(id => lex.concepts.get(id).near.has(x.id)));
         const both = pool.filter(x => ids.every(id => lex.concepts.get(id).near.has(x.id)));
@@ -337,19 +343,24 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     for (let i = 0; i < 300; i++) {
       const a = all[Math.floor(random() * all.length)], b = all[Math.floor(random() * all.length)];
       if (a.id === b.id) continue;
-      const pick = selectBotWord({pair: [a.label, b.label], blocked: [], language: lang, seed: i + 1});
-      judge([a.label, b.label], new Set([a.key, b.key]), pick.word, "random", pick.decision.stage);
+      const input = {pair: [a.label, b.label], blocked: [], language: lang, seed: i + 1};
+      const pick = selectBotWord(input);
+      judge([a.label, b.label], new Set([a.key, b.key]), pick.word, "random", pick.decision.stage, strongestWord(input));
     }
     const possible = records.filter(r => r.strongPossible);
-    const strong = possible.filter(r => r.sa === 3 && r.sb === 3);
+    const strong = possible.filter(r => r.ta === 3 && r.tb === 3);
+    const sampledStrong = possible.filter(r => r.sa === 3 && r.sb === 3);
     const unrelated = records.filter(r => r.sa === 0 && r.sb === 0);
     const weakest = [...records].sort((x, y) => (Math.min(x.sa, x.sb) - Math.min(y.sa, y.sb)) || (x.sa + x.sb - y.sa - y.sb)).slice(0, 20);
-    t.diagnostic(`${lang}: ${records.length} picks; strong where possible ${strong.length}/${possible.length}; unrelated to both ${unrelated.length}`);
+    t.diagnostic(`${lang}: ${records.length} picks; strongest answer strong where possible ${strong.length}/${possible.length}; sampled pick ${sampledStrong.length}/${possible.length}; unrelated to both ${unrelated.length}`);
     t.diagnostic(`${lang} weakest: ${weakest.map(r => `${r.prompts.join(" + ")} -> ${r.word} [${r.sa},${r.sb}]`).join("; ")}`);
     assert.ok(possible.length >= 100, `${lang}: only ${possible.length} pairs had a strong answer`);
     // Gary aims for the player's most likely answer, which is often a strong first thought of one word
     // that plausibly fits the other (GAME for SISTER + PLAY), not always a word linked directly to both.
     // So "directly linked to both" is a sanity floor here, not the goal; relating to both is required below.
+    // Since engine-2.1 the played word is sampled from a neighbourhood around the strongest answer (so
+    // it is not always the most convergent bridge): the floor applies to that strongest answer, and every
+    // sampled word must still relate to both prompts (checked below).
     assert.ok(strong.length / possible.length >= 0.75, `${lang}: strong for ${strong.length}/${possible.length}`);
     // Every pick relates meaningfully (link, shared neighbour or category) to BOTH prompts whenever the
     // data allows it. A weak, balanced last-resort pick is only allowed when no meaningful two-sided word

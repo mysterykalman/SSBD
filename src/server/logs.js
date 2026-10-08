@@ -3,6 +3,7 @@
 // and token-protected review endpoints (list, detail, flags, exports, metrics).
 //
 //   POST /api/log/batch            {games: [...], rounds: [...]}   anyone (the app); idempotent
+//                                  (a won game's player_rating is set once; the reply lists `rated` ids)
 //   GET  /api/review/games          ?character&language&status&engine&from&to&flagged   review token
 //   GET  /api/review/game?id=       one game with its rounds, decisions and review flags    review token
 //   POST /api/review/flag           {game_id, round, flags: [...], note}                   review token
@@ -33,6 +34,9 @@ export async function logBatch(db, body) {
   const rounds = rawRounds.map(cleanRound).filter(Boolean);
   const received = now();
   const known = new Set();
+  /** @type {string[]} */
+  const rated = [];
+  let ratingUnavailable = false;
   await db.tx(async q => {
     for (const g of games) {
       await q.query(`INSERT INTO bot_games (game_id, mode, character, language, started_at, last_activity_at, ended_at, status, rounds, app_version, engine_version, dataset_version, config, seed, received_at)
@@ -50,6 +54,24 @@ export async function logBatch(db, body) {
       [g.game_id, g.mode, g.character, g.language, g.started_at, g.last_activity_at, g.ended_at, g.status, g.rounds, g.app_version, g.engine_version, g.dataset_version, g.config && JSON.stringify(g.config), g.seed, received]);
       known.add(g.game_id);
     }
+    // Player ratings (won games only): written once, never overwritten. A separate statement inside a
+    // savepoint, so a database without the rating column (migration 20261010120000 not applied yet)
+    // still stores every game and round; those ratings are simply not confirmed and stay queued.
+    const rating = games.filter(g => g.player_rating);
+    if (rating.length) {
+      await q.query("SAVEPOINT rating");
+      try {
+        for (const g of rating) {
+          await q.query("UPDATE bot_games SET player_rating = $2 WHERE game_id = $1 AND status = 'matched' AND player_rating IS NULL", [g.game_id, g.player_rating]);
+        }
+        for (const row of (await q.query("SELECT game_id FROM bot_games WHERE game_id = ANY($1) AND player_rating IS NOT NULL", [rating.map(g => g.game_id)])).rows) rated.push(row.game_id);
+        await q.query("RELEASE SAVEPOINT rating");
+      } catch (error) {
+        await q.query("ROLLBACK TO SAVEPOINT rating");
+        if (/** @type {any} */ (error)?.code !== "42703") throw error; // undefined_column: the rating migration is not applied yet
+        ratingUnavailable = true;
+      }
+    }
     const missing = [...new Set(rounds.map(r => r.game_id).filter(id => !known.has(id)))];
     if (missing.length) for (const row of (await q.query("SELECT game_id FROM bot_games WHERE game_id = ANY($1)", [missing])).rows) known.add(row.game_id);
     for (const r of rounds) {
@@ -59,7 +81,8 @@ export async function logBatch(db, body) {
       [r.game_id, r.round, r.pair_a, r.pair_b, r.user_word, r.bot_word, r.user_key, r.bot_key, r.matched, r.revealed_at, r.decision_ms, r.stage, r.low_quality, r.decision && JSON.stringify(r.decision), received]);
     }
   });
-  return json({ok: true, games: games.length, rounds: rounds.filter(r => known.has(r.game_id)).length, rejected: rawGames.length - games.length + rawRounds.length - rounds.length});
+  return json({ok: true, games: games.length, rounds: rounds.filter(r => known.has(r.game_id)).length, rejected: rawGames.length - games.length + rawRounds.length - rounds.length,
+    rated, ...(ratingUnavailable ? {ratingUnavailable: true} : {})});
 }
 
 /** Constant-time comparison of the request's bearer token with the configured review token. */

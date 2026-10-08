@@ -1,5 +1,5 @@
 // The win sequence: "THAT’S A MATCH!" + "You both said WORD. Your brains did a high five." in the
-// reveal modal, then "YOU DID IT!" + "Matched on move N. Somebody cue the tiny parade." on the final
+// reveal modal, then "YOU DID IT!" + "Matched on move N" on the final
 // screen only. Against Gary, his reaction reads as Gary speaking: his avatar beside a speech bubble.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
@@ -60,7 +60,7 @@ test("Gary win: match copy with the word in the modal, Gary's avatar speaking hi
     await page.click("#revealContinue");
     await page.waitForSelector("#app .end.win");
     const end = await page.locator("#app .end").innerText();
-    assert.match(end, /YOU DID IT!\s+Matched on move 2\. Somebody cue the tiny parade\./);
+    assert.match(end, /YOU DID IT!\s+Matched on move 2(?!\.)/);
     // The visible game (the live region keeps the last spoken announcement, which is fine).
     const all = await page.locator("#app").innerText();
     assert.equal(count(all, "YOU DID IT!"), 1);
@@ -102,7 +102,7 @@ test("human vs human win: the same copy for both players, no Gary reaction, the 
     await page.click("#revealContinue");
     await page.waitForSelector("#app .end.win");
     const all = await page.locator("#app").innerText();
-    assert.match(all, /YOU DID IT!\s+Matched on move 2\. Somebody cue the tiny parade\./);
+    assert.match(all, /YOU DID IT!\s+Matched on move 2(?!\.)/);
     assert.equal(count(all, "YOU DID IT!"), 1);
     await page.context().close();
   }
@@ -124,6 +124,6 @@ test("French: the same two-step sequence, translated", async () => {
   assert.ok(modal.includes(`Vous avez tous les deux dit ${word}. Vos cerveaux se sont tapé dans la main.`), modal);
   await page.click("#revealContinue");
   await page.waitForSelector("#app .end.win");
-  assert.match(await page.locator("#app .end").innerText(), /TU AS RÉUSSI[\s\u202f]!\s+Trouvé au coup 1\. Que quelqu’un lance la mini-parade\./);
+  assert.match(await page.locator("#app .end").innerText(), /TU AS RÉUSSI[\s\u202f]!\s+Trouvé au coup 1(?!\.)/);
   await context.close();
 });

@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "version": "replay-1",
-  "about": "Versioned replay cases for the Solo bot. Each case keeps the exact engine input (latest revealed pair, words already used in the game, language, seed), the word the bot originally chose and with which engine, any human review flags, and what a good answer looks like. `acceptable` lists answers a reviewer judged good; `reject` lists answers judged poor. `status: \"pass\"` cases must give an acceptable word with the current engine (enforced by test/replay.test.mjs); `status: \"known-gap\"` cases document a weakness still open (only the safety invariants are enforced, and scripts/replay.mjs reports them). Rankings never change from logs automatically: a logged round becomes a case here only after review, by editing this file.",
+  "version": "replay-2",
+  "about": "Versioned replay cases for the Solo bot. Each case keeps the exact engine input (latest revealed pair, words already used in the game, language, seed), the word the bot originally chose and with which engine, any human review flags, and what a good answer looks like. `acceptable` lists answers a reviewer judged good for the engine's single strongest answer (since engine-2.1 the played word is drawn from a credible neighbourhood around it, so it is checked for validity, the pool and `reject` instead); `reject` lists answers judged poor and applies to both. `status: \"pass\"` cases must meet this with the current engine (enforced by test/replay.test.mjs); `status: \"known-gap\"` cases document a weakness still open (only the safety invariants are enforced, and scripts/replay.mjs reports them). Rankings never change from logs automatically: a logged round becomes a case here only after review, by editing this file.",
   "cases": [
     {"id": "ref-1", "category": "reference game", "language": "en", "pair": ["lamp", "restaurant"], "blocked": [], "seed": 7,
      "original": {"engine": "engine-1", "word": "christmas"}, "flags": ["weak"],

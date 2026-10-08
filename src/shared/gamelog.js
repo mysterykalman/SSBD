@@ -15,6 +15,8 @@ export const ABANDON_AFTER_MS = 24 * 60 * 60 * 1000;
 export const REVIEW_FLAGS = ["weak", "one-sided", "obscure", "generic", "good"];
 export const FLAG_LABELS = {weak: "Weak connection", "one-sided": "One-sided association", obscure: "Too obscure", generic: "Too generic", good: "Good connection"};
 const FINAL = new Set(["matched", "exhausted", "ended"]);
+/** A player's 1–5 star rating of a won Solo game, or null. */
+export const cleanRating = v => (Number.isInteger(v) && v >= 1 && v <= 5 ? v : null);
 const MAX_WORD = 60;
 
 /** @param {{status: string}} game */
@@ -46,7 +48,9 @@ export function gameRecord(game, meta = {}) {
     engine_version: meta.engineVersion || null,
     dataset_version: meta.datasetVersion || null,
     config: meta.config || null,
-    seed: Number.isFinite(game.seed) ? game.seed : null
+    seed: Number.isFinite(game.seed) ? game.seed : null,
+    // The player's 1–5 star rating after a win (null until they rate; never asked otherwise).
+    player_rating: status === "matched" ? cleanRating(game.playerRating) : null
   };
 }
 
@@ -102,7 +106,8 @@ export function cleanGame(g) {
     app_version: typeof g.app_version === "string" ? g.app_version.slice(0, 40) : null,
     engine_version: typeof g.engine_version === "string" ? g.engine_version.slice(0, 40) : null,
     dataset_version: typeof g.dataset_version === "string" ? g.dataset_version.slice(0, 40) : null,
-    config, seed: Number.isSafeInteger(g.seed) ? g.seed : null
+    config, seed: Number.isSafeInteger(g.seed) ? g.seed : null,
+    player_rating: status === "matched" ? cleanRating(g.player_rating) : null
   };
 }
 
@@ -152,6 +157,7 @@ const GOOD_STAGES = new Set(["opening", "shared-direct", "direct-plus-indirect",
  *  lowQualityRate (automated)  rounds the engine itself flagged low quality; same denominator.
  *  repeatedOrInvalid  bot words that repeat (or vary) a word revealed earlier in the game, or are empty.
  *  latency  decision_ms median and 95th percentile over rounds that recorded it.
+ *  playerRating  mean 1–5 stars and the count per star; denominator: matched games, of which `n` rated.
  * @param {any[]} games
  * @param {number} [now]
  */
@@ -194,8 +200,15 @@ export function computeMetrics(games, now = Date.now()) {
     fallbackRate: rate(fallback.length, decided.length),
     lowQualityRate: rate(low.length, decided.length),
     repeatedOrInvalid: rate(repeated, rounds.length),
-    latencyMs: {median: median(latency), p95: percentile(latency, 0.95), n: latency.length}
+    latencyMs: {median: median(latency), p95: percentile(latency, 0.95), n: latency.length},
+    playerRating: ratingSummary(matched)
   };
+}
+
+function ratingSummary(matched) {
+  const ratings = matched.map(g => cleanRating(g.player_rating)).filter(Boolean);
+  const stars = Object.fromEntries([1, 2, 3, 4, 5].map(n => [n, ratings.filter(r => r === n).length]));
+  return {mean: ratings.length ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 100) / 100 : null, n: ratings.length, d: matched.length, stars};
 }
 
 /** Metrics per group (e.g. character + engine version), each with its own sample size. */
@@ -222,7 +235,9 @@ export function csvCell(value) {
 }
 
 export const CSV_COLUMNS = ["game_id", "character", "language", "status", "started_at", "engine_version", "dataset_version", "app_version",
-  "round", "pair_a", "pair_b", "user_word", "bot_word", "matched", "revealed_at", "decision_ms", "stage", "low_quality", "review_flags", "review_note"];
+  "round", "pair_a", "pair_b", "user_word", "bot_word", "matched", "revealed_at", "decision_ms", "stage", "low_quality", "review_flags", "review_note",
+  // Added later, at the end so older column positions stay the same.
+  "player_rating"];
 
 /** Games (each with rounds and reviews) → CSV, one line per round. */
 export function toCsv(games, now = Date.now()) {
