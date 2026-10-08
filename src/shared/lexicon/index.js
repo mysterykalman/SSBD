@@ -2,7 +2,8 @@
 
 import {CATEGORIES, CONCEPTS, PHRASES} from "./data.js";
 import {ADDED_CONCEPTS, ADDED_LINKS, ADDED_PHRASES, ALIASES} from "./additions.js";
-import {ADDED_CONCEPTS_3, ADDED_LINKS_3, ADDED_MEMBERS_3, ADDED_PHRASES_3, ALIASES_3, DATASET_VERSION} from "./additions3.js";
+import {ADDED_CONCEPTS_3, ADDED_LINKS_3, ADDED_MEMBERS_3, ADDED_PHRASES_3, ALIASES_3, DATASET_VERSION as DATASET_3} from "./additions3.js";
+import {ADDED_CONCEPTS_4, ADDED_LINKS_4, ADDED_MEMBERS_4, ADDED_PHRASES_4, ALIASES_4, DATASET_VERSION, EXTRA_WORDS_4} from "./additions4.js";
 import {EXTRA_WORDS} from "./vocab.js";
 import {wordKey} from "../words.js";
 
@@ -17,12 +18,13 @@ const DERIVATIONAL = ["y", "ie", "ish", "ly", "ful", "less", "ness"];
 /** The original curated graph, kept so older engine decisions can be replayed on the data they used. */
 export const BASE_DATASET = "lexicon-1";
 /** Every dataset version that can be loaded, oldest first (each one adds to the previous). */
-export const DATASETS = [BASE_DATASET, "lexicon-2", DATASET_VERSION];
+export const DATASETS = [BASE_DATASET, "lexicon-2", DATASET_3, DATASET_VERSION];
 export {DATASET_VERSION};
 
 /**
  * The lookup graph for a language. `dataset` picks the data version (default: the current one);
- * "lexicon-1" is the original graph, "lexicon-2" adds the first additions, "lexicon-3" the second.
+ * "lexicon-1" is the original graph, "lexicon-2" adds the first additions, "lexicon-3" the second,
+ * "lexicon-4" the engine-2.3 vocabulary audit.
  */
 export function getLexicon(language = "en", dataset = DATASET_VERSION) {
   const lang = language === "fr" ? "fr" : "en";
@@ -35,8 +37,8 @@ export function getLexicon(language = "en", dataset = DATASET_VERSION) {
 function buildLexicon(lang, version) {
   const labelIndex = lang === "fr" ? 2 : 1;
   const level = DATASETS.indexOf(version);
-  const extended = level >= 1, third = level >= 2;
-  const rows = [...CONCEPTS, ...(extended ? ADDED_CONCEPTS : []), ...(third ? ADDED_CONCEPTS_3 : [])];
+  const extended = level >= 1, third = level >= 2, fourth = level >= 3;
+  const rows = [...CONCEPTS, ...(extended ? ADDED_CONCEPTS : []), ...(third ? ADDED_CONCEPTS_3 : []), ...(fourth ? ADDED_CONCEPTS_4 : [])];
   const concepts = new Map();
   for (const [id, en, fr, tags] of rows) {
     concepts.set(id, {id, label: lang === "fr" ? fr : en, key: wordKey(lang === "fr" ? fr : en), tags, links: new Set(), phrases: new Set(), near: new Set(), out: new Map(), kinds: new Map(), members: new Set()});
@@ -54,7 +56,7 @@ function buildLexicon(lang, version) {
     }
   }
   if (extended) {
-    for (const [a, b] of [...ADDED_LINKS, ...(third ? ADDED_LINKS_3 : [])]) {
+    for (const [a, b] of [...ADDED_LINKS, ...(third ? ADDED_LINKS_3 : []), ...(fourth ? ADDED_LINKS_4 : [])]) {
       if (!concepts.has(a) || !concepts.has(b) || a === b) continue;
       concepts.get(a).links.add(b);
       concepts.get(b).links.add(a);
@@ -62,7 +64,7 @@ function buildLexicon(lang, version) {
   }
   // Phrases and compounds are language-specific ("snow" + "ball" in English,
   // "pomme" + "terre" in French) and undirected.
-  for (const [a, b] of [...(PHRASES[lang] || []), ...(extended ? ADDED_PHRASES[lang] || [] : []), ...(third ? ADDED_PHRASES_3[lang] || [] : [])]) {
+  for (const [a, b] of [...(PHRASES[lang] || []), ...(extended ? ADDED_PHRASES[lang] || [] : []), ...(third ? ADDED_PHRASES_3[lang] || [] : []), ...(fourth ? ADDED_PHRASES_4[lang] || [] : [])]) {
     if (!concepts.has(a) || !concepts.has(b) || a === b) continue;
     concepts.get(a).phrases.add(b);
     concepts.get(b).phrases.add(a);
@@ -70,7 +72,8 @@ function buildLexicon(lang, version) {
   // "Is a kind of": `kinds` maps a concept to the categories it belongs to (with their weight),
   // `members` lists a category's members. Category and member also count as linked.
   const weights = new Map(CATEGORIES.map(([category, weight]) => [category, weight]));
-  const categoryRows = [...CATEGORIES, ...(third ? ADDED_MEMBERS_3.map(([category, members]) => [category, weights.get(category) ?? 0.8, members]) : [])];
+  const added = [...(third ? ADDED_MEMBERS_3 : []), ...(fourth ? ADDED_MEMBERS_4 : [])];
+  const categoryRows = [...CATEGORIES, ...added.map(([category, members]) => [category, weights.get(category) ?? 0.8, members])];
   for (const row of categoryRows) {
     const [category, weight, members] = /** @type {[string, number, string[]]} */ (row);
     if (!concepts.has(category)) continue;
@@ -88,7 +91,7 @@ function buildLexicon(lang, version) {
   for (const concept of concepts.values()) if (!byKey.has(concept.key)) byKey.set(concept.key, concept.id);
   // Synonyms and variants: only where no concept already has that spelling.
   const aliases = new Map();
-  const aliasRows = [...(extended ? Object.entries(ALIASES[lang] || {}) : []), ...(third ? Object.entries(ALIASES_3[lang] || {}) : [])];
+  const aliasRows = [...(extended ? Object.entries(ALIASES[lang] || {}) : []), ...(third ? Object.entries(ALIASES_3[lang] || {}) : []), ...(fourth ? Object.entries(ALIASES_4[lang] || {}) : [])];
   const aliasWords = new Map(); // key → the alias as written ("surfing"), for "Did you mean?"
   for (const [word, id] of aliasRows) {
     const k = wordKey(word.replace(/_/g, " "));
@@ -96,7 +99,7 @@ function buildLexicon(lang, version) {
   }
   // Real words the speller knows (graph labels and the everyday vocabulary): never split into
   // pieces or matched by a prefix ("carpet" is not car + pet, "sandal" is not sand).
-  const vocabulary = new Set([...byKey.keys(), ...(EXTRA_WORDS[lang] || []).map(w => wordKey(w))]);
+  const vocabulary = new Set([...byKey.keys(), ...(EXTRA_WORDS[lang] || []).map(w => wordKey(w)), ...(fourth ? [...aliases.keys(), ...(EXTRA_WORDS_4[lang] || []).map(w => wordKey(w))] : [])]);
   const knownKeys = [...byKey.keys()].sort((x, y) => y.length - x.length);
 
   function exact(key) {
@@ -142,7 +145,12 @@ function buildLexicon(lang, version) {
     }
     for (const known of knownKeys) {
       if (known.length < 3 || known.length >= key.length || known.length / key.length < 0.6) continue;
-      if (real ? key.startsWith(known) && DERIVATIONAL.includes(key.slice(known.length)) : key.startsWith(known) || key.endsWith(known)) return [byKey.get(known)];
+      if (real) {
+        // A known word plus a derivational ending, also with the final consonant doubled (sunny → sun, foggy → fog).
+        const rest = key.slice(known.length);
+        const doubled = fourth && rest.length >= 2 && rest[0] === known[known.length - 1] && !"aeiou".includes(rest[0]) ? rest.slice(1) : null;
+        if (key.startsWith(known) && (DERIVATIONAL.includes(rest) || (doubled && DERIVATIONAL.includes(doubled)))) return [byKey.get(known)];
+      } else if (fourth ? known.length / key.length >= 0.7 && (key.startsWith(known) || key.endsWith(known)) : key.startsWith(known) || key.endsWith(known)) return [byKey.get(known)];
     }
     return [];
   }
@@ -152,6 +160,6 @@ function buildLexicon(lang, version) {
     return resolveAll(raw)[0] ?? null;
   }
 
-  const words = [...concepts.values()].map(c => c.label).concat(EXTRA_WORDS[lang] || []);
+  const words = [...concepts.values()].map(c => c.label).concat(EXTRA_WORDS[lang] || [], fourth ? EXTRA_WORDS_4[lang] || [] : []);
   return {language: lang, dataset: version, labelIndex, concepts, byKey, aliases, aliasWords, vocabulary, exact, resolve, resolveAll, words};
 }

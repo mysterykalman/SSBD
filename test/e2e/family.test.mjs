@@ -50,7 +50,7 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
   await ben.click("#lockBtn");
   // Each player gets the reveal in the modal, their own word first; the board waits for Keep playing.
   const benReveal = await revealShown(ben);
-  assert.match(benReveal, /YOUR WORD[\s\S]*PLANET[\s\S]*ANA'S WORD[\s\S]*ROCKET/i);
+  assert.match(benReveal, /YOU[\s\S]*PLANET[\s\S]*ANA[\s\S]*ROCKET/i);
   assert.equal(await ben.locator("#prompt").count(), 0, "Ben's board stays on move 1 under the modal");
   assert.ok(await continueReveal(ben));
   await ben.waitForSelector("#prompt");
@@ -58,7 +58,7 @@ test("family game: create, join, private words, simultaneous reveal, next prompt
   assert.match(await ben.locator(".trail-row").first().innerText(), /ROCKET[\s\S]*PLANET/i);
 
   const anaReveal = await revealShown(ana);
-  assert.match(anaReveal, /YOUR WORD[\s\S]*ROCKET[\s\S]*BEN'S WORD[\s\S]*PLANET/i);
+  assert.match(anaReveal, /YOU[\s\S]*ROCKET[\s\S]*BEN[\s\S]*PLANET/i);
   assert.equal(await ana.locator("#prompt").count(), 0, "Ana's board stays on move 1 under the modal");
   assert.ok(await continueReveal(ana));
   await ana.waitForSelector("#prompt");

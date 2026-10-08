@@ -909,3 +909,33 @@ See `docs/BOT_ENGINE.md` for the details: root causes, formula, stages, licensin
   - French is a faithful translation.
   - The intro kicker now reads "Meet your teammate" (was "Meet your rival").
 - **Homepage tiles** use the exact approved copy: Solo Play / Choose your player; Play Together.
+
+## Status update: combined Solo quality release, engine-2.3 (2026-10-08)
+
+- **Engine-2.3** (`src/shared/engine.js`; full write-up in `docs/BOT_ENGINE.md` section 0).
+  - Human-first quality floor: both sides of an answer must be direct links.
+  - An "anchored" tier sits below the high-quality threshold.
+  - Recovery mode (a broad, familiar hub tied to both words) is logged with `recovery` and `recoveryReason`.
+  - Milo (easier) and Gary (harder) selection profiles: same lexicon, same scoring, same fairness rules.
+  - A derived opening pool.
+  - Player-style and near-miss tie-breakers, built only from revealed rounds (`history` input).
+  - Engine-2.2 is frozen in `src/shared/engine-2.2.js` (on lexicon-3) for replay only.
+- **Lexicon-4** (`src/shared/lexicon/additions4.js`): about 300 everyday words, synonyms, a doubled-consonant derivation, VACATION as its own word, and stricter mis-normalisation guards.
+- **Milo** speaks through his own branching narrative (`src/client/milo-narrative.js`, the exact approved script) on the shared machinery (`src/client/narrative.js`). Gary's script is unchanged. Milo's one-line script and the rotating pools are removed.
+- **System copy.**
+  - Round header: "What connects these two?" / "Pick one word that fits both."
+  - Current pair label: "Match these two". History label: "Earlier moves".
+  - Reveal labels: You / Gary / Milo.
+  - Next pair: "Next: A + B".
+  - A match shows "You both said WORD."
+  - "Nice connection! The trail continues.", "Your brains did a high five." and Gary's "Fine. Now try" are gone.
+  - No generic note is stacked on the character's lines.
+- **Review.**
+  - New metrics: recovery, unresolved input, below-threshold, near-match, style tie-break, average plausibility and weak side, highlighted games.
+  - Highlights per game, with the first bad round marked.
+  - Per-round rank, plausibility, weak side, recovery, unresolved input, near-match and style tie-break columns.
+  - New CSV columns after `player_rating`. No migration is needed: everything is read from the existing `decision` JSON.
+- **Fixtures.** `test/fixtures/human-eval.json` holds the accept/alternate/reject sets. `bot-replay.json` is now `replay-4`, with the reported rounds. The exported bad-game files were not available offline.
+- **Tools.**
+  - `node scripts/solo-review.mjs` prints simulated transcripts for manual review.
+  - `node scripts/convergence.mjs` runs per character, now with a noisier `human` stand-in.

@@ -1,4 +1,4 @@
-// The win sequence: "THAT’S A MATCH!" + "You both said WORD. Your brains did a high five." in the
+// The win sequence: "THAT’S A MATCH!" + "You both said WORD." in the
 // reveal modal, then "YOU DID IT!" + "Matched on move N" on the final
 // screen only. Against Gary, his reaction reads as Gary speaking: his avatar beside a speech bubble.
 import {test, before, after} from "node:test";
@@ -35,7 +35,8 @@ test("Gary win: match copy with the word in the modal, Gary's avatar speaking hi
     // Reveal modal: the match announcement, with the matched word, and never "YOU DID IT!".
     const modal = await page.locator("#revealModal").innerText();
     assert.match(modal, /THAT’S A MATCH!/);
-    assert.ok(modal.includes(`You both said ${word}. Your brains did a high five.`), modal);
+    assert.ok(modal.includes(`You both said ${word}.`), modal);
+    assert.ok(!/high five/i.test(modal), modal);
     assert.equal(count(modal, "YOU DID IT!"), 0, "YOU DID IT! is saved for the final screen");
     assert.doesNotMatch(modal, /Same same!|SAME WORD/);
 
@@ -96,7 +97,7 @@ test("human vs human win: the same copy for both players, no Gary reaction, the 
   for (const page of pages) {
     const modal = await page.locator("#revealModal").innerText();
     assert.match(modal, /THAT’S A MATCH!/);
-    assert.ok(modal.includes("You both said ROCKET. Your brains did a high five."), modal);
+    assert.ok(modal.includes("You both said ROCKET."), modal);
     assert.equal(count(modal, "YOU DID IT!"), 0);
     assert.equal(await page.locator("#garyLine").count(), 0, "no Gary in family games");
     await page.click("#revealContinue");
@@ -121,7 +122,8 @@ test("French: the same two-step sequence, translated", async () => {
   await page.waitForSelector("#revealContinue");
   const modal = await page.locator("#revealModal").innerText();
   assert.match(modal, /C’EST UN MATCH[\s\u202f]!/); // French puts a narrow no-break space before "!"
-  assert.ok(modal.includes(`Vous avez tous les deux dit ${word}. Vos cerveaux se sont tapé dans la main.`), modal);
+  assert.ok(modal.includes(`Vous avez tous les deux dit ${word}.`), modal);
+  assert.ok(!/tapé dans la main/.test(modal), modal);
   await page.click("#revealContinue");
   await page.waitForSelector("#app .end.win");
   assert.match(await page.locator("#app .end").innerText(), /TU AS RÉUSSI[\s\u202f]!\s+Trouvé au coup 1(?!\.)/);

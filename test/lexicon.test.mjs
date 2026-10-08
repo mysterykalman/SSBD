@@ -4,7 +4,7 @@ import {CONCEPTS, PHRASES, TAGS} from "../src/shared/lexicon/data.js";
 import {EXTRA_WORDS} from "../src/shared/lexicon/vocab.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {ENGINE1_DATASET, chooseOpening, chooseResponse, wordForms, rankCandidates} from "../src/shared/bot.js";
-import {ENGINE_CONFIG, selectBotWord} from "../src/shared/engine.js";
+import {STRONGEST_CONFIG, selectBotWord} from "../src/shared/engine.js";
 import {createSpeller, validateWord, wordKey} from "../src/shared/words.js";
 
 // Local seeded RNG so these tests do not depend on rules.js.
@@ -291,7 +291,7 @@ function judgeSide(lex, promptId, pickId) {
 const isUsed = (used, key) => [...wordForms(key)].some(form => used.has(form));
 const BRIDGE_STAGES = new Set(["shared-direct", "direct-plus-indirect", "indirect-both", "weak-fallback"]);
 /** The engine's strongest answer for an input (a quality window of one). */
-const strongestWord = input => selectBotWord({...input, config: {...ENGINE_CONFIG, window: {...ENGINE_CONFIG.window, size: 1}}}).word;
+const strongestWord = input => selectBotWord({...input, config: STRONGEST_CONFIG}).word;
 
 test("bot quality in simulated games and random pairs (EN and FR)", t => {
   for (const lang of ["en", "fr"]) {

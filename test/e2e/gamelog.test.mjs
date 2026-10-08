@@ -138,7 +138,7 @@ test("review screen: token gate, game list, round diagnostics, human flags and C
   await page.locator(".rv-games tbody tr").first().locator("button", {hasText: "Rounds"}).click();
   await page.waitForSelector(".rv-rounds");
   const headers = await page.locator(".rv-game-detail:not([hidden]) .rv-rounds > thead th").allInnerTexts();
-  assert.deepEqual(headers.map(h => h.trim()), ["Round", "Previous pair", "User", "Gary", "Match", "Automated", "Human flags"]);
+  assert.deepEqual(headers.map(h => h.trim()), ["Round", "Previous pair", "User", "Gary", "Rank", "Plausibility", "Weak side", "Recovery", "Unresolved input", "Near-match", "Style tie-break", "Match", "Automated", "Human flags"]);
   const roundTwo = page.locator(".rv-game-detail:not([hidden]) .rv-expand", {hasText: "Round 2"});
   await roundTwo.click();
   assert.equal(await roundTwo.getAttribute("aria-expanded"), "true");

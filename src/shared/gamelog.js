@@ -155,7 +155,66 @@ const percentile = (xs, p) => {
   return s[Math.min(s.length - 1, Math.ceil(p * s.length) - 1)];
 };
 const rate = (n, d) => ({n, d, rate: d ? n / d : null});
-const GOOD_STAGES = new Set(["opening", "shared-direct", "direct-plus-indirect", "indirect-both"]);
+const GOOD_STAGES = new Set(["opening", "shared-direct", "direct-plus-indirect", "indirect-both", "anchored"]);
+/** Stages that mean the bot had no good shared answer (engine-2.3 marks these `recovery` itself). */
+const RECOVERY_STAGES = new Set(["recovery", "unknown-input", "no-known-input", "one-input-only", "no-candidates"]);
+const num = x => (typeof x === "number" && Number.isFinite(x) ? x : null);
+/** The difficulty profile each character plays with (engine-2.3; older games had none). */
+export const PROFILES = {milo: "easier", gary: "harder"};
+
+/**
+ * The quality facts of one logged round, from its decision record (`decision` when loaded in full,
+ * or the server's compact `quality` projection): whether the bot was in recovery, whether its answer
+ * cleared the high-quality threshold, whether an input was not understood, the pick's rank,
+ * plausibility and weak-side relation, the near-match state and the style tie-break. Older engines
+ * fall back to the stage (recovery = a fallback stage; high quality = shared-direct).
+ */
+export function roundQuality(r) {
+  const q = r.quality || r.decision || {};
+  const paired = Boolean(r.pair_a || (Array.isArray(r.pair) && r.pair[0]) || (Array.isArray(q.pair) && q.pair[0]));
+  const unresolved = typeof q.unresolvedInputs === "number" ? q.unresolvedInputs > 0 : Array.isArray(q.inputs) ? q.inputs.some(i => i && i.known === false) : false;
+  return {
+    paired,
+    profile: typeof q.profile === "string" ? q.profile : null,
+    recovery: typeof q.recovery === "boolean" ? q.recovery : RECOVERY_STAGES.has(r.stage),
+    highQuality: typeof q.highQuality === "boolean" ? q.highQuality : r.stage === "shared-direct",
+    unresolved,
+    rank: num(q.pickRank),
+    plausibility: num(q.pickPlausibility),
+    weak: num(q.pickWeak),
+    nearMatch: Boolean(q.nearMatch),
+    styleTieBreak: Boolean(q.style?.applied && q.tieBreak?.used),
+    tieChanged: Boolean(q.tieBreak?.changed)
+  };
+}
+
+/** Why a game deserves a look: recovery > 25 % of rounds, unresolved input > 10 %, repeated low-quality rounds, or a rating of 1–2 stars. */
+export function gameHighlights(g) {
+  const rounds = (g.rounds_list || []).slice().sort((a, b) => a.round - b.round).map(r => ({r, q: roundQuality(r)})).filter(x => x.q.paired);
+  const reasons = [];
+  if (rounds.length) {
+    const share = f => rounds.filter(f).length / rounds.length;
+    const rec = share(x => x.q.recovery), un = share(x => x.q.unresolved);
+    if (rec > 0.25) reasons.push(`recovery in ${Math.round(rec * 100)}% of rounds`);
+    if (un > 0.10) reasons.push(`unresolved input in ${Math.round(un * 100)}% of rounds`);
+    let streak = 0, longest = 0;
+    for (const x of rounds) { streak = x.q.recovery || x.r.low_quality ? streak + 1 : 0; longest = Math.max(longest, streak); }
+    if (longest >= 2) reasons.push(`${longest} low-quality rounds in a row`);
+  }
+  const rating = cleanRating(g.player_rating);
+  if (rating && rating <= 2) reasons.push(`rated ${rating}/5`);
+  return reasons;
+}
+
+/** The first round worth looking at: recovery, an unresolved input, below the threshold, or flagged weak/one-sided by a reviewer. */
+export function firstBadRound(g) {
+  const rounds = (g.rounds_list || []).slice().sort((a, b) => a.round - b.round);
+  const bad = rounds.find(r => {
+    const q = roundQuality(r);
+    return q.paired && (q.recovery || q.unresolved || r.low_quality || (r.flags || []).some(f => f === "weak" || f === "one-sided"));
+  });
+  return bad ? bad.round : null;
+}
 
 /**
  * Quality metrics for a set of games (each with `rounds_list`: its round rows, with any review
@@ -173,6 +232,10 @@ const GOOD_STAGES = new Set(["opening", "shared-direct", "direct-plus-indirect",
  *  repeatedOrInvalid  bot words that repeat (or vary) a word revealed earlier in the game, or are empty.
  *  latency  decision_ms median and 95th percentile over rounds that recorded it.
  *  playerRating  mean 1–5 stars and the count per star; denominator: matched games, of which `n` rated.
+ *  recoveryRate / unresolvedRate / belowHighQualityRate / nearMatchRate  denominator: rounds with a pair
+ *     (the opening has nothing to connect). See roundQuality.
+ *  avgPlausibility / avgWeakSide  the bot's answers, over rounds that recorded them (engine-2.3).
+ *  highlighted  games with at least one highlight (gameHighlights).
  * @param {any[]} games
  * @param {number} [now]
  */
@@ -199,6 +262,9 @@ export function computeMetrics(games, now = Date.now()) {
     }
   }
   const reviewed = rounds.filter(r => (r.flags || []).length);
+  const quality = rounds.map(roundQuality).filter(q => q.paired);
+  const mean = xs => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 1000) / 1000 : null);
+  const plaus = quality.map(q => q.plausibility).filter(x => x !== null), weak = quality.map(q => q.weak).filter(x => x !== null);
   const latency = rounds.map(r => r.decision_ms).filter(x => Number.isFinite(x));
   return {
     games: withStatus.length,
@@ -216,7 +282,15 @@ export function computeMetrics(games, now = Date.now()) {
     lowQualityRate: rate(low.length, decided.length),
     repeatedOrInvalid: rate(repeated, rounds.length),
     latencyMs: {median: median(latency), p95: percentile(latency, 0.95), n: latency.length},
-    playerRating: ratingSummary(matched)
+    playerRating: ratingSummary(matched),
+    recoveryRate: rate(quality.filter(q => q.recovery).length, quality.length),
+    unresolvedRate: rate(quality.filter(q => q.unresolved).length, quality.length),
+    belowHighQualityRate: rate(quality.filter(q => !q.highQuality).length, quality.length),
+    nearMatchRate: rate(quality.filter(q => q.nearMatch).length, quality.length),
+    styleTieBreakRate: rate(quality.filter(q => q.styleTieBreak).length, quality.length),
+    avgPlausibility: {value: mean(plaus), n: plaus.length},
+    avgWeakSide: {value: mean(weak), n: weak.length},
+    highlighted: rate(withStatus.filter(g => gameHighlights(g).length).length, withStatus.length)
   };
 }
 
@@ -252,14 +326,17 @@ export function csvCell(value) {
 export const CSV_COLUMNS = ["game_id", "character", "language", "status", "started_at", "engine_version", "dataset_version", "app_version",
   "round", "pair_a", "pair_b", "user_word", "bot_word", "matched", "revealed_at", "decision_ms", "stage", "low_quality", "review_flags", "review_note",
   // Added later, at the end so older column positions stay the same.
-  "player_rating"];
+  "player_rating", "difficulty_profile", "recovery", "unresolved_input", "high_quality", "pick_rank", "pick_plausibility", "pick_weak_side", "near_match", "style_tie_break"];
 
 /** Games (each with rounds and reviews) → CSV, one line per round. */
 export function toCsv(games, now = Date.now()) {
   const lines = [CSV_COLUMNS.join(",")];
   for (const g of games) {
     for (const r of [...(g.rounds_list || [])].sort((a, b) => a.round - b.round)) {
-      const row = {...g, status: reportedStatus(g, now), ...r, review_flags: r.flags || [], review_note: r.note || ""};
+      const q = roundQuality(r);
+      const row = {...g, status: reportedStatus(g, now), ...r, review_flags: r.flags || [], review_note: r.note || "",
+        difficulty_profile: q.profile ?? PROFILES[g.character] ?? "", recovery: q.paired ? q.recovery : "", unresolved_input: q.paired ? q.unresolved : "",
+        high_quality: q.paired ? q.highQuality : "", pick_rank: q.rank, pick_plausibility: q.plausibility, pick_weak_side: q.weak, near_match: q.nearMatch, style_tie_break: q.styleTieBreak};
       lines.push(CSV_COLUMNS.map(c => csvCell(row[c])).join(","));
     }
   }

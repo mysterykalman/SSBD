@@ -1,6 +1,108 @@
 # Solo bot engine, game logs and review
 
-This covers how Gary and Milo choose their word (engine-2.2, dataset lexicon-3), how Solo games are logged, how to review them, and how to replay decisions.
+This covers how Gary and Milo choose their word (engine-2.3, dataset lexicon-4), how they talk (their narratives), how Solo games are logged, how to review them, and how to replay decisions. Section 0 is the current engine; sections 1–2 are the history it builds on (engine-2.2 is frozen in `src/shared/engine-2.2.js` for replay only).
+
+## 0. Engine-2.3: the human-first Solo engine (current)
+
+Playing Solo should feel like trying to get on the same wavelength as a character. The player should almost always understand why the character chose their word.
+
+### Philosophy
+
+- **Human first.** The bot optimises for the word another ordinary person would plausibly blurt out within a few seconds for **both** words, not for the cleverest graph path. An answer that needs explaining is a bad answer.
+  - Good: MICROWAVE + OVEN → HOT / KITCHEN, BED + MOON → NIGHT / DREAM, PAW + FISH → PET / CAT, TREES + BIRD → NEST.
+  - Bad (engine-2.2 and earlier): VACATION + FARM → TURKEY, POTATOES + CHRISTMAS → SOUP, CHICKEN + SEA → HORSE.
+- **Difficulty must never be created by choosing implausible words.** Milo and Gary differ only in how predictable they are among answers that are all genuinely good.
+- **Simulation priorities, in order:** plausibility, both inputs contribute, vocabulary, fairness, character difficulty, convergence, length. No randomness is added to stretch a game.
+
+### The quality floor
+
+Every candidate is scored as before (connection to each input, plausibility from the *kind* of link on each side, familiarity, cue; see section 2). A candidate is **high quality** only when:
+
+- **both** sides are direct links (category, compound, curated, member or link): shared-neighbour hops, half-compounds ("sea" → HORSE because of "seahorse"), tag matches and two-step paths never pass, however strong the other side is;
+- its plausibility is ≥ 0.78 and its weaker side is ≥ 0.6 (the weak side matters as much as the strong one);
+- it is not a lazy piece of an input (a word built from an input passes only when it is tied directly to both: RAIN + BOW → RAINBOW). A generic word (FOOD, BIG…) is marked down by 0.10 in score and plausibility, so it only passes when both of its links are first-thought ones (TALL + BEAR → BIG), and a more specific shared answer still wins.
+
+When something clears the floor, the pick is always one of those words (`stage: shared-direct`, `highQuality: true`).
+
+**Anchored** (below the threshold, not recovery): when nothing clears the floor but a first-thought word for one input (category, compound or curated, ≥ 0.8) is clearly tied to the other (3+ shared neighbours), the single best one is played (DESSERT + EGG → CAKE). It is logged as `stage: anchored`, `highQuality: false`.
+
+### Recovery mode
+
+Recovery replaces "low quality but valid". When no answer is high quality or anchored, the bot deliberately plays a **simple, broad, familiar, concrete hub word related to both inputs**: it ranks connected candidates (weak side ≥ 0.12) by breadth, familiarity, connection, concreteness and plausibility, with bonuses for a hub that is a direct link of at least one word and one that is also clearly tied to the other. Vague words (THING, NICE…, unless directly tied to both words) and gloomy ones are never recovery words, and a recovery word is never a narrow word for only one input. Recovery is always the single most readable hub (no variety). When nothing connects both, the broadest familiar word of the stronger side is used. An input still not understood after spelling, spacing and inflection checks is also recovery (a broad answer from the known word). Every recovery decision is logged with `recovery: true` and a `recoveryReason`.
+
+### Milo and Gary: same engine, two difficulty profiles
+
+Same lexicon, same scoring, same floor, same fairness rules (each commits before the reveal from the shared state only). Only the selection profile differs (`ENGINE_CONFIG.profiles`):
+
+| | Milo (easier) | Gary (harder) |
+|---|---|---|
+| Ranking | the score plus a small bonus for familiar, concrete, first-thought (curated) words | the score |
+| Near-best range | answers ≤ 0.02 from the top (virtually equal), at most 2 | answers ≤ 0.15 from the top, at most 3, all above the floor |
+| Choice in the range | 80 % / 20 % | 45 % / 35 % / 20 % |
+| Effect | plays the obvious answer; converges fast because he is predictable, never because he helps | sometimes plays the second or third genuinely strong reading (BED + MOON → NIGHT or DREAM) |
+
+Gary's range only ever holds high-quality candidates, so he is never handed a weaker word to make the game last longer. The target game lengths (Milo usually 3–6 moves, Gary 5–9) are a consequence, never forced.
+
+### Opening pool
+
+The first word comes from a **derived** pool (`openingPool`): single short words with 12+ links, most of them to other well-connected words (bridgeable), in a familiar concrete class (animal, food, object, place, nature, event, activity), nothing gloomy, generic, vague or job-related, plus the everyday seeds people reach for first (dog, school, beach, pizza, music, car, rain, movie, home, game, book, summer, food, family, park, water, party, night, tree, snow). A short vetting list removes derived words that make poor first words (a bare verb or colour, a utensil). About 60 words in English and French.
+
+### Player-style adaptation (light tie-breaker)
+
+The bot still commits before seeing the current word. From the **previous revealed rounds only** (`history`), it learns the share of each word class in the player's own words: animal, food, event, people, activity, place, object, nature, abstract, descriptive (from the words' topic tags). From two revealed rounds on, a candidate already inside the near-best range gets `0.05 × share of its class`. This only reorders near-equal answers; it never adds a word outside the range.
+
+### Near-miss momentum
+
+When the last revealed round's two words were closely related (a direct link either way, e.g. WARM / HOT), the decision records a near-match state, and candidates inside the near-best range get `0.15 × (weak side − 0.6)`: the answers most tied to *both* words of the cluster come first. Revealed history only.
+
+### Vocabulary (lexicon-4, `src/shared/lexicon/additions4.js`)
+
+- 297 new words with ordinary, familiar links (plus 233 English and 18 French synonyms and variants, and 90 missing links between existing words): work and jobs (business, coworker, accountant, plumber…), school (principal, cafeteria, locker…), travel and places (vacation, trip, hotel, passport, village, mall, bank…), home (laundry, dishes, toaster, kettle, heater, curtain, crate, cage, nap…), food (gravy, roast, stew, sushi, squash, zucchini, berries…), animals, holidays, activities, body, descriptive words (heavy, sharp, fluffy, shiny, empty…) and basic ideas (luck, hope, idea, secret, memory, danger…).
+- Derivations: SUNNY → sun and FOGGY → fog (a doubled consonant before a derivational ending), ROASTED → roast (inflection), COOKING → cook, DAYTIME → day, CUBICLE → office, DESTINATION → trip, NAP has its own word (sleep, bed, tired…), HEAT its own (hot, warm, sun…), CAGE / CRATE their own.
+- **VACATION** was an alias of HOLIDAY (a festive holiday here), so VACATION + FARM read as HOLIDAY + FARM and led to TURKEY. It is now its own word (beach, trip, summer…).
+- No aggressive mis-normalisation: a guessed head or tail of an unknown word must now cover ≥ 70 % of it (HOTEL was read as HOT, PASSPORT as SPORT, ALARM as ARM); real words one letter away from a new word (stamp, swap, create…) are known as words so they are never "corrected" into it (STAMP → SWAMP).
+- Missing everyday links found by simulated games (tea–breakfast, sea–food, party–food, rain–cozy, movie–cozy…).
+- Audit: of the 1,352 real words the speller knows, 992 were not understood by lexicon-3 and 648 by lexicon-4 (the rest are mostly function words, numbers, months and days). A sweep of ~560 everyday words across the categories above leaves 14 unresolved (rare foods and a few abstract words).
+
+### The human evaluation fixture
+
+`test/fixtures/human-eval.json` lists, for each pair, what an ordinary person would accept (`accept`), what is fine but less obvious (`alternate`) and what would need explaining (`reject`). Tests check the character of the output, not one exact word: Milo must play an `accept` word, Gary an `accept` or `alternate` word, neither a `reject` word; pairs with no good shared answer must be marked recovery. The reported examples are in it (VACATION + FARM is never TURKEY; POTATOES + CHRISTMAS is DINNER, never SOUP; CHICKEN + SEA is never HORSE). **Limitation:** the exported "not having any fun" game files were not available offline (no database access from the build), so the reported rounds are rebuilt from the quoted words and seeds are not the games' own.
+
+### Narrative architecture
+
+Both characters speak through one branching narrative system (`src/client/narrative.js`): one paired BEFORE/AFTER beat per move from one branch, chosen from the direction of the game (match, exhausted, opening, close, recovery, improving, drifting, stuck, strange, strong, good, weak, very weak, normal, long). Pairs are never split, a branch cycles through all its pairs before any repeats, the same line never comes twice in a row, and everything is re-derived from the revealed moves (a reload shows the same dialogue). Gary's approved script is unchanged (`gary-narrative.js`); Milo has his own approved script (`milo-narrative.js`) with the same precedence, his own win ranges (fast 2–3, normal 4–10, late 11–16, very late 17–20) and one long-game branch from move 10. The narrative never reads or changes the bot's word.
+
+Each round is a scene: lock in → BEFORE line during the countdown → both words → AFTER line → the next pair ("Next: A + B"). A match adds "THAT’S A MATCH! You both said WORD." and the POST-WIN line on the result card; a 20-move miss adds the FOLLOW-UP on the game-over card. No generic system sentence is stacked on the character's lines.
+
+### Simulations and manual review
+
+- `node scripts/convergence.mjs` plays simulated games per character against several stand-ins for the player, including `human` (usually one of the six best-scoring words, the best ones most often; two times in five a first thought about only one word).
+- `node scripts/solo-review.mjs --games 20 --transcripts 10` prints full transcripts and every recovery or anchored round to read.
+
+Results on engine-2.3 / lexicon-4 (2026-10-08). The stand-ins share the engine's word graph, so every game converges far faster than real ones. Treat these as a comparison between Milo and Gary and between versions, not as a forecast. Live numbers come from `/review`.
+
+| Bot | Stand-in (EN, 300 games) | ≤ 3 | ≤ 5 | ≤ 10 | Median |
+|---|---|---|---|---|---|
+| Milo | human | 53 % | 89 % | 100 % | 3 |
+| Gary | human | 52 % | 88 % | 99 % | 3 |
+| Milo | predictor (engine-1 model) | 68 % | 89 % | 99 % | 3 |
+| Gary | predictor (engine-1 model) | 61 % | 84 % | 98 % | 3 |
+
+Manual review: 20 Milo and 20 Gary games (`solo-review.mjs`, seed 7000), with 10 transcripts read in full.
+
+- **Round quality:** 61 % of rounds were high quality, 15 % anchored and 24 % recovery. Most recovery rounds fall on move 2, where the pair is two unrelated opening words; from move 3 on, recovery was 12 %.
+- **Unresolved inputs:** 0 %.
+- **Answers that needed explaining:** 5 of about 90 non-opening rounds.
+  - PARTY + PAN → TEA (CAKE was already played).
+  - CAKE + OWL → TREE.
+  - CLOUD + KITCHEN → RAIN.
+  - ISLAND + EGG → SEA.
+  - DANCE + SEA → PARTY.
+  - All five come from two unrelated words or from the obvious answer being blocked.
+- **Fixed during the review:** TEA + EGG now reaches BREAKFAST.
+- **Narrative flow:** in every transcript each move had one paired beat. Openings came first, close and win beats followed the rounds as expected, and no line was repeated in a row.
+
+
 
 ## 1. Why the old choices were poor (engine-1 on lexicon-1)
 
@@ -19,7 +121,9 @@ There were three causes:
 2. **The ranking favoured "what a person would say about either word" over "what links both".** A strong link to one word could outweigh a weak link to the other.
 3. **No penalties for generic words or one-sided links.** The fallback was a single "tier" ladder, with no record of why a stage was used.
 
-## 2. Engine-2.2 (`src/shared/engine.js`)
+## 2. Engine-2.2 (previous engine; frozen in `src/shared/engine-2.2.js` on lexicon-3 for replay)
+
+Engine-2.3 keeps this scoring and adds the floor, profiles, recovery, openings and tie-breakers above.
 
 `selectBotWord({pair, blocked, language, character, seed, config})` → `{word, quality, decision}`
 
@@ -260,19 +364,22 @@ Apply these migrations to the production database:
 1. Set a long random **`REVIEW_TOKEN`** environment variable in Vercel (server-side only; never `NEXT_PUBLIC_`). Without it, every `/api/review/*` endpoint returns 404.
 2. Open `https://<your-domain>/review` and enter the token. It is kept for that browser tab only and sent as a bearer header. A wrong token returns 401. The page is `noindex`.
 3. Use the screen:
-   - **Filters:** character, language, outcome, engine version, dates, and "flagged or low quality".
-   - **Rounds table:** Round | Previous pair | User | Gary/Milo | Match | Automated | Human flags. Expand a round for the full decision.
+   - **Filters:** character, language, outcome, engine version, dates, "flagged or low quality", and "highlighted".
+   - **Games list:** a Highlights column (recovery > 25 % of rounds, unresolved input > 10 %, repeated low-quality rounds, a 1–2 star rating) and the first bad round; highlighted games are shaded.
+   - **Game header:** character and difficulty profile, language, outcome and match move, rounds, engine version, rating, and the highlights.
+   - **Rounds table:** Round | Previous pair | User | Gary/Milo | Rank | Plausibility | Weak side | Recovery | Unresolved input | Near-match | Style tie-break | Match | Automated | Human flags. The first bad round (recovery, unresolved input, low quality, or flagged weak/one-sided) is outlined and labelled. Expand a round for the full decision: quality tier and recovery reason, pick rank/plausibility/weak side, the near-best range and its rule, the tie-breakers, every candidate.
    - **Human flags** (weak, one-sided, too obscure, too generic, good connection) and a note. They are stored apart from the automated low-quality indicator.
    - **Player rating:** a column in the games list, on the game header, as `player_rating` in JSON, as the last CSV column, and as a metrics row (mean, with rated/won counts).
    - **Exports:** CSV (one row per round; cells are quoted, and cells starting with `= + - @` are neutralised against spreadsheet formulas) and JSON (with full decisions).
-   - **Metrics** (each with its denominator): match within 5 and within 10 moves, median moves to a match, ended/abandoned by round, the rates of reviewed weak, one-sided and good rounds, fallback rate, low-quality rate, repeated/invalid bot words (should be 0), and decision latency. They are shown overall and per character × engine version, and can be filtered by language.
+   - **Metrics** (each with its denominator): match within 5 and within 10 moves, median moves to a match, ended/abandoned by round, the rates of reviewed weak, one-sided and good rounds, fallback rate, low-quality rate, **recovery rounds, unresolved input, answers below the high-quality threshold, near-match rounds, style tie-breaks, average plausibility and average weak-side relation of the bot's answers, highlighted games**, repeated/invalid bot words (should be 0), and decision latency. They are shown overall and per character × engine version, and can be filtered by language. For engine-2.2 and older, recovery and the threshold come from the stage.
+   - **CSV:** after the original columns: `player_rating`, `difficulty_profile`, `recovery`, `unresolved_input`, `high_quality`, `pick_rank`, `pick_plausibility`, `pick_weak_side`, `near_match`, `style_tie_break`.
 
 The **This device** section works without a token. It shows this browser's own log and offers a device CSV/JSON export and "Upload now". Use it when central logging is not set up.
 
 ## 5. Replay and regression
 
-- `node scripts/replay.mjs` runs `test/fixtures/bot-replay.json` (versioned, `replay-1`) through engine-1 on lexicon-1 and the current engine, side by side. Use `--format csv` or `--format json` for other output, and `--out <file>` to write to a file.
-- `node scripts/replay.mjs --log export.json` replays rounds from a review JSON export. Each round is rebuilt with its exact pair, the words used before it, and its seed.
+- `node scripts/replay.mjs` runs `test/fixtures/bot-replay.json` (versioned, now `replay-4`) through engine-1 on lexicon-1, engine-2.2 on lexicon-3 (frozen copy) and the current engine, side by side. Use `--format csv` or `--format json` for other output, and `--out <file>` to write to a file.
+- `node scripts/replay.mjs --log export.json` replays rounds from a review JSON export. Each round is rebuilt with its exact pair, the words used before it, the revealed rounds (for the tie-breakers), the character and its seed. Rounds logged by engine-2.2 are reproduced exactly by the frozen engine-2.2 column.
 - `test/replay.test.mjs` enforces the fixtures:
   - `pass` cases must give an acceptable word;
   - `known-gap` cases document open weaknesses and must still be safe.

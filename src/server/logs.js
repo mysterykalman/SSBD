@@ -14,7 +14,7 @@
 // review endpoints do not exist (404). It is never sent to the browser by the server.
 
 import {timingSafeEqual} from "node:crypto";
-import {REVIEW_FLAGS, cleanGame, cleanRound, computeMetrics, metricsBy, reportedStatus, toCsv} from "../shared/gamelog.js";
+import {REVIEW_FLAGS, cleanGame, cleanRound, computeMetrics, firstBadRound, gameHighlights, metricsBy, reportedStatus, roundQuality, toCsv} from "../shared/gamelog.js";
 
 const MAX_GAMES = 40, MAX_ROUNDS = 200;
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), {status, headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers}});
@@ -108,14 +108,18 @@ async function loadGames(db, params, {decisions = false} = {}) {
   const games = (await db.query(`SELECT g.* FROM bot_games g ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY g.started_at DESC LIMIT 2000`, args)).rows;
   if (!games.length) return [];
   const ids = games.map(g => g.game_id);
+  // `quality`: the decision record without its long lists (candidates, rejections, the pool), for
+  // the quality metrics and per-round review fields (see roundQuality in src/shared/gamelog.js).
   const rounds = (await db.query(`SELECT r.game_id, r.round, r.pair_a, r.pair_b, r.user_word, r.bot_word, r.user_key, r.bot_key, r.matched, r.revealed_at, r.decision_ms, r.stage, r.low_quality${decisions ? ", r.decision" : ""},
+      (r.decision - 'candidates' - 'rejected' - 'pool' - 'config') AS quality,
       v.flags, v.note FROM bot_rounds r LEFT JOIN bot_reviews v ON v.game_id = r.game_id AND v.round = r.round WHERE r.game_id = ANY($1) ORDER BY r.game_id, r.round`, [ids])).rows;
   const byGame = new Map(ids.map(id => [id, []]));
-  for (const r of rounds) byGame.get(r.game_id).push({...r, flags: r.flags || [], decision_ms: r.decision_ms === null ? null : Number(r.decision_ms)});
+  for (const {quality, ...r} of rounds) byGame.get(r.game_id).push({...r, ...(decisions ? {} : {quality}), flags: r.flags || [], decision_ms: r.decision_ms === null ? null : Number(r.decision_ms)});
   const at = Date.now();
   let list = games.map(g => ({...g, seed: g.seed === null ? null : Number(g.seed), rounds_list: byGame.get(g.game_id), reported_status: reportedStatus(g, at)}));
   if (params.get("status")) list = list.filter(g => g.reported_status === params.get("status"));
   if (params.get("flagged") === "1") list = list.filter(g => g.rounds_list.some(r => r.flags.length || r.low_quality));
+  if (params.get("flagged") === "highlighted") list = list.filter(g => gameHighlights(g).length);
   return list;
 }
 
@@ -136,7 +140,9 @@ export async function reviewRoute(request, db, token, body = {}) {
   if (path === "/api/review/games" && request.method === "GET") {
     const list = await loadGames(db, params);
     return json({games: list.map(({rounds_list, config: _c, ...g}) => ({...g,
-      flagged_rounds: rounds_list.filter(r => r.flags.length).length, low_quality_rounds: rounds_list.filter(r => r.low_quality).length}))});
+      flagged_rounds: rounds_list.filter(r => r.flags.length).length, low_quality_rounds: rounds_list.filter(r => r.low_quality).length,
+      recovery_rounds: rounds_list.filter(r => roundQuality(r).recovery && roundQuality(r).paired).length,
+      highlights: gameHighlights({...g, rounds_list}), first_bad_round: firstBadRound({rounds_list})}))});
   }
   if (path === "/api/review/game" && request.method === "GET") {
     const [game] = await loadGames(db, new URLSearchParams({id: params.get("id") || ""}), {decisions: true});

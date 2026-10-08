@@ -1,7 +1,7 @@
 {
  "schema": 1,
- "version": "replay-3",
- "about": "Versioned replay cases for the Solo bot. Each case keeps the exact engine input (latest revealed pair, words already used in the game, language, seed), the word the bot originally chose and with which engine, any human review flags, and what a good answer looks like. `acceptable` lists answers a reviewer judged good for the engine's single strongest answer (since engine-2.1 the played word is drawn from a credible neighbourhood around it, so it is checked for validity, the pool and `reject` instead); `reject` lists answers judged poor and applies to both. `status: \"pass\"` cases must meet this with the current engine (enforced by test/replay.test.mjs); `status: \"known-gap\"` cases document a weakness still open (only the safety invariants are enforced, and scripts/replay.mjs reports them). Rankings never change from logs automatically: a logged round becomes a case here only after review, by editing this file. The g1056 cases rebuild the 10:56 engine-2.1 game (game 4ac661bf, Gary, 14 moves, rated 1 star) from its round words; the original log was not available offline, so seeds are not the game's own and only seed-independent expectations are set.",
+ "version": "replay-4",
+ "about": "Versioned replay cases for the Solo bot. Each case keeps the exact engine input (latest revealed pair, words already used in the game, language, seed), the word the bot originally chose and with which engine, any human review flags, and what a good answer looks like. `acceptable` lists answers a reviewer judged good for the engine's single strongest answer (since engine-2.1 the played word is drawn from a credible neighbourhood around it, so it is checked for validity, the pool and `reject` instead); `reject` lists answers judged poor and applies to both. `status: \"pass\"` cases must meet this with the current engine (enforced by test/replay.test.mjs); `status: \"known-gap\"` cases document a weakness still open (only the safety invariants are enforced, and scripts/replay.mjs reports them). Rankings never change from logs automatically: a logged round becomes a case here only after review, by editing this file. The g1056 cases rebuild the 10:56 engine-2.1 game (game 4ac661bf, Gary, 14 moves, rated 1 star) from its round words; the original log was not available offline, so seeds are not the game's own and only seed-independent expectations are set. Since engine-2.3 (replay-4) cases may also carry the revealed rounds (`history`) and the `character`, and expect `recovery` where no good shared answer exists. The rep-* cases are the rounds quoted from the Solo games players reported (\"not having any fun\"); the exported game files were not available offline, so each round is rebuilt from the quoted words.",
  "cases": [
   {
    "id": "ref-1",
@@ -493,7 +493,8 @@
      "house",
      "home",
      "family",
-     "friend"
+     "friend",
+     "chase"
     ],
     "maxStage": 3
    },
@@ -1136,6 +1137,245 @@
     "acceptable": [
      "pet"
     ]
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-1",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "vacation",
+    "farm"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [
+    "weak"
+   ],
+   "expect": {
+    "reject": [
+     "turkey",
+     "halloween",
+     "pumpkin"
+    ],
+    "recovery": true
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-2",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "potatoes",
+    "christmas"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [
+    "weak"
+   ],
+   "expect": {
+    "acceptable": [
+     "dinner"
+    ],
+    "reject": [
+     "soup"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-3",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "chicken",
+    "sea"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [
+    "weak"
+   ],
+   "expect": {
+    "acceptable": [
+     "fish",
+     "bird"
+    ],
+    "reject": [
+     "horse"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-4",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "microwave",
+    "oven"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "hot",
+     "heat",
+     "cook",
+     "kitchen"
+    ],
+    "reject": [
+     "cake",
+     "spoon"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-5",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "bed",
+    "moon"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "dream",
+     "night",
+     "sleep"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-6",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "paw",
+    "fish"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "pet",
+     "cat"
+    ],
+    "reject": [
+     "dog"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-7",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "trees",
+    "bird"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "nest"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-8",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "business",
+    "cubicle"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "work",
+     "office",
+     "boss",
+     "job"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-9",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "sunny",
+    "nap"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "summer",
+     "afternoon",
+     "beach",
+     "cat"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "rep-10",
+   "category": "reported game",
+   "language": "en",
+   "pair": [
+    "gravy",
+    "roasted"
+   ],
+   "blocked": [],
+   "seed": 1,
+   "character": "milo",
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "dinner",
+     "meat",
+     "chicken",
+     "turkey",
+     "potato"
+    ],
+    "maxStage": 1
    },
    "status": "pass"
   }

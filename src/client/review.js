@@ -6,7 +6,7 @@
 // nothing is shown. The "This device" section reads only this browser's own local log (no token):
 // it is the export path when central review is not set up.
 
-import {CSV_COLUMNS, FLAG_LABELS, REVIEW_FLAGS, computeMetrics, reportedStatus} from "../shared/gamelog.js";
+import {CSV_COLUMNS, FLAG_LABELS, PROFILES, REVIEW_FLAGS, computeMetrics, firstBadRound, gameHighlights, reportedStatus, roundQuality} from "../shared/gamelog.js";
 import {decisionView} from "./decision-view.js";
 import {localCsv, localGames, localPendingCount, syncNow} from "./gamelog.js";
 
@@ -64,6 +64,14 @@ function metricsView(m, title) {
       row("Human: good connection", pct(m.reviewedGood), "of rounds a reviewer flagged"),
       row("Automated: fallback stage", pct(m.fallbackRate), "weak-fallback or lower, or an unknown input"),
       row("Automated: low quality", pct(m.lowQualityRate), "the engine's own indicator"),
+      row("Recovery rounds", pct(m.recoveryRate), "no good shared answer: the bot played a broad hub word (rounds with a pair)"),
+      row("Unresolved input", pct(m.unresolvedRate), "a word of the pair was not understood (rounds with a pair)"),
+      row("Below the high-quality threshold", pct(m.belowHighQualityRate), "the bot's answer was not direct on both words (anchored or recovery)"),
+      row("Near-match rounds", pct(m.nearMatchRate), "the previous two revealed words were closely related"),
+      row("Style tie-break used", pct(m.styleTieBreakRate), "the player's style reordered near-equal answers"),
+      row("Average plausibility (bot answers)", m.avgPlausibility?.value ?? "—", `0–1, engine-2.3 rounds (n=${m.avgPlausibility?.n ?? 0})`),
+      row("Average weak-side relation", m.avgWeakSide?.value ?? "—", `how strongly the answer ties to the weaker word (n=${m.avgWeakSide?.n ?? 0})`),
+      row("Highlighted games", pct(m.highlighted), "recovery > 25 %, unresolved > 10 %, repeated low-quality rounds, or rated 1–2"),
       row("Repeated or invalid bot word", pct(m.repeatedOrInvalid), "should always be 0"),
       row("Player rating (wins)", m.playerRating?.n ? `${m.playerRating.mean} / 5 (${m.playerRating.n}/${m.playerRating.d} rated)` : `— (0/${m.playerRating?.d ?? 0} rated)`,
         m.playerRating?.n ? [5, 4, 3, 2, 1].map(n => `${n}★ ${m.playerRating.stars[n]}`).join(" · ") : "asked once after each Solo win"),
@@ -80,11 +88,18 @@ function playerInputView(p) {
   return el("p", {class: "rv-auto rv-input"}, `Player input: ${parts.join(" · ")}`);
 }
 
-/** One game's rounds: Round | Previous pair | User | Gary/Milo | Match | Flags, each expandable. */
+const yes = (on, label = "yes") => (on ? label : "");
+/**
+ * One game's rounds, each expandable: the pair, both words, and the bot's quality facts (candidate
+ * rank, plausibility, weak-side relation, recovery, unresolved input, near-match state, style
+ * tie-break). The first bad round is marked so it is easy to find.
+ */
 function roundsTable(game, {editable}) {
   const bot = characterName(game.character);
+  const firstBad = firstBadRound(game);
   const rows = [];
   for (const r of game.rounds_list) {
+    const q = roundQuality(r);
     const flags = el("div", {class: "rv-flags"});
     const flagged = new Set(r.flags || []);
     if (editable) {
@@ -106,7 +121,7 @@ function roundsTable(game, {editable}) {
       flags.append(el("p", {class: "rv-flags-title"}, "Human review: ", (r.flags || []).map(f => FLAG_LABELS[f]).join(", ") || "none"));
     }
     const flagCell = el("td", {class: "rv-human"}, (r.flags || []).map(f => FLAG_LABELS[f]).join(", ") || "—");
-    const detail = el("tr", {class: "rv-detail", hidden: true}, el("td", {colspan: "7"},
+    const detail = el("tr", {class: "rv-detail", hidden: true}, el("td", {colspan: "14"},
       el("p", {class: "rv-auto"}, `Automated indicator: ${r.low_quality ? "LOW QUALITY" : "ok"} · stage ${r.stage || "—"} · ${r.decision_ms ?? "—"} ms`),
       playerInputView(r.player_input || r.decision?.playerInput),
       decisionView(r.decision, {selected: r.bot_word, character: game.character}), flags));
@@ -114,21 +129,29 @@ function roundsTable(game, {editable}) {
       detail.hidden = !detail.hidden;
       toggle.setAttribute("aria-expanded", String(!detail.hidden));
     }}, `Round ${r.round}`);
-    rows.push(el("tr", {class: `rv-round ${r.low_quality ? "rv-low" : ""}`},
-      el("td", {}, toggle),
+    const first = r.round === firstBad;
+    const n2 = x => (x === null ? "—" : x.toFixed(2));
+    rows.push(el("tr", {class: `rv-round ${r.low_quality || q.recovery ? "rv-low" : ""} ${first ? "rv-first-bad" : ""}`, "data-round": String(r.round)},
+      el("td", {}, toggle, first ? el("span", {class: "rv-first-bad-label"}, " first bad round") : null),
       el("td", {}, r.pair_a ? `${r.pair_a} + ${r.pair_b}` : "Start"),
-      el("td", {}, r.user_word), el("td", {}, r.bot_word), el("td", {}, r.matched ? "MATCH" : ""),
+      el("td", {}, r.user_word), el("td", {}, r.bot_word),
+      el("td", {}, q.rank === null ? "—" : String(q.rank)), el("td", {}, n2(q.plausibility)), el("td", {}, n2(q.weak)),
+      el("td", {}, yes(q.paired && q.recovery)), el("td", {}, yes(q.paired && q.unresolved)), el("td", {}, yes(q.nearMatch)), el("td", {}, yes(q.styleTieBreak, q.tieChanged ? "reordered" : "yes")),
+      el("td", {}, r.matched ? "MATCH" : ""),
       el("td", {class: "rv-auto-cell"}, r.low_quality ? "low (auto)" : ""), flagCell), detail);
   }
   return el("table", {class: "rv-rounds"},
-    el("thead", {}, el("tr", {}, ...["Round", "Previous pair", "User", bot, "Match", "Automated", "Human flags"].map(x => el("th", {scope: "col"}, x)))),
+    el("thead", {}, el("tr", {}, ...["Round", "Previous pair", "User", bot, "Rank", "Plausibility", "Weak side", "Recovery", "Unresolved input", "Near-match", "Style tie-break", "Match", "Automated", "Human flags"].map(x => el("th", {scope: "col"}, x)))),
     el("tbody", {}, ...rows));
 }
 
 function gameHeader(g) {
   const status = reportedStatus(g);
   const rating = ratingStars(g.player_rating);
-  return `${new Date(g.started_at).toLocaleString()} · ${characterName(g.character)} · ${g.language.toUpperCase()} · ${STATUS_LABELS[status] || status} · ${g.rounds} rounds · ${g.engine_version || "engine ?"}${rating ? ` · Player rating: ${rating} (${g.player_rating}/5)` : ""}`;
+  const profile = (g.rounds_list || []).map(r => roundQuality(r).profile).find(Boolean) || (/engine-2\.[3-9]|engine-[3-9]/.test(g.engine_version || "") ? PROFILES[g.character] : null);
+  const match = g.status === "matched" ? ` · matched on move ${g.rounds}` : "";
+  const highlights = gameHighlights(g);
+  return `${new Date(g.started_at).toLocaleString()} · ${characterName(g.character)}${profile ? ` (${profile} profile)` : ""} · ${g.language.toUpperCase()} · ${STATUS_LABELS[status] || status}${match} · ${g.rounds} rounds · ${g.engine_version || "engine ?"}${rating ? ` · Player rating: ${rating} (${g.player_rating}/5)` : ""}${highlights.length ? ` · LOOK: ${highlights.join("; ")}` : ""}`;
 }
 
 /** Render the review screen into `root`. */
@@ -176,7 +199,7 @@ function renderServer(section) {
     select("status", "Outcome", [["", "All"], ...Object.entries(STATUS_LABELS)]),
     el("label", {class: "rv-filter"}, "Engine ", el("input", {type: "text", name: "engine", placeholder: "engine-2.1", size: "10", onchange: e => { filters.engine = e.target.value.trim(); load(); }})),
     date("from", "From"), date("to", "To"),
-    select("flagged", "Flags", [["", "All games"], ["1", "Flagged or low quality"]]),
+    select("flagged", "Flags", [["", "All games"], ["1", "Flagged or low quality"], ["highlighted", "Highlighted"]]),
     el("button", {type: "button", class: "btn small ghost", onclick: () => exportAs("csv")}, "Export CSV"),
     el("button", {type: "button", class: "btn small ghost", onclick: () => exportAs("json")}, "Export JSON"),
     el("button", {type: "button", class: "btn small ghost", onclick: () => { setToken(""); renderServer(section); }}, "Forget token"));
@@ -208,9 +231,9 @@ function renderServer(section) {
   function gamesTable(games) {
     if (!games.length) return el("p", {}, "No games match these filters.");
     return el("table", {class: "rv-games"},
-      el("thead", {}, el("tr", {}, ...["Date", "Character", "Language", "Outcome", "Rounds", "Engine", "Rating", "Flags", ""].map(x => el("th", {scope: "col"}, x)))),
+      el("thead", {}, el("tr", {}, ...["Date", "Character", "Language", "Outcome", "Rounds", "Engine", "Rating", "Flags", "Highlights", ""].map(x => el("th", {scope: "col"}, x)))),
       el("tbody", {}, ...games.map(g => {
-        const holder = el("tr", {class: "rv-game-detail", hidden: true}, el("td", {colspan: "9"}));
+        const holder = el("tr", {class: "rv-game-detail", hidden: true}, el("td", {colspan: "10"}));
         const open = el("button", {type: "button", class: "btn small", onclick: async () => {
           holder.hidden = !holder.hidden;
           if (!holder.hidden && !holder.dataset.loaded) {
@@ -221,10 +244,11 @@ function renderServer(section) {
             } catch (e) { holder.firstChild.textContent = e.message; }
           }
         }}, "Rounds");
-        return [el("tr", {}, el("td", {}, new Date(g.started_at).toLocaleString()), el("td", {}, characterName(g.character)), el("td", {}, g.language.toUpperCase()),
+        return [el("tr", {class: (g.highlights || []).length ? "rv-highlight" : null}, el("td", {}, new Date(g.started_at).toLocaleString()), el("td", {}, characterName(g.character)), el("td", {}, g.language.toUpperCase()),
           el("td", {}, STATUS_LABELS[g.reported_status] || g.reported_status), el("td", {}, String(g.rounds)), el("td", {}, g.engine_version || "—"),
           el("td", {class: "rv-rating", "aria-label": g.player_rating ? `${g.player_rating} out of 5` : "not rated"}, ratingStars(g.player_rating) || "—"),
-          el("td", {}, [g.flagged_rounds ? `${g.flagged_rounds} reviewed` : "", g.low_quality_rounds ? `${g.low_quality_rounds} low (auto)` : ""].filter(Boolean).join(" · ") || "—"), el("td", {}, open)), holder];
+          el("td", {}, [g.flagged_rounds ? `${g.flagged_rounds} reviewed` : "", g.low_quality_rounds ? `${g.low_quality_rounds} low (auto)` : "", g.recovery_rounds ? `${g.recovery_rounds} recovery` : ""].filter(Boolean).join(" · ") || "—"),
+          el("td", {class: "rv-highlights"}, [(g.highlights || []).join("; "), g.first_bad_round ? `first bad round: ${g.first_bad_round}` : ""].filter(Boolean).join(" · ") || "—"), el("td", {}, open)), holder];
       }).flat()));
   }
   load();

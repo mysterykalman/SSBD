@@ -55,7 +55,7 @@ test("English has no stray space before punctuation", () => {
 test("French copy speaks to kids with tu, not vous", () => {
   const formal = /\b(vous|votre|vos)\b/i;
   // The few lines addressed to both players together legitimately use the plural.
-  const plural = new Set(["heroTitle", "heroCopy", "heroRules", "firstSolo", "garyFirstSolo", "miloFirstSolo", "firstFamily", "revealDifferent", "revealMatchCopy", "winCopy", "togetherCopy2"]);
+  const plural = new Set(["heroTitle", "heroCopy", "heroRules", "firstSolo", "garyFirstSolo", "miloFirstSolo", "firstFamily", "revealMatchCopy", "winCopy", "togetherCopy2"]);
   for (const [key, value] of Object.entries(STRINGS.fr)) {
     if (!plural.has(key)) assert.doesNotMatch(value, formal, `fr.${key}`);
   }
@@ -85,9 +85,9 @@ test("copy stays warm and kid-facing: no technical or failure words", () => {
   for (const lang of LANGUAGES) {
     for (const [key, value] of Object.entries(STRINGS[lang])) {
       for (const re of banned[lang]) {
-        // Gary's approved script ("This is usually where things go wrong", "Not wrong, exactly") is
-        // his own dry voice about the game, never a verdict on the player.
-        if (key.startsWith("gn.") && String(re) === String(/\bwrong\b/i)) continue;
+        // Gary's and Milo's approved scripts ("This is usually where things go wrong", "Same idea,
+        // wrong word") are their own voice about the game, never a verdict on the player.
+        if (/^(gn|mn)\./.test(key) && String(re) === String(/\bwrong\b/i)) continue;
         assert.doesNotMatch(value, re, `${lang}.${key}: ${value}`);
       }
     }

@@ -78,9 +78,9 @@ test("When the reveal modal is open, the pending next pair is not rendered in th
   // Reveal, in the same modal.
   await page.waitForSelector("#revealContinue");
   const modal = await page.locator("#revealModal").innerText();
-  assert.match(modal, /YOUR WORD[\s\S]*GARY.S WORD/i);
+  assert.deepEqual((await page.locator("#revealModal .rv-word small").allInnerTexts()).map(x => x.trim()), ["YOU", "GARY"]);
   assert.match(modal, new RegExp(`${mine}[\\s\\S]*${bot}`, "i"));
-  assert.match(modal, new RegExp(`Fine\\. Now try ${mine} \\+ ${bot}\\.`, "i")); // Gary's wording of the next pair
+  assert.match(modal, new RegExp(`Next: ${mine} \\+ ${bot}`, "i")); // the next pair, plain system copy
   assert.match(await page.locator("#revealContinue").innerText(), /Keep playing/);
   assert.equal(await page.locator("#app #prompt").count(), 0, "board still pre-reveal while the reveal is shown");
   assert.equal(await page.locator("dialog[open]").count(), 1, "exactly one modal");
@@ -148,8 +148,8 @@ test("one-letter word, refresh during the reveal, Escape and FR copy", async () 
   await page.keyboard.press("Escape"); // ignored until the reveal is ready
   await page.waitForSelector("#revealContinue");
   assert.equal(await page.locator("#revealModal[open]").count(), 1);
-  assert.match(await page.locator("#revealModal").innerText(), /TON MOT[\s\S]*MOT DE GARY/i);
-  assert.match(await page.locator("#revealModal").innerText(), /Bon\. Maintenant, essaie \S+ \+ \S+\./);
+  assert.deepEqual((await page.locator("#revealModal .rv-word small").allInnerTexts()).map(x => x.trim()), ["TOI", "GARY"]);
+  assert.match(await page.locator("#revealModal").innerText(), /Ensuite\s?: \S+ \+ \S+/);
   assert.match(await page.locator("#revealContinue").innerText(), /On continue/);
   await page.keyboard.press("Escape"); // when ready, Escape continues like the button
   await page.waitForSelector("#revealModal", {state: "detached"});
@@ -212,8 +212,8 @@ test("family game: both players get one reveal each, and the board waits for Kee
   await submit(ben, "Orbit");
   for (const [page, them] of [[ben, "Ana"], [ana, "Ben"]]) {
     await page.waitForSelector("#revealContinue", {timeout: 10000});
-    assert.match(await page.locator("#revealModal").innerText(), new RegExp(`YOUR WORD[\\s\\S]*${them}'S WORD`, "i"));
-    assert.match(await page.locator("#revealModal").innerText(), /Next move starts with COMET \+ ORBIT/);
+    assert.deepEqual((await page.locator("#revealModal .rv-word small").allInnerTexts()).map(x => x.trim().toUpperCase()), ["YOU", them.toUpperCase()]);
+    assert.match(await page.locator("#revealModal").innerText(), /Next: COMET \+ ORBIT/);
     assert.equal(await page.locator("#app #prompt").count(), 0, "board still on move 1 under the modal");
     await page.click("#revealContinue");
     await page.waitForSelector("#revealModal", {state: "detached"});
@@ -347,8 +347,8 @@ test("an inflected match (Gary's word, pluralised) looks exactly like a normal w
   const modal = await page.locator("#revealModal").innerText();
   // Both sides read as the player's own word: the inflection rule is invisible.
   assert.deepEqual((await page.locator("#revealModal .rv-word .chip-word .typed, #revealModal .rv-word.you .chip-word").allTextContents()).map(w => w.trim().toUpperCase()), [plural.toUpperCase(), plural.toUpperCase()]);
-  assert.match(modal, new RegExp(`GARY.S WORD\\s+${plural}`, "i"), "Gary's side shows the player's form");
-  assert.match(modal, new RegExp(`THAT’S A MATCH!\\s+You both said ${plural}\\. Your brains did a high five\\.`, "i"), "the standard match copy, in the player's word");
+  assert.match(modal, new RegExp(`GARY\\s+${plural}`, "i"), "Gary's side shows the player's form");
+  assert.match(modal, new RegExp(`THAT’S A MATCH!\\s+You both said ${plural}\\.`, "i"), "the standard match copy, in the player's word");
   assert.doesNotMatch(modal, /close enough|plural|schmural|tense|variant|same idea/i);
   assert.equal(await page.locator("#revealNext").count(), 0, "no 'next move starts with' for a match");
   await page.click("#revealContinue");

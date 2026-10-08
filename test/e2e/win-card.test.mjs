@@ -5,7 +5,8 @@ import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
 import pg from "pg";
 import {botWord, launch, lockIn, noHorizontalScroll, playDistinct, startServer, startSolo} from "./helpers.mjs";
-import {pairKeys} from "../../src/client/gary-narrative.js";
+import {GARY_NARRATIVE} from "../../src/client/gary-narrative.js";
+import {MILO_NARRATIVE} from "../../src/client/milo-narrative.js";
 import {STRINGS} from "../../src/client/i18n.js";
 
 const TOKEN = "e2e-review-token-not-a-secret";
@@ -44,18 +45,13 @@ test("Gary's and Milo's win cards: their own avatar and win line, the progress r
     assert.equal(await page.locator(`.win-card .wc-avatar img.art-${who}`).count(), 1, `${name}'s avatar`);
     assert.equal(await page.locator(".win-card .board-title").innerText(), "YOU DID IT!");
     assert.equal((await page.locator("#winMove").innerText()).trim(), "Matched on move 2");
-    // The win line is the character's own (Milo: his fixed fast-win line; Gary: one of his early-match lines).
+    // The win line is the character's own: the AFTER line of their fast-win pair, then that same pair's POST-WIN line.
     const said = (await page.locator("#winReaction .wc-bubble").first().innerText()).replace(/^\w+:\s*/, "").trim();
     const postWin = (await page.locator("#postWinLine").innerText()).replace(/^\w+:\s*/, "").trim();
-    if (who === "milo") {
-      assert.equal(said, "Already?! Okay, we’re good at this.");
-      assert.equal((await page.locator("#postWinLine").innerText()).replace(/^Milo:\s*/, "").trim(), "That was fun. Again?");
-    } else {
-      // Gary: the AFTER line of his fast-win pair, then that same pair's POST-WIN line.
-      const fast = ["a", "b", "c"].map(p => pairKeys("fastWin", p));
-      const pair = fast.find(k => STRINGS.en[k.after] === said && STRINGS.en[k.extra] === postWin);
-      assert.ok(pair, `${said} / ${postWin}`);
-    }
+    const n = who === "milo" ? MILO_NARRATIVE : GARY_NARRATIVE;
+    const fast = n.pairsOf("fastWin").map(p => n.pairKeys("fastWin", p));
+    const pair = fast.find(k => STRINGS.en[k.after] === said && STRINGS.en[k.extra] === postWin);
+    assert.ok(pair, `${who}: ${said} / ${postWin}`);
     // Progress rail unchanged: matched on move 2, two stones reached.
     assert.match(await page.locator(".progress").innerText(), /Matched on move 2!/);
     // Button hierarchy: primary coral, secondary cream, history quiet.
