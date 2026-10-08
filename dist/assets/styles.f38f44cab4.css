@@ -628,3 +628,4 @@ main:focus { outline: none; }
 .kb-open .prompt { margin: 0 0 4px; gap: 6px 10px; }
 .kb-open .word-form { margin-top: 6px; gap: 8px; grid-template-columns: minmax(0, 1fr) auto; }
 .kb-open .word-form .btn { width: auto; }
+@media (max-width: 360px) { .kb-open .word-form .btn { padding-inline: 14px; } }
