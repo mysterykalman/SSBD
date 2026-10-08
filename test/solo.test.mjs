@@ -1,9 +1,9 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {chooseResponse} from "../src/shared/bot.js";
+import {ENGINE_CONFIG, selectBotWord} from "../src/shared/engine.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
-import {currentMove, moveRandom, seededRandom, usedKeys} from "../src/shared/rules.js";
-import {publicMove, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
+import {currentMove, seededRandom, usedKeys} from "../src/shared/rules.js";
+import {moveSeed, publicMove, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
 import {wordKey} from "../src/shared/words.js";
 
 const PLAYER_WORDS = ["sun", "sky", "night", "dream", "bed", "pillow", "blanket", "cozy", "winter", "snow", "cold", "ice", "skating", "fun", "party", "cake", "candle", "birthday", "gift", "surprise", "happy"];
@@ -77,13 +77,15 @@ test("Solo reaches the 20-move limit with a valid end state", () => {
   assert.equal(currentMove(game).hidden, undefined);
 });
 
-test("openings vary between new games; a response to the same pair is stable (Gary aims, he doesn't roll dice)", () => {
+test("openings vary between new games; a response to the same pair only varies within its small strong pool", () => {
   const openings = new Set();
   for (let seed = 1; seed <= 30; seed++) openings.add(currentMove(startSoloGame({id: `v${seed}`, seed})).hidden.b);
   assert.ok(openings.size >= 15, `only ${openings.size} distinct openings`);
   const responses = new Set();
-  for (let seed = 1; seed <= 30; seed++) responses.add(chooseResponse({prompts: ["sun", "moon"], rng: seededRandom(seed)}).word);
-  assert.ok(responses.size <= 2, `sun + moon gave ${[...responses].join(",")}`);
+  for (let seed = 1; seed <= 30; seed++) responses.add(selectBotWord({pair: ["sun", "moon"], seed}).word);
+  assert.ok(responses.size <= ENGINE_CONFIG.poolSize, `sun + moon gave ${[...responses].join(",")}`);
+  // And the same seed always gives the same word.
+  for (let seed = 1; seed <= 10; seed++) assert.equal(selectBotWord({pair: ["sun", "moon"], seed}).word, selectBotWord({pair: ["sun", "moon"], seed}).word);
 });
 
 test("bot responses relate to both prompts", () => {
@@ -95,7 +97,7 @@ test("bot responses relate to both prompts", () => {
   const pairs = [["sun", "moon"], ["dog", "cat"], ["pizza", "cake"], ["beach", "summer"], ["dragon", "castle"], ["rain", "flower"], ["school", "book"], ["music", "party"]];
   for (const [a, b] of pairs) {
     for (let seed = 1; seed <= 10; seed++) {
-      const pick = chooseResponse({prompts: [a, b], rng: seededRandom(seed)});
+      const pick = selectBotWord({pair: [a, b], seed});
       assert.equal(pick.quality, "strong", `${a}+${b} -> ${pick.word}`);
       assert.ok(near(pick.word, a) && near(pick.word, b), `${a}+${b} -> ${pick.word}`);
       assert.notEqual(wordKey(pick.word), wordKey(a));
@@ -107,12 +109,14 @@ test("bot responses relate to both prompts", () => {
 test("bot excludes used words and handles unknown prompts gracefully", () => {
   const exclude = new Set(["sky", "star", "night", "space", "light"].map(wordKey));
   for (let seed = 1; seed <= 10; seed++) {
-    const pick = chooseResponse({prompts: ["sun", "moon"], excludeKeys: exclude, rng: seededRandom(seed)});
+    const pick = selectBotWord({pair: ["sun", "moon"], blocked: [...exclude], seed});
     assert.ok(!exclude.has(wordKey(pick.word)), pick.word);
   }
-  const odd = chooseResponse({prompts: ["zorblax", "quuxify"], rng: seededRandom(1)});
+  const odd = selectBotWord({pair: ["zorblax", "quuxify"], seed: 1});
   assert.ok(odd.word && odd.quality === "loose");
-  const compound = chooseResponse({prompts: ["sunflower", "nightmare"], rng: seededRandom(1)});
+  assert.equal(odd.decision.stage, "no-known-input");
+  assert.equal(odd.decision.lowQuality, true);
+  const compound = selectBotWord({pair: ["sunflower", "nightmare"], seed: 1});
   assert.ok(compound.word);
 });
 
@@ -149,10 +153,12 @@ test("each bot word comes from the exact current prompts, one word per move", ()
         assert.equal(typeof hidden, "string");
         assert.ok(hidden.split(" ").length <= 3, hidden);
         if (move.prompts) {
-          // Recomputing from this move's prompts and the revealed words gives the same word.
-          const history = game.moves.flatMap(m => (m.words ? [[m.words.a, m.words.b]] : []));
-          const again = chooseResponse({prompts: move.prompts, language, excludeKeys: usedKeys(game), history, rng: moveRandom(game, move.number)});
+          // Recomputing from exactly the engine's inputs (this move's prompts, the revealed words, the
+          // language, the character and the move's seed) gives the same word.
+          const blocked = game.moves.flatMap(m => (m.words ? [m.words.a, m.words.b] : []));
+          const again = selectBotWord({pair: move.prompts, blocked, language, character: "gary", seed: moveSeed(game, move.number)});
           assert.equal(again.word, hidden, `move ${move.number}`);
+          assert.deepEqual(again.decision, move.hidden.decision, "the stored decision is the one that chose the word");
         }
         let r = {ok: false};
         while (!r.ok) r = submitSoloWord(game, all[Math.floor(random() * all.length)].label);

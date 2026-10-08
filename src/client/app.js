@@ -14,6 +14,7 @@ import {createStore} from "./store.js";
 import {garyRandom, hasMet, markMet, recentLines, rememberLines, typeInto} from "./gary.js";
 import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, cleverBridge, connectionStrength, copyKey, pickReaction, rematchLine, resultAvoid, resultKey, revealKind, scriptedHelp, scriptedReaction, scriptedResult} from "./characters.js";
 import {characterArt} from "./gary-art.js";
+import {decisionView} from "./decision-view.js";
 
 const store = createStore();
 const state = {
@@ -651,34 +652,11 @@ function garyDebugPanel(view) {
   if (!garyDiagnosticsEnabled() || view.kind !== "solo") return null;
   const move = [...view.moves].reverse().find(m => m.words && m.garyDecision);
   const d = move?.garyDecision;
-  const pct = p => `${Math.round(p * 100)}%`;
-  const cell = (tag, text, attrs = {}) => h(tag, attrs, String(text));
   const body = !d
     ? [h("p", {}, "No decision recorded yet (diagnostics were off when this move was locked, or nothing has been revealed).")]
-    : [
-      h("dl", {},
-        cell("dt", "Character"), cell("dd", `${view.character} (presentation only: every character uses this same engine)`),
-        cell("dt", "Current pair"), cell("dd", d.pair ? d.pair.map(w => w.toUpperCase()).join(" + ") : "(opening move)"),
-        cell("dt", "Trail theme from"), cell("dd", d.trail?.length ? d.trail.join(", ") : "(no trail yet)"),
-        cell("dt", "Selected word"), cell("dd", String(d.selected).toUpperCase(), {class: "gd-selected"}),
-        cell("dt", "Reason selected"), cell("dd", d.reason),
-        cell("dt", "Why #1 beat #2"), cell("dd", d.beat || "(no rival)"),
-        cell("dt", "Convergence distance"), cell("dd", d.distance ? `${d.distance.before.toFixed(2)} → ${d.distance.after.toFixed(2)} expected hops to the player's answer` : "(none)")),
-      d.predicted?.length ? h("table", {class: "gd-predicted"},
-        h("caption", {}, "Predicted human answers"),
-        h("thead", {}, h("tr", {}, cell("th", "word"), cell("th", "p"), cell("th", "why"))),
-        h("tbody", {}, ...d.predicted.map(x => h("tr", {}, cell("td", x.word), cell("td", pct(x.p)), cell("td", x.why)))))
-        : h("p", {class: "gd-predicted"}, d.pair ? "Predicted human answers: none (a word on the table means nothing to Gary's vocabulary)." : "Predicted human answers: none (opening move)."),
-      d.candidates?.length ? h("table", {class: "gd-candidates"},
-        h("caption", {}, `Gary's candidate words (score = ${d.weights.human} human + ${d.weights.fit} fit + ${d.weights.centre} centre + ${d.weights.personality} personality − penalty; only contenders, marked *, can win)`),
-        h("thead", {}, h("tr", {}, ...["word", "score", "human", "fit", "centre", "personality", "penalty", "sides", "hops after", "tier"].map(x => cell("th", x)))),
-        h("tbody", {}, ...d.candidates.map(c => h("tr", {class: c.word === d.selected ? "gd-pick" : ""},
-          cell("td", c.word + (c.contender ? " *" : "")), cell("td", c.total.toFixed(3)), cell("td", c.human.toFixed(2)), cell("td", c.fit.toFixed(2)), cell("td", c.centre.toFixed(2)),
-          cell("td", c.personality.toFixed(2)), cell("td", c.penalty.toFixed(2)), cell("td", c.sides.join(" / ") + (c.sideways ? " (sideways)" : "")), cell("td", c.after?.toFixed(2) ?? ""), cell("td", c.tier)))))
-        : h("p", {class: "gd-candidates"}, "Gary's candidate words: none scored (opening move: a friendly word at random).")
-    ];
+    : [decisionView(d, {character: view.character, selected: move.words[view.otherSide]})];
   return h("details", {class: "card gary-debug", id: "garyDebug", lang: "en", open: true},
-    h("summary", {}, `Gary's decision${move ? ` · move ${move.number}` : ""} (developer diagnostics)`), ...body);
+    h("summary", {}, `${characterName(view)}'s decision${move ? ` · move ${move.number}` : ""} (developer diagnostics)`), ...body);
 }
 
 /**
