@@ -77,7 +77,7 @@ test("Solo reaches the 20-move limit with a valid end state", () => {
   assert.equal(currentMove(game).hidden, undefined);
 });
 
-test("openings vary between new games; a response to the same pair only varies within its credible neighbourhood", () => {
+test("openings vary between new games; a response to the same pair only varies within its quality window", () => {
   const openings = new Set();
   for (let seed = 1; seed <= 30; seed++) openings.add(currentMove(startSoloGame({id: `v${seed}`, seed})).hidden.b);
   assert.ok(openings.size >= 15, `only ${openings.size} distinct openings`);
@@ -87,9 +87,8 @@ test("openings vary between new games; a response to the same pair only varies w
     responses.add(r.word);
     r.decision.pool.forEach(w => pool.add(w));
   }
-  assert.ok(responses.size >= 2, `sun + moon always gave ${[...responses].join(",")}`);
-  for (const w of responses) assert.ok(pool.has(w), `sun + moon gave ${w}, outside its neighbourhood`);
-  assert.ok(pool.size <= 1 + ENGINE_CONFIG.sampling.strong.count + ENGINE_CONFIG.sampling.reasonable.count + ENGINE_CONFIG.sampling.lateral.count);
+  for (const w of responses) assert.ok(pool.has(w), `sun + moon gave ${w}, outside its quality window`);
+  assert.ok(pool.size <= ENGINE_CONFIG.window.size);
   // And the same seed always gives the same word.
   for (let seed = 1; seed <= 10; seed++) assert.equal(selectBotWord({pair: ["sun", "moon"], seed}).word, selectBotWord({pair: ["sun", "moon"], seed}).word);
 });

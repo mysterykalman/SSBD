@@ -1,68 +1,1143 @@
 {
-  "schema": 1,
-  "version": "replay-2",
-  "about": "Versioned replay cases for the Solo bot. Each case keeps the exact engine input (latest revealed pair, words already used in the game, language, seed), the word the bot originally chose and with which engine, any human review flags, and what a good answer looks like. `acceptable` lists answers a reviewer judged good for the engine's single strongest answer (since engine-2.1 the played word is drawn from a credible neighbourhood around it, so it is checked for validity, the pool and `reject` instead); `reject` lists answers judged poor and applies to both. `status: \"pass\"` cases must meet this with the current engine (enforced by test/replay.test.mjs); `status: \"known-gap\"` cases document a weakness still open (only the safety invariants are enforced, and scripts/replay.mjs reports them). Rankings never change from logs automatically: a logged round becomes a case here only after review, by editing this file.",
-  "cases": [
-    {"id": "ref-1", "category": "reference game", "language": "en", "pair": ["lamp", "restaurant"], "blocked": [], "seed": 7,
-     "original": {"engine": "engine-1", "word": "christmas"}, "flags": ["weak"],
-     "expect": {"acceptable": ["table", "light", "candle", "dinner"], "reject": ["christmas"], "maxStage": 3}, "status": "pass"},
-    {"id": "ref-2", "category": "reference game", "language": "en", "pair": ["tables", "christmas"], "blocked": ["lamp", "restaurant"], "seed": 7,
-     "original": {"engine": "engine-1", "word": "dinner"}, "flags": ["good"],
-     "expect": {"acceptable": ["dinner", "family", "feast", "tree"], "maxStage": 3}, "status": "pass"},
-    {"id": "ref-3", "category": "reference game", "language": "en", "pair": ["gifts", "dinner"], "blocked": ["lamp", "restaurant", "tables", "christmas"], "seed": 7,
-     "original": {"engine": "engine-1", "word": "pizza"}, "flags": ["one-sided"],
-     "expect": {"acceptable": ["birthday", "party", "family", "holiday", "thanksgiving"], "reject": ["pizza"], "maxStage": 3}, "status": "pass"},
-    {"id": "ref-4", "category": "reference game", "language": "en", "pair": ["presents", "pizza"], "blocked": ["lamp", "restaurant", "tables", "christmas", "gifts", "dinner"], "seed": 7,
-     "original": {"engine": "engine-1", "word": "food"}, "flags": ["one-sided", "generic"],
-     "expect": {"acceptable": ["birthday", "party"], "reject": ["food"], "maxStage": 3}, "status": "pass"},
-    {"id": "ref-5", "category": "reference game", "language": "en", "pair": ["pan", "cake"], "blocked": [], "seed": 7,
-     "original": {"engine": "engine-1", "word": "birthday"}, "flags": ["one-sided"],
-     "expect": {"acceptable": ["oven", "bake", "kitchen", "cook", "pancake", "baking"], "reject": ["birthday"], "maxStage": 3}, "status": "pass"},
-    {"id": "fam-1", "category": "familiar connection", "language": "en", "pair": ["bread", "butter"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["toast", "knife", "sandwich", "breakfast"], "maxStage": 1}, "status": "pass"},
-    {"id": "fam-2", "category": "familiar connection", "language": "en", "pair": ["cat", "dog"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["pet", "animal", "vet", "fur", "tail", "paw"], "maxStage": 1}, "status": "pass"},
-    {"id": "fam-3", "category": "familiar connection", "language": "en", "pair": ["dolphin", "ocean"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["sea", "whale", "fish", "water", "swim", "wave"], "maxStage": 1}, "status": "pass"},
-    {"id": "comp-1", "category": "compound", "language": "en", "pair": ["rain", "bow"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["rainbow"], "maxStage": 1}, "status": "pass"},
-    {"id": "comp-2", "category": "compound", "language": "en", "pair": ["fire", "truck"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["firefighter", "fire truck", "firetruck", "siren", "ladder"], "maxStage": 1}, "status": "pass"},
-    {"id": "comp-3", "category": "compound", "language": "en", "pair": ["snow", "man"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["snowman", "winter", "cold", "carrot"]}, "status": "known-gap",
-     "gap": "\"man\" has few links and the vocabulary has no SNOWMAN concept; the engine falls back to a weak word."},
-    {"id": "amb-1", "category": "ambiguous word", "language": "en", "pair": ["bat", "ball"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["baseball", "cricket", "game", "sport"], "maxStage": 2}, "status": "pass"},
-    {"id": "amb-2", "category": "ambiguous word", "language": "en", "pair": ["bark", "tree"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["wood", "trunk", "forest", "dog"]}, "status": "known-gap",
-     "gap": "BARK is not in the vocabulary (neither the dog sense nor the tree sense), so the engine answers from TREE only."},
-    {"id": "amb-3", "category": "ambiguous word", "language": "en", "pair": ["ring", "phone"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["call", "bell", "sound"]}, "status": "known-gap",
-     "gap": "RING is stored as the jewellery sense only; the phone sense (to ring) is missing."},
-    {"id": "unrel-1", "category": "unrelated pair", "language": "en", "pair": ["volcano", "pencil"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"lowQuality": true}, "status": "pass"},
-    {"id": "unrel-2", "category": "unrelated pair", "language": "en", "pair": ["piano", "octopus"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"lowQuality": true, "reject": ["sheep"]}, "status": "pass"},
-    {"id": "sparse-1", "category": "sparse vocabulary", "language": "en", "pair": ["zephyr", "moon"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["space", "sky", "star", "night", "sun", "rocket"], "lowQuality": true}, "status": "pass"},
-    {"id": "sparse-2", "category": "sparse vocabulary", "language": "en", "pair": ["xyzzy", "blorp"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"lowQuality": true}, "status": "pass"},
-    {"id": "block-1", "category": "heavy blocking", "language": "en", "pair": ["cat", "dog"], "blocked": ["pet", "animal", "bone", "mouse", "fur", "tail", "puppy", "kitten", "leash", "bark", "meow", "paw"], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["vet", "whisker", "collar", "house", "home", "family", "friend"], "maxStage": 3}, "status": "pass"},
-    {"id": "broad-1", "category": "broad vs specific", "language": "en", "pair": ["food", "animal"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"reject": ["food", "animal", "thing", "stuff"]}, "status": "pass"},
-    {"id": "broad-2", "category": "broad vs specific", "language": "en", "pair": ["sun", "beach"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["summer", "sand", "hot", "holiday", "vacation", "towel", "sunscreen"], "reject": ["fun", "nice"], "maxStage": 1}, "status": "pass"},
-    {"id": "fr-1", "category": "French", "language": "fr", "pair": ["lampe", "restaurant"], "blocked": [], "seed": 7,
-     "original": {"engine": "engine-1", "word": "noël"}, "flags": ["weak"],
-     "expect": {"acceptable": ["table", "lumière", "bougie", "dîner"], "reject": ["noël"], "maxStage": 3}, "status": "pass"},
-    {"id": "fr-2", "category": "French", "language": "fr", "pair": ["chat", "chien"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["animal domestique", "animal", "vétérinaire", "poil", "queue"], "maxStage": 1}, "status": "pass"},
-    {"id": "fr-3", "category": "French", "language": "fr", "pair": ["pain", "beurre"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["tartine", "couteau", "petit déjeuner", "sandwich"], "maxStage": 1}, "status": "pass"},
-    {"id": "fr-4", "category": "French", "language": "fr", "pair": ["neige", "hiver"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"acceptable": ["froid", "ski", "bonhomme de neige", "flocon"], "maxStage": 1}, "status": "pass"},
-    {"id": "fr-5", "category": "French unrelated", "language": "fr", "pair": ["volcan", "crayon"], "blocked": [], "seed": 7,
-     "original": null, "flags": [], "expect": {"lowQuality": true}, "status": "pass"}
-  ]
+ "schema": 1,
+ "version": "replay-3",
+ "about": "Versioned replay cases for the Solo bot. Each case keeps the exact engine input (latest revealed pair, words already used in the game, language, seed), the word the bot originally chose and with which engine, any human review flags, and what a good answer looks like. `acceptable` lists answers a reviewer judged good for the engine's single strongest answer (since engine-2.1 the played word is drawn from a credible neighbourhood around it, so it is checked for validity, the pool and `reject` instead); `reject` lists answers judged poor and applies to both. `status: \"pass\"` cases must meet this with the current engine (enforced by test/replay.test.mjs); `status: \"known-gap\"` cases document a weakness still open (only the safety invariants are enforced, and scripts/replay.mjs reports them). Rankings never change from logs automatically: a logged round becomes a case here only after review, by editing this file. The g1056 cases rebuild the 10:56 engine-2.1 game (game 4ac661bf, Gary, 14 moves, rated 1 star) from its round words; the original log was not available offline, so seeds are not the game's own and only seed-independent expectations are set.",
+ "cases": [
+  {
+   "id": "ref-1",
+   "category": "reference game",
+   "language": "en",
+   "pair": [
+    "lamp",
+    "restaurant"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": {
+    "engine": "engine-1",
+    "word": "christmas"
+   },
+   "flags": [
+    "weak"
+   ],
+   "expect": {
+    "acceptable": [
+     "table",
+     "light",
+     "candle",
+     "dinner"
+    ],
+    "reject": [
+     "christmas"
+    ],
+    "maxStage": 3
+   },
+   "status": "pass"
+  },
+  {
+   "id": "ref-2",
+   "category": "reference game",
+   "language": "en",
+   "pair": [
+    "tables",
+    "christmas"
+   ],
+   "blocked": [
+    "lamp",
+    "restaurant"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-1",
+    "word": "dinner"
+   },
+   "flags": [
+    "good"
+   ],
+   "expect": {
+    "acceptable": [
+     "dinner",
+     "family",
+     "feast",
+     "tree"
+    ],
+    "maxStage": 3
+   },
+   "status": "pass"
+  },
+  {
+   "id": "ref-3",
+   "category": "reference game",
+   "language": "en",
+   "pair": [
+    "gifts",
+    "dinner"
+   ],
+   "blocked": [
+    "lamp",
+    "restaurant",
+    "tables",
+    "christmas"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-1",
+    "word": "pizza"
+   },
+   "flags": [
+    "one-sided"
+   ],
+   "expect": {
+    "acceptable": [
+     "birthday",
+     "party",
+     "family",
+     "holiday",
+     "thanksgiving"
+    ],
+    "reject": [
+     "pizza"
+    ],
+    "maxStage": 3
+   },
+   "status": "pass"
+  },
+  {
+   "id": "ref-4",
+   "category": "reference game",
+   "language": "en",
+   "pair": [
+    "presents",
+    "pizza"
+   ],
+   "blocked": [
+    "lamp",
+    "restaurant",
+    "tables",
+    "christmas",
+    "gifts",
+    "dinner"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-1",
+    "word": "food"
+   },
+   "flags": [
+    "one-sided",
+    "generic"
+   ],
+   "expect": {
+    "acceptable": [
+     "birthday",
+     "party"
+    ],
+    "reject": [
+     "food"
+    ],
+    "maxStage": 3
+   },
+   "status": "pass"
+  },
+  {
+   "id": "ref-5",
+   "category": "reference game",
+   "language": "en",
+   "pair": [
+    "pan",
+    "cake"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": {
+    "engine": "engine-1",
+    "word": "birthday"
+   },
+   "flags": [
+    "one-sided"
+   ],
+   "expect": {
+    "acceptable": [
+     "oven",
+     "bake",
+     "kitchen",
+     "cook",
+     "pancake",
+     "baking"
+    ],
+    "reject": [
+     "birthday"
+    ],
+    "maxStage": 3
+   },
+   "status": "pass"
+  },
+  {
+   "id": "fam-1",
+   "category": "familiar connection",
+   "language": "en",
+   "pair": [
+    "bread",
+    "butter"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "toast",
+     "knife",
+     "sandwich",
+     "breakfast"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "fam-2",
+   "category": "familiar connection",
+   "language": "en",
+   "pair": [
+    "cat",
+    "dog"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "pet",
+     "animal",
+     "vet",
+     "fur",
+     "tail",
+     "paw"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "fam-3",
+   "category": "familiar connection",
+   "language": "en",
+   "pair": [
+    "dolphin",
+    "ocean"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "sea",
+     "whale",
+     "fish",
+     "water",
+     "swim",
+     "wave"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "comp-1",
+   "category": "compound",
+   "language": "en",
+   "pair": [
+    "rain",
+    "bow"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "rainbow"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "comp-2",
+   "category": "compound",
+   "language": "en",
+   "pair": [
+    "fire",
+    "truck"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "firefighter",
+     "fire truck",
+     "firetruck",
+     "siren",
+     "ladder"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "comp-3",
+   "category": "compound",
+   "language": "en",
+   "pair": [
+    "snow",
+    "man"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "snowman",
+     "winter",
+     "cold",
+     "carrot"
+    ]
+   },
+   "status": "known-gap",
+   "gap": "\"man\" has few links and the vocabulary has no SNOWMAN concept; the engine falls back to a weak word."
+  },
+  {
+   "id": "amb-1",
+   "category": "ambiguous word",
+   "language": "en",
+   "pair": [
+    "bat",
+    "ball"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "baseball",
+     "cricket",
+     "game",
+     "sport",
+     "hit"
+    ],
+    "maxStage": 2
+   },
+   "status": "pass"
+  },
+  {
+   "id": "amb-2",
+   "category": "ambiguous word",
+   "language": "en",
+   "pair": [
+    "bark",
+    "tree"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "wood",
+     "trunk",
+     "forest",
+     "dog"
+    ]
+   },
+   "status": "pass"
+  },
+  {
+   "id": "amb-3",
+   "category": "ambiguous word",
+   "language": "en",
+   "pair": [
+    "ring",
+    "phone"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "call",
+     "bell",
+     "sound"
+    ]
+   },
+   "status": "known-gap",
+   "gap": "RING is stored as the jewellery sense only; the phone sense (to ring) is missing."
+  },
+  {
+   "id": "unrel-1",
+   "category": "unrelated pair",
+   "language": "en",
+   "pair": [
+    "volcano",
+    "pencil"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "lowQuality": true
+   },
+   "status": "pass"
+  },
+  {
+   "id": "unrel-2",
+   "category": "unrelated pair",
+   "language": "en",
+   "pair": [
+    "piano",
+    "octopus"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "lowQuality": true,
+    "reject": [
+     "sheep"
+    ]
+   },
+   "status": "pass"
+  },
+  {
+   "id": "sparse-1",
+   "category": "sparse vocabulary",
+   "language": "en",
+   "pair": [
+    "zephyr",
+    "moon"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "space",
+     "sky",
+     "star",
+     "night",
+     "sun",
+     "rocket",
+     "light"
+    ],
+    "lowQuality": true
+   },
+   "status": "pass"
+  },
+  {
+   "id": "sparse-2",
+   "category": "sparse vocabulary",
+   "language": "en",
+   "pair": [
+    "xyzzy",
+    "blorp"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "lowQuality": true
+   },
+   "status": "pass"
+  },
+  {
+   "id": "block-1",
+   "category": "heavy blocking",
+   "language": "en",
+   "pair": [
+    "cat",
+    "dog"
+   ],
+   "blocked": [
+    "pet",
+    "animal",
+    "bone",
+    "mouse",
+    "fur",
+    "tail",
+    "puppy",
+    "kitten",
+    "leash",
+    "bark",
+    "meow",
+    "paw"
+   ],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "vet",
+     "whisker",
+     "collar",
+     "house",
+     "home",
+     "family",
+     "friend"
+    ],
+    "maxStage": 3
+   },
+   "status": "pass"
+  },
+  {
+   "id": "broad-1",
+   "category": "broad vs specific",
+   "language": "en",
+   "pair": [
+    "food",
+    "animal"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "reject": [
+     "food",
+     "animal",
+     "thing",
+     "stuff"
+    ]
+   },
+   "status": "pass"
+  },
+  {
+   "id": "broad-2",
+   "category": "broad vs specific",
+   "language": "en",
+   "pair": [
+    "sun",
+    "beach"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "summer",
+     "sand",
+     "hot",
+     "holiday",
+     "vacation",
+     "towel",
+     "sunscreen"
+    ],
+    "reject": [
+     "fun",
+     "nice"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "fr-1",
+   "category": "French",
+   "language": "fr",
+   "pair": [
+    "lampe",
+    "restaurant"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": {
+    "engine": "engine-1",
+    "word": "noël"
+   },
+   "flags": [
+    "weak"
+   ],
+   "expect": {
+    "acceptable": [
+     "table",
+     "lumière",
+     "bougie",
+     "dîner"
+    ],
+    "reject": [
+     "noël"
+    ],
+    "maxStage": 3
+   },
+   "status": "pass"
+  },
+  {
+   "id": "fr-2",
+   "category": "French",
+   "language": "fr",
+   "pair": [
+    "chat",
+    "chien"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "animal domestique",
+     "animal",
+     "vétérinaire",
+     "poil",
+     "queue"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "fr-3",
+   "category": "French",
+   "language": "fr",
+   "pair": [
+    "pain",
+    "beurre"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "tartine",
+     "couteau",
+     "petit déjeuner",
+     "sandwich"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "fr-4",
+   "category": "French",
+   "language": "fr",
+   "pair": [
+    "neige",
+    "hiver"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "froid",
+     "ski",
+     "bonhomme de neige",
+     "flocon"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "fr-5",
+   "category": "French unrelated",
+   "language": "fr",
+   "pair": [
+    "volcan",
+    "crayon"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": null,
+   "flags": [],
+   "expect": {
+    "lowQuality": true
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-2",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "battleship",
+    "barn"
+   ],
+   "blocked": [],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "farm"
+   },
+   "flags": [
+    "one-sided"
+   ],
+   "expect": {},
+   "status": "pass"
+  },
+  {
+   "id": "g1056-3",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "wood",
+    "farm"
+   ],
+   "blocked": [
+    "battleship",
+    "barn"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "bird"
+   },
+   "flags": [
+    "weak"
+   ],
+   "expect": {
+    "reject": [
+     "bird"
+    ]
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-4",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "trees",
+    "bird"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "nest"
+   },
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "nest",
+     "branch",
+     "owl",
+     "feather"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-5",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "birdnest",
+    "nest"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "egg"
+   },
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "egg",
+     "feather",
+     "branch"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-6",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "twigs",
+    "egg"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "shell"
+   },
+   "flags": [
+    "one-sided"
+   ],
+   "expect": {
+    "reject": [
+     "shell"
+    ]
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-7",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "chicks",
+    "shell"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest",
+    "twigs",
+    "egg"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "sea"
+   },
+   "flags": [
+    "one-sided"
+   ],
+   "expect": {},
+   "status": "pass"
+  },
+  {
+   "id": "g1056-8",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "chicken",
+    "sea"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest",
+    "twigs",
+    "egg",
+    "chicks",
+    "shell"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "horse"
+   },
+   "flags": [
+    "one-sided",
+    "obscure"
+   ],
+   "expect": {
+    "reject": [
+     "horse"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-9",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "tuna",
+    "horse"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest",
+    "twigs",
+    "egg",
+    "chicks",
+    "shell",
+    "chicken",
+    "sea"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "ride"
+   },
+   "flags": [
+    "one-sided"
+   ],
+   "expect": {
+    "reject": [
+     "ride"
+    ]
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-10",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "seahorse",
+    "ride"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest",
+    "twigs",
+    "egg",
+    "chicks",
+    "shell",
+    "chicken",
+    "sea",
+    "tuna",
+    "horse"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "tail"
+   },
+   "flags": [
+    "weak"
+   ],
+   "expect": {},
+   "status": "pass"
+  },
+  {
+   "id": "g1056-11",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "surfing",
+    "tail"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest",
+    "twigs",
+    "egg",
+    "chicks",
+    "shell",
+    "chicken",
+    "sea",
+    "tuna",
+    "horse",
+    "seahorse",
+    "ride"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "cat"
+   },
+   "flags": [
+    "one-sided"
+   ],
+   "expect": {
+    "reject": [
+     "cat",
+     "dog"
+    ]
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-12",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "wave",
+    "cat"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest",
+    "twigs",
+    "egg",
+    "chicks",
+    "shell",
+    "chicken",
+    "sea",
+    "tuna",
+    "horse",
+    "seahorse",
+    "ride",
+    "surfing",
+    "tail"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "fish"
+   },
+   "flags": [],
+   "expect": {},
+   "status": "pass"
+  },
+  {
+   "id": "g1056-13",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "paw",
+    "fish"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest",
+    "twigs",
+    "egg",
+    "chicks",
+    "shell",
+    "chicken",
+    "sea",
+    "tuna",
+    "horse",
+    "seahorse",
+    "ride",
+    "surfing",
+    "tail",
+    "wave",
+    "cat"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "dog"
+   },
+   "flags": [
+    "weak"
+   ],
+   "expect": {
+    "acceptable": [
+     "pet"
+    ],
+    "reject": [
+     "dog"
+    ],
+    "maxStage": 1
+   },
+   "status": "pass"
+  },
+  {
+   "id": "g1056-14",
+   "category": "10:56 game (engine-2.1, 1 star)",
+   "language": "en",
+   "pair": [
+    "aquarium",
+    "dog"
+   ],
+   "blocked": [
+    "battleship",
+    "barn",
+    "wood",
+    "farm",
+    "trees",
+    "bird",
+    "birdnest",
+    "nest",
+    "twigs",
+    "egg",
+    "chicks",
+    "shell",
+    "chicken",
+    "sea",
+    "tuna",
+    "horse",
+    "seahorse",
+    "ride",
+    "surfing",
+    "tail",
+    "wave",
+    "cat",
+    "paw",
+    "fish"
+   ],
+   "seed": 7,
+   "original": {
+    "engine": "engine-2.1",
+    "word": "pet"
+   },
+   "flags": [],
+   "expect": {
+    "acceptable": [
+     "pet"
+    ]
+   },
+   "status": "pass"
+  }
+ ]
 }

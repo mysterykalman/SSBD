@@ -4,6 +4,12 @@
 // choosing for.
 
 import {getLexicon} from "./lexicon/index.js";
+
+/**
+ * Engine-1 is retired (Solo uses src/shared/engine.js). It stays for replays and its own tests, frozen
+ * on the last dataset it was validated against, so newer vocabulary never changes its behaviour.
+ */
+export const ENGINE1_DATASET = "lexicon-2";
 import {lemmaKeys} from "./morph.js";
 import {createSpeller, wordKey} from "./words.js";
 import {hashString} from "./rules.js";
@@ -383,7 +389,7 @@ function cachedLemmas(label, language) {
  * `dataset` pins a lexicon version (the replay tool runs this engine on the data it shipped with).
  * @param {{prompts: string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], tuning?: typeof BOT_TUNING, dataset?: string}} options
  */
-export function rankCandidates({prompts, language = "en", excludeKeys = new Set(), history = [], tuning = BOT_TUNING, dataset = undefined}) {
+export function rankCandidates({prompts, language = "en", excludeKeys = new Set(), history = [], tuning = BOT_TUNING, dataset = ENGINE1_DATASET}) {
   const lex = getLexicon(language, dataset);
   const list = (Array.isArray(prompts) ? prompts : []).slice(0, 2).map(p => String(p ?? ""));
   const [idsA = [], idsB = []] = list.map(p => resolvePrompt(lex, p, language));
@@ -534,7 +540,7 @@ const GLOOMY_OPENINGS = new Set(["nightmare", "scary", "fear", "ghost", "monster
  * @param {{language?: Language, excludeKeys?: Set<string>, rng?: () => number, dataset?: string}} options
  * @returns {BotPick}
  */
-export function chooseOpening({language = "en", excludeKeys = new Set(), rng = Math.random, dataset = undefined}) {
+export function chooseOpening({language = "en", excludeKeys = new Set(), rng = Math.random, dataset = ENGINE1_DATASET}) {
   const lex = getLexicon(language, dataset);
   const pool = [...lex.concepts.values()].filter(c => c.links.size >= 7 && !c.label.includes(" ") && !GLOOMY_OPENINGS.has(c.id) && !isExcluded(c.key, excludeKeys));
   const fallback = [...lex.concepts.values()].filter(c => !isExcluded(c.key, excludeKeys));
@@ -635,7 +641,7 @@ function explain(pick, predicted, lex, tierNote) {
  * @param {{prompts: [string, string] | string[], language?: Language, excludeKeys?: Set<string>, history?: string[][], rng?: () => number, tuning?: typeof BOT_TUNING, explain?: boolean, dataset?: string}} options
  * @returns {BotPick & {decision?: GaryDecision}}
  */
-export function chooseResponse({prompts, language = "en", excludeKeys = new Set(), history = [], rng = Math.random, tuning = BOT_TUNING, explain: wantExplain = false, dataset = undefined}) {
+export function chooseResponse({prompts, language = "en", excludeKeys = new Set(), history = [], rng = Math.random, tuning = BOT_TUNING, explain: wantExplain = false, dataset = ENGINE1_DATASET}) {
   // rng is only used for an opening or last-resort word; a decision about words on the table is a
   // pure function of the game state.
   const {ranked, predicted, themeWords, before, knownA, knownB} = rankCandidates({prompts, language, excludeKeys, history, tuning, dataset});

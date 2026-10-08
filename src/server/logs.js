@@ -76,9 +76,11 @@ export async function logBatch(db, body) {
     if (missing.length) for (const row of (await q.query("SELECT game_id FROM bot_games WHERE game_id = ANY($1)", [missing])).rows) known.add(row.game_id);
     for (const r of rounds) {
       if (!known.has(r.game_id)) continue; // a round always travels with (or after) its game record
+      // How the player's word was read travels inside the round's decision record (no schema change).
+      const decision = r.decision || r.player_input ? {...(r.decision || {}), ...(r.player_input ? {playerInput: r.player_input} : {})} : null;
       await q.query(`INSERT INTO bot_rounds (game_id, round, pair_a, pair_b, user_word, bot_word, user_key, bot_key, matched, revealed_at, decision_ms, stage, low_quality, decision, received_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) ON CONFLICT (game_id, round) DO NOTHING`,
-      [r.game_id, r.round, r.pair_a, r.pair_b, r.user_word, r.bot_word, r.user_key, r.bot_key, r.matched, r.revealed_at, r.decision_ms, r.stage, r.low_quality, r.decision && JSON.stringify(r.decision), received]);
+      [r.game_id, r.round, r.pair_a, r.pair_b, r.user_word, r.bot_word, r.user_key, r.bot_key, r.matched, r.revealed_at, r.decision_ms, r.stage, r.low_quality, decision && JSON.stringify(decision), received]);
     }
   });
   return json({ok: true, games: games.length, rounds: rounds.filter(r => known.has(r.game_id)).length, rejected: rawGames.length - games.length + rawRounds.length - rounds.length,

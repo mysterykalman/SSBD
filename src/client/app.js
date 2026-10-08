@@ -4,10 +4,11 @@
 
 import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js";
 import {publicMove, setGaryDiagnostics, startSoloGame, submitSoloWord} from "../shared/solo.js";
-import {chooseResponse} from "../shared/bot.js";
+import {ENGINE_CONFIG, selectBotWord} from "../shared/engine.js";
 import {isJoinCode, looksLikeRoomCode, normalizeJoinCode} from "../shared/codes.js";
 import {getLexicon} from "../shared/lexicon/index.js";
 import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
+import {correctionFor, understandWord} from "../shared/understand.js";
 import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
@@ -34,6 +35,10 @@ const state = {
   busy: false,
   dashboard: null,
   dismissedSuggestion: null,
+  /** The word the "Did you mean?" box last asked about on lock-in (asked once per word). */
+  confirmFor: null,
+  /** What the player did with a spelling suggestion for the word about to be played (for the log). */
+  inputNote: null,
   pollTimer: null
 };
 const t = translator(() => state.lang);
@@ -845,7 +850,8 @@ function wantedUsedWord(view, move) {
   const used = new Set(before.flatMap(m => [wordKey(m.words.a), wordKey(m.words.b)]));
   if (!used.size) return false;
   try {
-    const free = chooseResponse({prompts: move.prompts, language: view.language, history: before.map(m => [m.words.a, m.words.b]), excludeKeys: new Set(), rng: () => 0.5});
+    // The engine's single best answer to this pair with nothing blocked (presentation only).
+    const free = selectBotWord({pair: move.prompts, blocked: [], language: view.language, config: {...ENGINE_CONFIG, window: {...ENGINE_CONFIG.window, size: 1}}});
     return used.has(wordKey(free.word)) && wordKey(free.word) !== wordKey(move.words[view.otherSide]);
   } catch {
     return false;
@@ -1354,6 +1360,9 @@ let suggestTimer = null;
 let submitSource = null; // "enter" when the last key in the input was Enter (see playPanel)
 function onWordInput() {
   setHelp(null);
+  // A new word: earlier suggestion answers no longer apply to it.
+  state.inputNote = null;
+  state.confirmFor = null;
   clearTimeout(suggestTimer);
   suggestTimer = setTimeout(updateSuggestion, 350);
 }
@@ -1470,20 +1479,55 @@ function setHelp(message, isError = false) {
   input?.setAttribute("aria-invalid", String(error));
 }
 
-function updateSuggestion() {
+/**
+ * A spelling suggestion for what is in the word box, with how sure we are:
+ * "high" for a typical slip of a known word (battelship → battleship), "medium" for a looser match.
+ * Nothing when the word is already understood as typed or no single word is a confident match.
+ * @returns {{word: string, confidence: "high" | "medium"} | null}
+ */
+function spellCheck(value) {
+  const lang = state.game.language;
+  const known = correctionFor(value, lang);
+  if (known) return known;
+  const info = speller(lang).suggestInfo(value);
+  return info ? {word: info.word, confidence: info.distance === 1 ? "high" : "medium"} : null;
+}
+
+/**
+ * The "Did you mean?" box above the word. A medium-confidence match is a quiet hint; a high-confidence
+ * one is shown clearly (You typed … / Did you mean …? with "Use" as the main button). Nothing is ever
+ * changed without the player's say-so; locking in a word with an open high-confidence suggestion asks
+ * once first (see submitWord). `confirming` = the player pressed lock and the box asks before going on.
+ */
+function updateSuggestion({confirming = false} = {}) {
   const input = $("word"), box = $("suggestion");
   if (!input || !box) return;
   const value = input.value.trim();
-  const suggestion = value && value !== state.dismissedSuggestion ? speller(state.game.language).suggest(value) : null;
+  const found = value && value !== state.dismissedSuggestion ? spellCheck(value) : null;
+  const strong = found?.confidence === "high";
+  const signature = found ? `${found.word}|${found.confidence}|${confirming}` : "";
   // Same suggestion as already shown: leave the live region alone (no repeat announcement).
-  if ((box.dataset.word || null) === (suggestion || null) && box.childElementCount === (suggestion ? 3 : 0)) return;
-  box.dataset.word = suggestion || "";
-  if (!suggestion) return box.replaceChildren();
-  // Only a hint: the player can always lock in their own word as typed.
+  if ((box.dataset.word || "") === signature && box.childElementCount > 0 === Boolean(found)) return;
+  box.dataset.word = signature;
+  box.classList.toggle("strong", strong);
+  box.classList.toggle("confirming", strong && confirming);
+  if (!found) return box.replaceChildren();
+  const use = () => { state.inputNote = {original: value, suggestion: found.word, confidence: found.confidence, accepted: true}; input.value = found.word; box.replaceChildren(); box.dataset.word = ""; };
+  const keep = () => { state.inputNote = {original: value, suggestion: found.word, confidence: found.confidence, accepted: false}; state.dismissedSuggestion = value; box.replaceChildren(); box.dataset.word = ""; };
+  if (!strong) {
+    // A quiet hint: the player can always lock in their own word as typed.
+    box.replaceChildren(
+      h("span", {}, t("didYouMean", {word: found.word.toUpperCase()})),
+      h("button", {class: "btn tiny teal", type: "button", onclick: () => { use(); input.focus(); }}, t("useSuggestion", {word: found.word.toUpperCase()})),
+      h("button", {class: "btn tiny ghost", type: "button", onclick: () => { keep(); input.focus(); }}, t("keepMine")));
+    return;
+  }
   box.replaceChildren(
-    h("span", {}, t("didYouMean", {word: suggestion.toUpperCase()})),
-    h("button", {class: "btn tiny teal", type: "button", onclick: () => { input.value = suggestion; box.replaceChildren(); input.focus(); }}, t("useSuggestion", {word: suggestion.toUpperCase()})),
-    h("button", {class: "btn tiny ghost", type: "button", onclick: () => { state.dismissedSuggestion = value; box.replaceChildren(); input.focus(); }}, t("keepMine")));
+    h("p", {class: "sg-typed"}, t("youTyped", {word: value})),
+    h("p", {class: "sg-question"}, t("didYouMean", {word: found.word.toUpperCase()})),
+    h("div", {class: "sg-actions"},
+      h("button", {class: "btn small sg-use", type: "button", id: "useSuggestion", onclick: () => { use(); if (confirming) submitWord("suggestion"); else input.focus(); }}, t("useSuggestion", {word: found.word})),
+      h("button", {class: "btn small ghost sg-keep", type: "button", id: "keepTyped", onclick: () => { keep(); if (confirming) submitWord("suggestion"); else input.focus(); }}, t("keepTyped", {word: value}))));
 }
 
 function rulesGame(view) {
@@ -1522,7 +1566,24 @@ async function submitWord(source = "direct") {
   });
   trace("checked", info);
   if (!check.ok) return rejectWord(check.code, check.word, info);
+  // A likely typo of a known word: ask once before locking it in ("Did you mean battleship?").
+  // Use or Keep then locks in straight away; locking in again from the box keeps it as typed.
+  const typed = raw.trim();
+  const found = typed !== state.dismissedSuggestion && state.confirmFor !== typed ? spellCheck(typed) : null;
+  if (found?.confidence === "high") {
+    state.confirmFor = typed;
+    trace("ignored", {...info, reason: "confirm-spelling", suggestion: found.word});
+    clearTimeout(suggestTimer);
+    updateSuggestion({confirming: true});
+    $("useSuggestion")?.focus({preventScroll: true});
+    return;
+  }
+  if (state.confirmFor === typed && !state.inputNote) state.inputNote = {original: typed, suggestion: spellCheck(typed)?.word ?? null, confidence: "high", accepted: false};
+  const note = state.inputNote;
+  state.inputNote = null;
+  state.confirmFor = null;
   state.dismissedSuggestion = null;
+  $("suggestion")?.replaceChildren();
 
   if (view.kind === "solo") {
     const game = store.soloGame(view.id);
@@ -1531,7 +1592,7 @@ async function submitWord(source = "direct") {
     if (!result.ok) return rejectWord(result.code, result.word, info);
     if (!store.saveSolo(result.game)) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
     // Bot evaluation log: this revealed round, written to the device at once and uploaded when possible.
-    logRound(result.game, result.move, result.decision, result.decisionMs);
+    logRound(result.game, result.move, result.decision, result.decisionMs, playerInput(check.word, note, view.language));
     logGaryDecision(result.move.garyDecision || result.decision);
     input.value = "";
     openView(soloView(result.game));
@@ -1558,6 +1619,21 @@ async function submitWord(source = "direct") {
     if (error.code === "NETWORK") toast(t("errNETWORK"), {kind: "error"});
     else if ($("formHelp")) rejectWord(error.code, error.data?.word, info);
     else toast(errorText(error.code, error.data?.word), {kind: "error"});
+  }
+}
+
+/**
+ * How the game read the player's word, for the bot-evaluation log (no personal data: the word they
+ * played, what they first typed if a suggestion was involved, and how it was understood).
+ */
+function playerInput(word, note, language) {
+  try {
+    const u = understandWord(word, language);
+    return {original: note?.original ?? word, submitted: word, normalized: u.normalized, understood_as: u.via, method: u.method, confidence: u.confidence,
+      fuzzy: u.fuzzy, spacing: u.spacing, morphology: u.morphology, unresolved: u.unresolved,
+      suggestion: note?.suggestion ?? null, suggestion_confidence: note?.confidence ?? null, suggestion_accepted: note ? note.accepted : null};
+  } catch {
+    return null;
   }
 }
 

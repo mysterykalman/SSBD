@@ -4,7 +4,7 @@
 import {test, beforeEach, afterEach} from "node:test";
 import assert from "node:assert/strict";
 import {handleApi} from "../src/server/api.js";
-import {ABANDON_AFTER_MS, CSV_COLUMNS, cleanGame, computeMetrics, csvCell, gameRecord, reportedStatus, roundRecord, toCsv} from "../src/shared/gamelog.js";
+import {ABANDON_AFTER_MS, CSV_COLUMNS, cleanGame, cleanRound, computeMetrics, csvCell, gameRecord, reportedStatus, roundRecord, toCsv} from "../src/shared/gamelog.js";
 import {ENGINE_CONFIG, ENGINE_VERSION} from "../src/shared/engine.js";
 import {DATASET_VERSION} from "../src/shared/lexicon/index.js";
 import {currentMove} from "../src/shared/rules.js";
@@ -56,7 +56,7 @@ test("records: one per revealed round, the decision committed before the reveal,
   assert.equal(record.ended_at, null);
   // No names, player ids, emails or addresses anywhere in what is logged.
   const text = JSON.stringify({record, rounds});
-  assert.doesNotMatch(text, /player(?!_rating)|display_name|email|recovery|"ip"|address/i, "the only player-anything is the anonymous star rating");
+  assert.doesNotMatch(text, /player(?!_rating|_input)|display_name|email|recovery|"ip"|address/i, "the only player-anything is the anonymous star rating and how their word was read");
   // The open (unrevealed) move is never logged.
   assert.ok(!rounds.some(r => r.bot_word === currentMove(game).hidden.b && r.round === currentMove(game).number));
 });
@@ -264,4 +264,22 @@ test("rating: review shows it on the game, in JSON and CSV exports (last column)
   assert.equal(rows.find(r => r.startsWith("rate-review,")).split(",").at(-1), "4");
   const metrics = await api("/api/review/metrics", {token: TOKEN});
   assert.deepEqual({mean: metrics.data.overall.playerRating.mean, n: metrics.data.overall.playerRating.n}, {mean: 4, n: 1});
+});
+
+test("player input diagnostics: how the word was read is logged with the round (short known fields only) and kept on the server", async () => {
+  const {game, round} = wonGame("input-log");
+  const input = {original: "chikcen", submitted: "chicken", normalized: "chicken", understood_as: "chicken", method: "exact", confidence: "certain",
+    fuzzy: false, spacing: false, morphology: false, unresolved: false, suggestion: "chicken", suggestion_confidence: "high", suggestion_accepted: true,
+    email: "nobody@example.com", extra: "x".repeat(500)};
+  const record = {...round, player_input: input};
+  const clean = cleanRound(record).player_input;
+  assert.equal(clean.original, "chikcen");
+  assert.equal(clean.suggestion_accepted, true);
+  assert.equal(clean.email, undefined, "unknown fields are dropped");
+  assert.equal(clean.extra, undefined);
+  await api("/api/log/batch", {body: {games: [gameRecord(game, meta)], rounds: [record]}});
+  const stored = (await db.store.query("SELECT decision FROM bot_rounds WHERE game_id = $1", ["input-log"])).rows[0].decision;
+  assert.equal(stored.playerInput.original, "chikcen");
+  assert.equal(stored.playerInput.suggestion_accepted, true);
+  assert.equal(stored.selected, round.bot_word, "the bot's decision record is unchanged");
 });

@@ -53,13 +53,14 @@ function prune(data) {
  * @param {any} move the revealed move
  * @param {any} decision the engine decision committed before the reveal
  * @param {number | null} ms how long the decision took
+ * @param {object | null} [input] how the player's word was read (spelling suggestion, spacing, inflection)
  */
-export function logRound(game, move, decision, ms) {
+export function logRound(game, move, decision, ms, input = null) {
   try {
     const data = load();
     const key = `${game.id}#${move.number}`;
     if (!data.rounds[key]) {
-      data.rounds[key] = roundRecord(game, move, decision, ms);
+      data.rounds[key] = roundRecord(game, move, decision, ms, input);
       queue(data.pending.rounds, key);
     }
     data.games[game.id] = gameRecord(game, meta());

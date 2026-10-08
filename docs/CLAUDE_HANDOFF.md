@@ -886,3 +886,15 @@ See `docs/BOT_ENGINE.md` for the details: root causes, formula, stages, licensin
 - **Win card.** A single Solo win card with the avatar, a speech bubble, inline stars, and a primary / secondary / tertiary button hierarchy.
 - **Rating.** Stored in `player_rating`. **Apply `supabase/migrations/20261010120000_bot_games_player_rating.sql`.** Until then, ratings stay queued on devices.
 - **Review fixes.** `/review` no longer prints "null" when there are no device games, and no longer shows an empty error bar on the token form.
+
+## Status update: engine-2.2 and input understanding (2026-10-08)
+
+- **The 10:56 game.** The engine-2.1 game (`4ac661bf-…`, rated 1 star) is the primary regression case: `g1056-*` in `test/fixtures/bot-replay.json` and the 10:56 tests in `test/engine.test.mjs`.
+- **Engine-2.2.**
+  - Band quotas are replaced by a quality window: only answers within 0.04 score and 0.10 plausibility of the best.
+  - A plausibility score is added.
+  - A compound half (SEA → HORSE via seahorse) now counts as weak.
+  - An unknown word gets a broad answer from the other word.
+- **Input understanding.** `src/shared/understand.js` handles spelling slips, spacing, inflections and compounds. It is shared by the engine and the "Did you mean?" prompt, which now asks once on lock-in for high-confidence typos.
+- **Lexicon-3.** `src/shared/lexicon/additions3.js` adds 195 concepts.
+- **Logs.** How each player word was read is logged (`player_input`). No migration is needed.

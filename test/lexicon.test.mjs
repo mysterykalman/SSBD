@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {CONCEPTS, PHRASES, TAGS} from "../src/shared/lexicon/data.js";
 import {EXTRA_WORDS} from "../src/shared/lexicon/vocab.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
-import {chooseOpening, chooseResponse, wordForms, rankCandidates} from "../src/shared/bot.js";
+import {ENGINE1_DATASET, chooseOpening, chooseResponse, wordForms, rankCandidates} from "../src/shared/bot.js";
 import {ENGINE_CONFIG, selectBotWord} from "../src/shared/engine.js";
 import {createSpeller, validateWord, wordKey} from "../src/shared/words.js";
 
@@ -142,7 +142,8 @@ test("bot never returns a plural or singular of a used word", () => {
 
 test("bot sweep: linked pairs give valid, mostly strong answers in both languages", () => {
   for (const lang of ["en", "fr"]) {
-    const lex = getLexicon(lang);
+    // Engine-1 (retired, frozen on its last validated dataset) is swept over its own vocabulary.
+    const lex = getLexicon(lang, ENGINE1_DATASET);
     const all = [...lex.concepts.values()];
     const random = rng(lang === "fr" ? 99 : 42);
     let sharing = 0, strong = 0;
@@ -289,8 +290,8 @@ function judgeSide(lex, promptId, pickId) {
 }
 const isUsed = (used, key) => [...wordForms(key)].some(form => used.has(form));
 const BRIDGE_STAGES = new Set(["shared-direct", "direct-plus-indirect", "indirect-both", "weak-fallback"]);
-/** The engine's strongest answer for an input (sampling off). */
-const strongestWord = input => selectBotWord({...input, config: {...ENGINE_CONFIG, sampling: null}}).word;
+/** The engine's strongest answer for an input (a quality window of one). */
+const strongestWord = input => selectBotWord({...input, config: {...ENGINE_CONFIG, window: {...ENGINE_CONFIG.window, size: 1}}}).word;
 
 test("bot quality in simulated games and random pairs (EN and FR)", t => {
   for (const lang of ["en", "fr"]) {
@@ -302,7 +303,7 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
       const c = lex.resolve(word);
       assert.ok(c, `${lang}: ${word} is a lexicon word`);
       const sa = judgeSide(lex, a, c), sb = judgeSide(lex, b, c);
-      // The engine's single strongest answer (before sampling the neighbourhood).
+      // The engine's single strongest answer (before varying among equally good ones).
       const t = lex.resolve(top);
       const ta = judgeSide(lex, a, t), tb = judgeSide(lex, b, t);
       let strongPossible = false;

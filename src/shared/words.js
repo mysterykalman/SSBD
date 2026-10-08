@@ -172,9 +172,16 @@ export function createSpeller(words) {
     if (!byLength.has(key.length)) byLength.set(key.length, []);
     byLength.get(key.length).push(key);
   }
-  return {
+  const api = {
     has(raw) { return byKey.has(wordKey(raw)); },
-    suggest(raw) {
+    /** The suggestion as a display word, or null (see suggestInfo). */
+    suggest(raw) { return api.suggestInfo(raw)?.word ?? null; },
+    /**
+     * The suggestion and how far it is from what was typed (1 = one typical slip, 2 = two changes in
+     * a long word), or null.
+     * @returns {{word: string, distance: number} | null}
+     */
+    suggestInfo(raw) {
       const key = wordKey(raw);
       if (key.length < 3 || byKey.has(key)) return null;
       // Simple plurals, inflections and accent-free spellings of known words are fine as typed.
@@ -192,7 +199,8 @@ export function createSpeller(words) {
       const match = found[0];
       if (best === 1 && !isTypicalSlip(key, match)) return null;
       if (best === 2 && match.slice(0, 2) !== key.slice(0, 2)) return null;
-      return byKey.get(match);
+      return {word: byKey.get(match), distance: best};
     }
   };
+  return api;
 }
