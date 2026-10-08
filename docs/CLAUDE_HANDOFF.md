@@ -818,3 +818,30 @@ newest finished row keeps "↑ Next round's words". Test: `test/e2e/trail-now.te
 - Tests: `test/gary.test.mjs` (config, pools, copy, tone), `test/characters-engine.test.mjs`,
   `test/e2e/characters.test.mjs` (picker, persistence, rematch, labels/avatars, no stray Gary with Milo, EN/FR).
   The e2e helper `startSolo(page, character?)` goes through the picker.
+
+## Together mode fixes: names, keyboard, shared duplicates, win sync (latest)
+
+- **Joining asks for the friend's own name.** "Join a game" (and an invite link) now asks for the room code
+  first, checks it with `GET /api/games/lookup`, then asks "What should we call you?" (prefilled when the
+  device already has a player, who may change it via `POST /api/player/name`), then joins. Previously the
+  name dialog came first, so a friend could type the code into it ("ZLED-31" → badge "Z"). Names that look
+  like room codes (AB12 or the old ABCD-12) are refused by the client and the server (`BAD_NAME`).
+- **Played words are used up for everyone.** `checkWord` (src/shared/rules.js) checks both sides of every
+  revealed move, so the server (Together), and Solo against Gary or Milo, all refuse a word anyone already
+  played (same normalisation: case, spacing, punctuation, inflections). Your own last word keeps
+  `SAME_AS_LAST`. The open move is never compared, so a same-move match still wins. Messages: Together
+  "That word has already been played."; Gary "Already played. Gary checked. Twice."; Milo "Ooh, that
+  one's taken! Got another one?" (character `copy.errALREADY_USED`).
+- **Win sync.** The server already closes a round once (`UPDATE … WHERE status = 'OPEN'`). The client bug
+  was ordering: a poll sent just before a submit could answer after it and put the older state back
+  (un-locking a locked word, or replacing the win with the pre-match board, after which the end screen came
+  without the reveal or confetti). `applyServerGame` now ignores any state older than the one on screen
+  (`progressOf`: revealed moves, finished, joined, locked words). A player waiting on the other polls every
+  second (otherwise 3.5 s), and re-checks at once on focus, `pageshow` and reconnect.
+- **On-screen keyboard.** `interactive-widget=resizes-content` (Android) plus `visualViewport` (iOS): while
+  the word box is focused on a touch screen and the visible height drops by over a quarter, `html.kb-open`
+  hides the decorative parts (back row, progress, language note; title and instruction become visually
+  hidden) and `keepPlayInView` keeps the two words, hint/error, input and Lock button in the visible area.
+- Tests: `test/together.test.mjs` (server), `test/e2e/together.test.mjs` (two browser sessions: names,
+  duplicates, wins in both orders, simultaneous submit, slow out-of-order network, reconnect, Gary/Milo
+  duplicates, FR), `test/e2e/keyboard.test.mjs`, updated rules tests; e2e helper `joinRoom`.

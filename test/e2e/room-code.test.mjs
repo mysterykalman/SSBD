@@ -2,7 +2,7 @@
 // and joining with the code (lowercase works; malformed codes get a friendly message).
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {launch, startServer} from "./helpers.mjs";
+import {joinRoom, launch, startServer} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -49,8 +49,6 @@ test("joining: the code typed in lowercase works; a malformed code gets a friend
   const ben = await friend.newPage();
   await ben.goto(server.url);
   await ben.click("#joinFamily");
-  await ben.fill("#nameInput", "Ben");
-  await ben.click('dialog button[type="submit"]');
   await ben.waitForSelector("dialog #joinInput");
   assert.match(await ben.locator("#dialog").innerText(), /like AB12/);
   for (const bad of ["ABCD-12", "A1B2", "AB123"]) {
@@ -58,8 +56,7 @@ test("joining: the code typed in lowercase works; a malformed code gets a friend
     await ben.click('dialog button[type="submit"]');
     await ben.waitForFunction(() => /two letters and two numbers/.test(document.getElementById("dialogError")?.textContent || ""));
   }
-  await ben.fill("#joinInput", code.toLowerCase());
-  await ben.click('dialog button[type="submit"]');
+  await joinRoom(ben, {name: "Ben", code: code.toLowerCase()});
   await ben.waitForSelector("#word");
   await page.waitForSelector("#word", {timeout: 10000});
   assert.match(await page.locator(".mode-chip").innerText(), /Ben/);

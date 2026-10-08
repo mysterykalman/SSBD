@@ -27,3 +27,13 @@ export function normalizeJoinCode(raw) {
 
 /** @param {string} code */
 export const isJoinCode = code => JOIN_CODE_PATTERN.test(code);
+
+/**
+ * Whether a typed name is really a room code ("AB12", or the old "ABCD-12"): a name is never
+ * taken from a code, so these are refused and the player is asked for their own name.
+ * @param {unknown} name
+ */
+export function looksLikeRoomCode(name) {
+  const compact = String(name ?? "").replace(/[\s-]+/g, "").toUpperCase();
+  return /^[A-Z]{2}[0-9]{2}$/.test(compact) || /^[A-Z]{4}[0-9]{2}$/.test(compact);
+}

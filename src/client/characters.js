@@ -35,7 +35,7 @@ export const CHARACTERS = {
     intro: {kicker: "garyMeet", lines: ["garyIntro1", "garyIntro2", "garyIntro3"], aside: "garyIntroSigh", cta: "garyIntroCta"},
     meetAgain: "garyMeetAgain",
     // Shared Solo copy in this character's own words (anything not listed uses the shared key).
-    copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady", revealLoose: "garyRevealLoose", revealNextStarts: "garyRevealNextStarts", gameOverAww: "garyGameOverAww", gameOverCopy: "garyGameOverCopy"},
+    copy: {firstSolo: "garyFirstSolo", botReady: "garyBotReady", revealLoose: "garyRevealLoose", revealNextStarts: "garyRevealNextStarts", gameOverAww: "garyGameOverAww", gameOverCopy: "garyGameOverCopy", errALREADY_USED: "garyAlreadyUsed"},
     // The reveal result, by how well the player's word fits the two words in play (see connectionStrength).
     results: {opening: "garyResultStart", strong: "garyResultStrong", good: "garyResultGood", weak: "garyResultWeak", veryWeak: "garyResultVeryWeak"},
     // Remarks not to make right after a given result (the same joke twice in one reveal).
@@ -71,7 +71,8 @@ export const CHARACTERS = {
     meetAgain: "miloMeetAgain",
     copy: {
       firstSolo: "miloFirstSolo", botReady: "miloBotReady", revealLoose: "miloRevealLoose", revealNice: "miloRevealNice",
-      revealNextStarts: "miloRevealNextStarts", keepPlaying: "miloKeepPlaying", gameOverAww: "miloGameOverAww", gameOverCopy: "miloGameOverCopy"
+      revealNextStarts: "miloRevealNextStarts", keepPlaying: "miloKeepPlaying", gameOverAww: "miloGameOverAww", gameOverCopy: "miloGameOverCopy",
+      errALREADY_USED: "miloAlreadyUsed"
     },
     results: {}, // one cheerful result line whatever the connection (copy.revealNice)
     resultAvoid: {},

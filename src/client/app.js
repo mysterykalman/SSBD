@@ -4,7 +4,7 @@
 
 import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js";
 import {publicMove, setGaryDiagnostics, startSoloGame, submitSoloWord} from "../shared/solo.js";
-import {isJoinCode, normalizeJoinCode} from "../shared/codes.js";
+import {isJoinCode, looksLikeRoomCode, normalizeJoinCode} from "../shared/codes.js";
 import {getLexicon} from "../shared/lexicon/index.js";
 import {cleanWord, createSpeller, wordKey} from "../shared/words.js";
 import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
@@ -214,6 +214,34 @@ function serverView(game) {
   };
 }
 
+/**
+ * How far a family game has got, as seen by this player. Games only ever move forward (a friend
+ * joins, words are locked, moves are revealed, the game ends), so a smaller value is an older state.
+ */
+function progressOf(view) {
+  const open = view.moves[view.moves.length - 1];
+  const revealed = view.moves.filter(m => m.words).length;
+  return [revealed, isFinished(view) ? 1 : 0, view.waitingForPlayer ? 0 : 1, open?.mine ? 1 : 0, open?.otherLocked ? 1 : 0];
+}
+function isOlderView(next, current) {
+  if (!current || current.id !== next.id || isSoloLike(current)) return false;
+  const a = progressOf(next), b = progressOf(current);
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i];
+  return false;
+}
+
+/**
+ * Show the server's state of a family game, unless it is older than what is already on screen.
+ * Responses can arrive out of order (a poll sent just before this player's own submit, a slow
+ * network): an older one must never undo a locked word, a reveal or the win. Returns whether it was shown.
+ */
+function applyServerGame(game) {
+  const view = serverView(game);
+  if (isOlderView(view, state.game)) { trace("stale", {id: view.id, got: progressOf(view), have: progressOf(state.game)}); return false; }
+  openView(view);
+  return true;
+}
+
 const isSoloLike = view => view.kind === "solo" || view.kind === "legacy-solo";
 /** The Solo character the player chose for this game (older and server-side Solo games: Gary). */
 const soloCharacter = view => character(view?.character);
@@ -265,7 +293,7 @@ async function route() {
   if ((match = path.match(/^\/join\/([\w-]+)$/))) {
     history.replaceState({}, "", "/");
     renderHome();
-    return ensurePlayer(() => joinDialog(decodeURIComponent(match[1])));
+    return joinDialog(decodeURIComponent(match[1]));
   }
   renderHome();
 }
@@ -290,7 +318,7 @@ async function loadFamilyGame(id) {
   try {
     const data = await api(`/api/game?id=${encodeURIComponent(id)}&player_id=${encodeURIComponent(state.player.id)}`);
     store.setLast({kind: "family", id});
-    openView(serverView(data.game));
+    if (!applyServerGame(data.game)) renderGame();
   } catch (error) {
     if (error.code === "NETWORK") {
       renderMessage(t("errNETWORK"), () => loadFamilyGame(id));
@@ -312,23 +340,38 @@ function needsPoll(view) {
   return true;
 }
 
-function schedulePoll() {
+// How often to check a family game. Fast while this player is waiting on the other one (their
+// word, or their joining), so a reveal or a win reaches both players within about a second.
+const POLL_WAITING_MS = 1000, POLL_IDLE_MS = 3500;
+function pollDelay(view) {
+  const open = view.moves[view.moves.length - 1];
+  return view.waitingForPlayer || (open?.mine && !open.otherLocked) ? POLL_WAITING_MS : POLL_IDLE_MS;
+}
+
+function schedulePoll(delay = pollDelay(state.game || {moves: []})) {
   stopPolling();
   if (!needsPoll(state.game)) return;
   state.pollTimer = setTimeout(async () => {
     if (document.hidden || !state.online || state.busy || state.screen !== "game") return schedulePoll();
+    const id = state.game.id;
     try {
-      const data = await api(`/api/game?id=${encodeURIComponent(state.game.id)}&player_id=${encodeURIComponent(state.player.id)}`);
+      const data = await api(`/api/game?id=${encodeURIComponent(id)}&player_id=${encodeURIComponent(state.player.id)}`);
       if (state.screen === "game" && state.game?.id === data.game.id && JSON.stringify(serverView(data.game)) !== JSON.stringify(state.game)) {
         const wasWaiting = state.game.waitingForPlayer;
-        openView(serverView(data.game));
-        refreshNotifications();
-        if (wasWaiting && !state.game.waitingForPlayer) toast(t("statusYourTurn"), {kind: "success"});
-        return;
+        if (applyServerGame(data.game)) {
+          refreshNotifications();
+          if (wasWaiting && !state.game.waitingForPlayer) toast(t("statusYourTurn"), {kind: "success"});
+          return;
+        }
       }
     } catch {}
-    schedulePoll();
-  }, 3500);
+    if (state.game?.id === id) schedulePoll();
+  }, delay);
+}
+
+/** Check a family game right away (the player came back to the tab, or the network returned). */
+function pollNow() {
+  if (state.screen === "game" && state.game && needsPoll(state.game) && !state.busy) schedulePoll(0);
 }
 
 // ---------- header ----------
@@ -422,7 +465,7 @@ function renderHome() {
             : h("div", {class: "start-copy"}, h("p", {}, t("togetherCopy1")), h("p", {}, t("togetherCopy2"))),
         h("div", {class: "row"},
           h("button", {class: "btn teal", type: "button", id: "createFamily", disabled: familyDisabled, onclick: () => ensurePlayer(createFamily)}, t("familyCreate")),
-          h("button", {class: "btn ghost", type: "button", id: "joinFamily", disabled: familyDisabled, onclick: () => ensurePlayer(() => joinDialog(""))}, t("familyJoin"))))),
+          h("button", {class: "btn ghost", type: "button", id: "joinFamily", disabled: familyDisabled, onclick: () => joinDialog("")}, t("familyJoin"))))),
     h("section", {class: "card games", "aria-labelledby": "gamesTitle"},
       h("h2", {id: "gamesTitle"}, t("gamesTitle")),
       h("ul", {class: "game-list", id: "gameList"}, gameListItems())));
@@ -1176,6 +1219,71 @@ function keepFeedbackInView() {
   if (delta) window.scrollBy({top: delta, behavior: reducedMotion() ? "auto" : "smooth"});
 }
 
+// ---------- on-screen keyboard ----------
+// Phones cover part of the page with the keyboard. Android (with interactive-widget=resizes-content)
+// shrinks the layout viewport; iOS only shrinks the *visual* viewport. Either way, while the word box
+// is focused and the visible height drops well below what it was, the keyboard is open: the board
+// then drops its decorative parts (html.kb-open) and the play area (the two words to connect, the
+// hint or error, the input and the Lock button) is kept inside the part of the screen still visible.
+let fullHeight = 0, fullWidth = 0;
+function visibleHeight() {
+  return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+}
+/** The visible height in screen terms (pinch-zoom changes CSS pixels, not the screen or the keyboard). */
+function screenHeight() {
+  const vv = window.visualViewport;
+  return vv ? vv.height * (vv.scale || 1) : window.innerHeight;
+}
+const touchScreen = () => window.matchMedia?.("(pointer: coarse)").matches ?? false;
+function keyboardOpen() {
+  const typing = document.activeElement?.id === "word";
+  // A keyboard only ever changes the height; a new width means the phone turned (start over).
+  const width = Math.round(window.visualViewport ? window.visualViewport.width : window.innerWidth);
+  if (width !== fullWidth) { fullWidth = width; fullHeight = typing ? 0 : screenHeight(); }
+  // The tallest visible height seen at this width while not typing is the screen without a keyboard.
+  if (!typing) { fullHeight = Math.max(fullHeight, screenHeight()); return false; }
+  // On a touch screen, a drop of more than a quarter of that while typing in the word box is the keyboard.
+  return touchScreen() && fullHeight > 0 && screenHeight() < fullHeight * 0.75;
+}
+function updateKeyboard() {
+  const open = keyboardOpen();
+  const root = document.documentElement;
+  if (root.classList.contains("kb-open") !== open) root.classList.toggle("kb-open", open);
+  root.style.setProperty("--visible-height", `${Math.round(visibleHeight())}px`);
+  if (open) requestAnimationFrame(keepPlayInView);
+}
+
+/** Scroll so the words in play, the hint/error, the input and the button sit in the visible part of the screen. */
+function keepPlayInView() {
+  const input = $("word");
+  if (!input || document.activeElement !== input) return;
+  const top = ($("prompt") || $("boardTitle") || input).getBoundingClientRect().top;
+  const bottom = ($("lockBtn") || input).getBoundingClientRect().bottom;
+  const vv = window.visualViewport;
+  const viewTop = vv ? vv.offsetTop : 0;
+  const viewBottom = viewTop + visibleHeight();
+  const margin = 8;
+  let delta = 0;
+  if (bottom - top <= viewBottom - viewTop - 2 * margin) {
+    // It all fits: show it whole, moving as little as possible.
+    if (top < viewTop + margin) delta = top - viewTop - margin;
+    else if (bottom > viewBottom - margin) delta = bottom - viewBottom + margin;
+  } else {
+    // Too tall (a very small screen): the input, its hint and the button win; the words sit just above.
+    const help = $("formHelp")?.getBoundingClientRect().top ?? input.getBoundingClientRect().top;
+    delta = Math.min(help - viewTop - margin, bottom - viewBottom + margin);
+  }
+  if (Math.abs(delta) > 1) window.scrollBy({top: delta, behavior: "auto"});
+}
+
+function watchKeyboard() {
+  const vv = window.visualViewport;
+  keyboardOpen(); // note the screen's size before any keyboard
+  (vv || window).addEventListener("resize", updateKeyboard);
+  document.addEventListener("focusin", event => { if (event.target?.id === "word") setTimeout(updateKeyboard, 50); });
+  document.addEventListener("focusout", event => { if (event.target?.id === "word") setTimeout(updateKeyboard, 50); });
+}
+
 function setHelp(message, isError = false) {
   const help = $("formHelp");
   if (!help) return;
@@ -1224,9 +1332,16 @@ function rulesGame(view) {
 }
 
 /** Show why a word was not taken, right next to the input, and keep the keyboard up. */
+/** A rejected word's message; in Solo, the character's own wording where they have one ("already played"). */
+function wordErrorText(view, code, word) {
+  const key = view && isSoloLike(view) ? copyKey(view.character, `err${code}`) : `err${code}`;
+  return key === `err${code}` ? errorText(code, word) : t(key, {word: word ? word.toUpperCase() : ""});
+}
+
 function rejectWord(code, word, info) {
-  trace("rejected", {...info, code, reason: errorText(code, word)});
-  setHelp(errorText(code, word), true);
+  const reason = wordErrorText(state.game, code, word);
+  trace("rejected", {...info, code, reason});
+  setHelp(reason, true);
   $("word")?.focus({preventScroll: true});
 }
 
@@ -1272,12 +1387,12 @@ async function submitWord(source = "direct") {
     trace("result", {...info, path: "api", ok: true});
     input.value = "";
     state.busy = false;
-    openView(serverView(data.game));
+    applyServerGame(data.game);
     if (!state.reveal) focusAfterMove();
   } catch (error) {
     trace("result", {...info, path: "api", ok: false, code: error.code || null});
     state.busy = false;
-    if (error.data?.game) openView(serverView(error.data.game));
+    if (error.data?.game) applyServerGame(error.data.game);
     else { input.disabled = false; if (button) { button.disabled = false; button.textContent = t("lockIn"); } }
     if (error.code === "NETWORK") toast(t("errNETWORK"), {kind: "error"});
     else if ($("formHelp")) rejectWord(error.code, error.data?.word, info);
@@ -1507,6 +1622,7 @@ function ensurePlayer(next) {
     submit: async () => {
       const name = $("nameInput").value.trim();
       if (!name) return d.error(t("errUNKNOWN_PLAYER"));
+      if (looksLikeRoomCode(name)) return d.error(t("errBAD_NAME"));
       try {
         const player = await api("/api/player", {display_name: name});
         state.player = player;
@@ -1540,7 +1656,14 @@ function recoveryDialog(next) {
   });
 }
 
+/**
+ * Joining a family game: the room code first (checked with the server), then the player's own name,
+ * then the join. The name is always asked for (prefilled if this device already has one), and is never
+ * taken from the code.
+ */
 function joinDialog(prefill) {
+  if (!state.online) return toast(t("familyOffline"), {kind: "error"});
+  if (state.apiDown) return toast(t("familyUnavailable"), {kind: "error"});
   const d = dialog(t("joinTitle"), t("joinCopy"), field("joinInput", t("joinLabel"), {value: prefill || "", autocapitalize: "characters", maxlength: "60"}), {
     label: t("join"),
     submit: async () => {
@@ -1548,14 +1671,53 @@ function joinDialog(prefill) {
       const code = normalizeJoinCode($("joinInput").value.trim().split("/").pop());
       if (!isJoinCode(code)) return d.error(errorText("BAD_JOIN_CODE"));
       try {
+        await api(`/api/games/lookup?code=${encodeURIComponent(code)}&player_id=${encodeURIComponent(state.player?.id || "")}`);
+      } catch (error) {
+        return d.error(errorText(error.code));
+      }
+      joinNameDialog(code);
+    }
+  });
+}
+
+/** Step two of joining: "What should we call you?", then join the room with that name. */
+function joinNameDialog(code) {
+  const d = dialog(t("nameTitle"), t("joinNameCopy"), field("nameInput", t("nameLabel"), {placeholder: t("namePlaceholder"), maxlength: "24", autocomplete: "nickname", value: state.player?.display_name || ""}), {
+    label: t("join"),
+    submit: async () => {
+      const name = $("nameInput").value.replace(/\s+/g, " ").trim();
+      if (!name) return d.error(t("errUNKNOWN_PLAYER"));
+      if (looksLikeRoomCode(name)) return d.error(t("errBAD_NAME"));
+      try {
+        await savePlayerName(name);
+        renderChrome();
         const data = await api("/api/games/join", {player_id: state.player.id, join_code: code});
         d.close();
         navigate(`/games/${data.id}`);
       } catch (error) {
         d.error(errorText(error.code));
       }
-    }
+    },
+    extra: state.player ? null : h("button", {class: "link", type: "button", onclick: () => recoveryDialog(() => joinNameDialog(code))}, t("haveRecovery"))
   });
+}
+
+/** Make sure this device's player exists on the server with this name (creating or renaming it). */
+async function savePlayerName(name) {
+  if (state.player && state.player.display_name === name) return;
+  if (state.player) {
+    try {
+      const updated = await api("/api/player/name", {player_id: state.player.id, display_name: name});
+      state.player = {...state.player, ...updated};
+      store.setPlayer(state.player);
+      return;
+    } catch (error) {
+      if (error.code !== "UNKNOWN_PLAYER") throw error;
+      // The server doesn't know this device's player (e.g. a different database): start a new one.
+    }
+  }
+  state.player = await api("/api/player", {display_name: name});
+  store.setPlayer(state.player);
 }
 
 function profileDialog() {
@@ -1599,7 +1761,9 @@ function boot() {
   $("profileBtn").addEventListener("click", profileDialog);
   $("brandLink").addEventListener("click", event => { event.preventDefault(); navigate("/"); });
   window.addEventListener("popstate", route);
-  window.addEventListener("online", () => setOnline(true));
+  window.addEventListener("online", () => { setOnline(true); pollNow(); });
+  window.addEventListener("focus", pollNow);
+  window.addEventListener("pageshow", pollNow);
   window.addEventListener("offline", () => setOnline(false));
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && state.screen === "game" && state.game && !isSoloLike(state.game) && state.online) loadFamilyGame(state.game.id);
@@ -1622,6 +1786,7 @@ function boot() {
   route();
   checkApi();
 
+  watchKeyboard();
   registerServiceWorker();
 }
 

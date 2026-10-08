@@ -123,6 +123,20 @@ test("shared Solo copy suits both characters; each character's own wording keeps
   assert.equal(STRINGS.en[copyKey("gary", "keepPlaying")], "Keep playing");
 });
 
+test("an already-played word: one plain Together message, and each character's own short line in Solo", () => {
+  assert.equal(STRINGS.en.errALREADY_USED, "That word has already been played.");
+  assert.equal(STRINGS.fr.errALREADY_USED, "Ce mot a déjà été joué.");
+  assert.equal(copyKey("gary", "errALREADY_USED"), "garyAlreadyUsed");
+  assert.equal(copyKey("milo", "errALREADY_USED"), "miloAlreadyUsed");
+  assert.equal(STRINGS.en.garyAlreadyUsed, "Already played. Gary checked. Twice.");
+  assert.equal(STRINGS.en.miloAlreadyUsed, "Ooh, that one's taken! Got another one?");
+  for (const lang of ["en", "fr"]) {
+    for (const key of ["errALREADY_USED", "garyAlreadyUsed", "miloAlreadyUsed"]) assert.ok(STRINGS[lang][key].length <= 50, `${lang}.${key} is short enough for gameplay`);
+    assert.doesNotMatch(STRINGS[lang].garyAlreadyUsed, /!/, "Gary does not exclaim");
+    assert.match(STRINGS[lang].miloAlreadyUsed, /!/, "Milo does");
+  }
+});
+
 test("Gary's reveal result follows how well the word fits; Milo keeps one cheerful line", () => {
   const lex = getLexicon("en");
   const cases = [[null, "beach", "opening"], [["sand", "shell"], "beach", "strong"], [["sand", "shell"], "castle", "good"], [["jogging", "sea"], "sport", "weak"], [["sand", "shell"], "violin", "veryWeak"], [["sand", "shell"], "qwzzk", "veryWeak"]];

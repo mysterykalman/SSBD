@@ -2,7 +2,7 @@
 // and inflected matches presented as normal wins in each player's own word.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, startServer, startSolo} from "./helpers.mjs";
+import {botWord, joinRoom, launch, startServer, startSolo} from "./helpers.mjs";
 
 // Emoji characters in copy. ★ (U+2605) and ✓ are drawn marks inside designed components (progress stones,
 // win badge), not emoji in text, so they are excluded.
@@ -94,12 +94,8 @@ async function familyPair(url, {reducedMotion = "reduce"} = {}) {
   const code = (await ana.locator("#joinCode").innerText()).trim();
   await ben.goto(url);
   await ben.click("#joinFamily");
-  await ben.fill("#nameInput", "Élodie");
-  await ben.click('dialog button[type="submit"]');
-  await ben.waitForSelector("dialog #joinInput");
-  assert.equal((await ben.locator("#dialogError").textContent()).trim(), "", "no error after a valid name");
-  await ben.fill("#joinInput", code);
-  await ben.click('dialog button[type="submit"]');
+  await joinRoom(ben, {name: "Élodie", code});
+  assert.equal(((await ben.locator("#dialogError").textContent().catch(() => "")) || "").trim(), "", "no error after a valid name");
   await ben.waitForSelector("#word");
   await ana.waitForSelector("#word", {timeout: 10000});
   return {ana, ben, ctxA, ctxB};

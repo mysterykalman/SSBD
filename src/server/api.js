@@ -24,7 +24,7 @@ import {chooseOpening, chooseResponse} from "../shared/bot.js";
 import {MAX_MOVES, checkWord, hashString, moveOutcome, seededRandom} from "../shared/rules.js";
 import {wordKey} from "../shared/words.js";
 import {isSchemaMissing, isUnavailable, isUniqueViolation} from "./db.js";
-import {isJoinCode, normalizeJoinCode, randomJoinCode} from "../shared/codes.js";
+import {isJoinCode, looksLikeRoomCode, normalizeJoinCode, randomJoinCode} from "../shared/codes.js";
 
 /**
  * @typedef {import("../shared/types.js").Store} Store
@@ -324,6 +324,9 @@ async function reload(db, loaded) {
 }
 
 /** @type {Record<string, string>} */
+/** A display name as stored: single spaces, trimmed, at most 24 characters. */
+const cleanName = raw => String(raw || "").replace(/\s+/g, " ").trim().slice(0, 24);
+
 const MESSAGES = {
   EMPTY: "Add a word first, then lock it in.",
   TOO_LONG: "That word is a bit long. Try a shorter one.",
@@ -331,7 +334,7 @@ const MESSAGES = {
   TOO_SHORT: "Try a word with at least two letters.", // retired: one-letter words are allowed
   TOO_MANY_WORDS: "Try one word (or a short phrase of up to three words).",
   SAME_AS_LAST: "You just played that word. Try a different one!",
-  ALREADY_USED: "You already used that word in this game. Try a new one!",
+  ALREADY_USED: "That word has already been played.",
   GAME_OVER: "This game is over. Start a new game to play again."
 };
 
@@ -533,7 +536,8 @@ async function route(request, db, codes) {
 
   if (path === "/api/player" && request.method === "POST") {
     const created = now(), playerId = uuid();
-    const displayName = String(body.display_name || "").replace(/\s+/g, " ").trim().slice(0, 24) || "Player";
+    const displayName = cleanName(body.display_name) || "Player";
+    if (looksLikeRoomCode(displayName)) return fail(400, "BAD_NAME", "That looks like a game code. Please type your name.");
     const base = displayName.normalize("NFD").replace(/\p{M}/gu, "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10) || "PLAYER";
     try {
       for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
@@ -548,6 +552,27 @@ async function route(request, db, codes) {
       console.error("player create failed", error);
     }
     return fail(500, "PLAYER_CREATE_FAILED", "Could not create a player right now. Please try again.");
+  }
+
+  // A player's own name, typed again when they join a game (they may change it).
+  if (path === "/api/player/name" && request.method === "POST") {
+    const displayName = cleanName(body.display_name);
+    if (!displayName) return fail(400, "EMPTY_NAME", "Please type your name.");
+    if (looksLikeRoomCode(displayName)) return fail(400, "BAD_NAME", "That looks like a game code. Please type your name.");
+    const updated = await first(db, "UPDATE players SET display_name = $1, last_seen_at = $2 WHERE id = $3 RETURNING id, display_name, recovery_code", [displayName, now(), String(body.player_id || "")]);
+    return updated ? json(updated) : fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
+  }
+
+  // Is there an open room with this code? Checked before asking a joining player for their name.
+  if (path === "/api/games/lookup" && request.method === "GET") {
+    const code = normalizeJoinCode(url.searchParams.get("code"));
+    if (!isJoinCode(code)) return fail(400, "BAD_JOIN_CODE", "Game codes are two letters and two numbers, like AB12.");
+    const game = await first(db, `SELECT id FROM games WHERE join_code = $1 AND ${ACTIVE_ROOM} ORDER BY created_at DESC LIMIT 1`, [code]);
+    if (!game) return fail(404, "GAME_NOT_FOUND", "We couldn't find a game with that code.");
+    const members = await all(db, "SELECT player_id FROM game_players WHERE game_id = $1", [game.id]);
+    const member = members.some(m => m.player_id === String(url.searchParams.get("player_id") || ""));
+    if (!member && members.length >= 2) return fail(409, "GAME_FULL", "That game already has two players.");
+    return json({ok: true, join_code: code, member});
   }
 
   if (path === "/api/player/recover" && request.method === "POST") {

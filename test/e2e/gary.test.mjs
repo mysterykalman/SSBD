@@ -2,7 +2,7 @@
 // never changes the game, never leaks into family games, and stays accessible.
 import {test, before, after} from "node:test";
 import assert from "node:assert/strict";
-import {botWord, launch, startServer, startSolo} from "./helpers.mjs";
+import {botWord, joinRoom, launch, startServer, startSolo} from "./helpers.mjs";
 
 let server, browser;
 before(async () => { server = await startServer(); browser = await launch(); });
@@ -113,10 +113,7 @@ test("family games never show Gary", async () => {
   await ana.waitForSelector("#joinCode");
   const code = (await ana.locator("#joinCode").innerText()).trim();
   await ben.goto(`${server.url}/join/${code}`);
-  await ben.fill("#nameInput", "Ben");
-  await ben.click('dialog button[type="submit"]');
-  await ben.waitForSelector("dialog #joinInput");
-  await ben.click('dialog button[type="submit"]');
+  await joinRoom(ben, {name: "Ben"});
   await ben.waitForSelector("#word");
   await ana.waitForSelector("#word", {timeout: 10000});
   await submit(ana, "Kite");

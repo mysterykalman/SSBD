@@ -617,3 +617,14 @@ main:focus { outline: none; }
 .gary-debug caption { text-align: left; font-weight: 700; padding-bottom: 4px; }
 .gary-debug th, .gary-debug td { border: 1px solid var(--line); padding: 2px 6px; text-align: left; white-space: nowrap; }
 .gary-debug tr.gd-pick td { background: var(--sun-soft); font-weight: 700; }
+
+/* On-screen keyboard open while typing a word (html.kb-open, see watchKeyboard in app.js): keep only
+   what the player needs to answer (the two words, the hint or error, the input and the button) and
+   let them fit in the part of the screen the keyboard leaves visible. */
+.kb-open .game-nav, .kb-open .board .progress, .kb-open .board .lang-note { display: none; }
+/* The title and instruction step out of view but stay readable to screen readers (the board is labelled by its title). */
+.kb-open .board .board-title, .kb-open .board .instruction { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.kb-open .board { padding-top: 10px; padding-bottom: 12px; }
+.kb-open .prompt { margin: 0 0 4px; gap: 6px 10px; }
+.kb-open .word-form { margin-top: 6px; gap: 8px; grid-template-columns: minmax(0, 1fr) auto; }
+.kb-open .word-form .btn { width: auto; }

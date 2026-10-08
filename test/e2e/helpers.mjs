@@ -70,6 +70,19 @@ export async function startSolo(page, character = null) {
   await page.click("#startCharacter");
 }
 
+/**
+ * Join a family game through the UI: the room code first (typed, or already filled in from an invite
+ * link when `code` is omitted), then "What should we call you?" with the player's own name.
+ */
+export async function joinRoom(page, {name, code = null}) {
+  await page.waitForSelector("dialog #joinInput");
+  if (code !== null) await page.fill("#joinInput", code);
+  await page.click('dialog button[type="submit"]');
+  await page.waitForSelector("dialog #nameInput");
+  await page.fill("#nameInput", name);
+  await page.click('dialog button[type="submit"]');
+}
+
 /** The bot's locked word for the open Solo move, read from device storage (test-only peek). */
 export async function botWord(page) {
   return page.evaluate(() => {

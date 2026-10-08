@@ -42,14 +42,17 @@ test("move 20 without a match exhausts the game", () => {
   assert.equal(moveOutcome(20, "same", "SAME"), "MATCHED");
 });
 
-test("a side may not reuse its own words; the other side's words are fine", () => {
+test("a played word is used up for the whole game: neither side may play it again", () => {
   let g = createGame({id: "g1"});
   g = revealMove(g, {a: "Sun", b: "Moon"});
   g = revealMove(g, {a: "Sky", b: "Star"});
   assert.equal(checkWord(g, "a", "sky").code, "SAME_AS_LAST");
   assert.equal(checkWord(g, "a", "SUN!").code, "ALREADY_USED");
-  assert.equal(checkWord(g, "a", "moon").ok, true);
+  assert.equal(checkWord(g, "a", "moon").code, "ALREADY_USED", "the other side's word is used up too");
+  assert.equal(checkWord(g, "a", "star").code, "ALREADY_USED", "even the other side's latest word");
   assert.equal(checkWord(g, "b", "star").code, "SAME_AS_LAST");
+  assert.equal(checkWord(g, "b", "sky").code, "ALREADY_USED");
+  assert.equal(checkWord(g, "a", "comet").ok, true);
   assert.deepEqual([...usedKeys(g)].sort(), ["moon", "sky", "star", "sun"]);
   assert.deepEqual([...usedKeys(g, "a")].sort(), ["sky", "sun"]);
 });
@@ -165,7 +168,7 @@ test("invalid word codes come straight from validation", () => {
   assert.deepEqual(ok, {ok: true, word: "Sunflower", key: "sunflower"});
 });
 
-test("duplicate codes: SAME_AS_LAST for the side's last word, ALREADY_USED for older ones, per side only", () => {
+test("duplicate codes: SAME_AS_LAST for the side's own last word, ALREADY_USED for any other word anyone played", () => {
   let g = createGame({id: "dup"});
   g = revealMove(g, {a: "Sun", b: "Moon"});
   g = revealMove(g, {a: "Sky", b: "Night"});
@@ -175,8 +178,11 @@ test("duplicate codes: SAME_AS_LAST for the side's last word, ALREADY_USED for o
   assert.equal(checkWord(g, "a", "sun").code, "ALREADY_USED");
   assert.equal(checkWord(g, "b", "STAR").code, "SAME_AS_LAST");
   assert.equal(checkWord(g, "b", "moon").code, "ALREADY_USED");
-  for (const w of ["moon", "night", "star"]) assert.equal(checkWord(g, "a", w).ok, true, `a may answer with b's ${w}`);
-  for (const w of ["sun", "sky", "cloud"]) assert.equal(checkWord(g, "b", w).ok, true, `b may answer with a's ${w}`);
+  for (const w of ["moon", "NIGHT", " star "]) assert.deepEqual(checkWord(g, "a", w), {ok: false, code: "ALREADY_USED", word: w.trim()}, `a may not answer with b's ${w}`);
+  for (const w of ["sun", "sky", "cloud"]) assert.equal(checkWord(g, "b", w).code, "ALREADY_USED", `b may not answer with a's ${w}`);
+  // The same underlying word counts (case, spacing, punctuation and inflections are normalised as before).
+  assert.equal(checkWord(g, "b", "Clouds").code, "ALREADY_USED");
+  assert.equal(checkWord(g, "a", "stars").code, "ALREADY_USED");
   assert.equal(checkWord(g, "a", "Sun-flower").ok, true, "a longer word is not a duplicate");
 });
 
@@ -285,7 +291,8 @@ test("one-letter words are accepted and follow the same duplicate rules", () => 
   assert.equal(checkWord(g, "a", " s! ").code, "SAME_AS_LAST");
   assert.equal(checkWord(g, "b", "e").code, "SAME_AS_LAST", "É/é/e share one key");
   assert.equal(checkWord(g, "b", "É").code, "SAME_AS_LAST");
-  assert.equal(checkWord(g, "a", "é").ok, true, "the other side's one-letter word is fine");
+  assert.equal(checkWord(g, "a", "é").code, "ALREADY_USED", "the other side's one-letter word is used up too");
+  assert.equal(checkWord(g, "a", "x").ok, true);
   g = revealMove(g, {a: "a", b: "I"});
   assert.equal(checkWord(g, "a", "s").code, "ALREADY_USED");
   assert.equal(checkWord(g, "a", "A").code, "SAME_AS_LAST");
