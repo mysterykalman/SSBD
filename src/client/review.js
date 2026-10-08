@@ -70,6 +70,16 @@ function metricsView(m, title) {
       row("Decision time", m.latencyMs.n ? `median ${m.latencyMs.median} ms · p95 ${m.latencyMs.p95} ms` : "—", `n=${m.latencyMs.n}`)));
 }
 
+/** How the player's word was read: what they typed, any spelling suggestion and what they did, and how it was understood. */
+function playerInputView(p) {
+  if (!p) return null;
+  const parts = [`typed "${p.original ?? p.submitted}"`];
+  if (p.suggestion) parts.push(`suggested "${p.suggestion}" (${p.suggestion_confidence || "?"}) — ${p.suggestion_accepted === true ? "accepted" : p.suggestion_accepted === false ? "kept the original" : "no answer"}`);
+  parts.push(`played "${p.submitted}"`);
+  parts.push(p.unresolved ? "NOT UNDERSTOOD" : `understood as ${String(p.understood_as || "?").toUpperCase()} (${p.method}${p.fuzzy ? ", spelling" : ""}${p.spacing ? ", spacing" : ""}${p.morphology ? ", inflection" : ""})`);
+  return el("p", {class: "rv-auto rv-input"}, `Player input: ${parts.join(" · ")}`);
+}
+
 /** One game's rounds: Round | Previous pair | User | Gary/Milo | Match | Flags, each expandable. */
 function roundsTable(game, {editable}) {
   const bot = characterName(game.character);
@@ -98,6 +108,7 @@ function roundsTable(game, {editable}) {
     const flagCell = el("td", {class: "rv-human"}, (r.flags || []).map(f => FLAG_LABELS[f]).join(", ") || "—");
     const detail = el("tr", {class: "rv-detail", hidden: true}, el("td", {colspan: "7"},
       el("p", {class: "rv-auto"}, `Automated indicator: ${r.low_quality ? "LOW QUALITY" : "ok"} · stage ${r.stage || "—"} · ${r.decision_ms ?? "—"} ms`),
+      playerInputView(r.player_input || r.decision?.playerInput),
       decisionView(r.decision, {selected: r.bot_word, character: game.character}), flags));
     const toggle = el("button", {type: "button", class: "link rv-expand", "aria-expanded": "false", onclick: () => {
       detail.hidden = !detail.hidden;

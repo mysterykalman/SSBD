@@ -60,8 +60,10 @@ export function gameRecord(game, meta = {}) {
  * @param {any} move the revealed move (words set)
  * @param {any} decision the engine decision committed before the reveal (or null for older games)
  * @param {number | null} decisionMs
+ * @param {object | null} [input] how the player's word was read: what they typed, any spelling
+ *   suggestion and whether they took it, and how the game understood it (spacing, inflection...)
  */
-export function roundRecord(game, move, decision, decisionMs) {
+export function roundRecord(game, move, decision, decisionMs, input = null) {
   const {config: _config, ...compact} = decision || {};
   return {
     schema: LOG_SCHEMA,
@@ -77,8 +79,20 @@ export function roundRecord(game, move, decision, decisionMs) {
     decision_ms: Number.isFinite(decisionMs) ? decisionMs : null,
     stage: decision?.stage ?? null,
     low_quality: decision ? Boolean(decision.lowQuality) : null,
-    decision: decision ? compact : null
+    decision: decision ? compact : null,
+    player_input: cleanInput(input)
   };
+}
+
+const INPUT_TEXT = ["original", "submitted", "normalized", "understood_as", "method", "confidence", "suggestion", "suggestion_confidence"];
+const INPUT_FLAGS = ["fuzzy", "spacing", "morphology", "unresolved", "suggestion_accepted"];
+/** The player-input diagnostics, reduced to known short fields (or null). */
+export function cleanInput(input) {
+  if (!input || typeof input !== "object") return null;
+  const out = {};
+  for (const k of INPUT_TEXT) out[k] = typeof input[k] === "string" ? input[k].slice(0, 60) : null;
+  for (const k of INPUT_FLAGS) out[k] = typeof input[k] === "boolean" ? input[k] : null;
+  return out;
 }
 
 /** Reported status: a game still in progress after ABANDON_AFTER_MS of inactivity is "abandoned" (inferred). */
@@ -124,7 +138,8 @@ export function cleanRound(r) {
     matched: r.matched === true, revealed_at: r.revealed_at,
     decision_ms: Number.isFinite(r.decision_ms) && r.decision_ms >= 0 && r.decision_ms < 60000 ? r.decision_ms : null,
     stage: typeof r.stage === "string" ? r.stage.slice(0, 40) : null, low_quality: typeof r.low_quality === "boolean" ? r.low_quality : null,
-    decision
+    decision,
+    player_input: cleanInput(r.player_input)
   };
 }
 

@@ -33,7 +33,8 @@ test("developer mode: the decision panel explains Gary's pick after each reveal 
   await lockIn(page, gary.toLowerCase() === "violin" ? "candle" : "violin");
   const panel = await page.locator("#garyDebug").innerText();
   for (const label of ["Latest pair", "Stage", "Candidate words", "final", "Selected word", "engine-2"]) assert.ok(panel.includes(label), `panel shows ${label}`);
-  assert.match(panel, /Strong pool|Neighbourhood/, "the pool the word was drawn from");
+  assert.match(panel, /Quality window|Strong pool/, "the answers the word was chosen from");
+  assert.match(panel, /plausibility/, "each candidate's plausibility");
   // Both connection scores, one per word of the pair, for every candidate.
   const [a, b] = prompts.map(w => w.toUpperCase());
   assert.ok(panel.includes(`→ ${a}`) && panel.includes(`→ ${b}`), "a column for each input word");

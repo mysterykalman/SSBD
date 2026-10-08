@@ -1,6 +1,6 @@
 # Solo bot engine, game logs and review
 
-This covers how Gary and Milo choose their word (engine-2.1, dataset lexicon-2), how Solo games are logged, how to review them, and how to replay decisions.
+This covers how Gary and Milo choose their word (engine-2.2, dataset lexicon-3), how Solo games are logged, how to review them, and how to replay decisions.
 
 ## 1. Why the old choices were poor (engine-1 on lexicon-1)
 
@@ -19,7 +19,7 @@ There were three causes:
 2. **The ranking favoured "what a person would say about either word" over "what links both".** A strong link to one word could outweigh a weak link to the other.
 3. **No penalties for generic words or one-sided links.** The fallback was a single "tier" ladder, with no record of why a stage was used.
 
-## 2. Engine-2.1 (`src/shared/engine.js`)
+## 2. Engine-2.2 (`src/shared/engine.js`)
 
 `selectBotWord({pair, blocked, language, character, seed, config})` → `{word, quality, decision}`
 
@@ -33,7 +33,14 @@ There were three causes:
   - Gary and Milo call the same function with the same inputs and get the same word; `character` is recorded but ignored.
   - A same-round match (both type the same word) is a win.
 - **Offline.** Local, non-generative and deterministic; no network and no paid AI dependency.
-- **Speed.** About 17 ms for the first call (it builds the lexicon index), then a median of 0.5 ms (p95 1.9 ms) on 500 random pairs.
+- **Speed.** About 27 ms for the first call (it builds the lexicon index), then a median of 0.4 ms (p95 3.1 ms) on 500 random pairs.
+- **Goal.** Every answer should make the player think "yeah, I can see why you said that." The order of priorities is:
+  1. a humanly plausible answer;
+  2. reading the player's word correctly;
+  3. both words meaningfully contributing;
+  4. identical, fair play for Gary and Milo;
+  5. variety among equally good answers;
+  6. game length, last.
 
 ### Candidates
 
@@ -41,16 +48,16 @@ Each input contributes its curated links, compound phrases ("table lamp") and ca
 
 ### Score (all terms 0–1 unless stated)
 
-Relation of a candidate to one input word:
+Relation of a candidate to one input word. Each relation is scaled by how sure we are of that input: an exact or inflected word 1, a likely typing slip 1 (high) or 0.9 (medium), a guessed head word 0.75.
 
 | Relation | Score |
 |---|---|
 | category ↔ member | 1.00 |
 | compound + link | 1.00 |
-| compound only | 0.95 |
 | curated rank r | 0.90 − 0.02·r (minimum 0.70) |
 | member | 0.75 |
 | link | 0.70 |
+| only the other half of a compound (SEA → HORSE via "seahorse") | 0.45 (was 0.95 before engine-2.2) |
 | shared neighbours (3 / 2 / 1) | 0.40 / 0.30 / 0.12 |
 | shared tag only | 0.05 |
 | none | 0 |
@@ -64,7 +71,11 @@ The final score is built from these terms:
 - `oneSided = 0.30·max(0, strong − weak − 0.45)` (penalty, 0–0.17)
 - `generic = 0.10` for words such as FOOD, THING, ANIMAL, FUN (penalty)
 - `piece = 0.10` for a lazy piece of a compound input (penalty)
-- `final = 0.70·connection + 0.15·familiarity + 0.15·cue − oneSided − generic − piece`. In practice the range is about −0.3 to 1.0.
+- `plausibility` (0–1): how easy the link is for a person to see, from the *kind* of link on each side.
+  - Kind values: category 1, compound 1, curated 0.95, member 0.85, link 0.8, shared-3 0.45, shared-2 0.35, compound part 0.3, shared-1 0.15, tag 0.05.
+  - Formula: 0.6·weaker side + 0.4·stronger side.
+  - Minus 0.10 for a graph-only path (no direct link on either side), and minus 0.10 for a generic word.
+- `final = 0.60·connection + 0.15·plausibility + 0.10·familiarity + 0.15·cue − oneSided − generic − piece`. In practice the range is about −0.3 to 1.0.
 
 ### Stages (used in order; recorded in every decision)
 
@@ -76,10 +87,11 @@ The final score is built from these terms:
 | 4 weak-fallback | weak ≥ 0.12 | yes |
 | 5 best-available | weak > 0 | yes |
 | 6 one-input-only | linked to one input only | yes |
-| unknown-input / no-known-input | one or both inputs are not in the vocabulary | yes |
+| unknown-input | one input is still not understood after spelling, spacing and inflection checks: a broad word directly tied to the other (see below) | yes |
+| no-known-input | neither input is understood: a friendly familiar word | yes |
 | opening | round 1 (there is no pair yet) | — |
 
-In stages 1–3 the word is drawn from the neighbourhood bands below. In low-quality stages, the strong pool is every word within 0.06 of the best score, up to 3 words. Every draw uses the seeded random generator, so the same game and move always give the same word. A word is never empty, blocked, or a repeat.
+The word is picked from the **quality window** (below), in every stage. Every draw uses the seeded random generator, so the same game and move always give the same word. A word is never empty, blocked, or a repeat.
 
 ### Fairness audit (2026-10)
 
@@ -98,47 +110,107 @@ Playtesters reported that Gary seemed to match unrealistically fast, as if he co
 
 **The real cause was predictability, not leaked information.** Engine-2.0 almost always played the single strongest bridge. Any player who thinks "most obvious link" therefore matched it almost immediately.
 
-### Neighbourhood sampling (stages 1–3)
+### Quality window (engine-2.2; replaces engine-2.1's band quotas)
 
-The engine now draws its word from bands of the credible neighbourhood (`ENGINE_CONFIG.sampling`):
+Engine-2.1 drew from fixed band quotas: 20% strongest, 35% strong, 30% reasonable, 15% lateral. It sometimes picked a clearly weaker word just to fill a quota (PAW + FISH → DOG instead of PET). That was artificial difficulty, so the quotas are gone.
 
-| Band | Share | What it holds |
-|---|---|---|
-| strongest | 20% | the top word of the reached stage (what engine-2.0 always played) |
-| strong | 35% | up to 3 more stage-1/2 words within 0.20 of the top, linked to both (weak side ≥ 0.30) |
-| reasonable | 30% | up to 4 words linked to both (weak side ≥ 0.30) within 0.35 |
-| lateral | 15% | up to 5 further down (within 0.50), still linked to both (weak side ≥ 0.30) |
+Within the reached stage, the best answer is always eligible. Other answers are eligible only if they are:
+- within **0.04** of its final score; and
+- within **0.10** of its plausibility; and
+- not a generic word or a piece of an input.
 
-Rules for the bands:
+At most 3 answers are eligible (`ENGINE_CONFIG.window`).
 
-- Generic words, pieces of an input, and anything scoring under 0.35 are never sampled.
-- An empty band's share moves to the next band below it.
-- The lateral band's share is capped at 30%; the rest goes back to the strongest word.
-- Low-quality stages (4+) and unknown inputs keep the strong pool (within 0.06 of the best, at most 3).
-- Gary and Milo use exactly the same engine.
+- If one answer is clearly best, it is chosen.
+- If several are equally good (PAW + FISH → PET or CAT), the move's seed picks between them.
 
-**Convergence** (`node scripts/convergence.mjs`). This plays simulated games through the real Solo lifecycle against stand-ins that share the bot's vocabulary, so treat the results as an upper bound.
+The window is logged with every decision (`decision.window`).
 
-| Stand-in (EN, 300 games) | engine-2.0 ≤3 / ≤5 / ≤10, median | engine-2.1 ≤3 / ≤5 / ≤10, median |
-|---|---|---|
-| always the strongest bridge | 99% / 100% / 100%, 2 | 80% / 92% / 100%, 2 |
-| engine-1 human-prediction model | 83% / 96% / 100%, 2 | 67% / 84% / 98%, 3 |
+**Game length is not a target.** A 3- or 4-move game is fine when that is the natural outcome. `node scripts/convergence.mjs` still reports match-by-move as information.
 
-The remaining speed is mostly structural. For many pairs the 669-word graph has only one balanced bridge, and a stand-in that knows the same graph finds it too. Real players use far more words, so live numbers should be slower.
+Against simulated players that share the bot's vocabulary, engine-2.2 converges fast:
 
-Compare live behaviour against the targets in `/review`:
-- match within 5 moves: 30–45%
-- match within 10 moves: 65–80%
-- median moves to match: 6–8
+| Simulated player (EN, 300 games) | Matched by move 3 | By move 5 | Median moves |
+|---|---|---|---|
+| Always plays the strongest answer | 96% | 100% | 2 |
+| Engine-1 human-prediction model | 82% | 95% | 2 |
 
-Filter by engine version (`engine-2.1`) to see only games played on the new engine. If live play is still too fast, expanding the vocabulary (more bridges per pair) is the next lever. Weakening the bot further is not.
+This is an upper bound. Real players don't share the graph, so judge real play in `/review` by quality first: flags, rating, low-quality rate. Look at match-by-move second.
 
-### Dataset (lexicon-2, `src/shared/lexicon/additions.js`)
+### Unknown words: a broad answer, not a one-sided continuation
 
-- 54 new everyday concepts, each with at least five links.
+When one word is still not understood after the input-understanding steps (section 2b), engine-2.1 scored only the other word. The result was a narrow word that ignored the player: CHICKS + SHELL → SEA, SURFING + TAIL → CAT.
+
+Engine-2.2 keeps only candidates **directly** tied to the known word (category, compound, curated, member, link) and scores them for breadth:
+- `0.5·relation + 0.2·familiarity + 0.3·breadth`
+- breadth is 1 for a category word, otherwise links/15 (at most 1).
+
+The result is a broad, familiar word, such as BARN → FARM. It is logged as `stage: unknown-input, fallback: broad-known-side`, flagged low quality.
+
+With lexicon-3 and the input steps below, this is now rare: every word of the 10:56 game is understood.
+
+### The 10:56 game: an engine-2.1 failure, and what changed
+
+Game `4ac661bf-57c3-440d-a14e-1c8dbf4e4225` (Gary, 14 moves, rated 1 star, started 2026-10-08T14:56:10Z). It is rebuilt from its round words in `test/fixtures/bot-replay.json` (cases `g1056-*`) and asserted in `test/engine.test.mjs`. The original log wasn't available offline, so the seeds are not the game's own.
+
+| Pair Gary answered | engine-2.1 | Cause | engine-2.2 |
+|---|---|---|---|
+| BATTLESHIP + BARN | farm | BATTLESHIP unknown → one-sided | a weak bridge, flagged low quality (the two words share almost nothing) |
+| WOOD + FARM | bird | only shared neighbours (graph-only) | fence |
+| TWIGS + EGG | shell | TWIGS unknown | branch / chicken |
+| CHICKS + SHELL | sea | CHICKS unknown | sea, flagged low quality (EGG, the natural answer, was already played) |
+| CHICKEN + SEA | horse | SEA → HORSE only through "seahorse" (compound half scored 0.95) | fish |
+| TUNA + HORSE | ride | TUNA unknown | animal |
+| SURFING + TAIL | cat | SURFING unknown | ocean / fish |
+| PAW + FISH | dog | the 15% lateral quota sampled DOG over PET | pet |
+
+### 2b. Understanding the player's word (`src/shared/understand.js`)
+
+Both the engine and the "Did you mean?" prompt read a typed word the same way. The steps run in order, and the first hit wins:
+
+1. **exact:** the word, or a listed synonym/variant (alias).
+2. **plural:** twigs → twig.
+3. **morphology:** the game's own inflection rules (`src/shared/morph.js`), e.g. surfing → surf, riding → ride.
+4. **compound:** two known words written together or apart, e.g. birdnest → bird + nest.
+5. **fuzzy:** a typing slip of a known word, e.g. battelship → battleship, chikcen → chicken, aqurium → aquarium. A sound-alike pass catches spellings like elefant → elephant and sizzors → scissors.
+6. **derived:** a known word plus an ending, e.g. snowy → snow.
+7. **component:** the head of an unknown longer word, low confidence.
+8. **unresolved.**
+
+**Spacing never matters** (sea horse = seahorse, ice cream = icecream, play ground = playground). Comparison keys drop spaces, case, accents and apostrophes, and a spacing variant is logged (`spacing: true`).
+
+**Fuzzy matching is conservative.**
+- Only words of 4+ letters.
+- Never a word the speller already knows as a real word ("draft" stays draft; "carpet" is no longer read as car + pet).
+- One change, or two for 8+ letters keeping the first two letters.
+- One unique closest concept.
+- **High** confidence: a typical slip (swapped neighbours, a letter left out or doubled, a sound-alike letter, a sound-alike spelling).
+- **Medium:** any other single change after the first letter.
+- Anything else is **low** and is not guessed.
+
+### "Did you mean?" (browser)
+
+| Confidence | What the player sees |
+|---|---|
+| high | "You typed: battelship / Did you mean BATTLESHIP?" with **Use battleship** (main button) and **Keep battelship**. Locking in asks once before playing; Use or Keep then locks in straight away. |
+| medium | The quiet hint as before. It never blocks the lock-in. |
+| low | Nothing; the word is played as typed. |
+
+The word is never changed without the player's say-so. Purely structural clean-up (trimming, case, curly apostrophes, spacing) needs no confirmation because the game already treats those as the same word.
+
+### Dataset (lexicon-3, `src/shared/lexicon/additions3.js`; lexicon-2 in `additions.js`)
+
+- **lexicon-3** fixes the coverage gaps the 10:56 game exposed. A check of about 470 everyday words had found 128 unknown; now 4 remain (ambiguous: guinea, crop, skip, board).
+  - 195 new concepts: animals, food, actions, places, vehicles, clothes, animal parts, nature, work and school.
+  - New category memberships.
+  - 73 aliases (61 English, 12 French), e.g. surfing → surf, mother → mom, bicycle → bike, hamburger → burger, spaghetti → pasta.
+  - A guard that real words are never split into pieces.
+  - Every new label is unique in both languages (tested).
+- **lexicon-2** (earlier):
+  - 54 new everyday concepts, each with at least five links.
 - New links (table–lamp, table–restaurant, birthday–dinner, christmas–dinner, gift–wrap…) and compounds.
 - English and French aliases (present → gift, house → home, teeth → tooth…).
-- lexicon-1 is still loadable (`getLexicon(lang, "lexicon-1")`) so old decisions can be replayed.
+- Every version is still loadable (`getLexicon(lang, "lexicon-1" | "lexicon-2" | "lexicon-3")`) so old decisions can be replayed on their data.
 
 ### Licensing
 
@@ -156,7 +228,7 @@ Neither was imported. Importing any external dataset needs a licence review firs
 | Record | Fields |
 |---|---|
 | Game | id (the game's own random id), mode, character, language, started / last activity / ended timestamps, player rating (1–5, won games only, once), status (`in_progress`, `matched`, `exhausted` = 20 moves without a match, `ended` = player started another game; `abandoned` is inferred at read time after 24 h of inactivity), rounds, app version, engine version, dataset version, config, seed |
-| Round | the pair the bot answered, user word, bot word, normalised keys, match, reveal time, decision time (ms), stage, low-quality flag, and the full decision (inputs, sources, candidates with A/B relations, weaker side, every score component, final score and rank, rejections, pool, selected word, config) |
+| Round | the pair the bot answered, user word, bot word, normalised keys, match, reveal time, decision time (ms), stage, low-quality flag, how the player's word was read (`player_input`: what they typed, any spelling suggestion with its confidence and whether they took it, normalised form, what it was understood as and how — spelling, spacing, inflection — or unresolved; stored on the server inside the round's decision as `playerInput`, no schema change), and the full decision (each input's understanding, plausibility per candidate, the quality window) (inputs, sources, candidates with A/B relations, weaker side, every score component, final score and rank, rejections, pool, selected word, config) |
 
 No names, player ids, emails or IP addresses are stored.
 

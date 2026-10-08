@@ -45,8 +45,8 @@ export function replayCase(c) {
   const t0 = performance.now();
   const {word, decision} = selectBotWord(input);
   const ms = performance.now() - t0;
-  // The single strongest answer (no sampling): what `acceptable` describes.
-  const top = selectBotWord({...input, config: {...ENGINE_CONFIG, sampling: null}}).word;
+  // The single strongest answer (a quality window of one): what `acceptable` describes.
+  const top = selectBotWord({...input, config: {...ENGINE_CONFIG, window: {...ENGINE_CONFIG.window, size: 1}}}).word;
   const expect = c.expect || {};
   const problems = [];
   const blockedKeys = new Set([...(c.blocked || []), ...c.pair].flatMap(w => [...lemmaKeys(w, c.language)]));

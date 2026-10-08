@@ -170,7 +170,10 @@ test("the 'Did you mean?' hint never blocks the player's own word", async () => 
   const gap = await page.evaluate(() => document.getElementById("word").getBoundingClientRect().top - document.getElementById("suggestion").getBoundingClientRect().bottom);
   assert.ok(gap >= 0 && gap < 40, `suggestion sits just above the input (gap ${gap}px)`);
   const before = (await revealed(page)).length;
+  // A likely typo asks once on lock-in; "Keep" plays exactly what was typed.
   await page.press("#word", "Enter");
+  await page.waitForSelector("#suggestion.confirming");
+  await page.click("#keepTyped");
   await waitForReveal(page, before);
   assert.equal((await revealed(page))[0].words.a, "elephnt", "submitted exactly as typed");
   await context.close();

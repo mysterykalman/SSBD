@@ -6,11 +6,11 @@
 //   Human first               structure never overturns a clear human-likelihood lead
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {BOT_TUNING, chooseOpening, chooseResponse, rankCandidates} from "../src/shared/bot.js";
+import {ENGINE1_DATASET, BOT_TUNING, chooseOpening, chooseResponse, rankCandidates} from "../src/shared/bot.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {seededRandom} from "../src/shared/rules.js";
 
-const lex = getLexicon("en");
+const lex = getLexicon("en", ENGINE1_DATASET);
 const everyday = [...lex.concepts.values()].filter(c => c.links.size >= 6 && !c.label.includes(" ")).map(c => c.label);
 
 /** Seeded random pairs of everyday words. */

@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {BOT_TUNING, chooseResponse, rankCandidates} from "../src/shared/bot.js";
+import {ENGINE1_DATASET, BOT_TUNING, chooseResponse, rankCandidates} from "../src/shared/bot.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {seededRandom} from "../src/shared/rules.js";
 import {sameUnderlyingWord} from "../src/shared/morph.js";
@@ -35,7 +35,7 @@ test("the brief's examples: answers connect BOTH words; one-sided answers are re
 
 test("invariant: every pick relates to BOTH prompts on its own (strong or fallback), in English and French", () => {
   for (const language of ["en", "fr"]) {
-    const lex = getLexicon(language);
+    const lex = getLexicon(language, ENGINE1_DATASET);
     const ids = [...lex.concepts.keys()];
     const random = seededRandom(99);
     const tiers = {};
@@ -141,7 +141,7 @@ test("lazy answers built on a prompt word lose out (SNOW for SNOWMAN)", () => {
 
 test("French uses the same logic", () => {
   const seen = picks(["soleil", "lune"], 200, {language: "fr"});
-  const lex = getLexicon("fr");
+  const lex = getLexicon("fr", ENGINE1_DATASET);
   for (const word of seen.keys()) assert.ok(lex.resolve(word), word);
   const {ranked} = rankCandidates({prompts: ["soleil", "lune"], language: "fr"});
   assert.ok(ranked.filter(r => r.passes).length >= 3);

@@ -28,7 +28,8 @@ export function decisionView(d, options = {}) {
   if (!d) return el("p", {class: "dv-empty"}, "No decision recorded for this round.");
   if (!d.engine) return el("p", {class: "dv-empty"}, `Decision from an older engine (no detailed record). Selected: ${String(d.selected || options.selected || "").toUpperCase()}.`);
   const pair = d.pair ? d.pair.map(w => w.toUpperCase()).join(" + ") : "(opening move)";
-  const inputs = (d.inputs || []).map(i => `${i.word.toUpperCase()}${i.known ? ` → ${i.ids.join(" + ")}` : " (unknown to the word graph)"}`).join("; ");
+  const how = i => (i.method && !["exact", undefined].includes(i.method) ? ` (${i.method}${i.confidence && i.confidence !== "certain" ? `, ${i.confidence}` : ""}${i.spacing ? ", spacing" : ""})` : "");
+  const inputs = (d.inputs || []).map(i => `${i.word.toUpperCase()}${i.known ? ` → ${i.ids.join(" + ")}${how(i)}` : " (not understood, even after spelling, spacing and inflection checks)"}`).join("; ");
   const facts = [
     ["Engine", `${d.engine} · ${d.dataset}`],
     options.character ? ["Character", `${options.character} (same baseline engine for every character)`] : null,
@@ -38,7 +39,9 @@ export function decisionView(d, options = {}) {
     ["Selected word", String(d.selected).toUpperCase()],
     d.bands
       ? ["Neighbourhood", Object.entries(d.bands).map(([band, words]) => `${band}: ${words.map(w => w.toUpperCase()).join(", ") || "—"}`).join(" · ")]
-      : ["Strong pool", (d.pool || []).map(w => w.toUpperCase()).join(", ") || "(none)"],
+      : [d.window ? "Quality window" : "Strong pool", (d.pool || []).map(w => w.toUpperCase()).join(", ") || "(none)"],
+    d.window ? ["Window rule", `final ≥ ${d.window.minFinal} (best ${d.window.topFinal} − ${d.window.margin}), plausibility ≥ ${d.window.minPlausibility} (best ${d.window.topPlausibility} − ${d.window.plausibilityMargin}); ${d.window.size} eligible`] : null,
+    d.fallback ? ["Fallback", d.fallback === "broad-known-side" ? "one word not understood: a broad word tied directly to the other" : d.fallback] : null,
     d.band ? ["Band drawn", `${d.band} (shares ${Object.entries(d.config?.sampling?.shares || {}).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(", ")})`] : null,
     ["Blocked words", String(d.blockedCount ?? "")],
     ["Candidates generated", String(d.generated ?? "")],
@@ -49,11 +52,11 @@ export function decisionView(d, options = {}) {
   const table = (d.candidates || []).length
     ? el("table", {class: "dv-candidates gd-candidates"},
       el("caption", {}, `Candidate words (reached: ${d.stage}; stage 1 = linked to both words … 6 = only one word). ${formulaLine(d.config)}`),
-      el("thead", {}, el("tr", {}, ...["#", "word", "stage", "band", "sources", `→ ${a}`, `→ ${b}`, "weaker", "connection", "familiarity", "cue", "penalties", "final"].map(x => el("th", {scope: "col"}, x)))),
+      el("thead", {}, el("tr", {}, ...["#", "word", "stage", "sources", `→ ${a}`, `→ ${b}`, "weaker", "connection", "plausibility", "familiarity", "cue", "penalties", "final"].map(x => el("th", {scope: "col"}, x)))),
       el("tbody", {}, ...d.candidates.map(c => el("tr", {class: c.word === d.selected ? "gd-pick" : null},
-        el("td", {}, String(c.rank)), el("td", {}, c.word), el("td", {}, String(c.stage)), el("td", {}, c.band || ""), el("td", {}, (c.sources || []).join(", ")),
+        el("td", {}, String(c.rank)), el("td", {}, c.word), el("td", {}, String(c.stage)), el("td", {}, (c.sources || []).join(", ")),
         el("td", {}, `${n2(c.relA)} ${c.kindA}`), el("td", {}, `${n2(c.relB)} ${c.kindB}`), el("td", {}, n2(c.weak)),
-        el("td", {}, n3(c.connection)), el("td", {}, n2(c.familiarity)), el("td", {}, n2(c.cue)),
+        el("td", {}, n3(c.connection)), el("td", {}, c.plausibility === undefined ? "—" : n2(c.plausibility)), el("td", {}, n2(c.familiarity)), el("td", {}, n2(c.cue)),
         el("td", {}, [c.oneSided ? `one-sided −${n2(c.oneSided)}` : "", c.generic ? `generic −${n2(c.generic)}` : "", c.piece ? `piece −${n2(c.piece)}` : ""].filter(Boolean).join(", ") || "—"),
         el("td", {}, n3(c.final))))))
     : el("p", {class: "dv-candidates gd-candidates"}, d.pair ? "No scored candidates (fallback word)." : "Opening move: a friendly, familiar word at random.");

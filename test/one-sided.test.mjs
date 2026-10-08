@@ -3,12 +3,12 @@
 // where the player often answers one-sidedly), never on hand-picked expected answers.
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {BOT_TUNING, chooseOpening, chooseResponse, rankCandidates} from "../src/shared/bot.js";
+import {ENGINE1_DATASET, BOT_TUNING, chooseOpening, chooseResponse, rankCandidates} from "../src/shared/bot.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {seededRandom} from "../src/shared/rules.js";
 import {wordKey} from "../src/shared/words.js";
 
-const lex = getLexicon("en");
+const lex = getLexicon("en", ENGINE1_DATASET);
 const concepts = [...lex.concepts.values()];
 const everyday = concepts.filter(c => c.links.size >= 4 && !c.label.includes(" ")).map(c => c.label);
 const SUP = BOT_TUNING.support;

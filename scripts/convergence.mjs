@@ -21,8 +21,8 @@ const revealed = game => game.moves.filter(m => m.words).flatMap(m => [m.words.a
 /** Stand-ins for the human side. Each sees exactly what the player sees: the latest pair and the used words. */
 export const PLAYERS = {
   // Always the single strongest bridge (the most convergent possible player).
-  obvious: ({pair, blocked, language, seed}) => selectBotWord({pair, blocked, language, seed, config: {...ENGINE_CONFIG, sampling: null}}).word,
-  // Picks from the same credible neighbourhood as the bot, independently (a varied, reasonable player).
+  obvious: ({pair, blocked, language, seed}) => selectBotWord({pair, blocked, language, seed, config: {...ENGINE_CONFIG, window: {...ENGINE_CONFIG.window, size: 1}}}).word,
+  // Picks from the same quality window as the bot, independently (a varied, reasonable player).
   varied: ({pair, blocked, language, seed}) => selectBotWord({pair, blocked, language, seed: seed ^ 0x5bd1e995}).word,
   // The original human-prediction model (engine-1): what a typical person would most likely say.
   predictor: ({pair, blocked, language, seed}) => {

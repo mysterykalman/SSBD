@@ -93,15 +93,29 @@ test("Gary and Milo play identically: same game, same seed, same words every rou
   }
 });
 
-test("convergence: sampling the neighbourhood matches later than always playing the strongest bridge", t => {
-  // The same 120 simulated games against the most convergent possible player (who always plays the
-  // strongest bridge). Before engine-2.1 the bot did the same and nearly every game ended by move 3.
+test("convergence is natural, not forced: no weaker word is chosen to make the game last longer", t => {
+  // Simulated games against the most convergent possible player (who always plays the strongest
+  // answer). Short games are fine when that is the natural outcome; what must hold is that the bot
+  // never steps away from the best answer except to an equally good one.
   const games = 120;
   const results = Array.from({length: games}, (_, i) => playGame(PLAYERS.obvious, {seed: 500 + i}));
-  const now = distribution(results);
-  t.diagnostic(JSON.stringify(now));
-  assert.ok(now.within3 < 0.85, `within 3: ${now.within3}`);
-  assert.ok(ENGINE_CONFIG.sampling.shares.strongest <= 0.25, "the single strongest bridge is a minority choice");
+  t.diagnostic(JSON.stringify(distribution(results)));
   // Every simulated bot word was valid (playGame throws on an invalid or repeated word).
   assert.equal(results.length, games);
+  // When only one answer is good enough, the bot plays exactly that answer.
+  const single = {...ENGINE_CONFIG, window: {...ENGINE_CONFIG.window, size: 1}};
+  let checked = 0;
+  for (const pair of [["sun", "beach"], ["cat", "dog"], ["paw", "fish"], ["trees", "bird"], ["bread", "butter"], ["lamp", "restaurant"], ["chicken", "sea"], ["rain", "bow"]]) {
+    for (let seed = 1; seed <= 20; seed++) {
+      const r = selectBotWord({pair, seed});
+      const best = selectBotWord({pair, seed, config: single}).word;
+      if (r.decision.window.size === 1) { assert.equal(r.word, best, `${pair}`); checked++; }
+      else {
+        const top = r.decision.candidates.find(c => c.word === best), pick = r.decision.candidates.find(c => c.word === r.word);
+        assert.ok(pick.final >= top.final - ENGINE_CONFIG.window.margin - 1e-9, `${pair}: ${r.word} is as good as ${best}`);
+      }
+    }
+  }
+  assert.ok(checked > 0);
 });
+
