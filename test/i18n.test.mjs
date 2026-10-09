@@ -55,7 +55,7 @@ test("English has no stray space before punctuation", () => {
 test("French copy speaks to kids with tu, not vous", () => {
   const formal = /\b(vous|votre|vos)\b/i;
   // The few lines addressed to both players together legitimately use the plural.
-  const plural = new Set(["heroTitle", "heroCopy", "heroRules", "firstSolo", "garyFirstSolo", "miloFirstSolo", "firstFamily", "revealMatchCopy", "winCopy", "togetherCopy2"]);
+  const plural = new Set(["heroTitle", "heroCopy", "heroRules", "firstSolo", "garyFirstSolo", "miloFirstSolo", "firstFamily", "revealMatchCopy", "winCopy", "togetherCopy1", "togetherCopy2"]);
   for (const [key, value] of Object.entries(STRINGS.fr)) {
     if (!plural.has(key)) assert.doesNotMatch(value, formal, `fr.${key}`);
   }
@@ -115,8 +115,8 @@ test("homepage copy", () => {
   // The old Solo tile copy is gone (the cake joke lives on Gary's card only).
   for (const key of ["soloCopy1", "soloCopy2", "soloCopy3", "soloOfflineNote"]) assert.equal(en[key], undefined, key);
   assert.deepEqual([en.togetherTitle, en.togetherCopy1, en.togetherCopy2, en.familyCreate, en.familyJoin],
-    ["Play Together", "Challenge a friend, sibling, cousin, or future ex-best friend to prove they can think exactly like you.",
-      "Do you go together like peanut butter and... uh, peanut butter? Or more like peanut butter and... pickles?", "Start a game", "Join a game"]);
+    ["Play Together", "Challenge a friend, sibling, cousin, or anyone nearby to see if your brains are secretly connected.",
+      "Pick the same word and feel like geniuses. Miss completely and blame each other.", "Start a game", "Join a game"]);
   assert.deepEqual([en.gamesTitle, en.gamesEmpty1, en.gamesEmpty2], ["Your games", "Nothing here yet.", "Suspiciously peaceful."]);
   for (const key of ["heroTitle", "heroCopy", "soloTitle", "soloBody", "soloBody2", "soloStart", "togetherTitle", "togetherCopy1", "togetherCopy2", "familyCreate", "familyJoin", "gamesEmpty1", "gamesEmpty2"]) {
     assert.ok(STRINGS.fr[key] && STRINGS.fr[key] !== en[key], `fr.${key} is translated`);
