@@ -8,7 +8,6 @@ const BASE = "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/ma
 const FUN_BASE = "https://raw.githubusercontent.com/jonjonsson/SoundMonster/main/Public%20domain";
 
 const SOUND = Object.freeze({
-  // Routine cues: deliberately quiet and short so the game never becomes noisy.
   uiClick: {channel: "ui", url: `${BASE}/jingles_NES00.ogg`, gain: 0.18, fadeIn: 35, fadeOut: 130, maxMs: 430},
   uiToggle: {channel: "ui", url: `${BASE}/jingles_NES10.ogg`, gain: 0.18, fadeIn: 35, fadeOut: 140, maxMs: 520},
   lock: {channel: "game", url: `${BASE}/jingles_NES01.ogg`, gain: 0.19, fadeIn: 40, fadeOut: 150, maxMs: 520},
@@ -20,13 +19,12 @@ const SOUND = Object.freeze({
   notify: {channel: "notifications", url: `${BASE}/jingles_NES10.ogg`, gain: 0.20, fadeIn: 45, fadeOut: 170, maxMs: 620},
   notifyError: {channel: "notifications", url: `${BASE}/jingles_NES09.ogg`, gain: 0.18, fadeIn: 45, fadeOut: 180, maxMs: 680},
 
-  // Major-moment cues. These are public-domain/CC0 SoundMonster files and are kept softer than source.
   chooseBoing: {channel: "game", url: `${FUN_BASE}/boing%20cartoon.mp3`, gain: 0.30, fadeIn: 90, fadeOut: 320, major: true},
   chooseDing: {channel: "game", url: `${FUN_BASE}/ding%20bell.mp3`, gain: 0.28, fadeIn: 90, fadeOut: 320, major: true},
   startRoll: {channel: "game", url: `${FUN_BASE}/announcement%20timpani%20roll.mp3`, gain: 0.24, fadeIn: 120, fadeOut: 420, major: true, maxMs: 1800},
   finalReveal: {channel: "game", url: `${FUN_BASE}/shock%20gasp.mp3`, gain: 0.26, fadeIn: 110, fadeOut: 380, major: true},
+  winHallelujah: {channel: "game", url: `${FUN_BASE}/hallelujah.mp3`, gain: 0.23, fadeIn: 140, fadeOut: 420, major: true, maxMs: 1900},
   winClap: {channel: "game", url: `${FUN_BASE}/golf%20clap.mp3`, gain: 0.27, fadeIn: 140, fadeOut: 520, major: true, maxMs: 2200},
-  winHallelujah: {channel: "game", url: `${FUN_BASE}/hallelujah.mp3`, gain: 0.23, fadeIn: 140, fadeOut: 500, major: true, maxMs: 2400},
   quitSlide: {channel: "game", url: `${FUN_BASE}/flute%20slide%20cartoon%20falling.mp3`, gain: 0.22, fadeIn: 90, fadeOut: 360, major: true, maxMs: 1400},
   quitRadio: {channel: "game", url: `${FUN_BASE}/radio%20mic%20off%20MDC1200.mp3`, gain: 0.20, fadeIn: 80, fadeOut: 300, major: true, maxMs: 1100}
 });
@@ -35,7 +33,6 @@ const POOL = Object.freeze({
   choose: ["chooseBoing", "chooseDing"],
   start: ["startRoll"],
   finalReveal: ["finalReveal"],
-  win: ["winClap", "winHallelujah"],
   quit: ["quitSlide", "quitRadio"]
 });
 
@@ -65,6 +62,7 @@ const lastPoolPick = new Map();
 let activeMajor = null;
 let pendingStart = false;
 let lastPhaseSignature = "";
+let winSequenceTimer = null;
 
 function saveSettings() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch {}
@@ -125,6 +123,7 @@ function play(name, {preview = false} = {}) {
       ramp(audio, 0, target, spec.fadeIn ?? 45);
       scheduleFade(audio, spec);
     }).catch(() => {});
+    return audio;
   } catch {}
 }
 
@@ -135,7 +134,16 @@ function playPool(poolName, options) {
   const choices = pool.length > 1 ? pool.filter(name => name !== previous) : pool;
   const name = choices[Math.floor(Math.random() * choices.length)] || pool[0];
   lastPoolPick.set(poolName, name);
-  play(name, options);
+  return play(name, options);
+}
+
+function playWinSequence() {
+  if (winSequenceTimer) clearTimeout(winSequenceTimer);
+  play("winHallelujah");
+  winSequenceTimer = setTimeout(() => {
+    winSequenceTimer = null;
+    play("winClap");
+  }, 1700);
 }
 
 function lang() {
@@ -146,7 +154,7 @@ const copy = {
   en: {
     sound: "Sound", soundOn: "Enable sound",
     soundHint: "Adjust each type separately. Your levels are remembered when sound is turned off.",
-    game: "Game sounds", gameHint: "Round changes, close-enough decisions, character choice, game start, winning reveal, wins and quitting",
+    game: "Game sounds", gameHint: "Round changes, close-enough decisions, character choice, game start, matching reveal, wins and quitting",
     notifications: "Notification sounds", notificationsHint: "Updates, alerts and errors",
     ui: "UI sounds", uiHint: "Buttons and controls"
   },
@@ -170,8 +178,22 @@ function injectStyles() {
     .audio-channel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.15rem .7rem;align-items:center;margin:.75rem 0}.audio-channel label{font-weight:750}.audio-channel small{grid-column:1;opacity:.68;font-size:.78rem}
     .audio-range-row{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) 3.2rem;gap:.65rem;align-items:center;margin-top:.3rem}.audio-range-row input[type=range]{width:100%;accent-color:currentColor}
     .audio-value{font-variant-numeric:tabular-nums;text-align:right;font-size:.82rem;font-weight:750}.audio-settings-panel.muted .audio-channel{opacity:.5}
+    .games.ssbd-games-scroll{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+    .games.ssbd-games-scroll>h2{flex:0 0 auto;position:relative;z-index:1;background:var(--paper);padding-bottom:6px}
+    .games.ssbd-games-scroll .game-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-right:6px;scrollbar-gutter:stable}
   `;
   document.head.append(style);
+}
+
+function syncHomeGamesCard() {
+  const games = document.querySelector(".games");
+  const solo = document.querySelector(".solo-card");
+  const family = document.querySelector(".family-card");
+  if (!games || !solo || !family) return;
+  games.classList.add("ssbd-games-scroll");
+  games.style.height = "";
+  const target = Math.ceil(Math.max(solo.getBoundingClientRect().height, family.getBoundingClientRect().height));
+  if (target > 0) games.style.height = `${target}px`;
 }
 
 function channelRow(channel, title, hint, previewSound) {
@@ -204,7 +226,7 @@ function enhanceProfileDialog() {
   const master = document.createElement("label"); master.className = "audio-master"; master.append(document.createTextNode(text.soundOn));
   const toggle = document.createElement("input"); toggle.type = "checkbox"; toggle.checked = settings.enabled; master.append(toggle);
   const rows = [
-    channelRow("game", text.game, text.gameHint, "winClap"),
+    channelRow("game", text.game, text.gameHint, "winHallelujah"),
     channelRow("notifications", text.notifications, text.notificationsHint, "notify"),
     channelRow("ui", text.ui, text.uiHint, "uiClick")
   ];
@@ -268,7 +290,7 @@ function inspectGameAudio() {
     return;
   }
 
-  if (phase === "gameOver" && document.querySelector(".end.win")) playPool("win");
+  if (phase === "gameOver" && document.querySelector(".end.win")) playWinSequence();
 }
 
 let bellCount = 0;
@@ -282,7 +304,10 @@ function inspectBell() {
 
 function installObservers() {
   const app = document.getElementById("app");
-  if (app) new MutationObserver(inspectGameAudio).observe(app, {attributes: true, attributeFilter: ["data-phase"]});
+  if (app) {
+    new MutationObserver(inspectGameAudio).observe(app, {attributes: true, attributeFilter: ["data-phase"]});
+    new MutationObserver(() => requestAnimationFrame(syncHomeGamesCard)).observe(app, {childList: true, subtree: true});
+  }
   const toasts = document.getElementById("toasts");
   if (toasts) new MutationObserver(records => {
     for (const record of records) for (const node of record.addedNodes) {
@@ -295,7 +320,8 @@ function installObservers() {
   document.addEventListener("click", event => {
     if (event.target instanceof Element && event.target.closest("#profileBtn")) queueMicrotask(enhanceProfileDialog);
   });
-  inspectGameAudio(); inspectBell();
+  window.addEventListener("resize", () => requestAnimationFrame(syncHomeGamesCard), {passive: true});
+  inspectGameAudio(); inspectBell(); requestAnimationFrame(syncHomeGamesCard);
 }
 
 injectStyles();
