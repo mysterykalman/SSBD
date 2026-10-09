@@ -1,65 +1,34 @@
 // Device-local sound system and settings UI.
-// Audio comes from Mcamento8/open-game-sfx-index. The selected files are CC0/public domain.
-// We use a small curated set of event-specific sounds, never the full index.
-
+// Routine interaction sounds stay subtle. Larger comedy/studio cues are reserved for major moments.
 
 const STORAGE_KEY = "ssbd.audio.v1";
 const DEFAULTS = Object.freeze({enabled: true, game: 0.7, notifications: 0.5, ui: 0.3});
-const BASE = "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio";
+const UI_BASE = "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio";
+const FUN_BASE = "https://raw.githubusercontent.com/jonjonsson/SoundMonster/main/Public%20domain";
 
 const SOUND = Object.freeze({
-  uiClick: {channel: "ui", url: `${BASE}/ui-audio/click2.ogg`},
-  uiToggle: {channel: "ui", url: `${BASE}/ui-audio/switch12.ogg`},
-  lock1: {channel: "game", url: `${BASE}/interface-sounds/confirmation_001.ogg`},
-  lock2: {channel: "game", url: `${BASE}/interface-sounds/confirmation_002.ogg`},
-  revealDrop: {channel: "game", url: `${BASE}/interface-sounds/drop_002.ogg`},
-  notify: {channel: "notifications", url: `${BASE}/interface-sounds/confirmation_002.ogg`},
-  notifyError: {channel: "notifications", url: `${BASE}/interface-sounds/error_001.ogg`},
+  uiClick: {channel: "ui", url: `${UI_BASE}/ui-audio/click2.ogg`, gain: 0.55},
+  uiToggle: {channel: "ui", url: `${UI_BASE}/ui-audio/switch12.ogg`, gain: 0.55},
+  lock: {channel: "game", url: `${UI_BASE}/interface-sounds/confirmation_001.ogg`, gain: 0.42},
+  notify: {channel: "notifications", url: `${UI_BASE}/interface-sounds/confirmation_002.ogg`, gain: 0.5},
+  notifyError: {channel: "notifications", url: `${UI_BASE}/interface-sounds/error_001.ogg`, gain: 0.48},
 
-  // Short, playful musical punctuation. These are deliberately reused across a few moments
-  // so the game has a recognizable sound language rather than dozens of unrelated noises.
-  piz00: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI00.ogg`},
-  piz01: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI01.ogg`},
-  piz02: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI02.ogg`},
-  piz03: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI03.ogg`},
-  piz04: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI04.ogg`},
-  piz05: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI05.ogg`},
-  piz06: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI06.ogg`},
-  piz07: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI07.ogg`},
-  hit00: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT00.ogg`},
-  hit02: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT02.ogg`},
-  hit03: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT03.ogg`},
-  hit06: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT06.ogg`},
-  hit10: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT10.ogg`},
-  hit12: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT12.ogg`},
-  nes00: {channel: "game", url: `${BASE}/music-jingles/jingles_NES00.ogg`},
-  nes09: {channel: "game", url: `${BASE}/music-jingles/jingles_NES09.ogg`},
-  nes10: {channel: "game", url: `${BASE}/music-jingles/jingles_NES10.ogg`},
-  downer: {channel: "game", url: `${BASE}/oga-levelup-powerup/Downer01.wav`},
-  rise1: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise01.wav`},
-  rise2: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise02.wav`},
-  rise3: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise03.wav`},
-  rise4: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise04.wav`},
-  rise5: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise05.wav`},
-  rise6: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise06.wav`},
-  coin: {channel: "game", url: `${BASE}/oga-levelup-powerup/Coin01.wav`}
+  // Major-moment cues. These source files are CC0/public domain in SoundMonster.
+  chooseBoing: {channel: "game", url: `${FUN_BASE}/boing%20cartoon.mp3`, gain: 0.34, major: true},
+  chooseDing: {channel: "game", url: `${FUN_BASE}/ding%20bell.mp3`, gain: 0.30, major: true},
+  startRoll: {channel: "game", url: `${FUN_BASE}/announcement%20timpani%20roll.mp3`, gain: 0.27, major: true},
+  finalReveal: {channel: "game", url: `${FUN_BASE}/shock%20gasp.mp3`, gain: 0.30, major: true},
+  winApplause: {channel: "game", url: `${FUN_BASE}/applause.mp3`, gain: 0.31, major: true},
+  winHallelujah: {channel: "game", url: `${FUN_BASE}/hallelujah.mp3`, gain: 0.25, major: true},
+  quitBye: {channel: "game", url: `${FUN_BASE}/bye%20bye.mp3`, gain: 0.28, major: true}
 });
 
 const POOL = Object.freeze({
-  lock: ["lock1", "lock2"],
-  reveal: ["revealDrop", "piz00", "hit00"],
-  revealClose: ["rise1", "rise2", "piz02"],
-  revealRelated: ["piz04", "hit03", "rise3"],
-  revealApart: ["downer", "hit06", "piz06"],
-  revealNeutral: ["revealDrop", "piz00", "hit00"],
-  win: ["piz01", "piz03", "nes00", "rise4"],
-  closeEnoughAsk: ["rise6", "piz00"],
-  closeEnoughYes: ["rise5", "piz05", "hit10"],
-  closeEnoughNo: ["downer", "hit06", "piz07"],
-  fail: ["downer", "piz07", "nes09"],
-  draw: ["piz04", "hit12", "nes10"],
-  quit: ["hit02", "downer"],
-  rating: ["coin", "lock2"]
+  choose: ["chooseBoing", "chooseDing"],
+  start: ["startRoll"],
+  finalReveal: ["finalReveal"],
+  win: ["winApplause", "winHallelujah"],
+  quit: ["quitBye"]
 });
 
 function clamp(value) {
@@ -85,24 +54,67 @@ function loadSettings() {
 let settings = loadSettings();
 const lastPlayed = new Map();
 const lastPoolPick = new Map();
+let activeMajor = null;
 
 function saveSettings() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch {}
 }
 
+function ramp(audio, from, to, ms, done) {
+  const started = performance.now();
+  const tick = now => {
+    if (!audio || audio.paused) return;
+    const p = Math.min(1, (now - started) / Math.max(1, ms));
+    audio.volume = clamp(from + (to - from) * p);
+    if (p < 1) requestAnimationFrame(tick);
+    else done?.();
+  };
+  audio.volume = clamp(from);
+  requestAnimationFrame(tick);
+}
+
+function fadeOut(audio, ms = 420) {
+  if (!audio || audio.paused || audio.datasetFading) return;
+  audio.datasetFading = true;
+  ramp(audio, audio.volume, 0, ms, () => {
+    try { audio.pause(); audio.currentTime = 0; } catch {}
+    if (activeMajor === audio) activeMajor = null;
+  });
+}
+
+function scheduleFadeOut(audio, ms = 420) {
+  const maybeFade = () => {
+    if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    const remaining = audio.duration - audio.currentTime;
+    if (remaining <= Math.max(0.5, ms / 1000 + 0.08)) {
+      audio.removeEventListener("timeupdate", maybeFade);
+      fadeOut(audio, Math.min(ms, Math.max(120, remaining * 1000 - 40)));
+    }
+  };
+  audio.addEventListener("timeupdate", maybeFade);
+}
+
 function play(name, {preview = false} = {}) {
   const spec = SOUND[name];
   if (!spec || !settings.enabled) return;
-  const volume = clamp(settings[spec.channel]);
-  if (volume <= 0) return;
+  const target = clamp(settings[spec.channel] * (spec.gain ?? 1));
+  if (target <= 0) return;
   const now = performance.now();
-  if (!preview && now - (lastPlayed.get(name) || 0) < 90) return;
+  if (!preview && now - (lastPlayed.get(name) || 0) < 120) return;
   lastPlayed.set(name, now);
   try {
+    if (spec.major && activeMajor && !activeMajor.paused) fadeOut(activeMajor, 140);
     const audio = new Audio(spec.url);
     audio.preload = "auto";
-    audio.volume = volume;
-    audio.play().catch(() => {});
+    audio.volume = spec.major ? 0 : target;
+    if (spec.major) activeMajor = audio;
+    audio.addEventListener("ended", () => { if (activeMajor === audio) activeMajor = null; }, {once: true});
+    audio.play().then(() => {
+      if (spec.major) {
+        ramp(audio, 0, target, 130);
+        scheduleFadeOut(audio, 450);
+      }
+    }).catch(() => {});
   } catch {}
 }
 
@@ -122,24 +134,22 @@ function lang() {
 
 const copy = {
   en: {
-    settings: "Settings",
     sound: "Sound",
     soundOn: "Enable sound",
     soundHint: "Adjust each type separately. Your levels are remembered when sound is turned off.",
     game: "Game sounds",
-    gameHint: "Reveals, wins, fails and other game moments",
+    gameHint: "Major game moments and subtle lock-in feedback",
     notifications: "Notification sounds",
     notificationsHint: "Updates, alerts and errors",
     ui: "UI sounds",
     uiHint: "Buttons and controls"
   },
   fr: {
-    settings: "Réglages",
     sound: "Son",
     soundOn: "Activer le son",
     soundHint: "Réglez chaque type séparément. Vos niveaux sont conservés lorsque le son est désactivé.",
     game: "Sons du jeu",
-    gameHint: "Révélations, victoires, défaites et autres moments du jeu",
+    gameHint: "Moments importants du jeu et validation discrète",
     notifications: "Sons de notification",
     notificationsHint: "Mises à jour, alertes et erreurs",
     ui: "Sons de l’interface",
@@ -158,11 +168,9 @@ function injectStyles() {
     .audio-master{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:.2rem 0 .85rem;font-weight:750}
     .audio-master input{width:1.15rem;height:1.15rem;accent-color:currentColor}
     .audio-channel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.15rem .7rem;align-items:center;margin:.75rem 0}
-    .audio-channel label{font-weight:750}
-    .audio-channel small{grid-column:1;opacity:.68;font-size:.78rem}
+    .audio-channel label{font-weight:750}.audio-channel small{grid-column:1;opacity:.68;font-size:.78rem}
     .audio-range-row{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) 3.2rem;gap:.65rem;align-items:center;margin-top:.3rem}
-    .audio-range-row input[type=range]{width:100%;accent-color:currentColor}
-    .audio-value{font-variant-numeric:tabular-nums;text-align:right;font-size:.82rem;font-weight:750}
+    .audio-range-row input[type=range]{width:100%;accent-color:currentColor}.audio-value{font-variant-numeric:tabular-nums;text-align:right;font-size:.82rem;font-weight:750}
     .audio-settings-panel.muted .audio-channel{opacity:.5}
   `;
   document.head.append(style);
@@ -224,10 +232,9 @@ function enhanceProfileDialog() {
   const toggle = document.createElement("input");
   toggle.type = "checkbox";
   toggle.checked = settings.enabled;
-  toggle.setAttribute("aria-label", text.soundOn);
   master.append(toggle);
   const rows = [
-    channelRow("game", text.game, text.gameHint, "piz01"),
+    channelRow("game", text.game, text.gameHint, "winApplause"),
     channelRow("notifications", text.notifications, text.notificationsHint, "notify"),
     channelRow("ui", text.ui, text.uiHint, "uiClick")
   ];
@@ -243,44 +250,35 @@ function enhanceProfileDialog() {
   form.insertBefore(panel, error || form.querySelector(".row.end") || null);
 }
 
-function isUiControl(target) {
-  if (!(target instanceof Element)) return false;
-  return Boolean(target.closest("button, a, [role=button], summary"));
-}
+function installInteractionSounds() {
+  document.addEventListener("change", event => {
+    if (event.target instanceof HTMLInputElement && event.target.matches("#characterPicker .pick-radio")) playPool("choose");
+  }, true);
 
-function installUiSounds() {
+  document.addEventListener("submit", event => {
+    if (!(event.target instanceof Element)) return;
+    if (event.target.id === "wordForm") { play("lock"); return; }
+    if (event.target.closest("#characterPicker")) { playPool("start"); return; }
+    // Creating a Together game asks for the player's name first. The confirmed name submit is the real start.
+    if (pendingTogetherStart && event.target.closest("#dialog")) {
+      pendingTogetherStart = false;
+      playPool("start");
+    }
+  }, true);
+
   document.addEventListener("click", event => {
-    if (!isUiControl(event.target)) return;
-    const button = event.target.closest("button");
-    if (button?.disabled) return;
-
-    // Important game actions get their own joke/punctuation instead of the generic click.
-    if (button?.id === "lockBtn") return;
-    if (button?.id === "closeBtn") { playPool("closeEnoughAsk"); return; }
-    if (button?.id === "closeNo") { playPool("closeEnoughNo"); return; }
-    if (button?.id === "quitConfirm") { playPool("quit"); return; }
-    if (button?.classList.contains("wc-star")) { playPool("rating"); return; }
+    if (!(event.target instanceof Element)) return;
+    const button = event.target.closest("button, a, [role=button], summary");
+    if (!button || button.matches(":disabled")) return;
+    if (button.id === "createFamily") { pendingTogetherStart = true; return; }
+    if (button.id === "quitConfirm") { playPool("quit"); return; }
+    if (button.id === "lockBtn" || button.id === "startCharacter") return;
     play("uiClick");
   }, true);
-  document.addEventListener("submit", event => {
-    if (event.target?.id === "wordForm") playPool("lock");
-  }, true);
 }
 
-function revealPool() {
-  const modal = document.getElementById("revealModal");
-  if (!modal) return "reveal";
-  if (modal.classList.contains("match")) return "reveal";
-  // The game marks how close the two words were (src/client/reactions.js), so this bundle needs no lexicon.
-  const group = modal.dataset.closeness;
-  if (group === "close") return "revealClose";
-  if (group === "related") return "revealRelated";
-  if (group === "apart") return "revealApart";
-  if (group === "neutral") return "revealNeutral";
-  return "reveal";
-}
-
-let lastGameCue = null;
+let pendingTogetherStart = false;
+let lastMajorCue = null;
 function inspectGameAudio() {
   const app = document.getElementById("app");
   if (!app) return;
@@ -288,22 +286,21 @@ function inspectGameAudio() {
   let cue = null;
   let signature = null;
 
+  // A reveal gets a large cue only when this exact reveal is the match that ends the game.
   if (phase === "revealing") {
-    cue = revealPool();
     const modal = document.getElementById("revealModal");
-    const words = [...(modal?.querySelectorAll(".rv-word .chip-word") || [])].map(node => node.textContent.trim()).join("|");
-    signature = `reveal:${cue}:${words}`;
-  } else if (phase === "gameOver") {
-    if (document.getElementById("agreedPanel")) cue = "closeEnoughYes";
-    else if (document.querySelector(".end.win")) cue = "win";
-    else if (document.getElementById("endedPanel")) cue = "quit";
-    else if (document.querySelector(".end.over .gary-end")) cue = "fail";
-    else if (document.querySelector(".end.over")) cue = "draw";
-    if (cue) signature = `end:${cue}:${document.getElementById("boardTitle")?.textContent || ""}`;
+    if (modal?.classList.contains("match")) {
+      cue = "finalReveal";
+      const words = [...modal.querySelectorAll(".rv-word .chip-word")].map(node => node.textContent.trim()).join("|");
+      signature = `final-reveal:${words}`;
+    }
+  } else if (phase === "gameOver" && document.querySelector(".end.win")) {
+    cue = "win";
+    signature = `win:${document.getElementById("boardTitle")?.textContent || ""}:${location.pathname}`;
   }
 
-  if (!cue || !signature || signature === lastGameCue) return;
-  lastGameCue = signature;
+  if (!cue || !signature || signature === lastMajorCue) return;
+  lastMajorCue = signature;
   playPool(cue);
 }
 
@@ -318,8 +315,6 @@ function inspectBell() {
 
 function installObservers() {
   const app = document.getElementById("app");
-  // Only the phase attribute (set on every render): watching the whole subtree ran this on every
-  // typed letter and timer tick, which made the game sluggish.
   if (app) new MutationObserver(inspectGameAudio).observe(app, {attributes: true, attributeFilter: ["data-phase"]});
   const toasts = document.getElementById("toasts");
   if (toasts) new MutationObserver(records => {
@@ -338,5 +333,5 @@ function installObservers() {
 }
 
 injectStyles();
-installUiSounds();
+installInteractionSounds();
 installObservers();
