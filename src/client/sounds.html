@@ -12,17 +12,23 @@
 <body>
 <main class="wrap">
   <div class="top"><div><h1>SSBD Soundboard</h1><p class="sub">Every sound currently used by Same Same but Different. The preview applies the same reduced gain and gentle fade-in/fade-out as the game.</p></div><a class="back" href="/">Back to game</a></div>
-  <div class="note"><strong>One live palette.</strong> Routine feedback now uses the more playful NES-style jingles. Bigger studio/cartoon sounds are reserved for character choice, starting, the winning reveal, winning, and quitting.</div>
+  <div class="note"><strong>One live palette.</strong> NES jingles handle the small state changes. Bigger studio/cartoon sounds are reserved for character choice, starting, the winning reveal, winning, and quitting.</div>
   <div id="groups"></div>
-  <p class="footer">Routine sounds are intentionally quieter and shorter than the source files. Major sounds are also reduced in volume so they act like punctuation rather than interrupting the game.</p>
+  <p class="footer">Routine sounds are intentionally quiet and short. Major sounds are also reduced in volume so they act like punctuation rather than interrupting the game.</p>
 </main>
 <div class="now" id="now" aria-live="polite"></div>
 <script>
 const NES='https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/music-jingles/';
 const FUN='https://raw.githubusercontent.com/jonjonsson/SoundMonster/main/Public%20domain/';
 const groups=[
- ['Routine NES sounds','Low-volume feedback used throughout normal play',[
-  ['NES 00','Normal UI click and lock-in','jingles_NES00.ogg',NES,.18,35,130,430],
+ ['Routine NES sounds','Small state changes and normal interaction feedback',[
+  ['NES 00','Normal UI click','jingles_NES00.ogg',NES,.18,35,130,430],
+  ['NES 01','Lock in a word','jingles_NES01.ogg',NES,.19,40,150,520],
+  ['NES 02','Continue to the next round after a normal reveal','jingles_NES02.ogg',NES,.16,35,140,500],
+  ['NES 04','Ask “Close enough?”','jingles_NES04.ogg',NES,.17,40,150,560],
+  ['NES 05','Accept “Close enough”','jingles_NES05.ogg',NES,.18,40,160,620],
+  ['NES 06','Reject “Close enough”','jingles_NES06.ogg',NES,.16,40,170,620],
+  ['NES 07','Submit a post-game star rating','jingles_NES07.ogg',NES,.16,35,150,520],
   ['NES 10','Sound toggle and normal notifications','jingles_NES10.ogg',NES,.18,35,140,520],
   ['NES 09','Error / negative notification','jingles_NES09.ogg',NES,.18,45,180,680]
  ]],
@@ -31,7 +37,7 @@ const groups=[
   ['Ding bell','One option when choosing Gary or Milo','ding%20bell.mp3',FUN,.28,90,320,null],
   ['Timpani roll','Starting a new game','announcement%20timpani%20roll.mp3',FUN,.24,120,420,1800],
   ['Shock gasp','Reveal only when the final words actually match','shock%20gasp.mp3',FUN,.26,110,380,null],
-  ['Applause','One win-screen option','applause.mp3',FUN,.27,140,520,2600],
+  ['Golf clap','One win-screen option','golf%20clap.mp3',FUN,.27,140,520,2200],
   ['Hallelujah','One win-screen option','hallelujah.mp3',FUN,.23,140,500,2400],
   ['Bye bye','Confirmed quit / leave','bye%20bye.mp3',FUN,.24,100,350,null]
  ]]
