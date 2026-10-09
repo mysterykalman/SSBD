@@ -2,7 +2,7 @@
 // Solo games run fully on the device (src/shared/solo.js) and work offline.
 // Family games use the API in src/server/api.js.
 
-import {MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js"; // MAX_MOVES: internal cap, never shown
+import {FINISHED, MAX_MOVES, checkWord, currentMove, isFinished} from "../shared/rules.js"; // MAX_MOVES: internal cap, never shown
 import {publicMove, setGaryDiagnostics, startSoloGame, submitSoloWord} from "../shared/solo.js";
 import {isJoinCode, looksLikeRoomCode, normalizeJoinCode} from "../shared/codes.js";
 import {getLexicon} from "../shared/lexicon/index.js";
@@ -11,6 +11,7 @@ import {correctionFor, understandWord} from "../shared/understand.js";
 import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
+import {reactionKeys} from "./reactions.js";
 import {hasMet, markMet, typeInto} from "./gary.js";
 import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, connectionStrength, copyKey, rematchLine, revealKind} from "./characters.js";
 import {characterArt} from "./gary-art.js";
@@ -216,6 +217,9 @@ function serverView(game) {
     status: game.status,
     waitingForPlayer: game.waitingForPlayer,
     leftBy: game.leftBy || null,
+    youName: game.you?.name || null,
+    agreedMove: game.agreedMove || null,
+    closeEnough: game.closeEnough || null,
     createdAt: game.createdAt,
     maxMoves: game.maxMoves || MAX_MOVES,
     youSide: game.you.side,
@@ -233,7 +237,9 @@ function serverView(game) {
 function progressOf(view) {
   const open = view.moves[view.moves.length - 1];
   const revealed = view.moves.filter(m => m.words).length;
-  return [revealed, isFinished(view) ? 1 : 0, view.waitingForPlayer ? 0 : 1, open?.mine ? 1 : 0, open?.otherLocked ? 1 : 0];
+  // "Close enough?" only moves forward too: no request → asked → declined (an agreement finishes the game).
+  const close = view.closeEnough?.state === "declined" ? 2 : view.closeEnough?.state ? 1 : 0;
+  return [revealed, isFinished(view) ? 1 : 0, view.waitingForPlayer ? 0 : 1, open?.mine ? 1 : 0, open?.otherLocked ? 1 : 0, close];
 }
 function isOlderView(next, current) {
   if (!current || current.id !== next.id || isSoloLike(current)) return false;
@@ -250,6 +256,12 @@ function isOlderView(next, current) {
 function applyServerGame(game) {
   const view = serverView(game);
   if (isOlderView(view, state.game)) { trace("stale", {id: view.id, got: progressOf(view), have: progressOf(state.game)}); return false; }
+  const before = state.game?.id === view.id ? state.game : null;
+  // "Close enough?" news from the other player: their No (a toast; play goes on) or the agreed match (a celebration).
+  if (before && before.status !== "AGREED" && view.status === "AGREED") state.agreedFresh = view.id;
+  if (before?.closeEnough?.state === "waiting" && view.closeEnough?.state === "declined" && view.closeEnough.by === "you") {
+    toast(t("closeDeclinedToast", {name: view.otherName || t("friend")}));
+  }
   openView(view);
   return true;
 }
@@ -363,7 +375,8 @@ function needsPoll(view) {
 const POLL_WAITING_MS = 1000, POLL_IDLE_MS = 3500;
 function pollDelay(view) {
   const open = view.moves[view.moves.length - 1];
-  return view.waitingForPlayer || (open?.mine && !open.otherLocked) ? POLL_WAITING_MS : POLL_IDLE_MS;
+  const asking = view.closeEnough?.state === "waiting" || view.closeEnough?.state === "asked";
+  return view.waitingForPlayer || asking || (open?.mine && !open.otherLocked) ? POLL_WAITING_MS : POLL_IDLE_MS;
 }
 
 function schedulePoll(delay = pollDelay(state.game || {moves: []})) {
@@ -469,7 +482,7 @@ function renderHome() {
       h("section", {class: "card start solo-card", "aria-labelledby": "soloTitle"},
         // Both characters, side by side and the same size: "Choose someone" lets the player pick either.
         h("div", {class: "start-icon pair", id: "soloPair", "aria-hidden": "true"}, ...CHARACTER_IDS.map(id => badge(null, {bot: true, who: id, cls: `pair-${id}`}))),
-        h("h2", {id: "soloTitle"}, t("soloTitle")),
+        h("h2", {id: "soloTitle"}, t("soloTitle"), " ", betaBadge()),
         h("div", {class: "start-copy"}, h("p", {}, t("soloBody")), h("p", {}, t("soloBody2"))),
         h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))),
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
@@ -522,8 +535,9 @@ function gameListItems() {
   items.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
   if (!items.length) return [h("li", {class: "empty"}, h("span", {class: "empty-line"}, t("gamesEmpty1")), h("span", {class: "empty-line muted"}, t("gamesEmpty2")))];
   return items.map(item => {
-    const finished = item.status === "MATCHED" || item.status === "EXHAUSTED" || item.status === "ENDED";
+    const finished = FINISHED.has(item.status);
     const status = item.status === "MATCHED" ? t("statusMatched")
+      : item.status === "AGREED" ? t("statusAgreed")
       : item.status === "EXHAUSTED" ? t("statusFinished")
       : item.status === "ENDED" ? t("statusEnded")
       : item.status === "WAITING" ? t("waitingJoin")
@@ -636,7 +650,10 @@ function renderGame() {
   const finished = isFinished(view);
   const revealed = latestRevealed(view);
   // The turn the player just continued into gets its one-time pop/celebration; re-renders don't repeat it.
-  const fresh = Boolean(revealed && !state.reveal && revealed.number === state.justContinued);
+  // An agreed "close enough" match celebrates once, when it happens (not on a later visit).
+  const agreedNow = view.status === "AGREED" && state.agreedFresh === view.id && !state.reveal;
+  if (agreedNow) state.agreedFresh = null;
+  const fresh = agreedNow || Boolean(revealed && !state.reveal && revealed.number === state.justContinued);
   state.justContinued = 0;
   const solo = isSoloLike(view);
   $("app").dataset.phase = state.reveal ? state.reveal.phase : finished ? "gameOver" : "playing";
@@ -652,7 +669,8 @@ function renderGame() {
       h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, backLabel()),
       h("span", {class: "mode-chip"},
         view.waitingForPlayer && !solo ? null : otherBadge(view, "small"),
-        h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")}))),
+        h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")})),
+        solo ? betaBadge() : null),
       // Quit (Solo) / Leave (Together): always there while the game is on, never a main action.
       finished ? null : h("button", {class: "quit-link", type: "button", id: "quitBtn", onclick: () => confirmQuit(state.game)}, solo ? t("quitBtn") : t("leaveBtn"))),
     board,
@@ -660,7 +678,7 @@ function renderGame() {
     garyDebugPanel(view));
   restoreInput(keep);
   watchIdle(view);
-  if (fresh && revealed.status === "MATCHED") celebrate();
+  if (fresh && (revealed.status === "MATCHED" || agreedNow)) celebrate();
 }
 
 /**
@@ -689,7 +707,7 @@ function progressTrail(view, move, finished, revealed, fresh) {
   const current = ended ? revealed?.number ?? 0 : finished ? revealed?.number ?? move.number : move.number;
   const label = ended ? t("progressRounds", {n: current}) : t("moveN", {n: current});
   const sub = finished
-    ? (view.status === "MATCHED" ? t("progressMatched", {n: current}) : ended ? t("progressEnded") : t("progressFinale"))
+    ? (view.status === "MATCHED" ? t("progressMatched", {n: current}) : view.status === "AGREED" ? t("progressAgreed", {n: current}) : ended ? t("progressEnded") : t("progressFinale"))
     : current <= 1 ? t("progressStart") : t("progressRounds", {n: current - 1});
   const pop = fresh && !finished && !reducedMotion();
   const stones = [];
@@ -770,6 +788,8 @@ function startReveal(view, move) {
   state.typoAside = null;
   state.reveal = {gameId: view.id, number: move.number, phase: "countdown", token, beat};
   const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
+  // Together: a short, kind word about how close the two answers were (the same for both players).
+  const cheer = solo ? null : togetherReaction(view, move);
   const dlg = h("dialog", {id: "revealModal", class: `reveal-modal ${move.status === "MATCHED" ? "match" : ""}`, "aria-labelledby": "revealHeading",
     oncancel: event => { event.preventDefault(); if (state.reveal?.phase === "ready") finishReveal(); }},
     h("div", {class: "rv-body"},
@@ -783,6 +803,7 @@ function startReveal(view, move) {
           h("span", {class: "op rv-step", "aria-hidden": "true"}, move.status === "MATCHED" ? "=" : "+"),
           solo ? garyRevealWord(view) : revealWord(t("revealTheirWord", {name: otherLabel(view)}), shownWords(view, move)[view.otherSide], "other")),
         beat ? garyReaction(view) : null,
+        cheer ? h("p", {class: "rv-cheer rv-step", id: "revealCheer"}, t(cheer)) : null,
         // The character's AFTER line is their reaction to the result, so there is no separate
         // result sentence; only a match gets the headline (and a family game's last move its note).
         move.status === "MATCHED" ? h("p", {class: "rv-outcome rv-step"}, h("span", {class: "rv-headline"}, t("revealMatchTitle")), " ", h("span", {class: "rv-subline"}, matchCopy(view, move)))
@@ -791,6 +812,12 @@ function startReveal(view, move) {
   document.body.append(dlg);
   dlg.showModal();
   runReveal(view, move, ended, token);
+}
+
+/** The Together reaction line key for a revealed (unmatched) move, or null. */
+function togetherReaction(view, move) {
+  if (move.status !== "REVEALED" || !move.words) return null;
+  return reactionKeys(getLexicon(view.language), view.id, view.moves.filter(m => m.number <= move.number)).get(move.number) || null;
 }
 
 /**
@@ -953,6 +980,7 @@ async function runReveal(view, move, ended, token) {
   announce([t("revealTitle"), beforeText ? t("revealSaid", {name: characterName(view), word: beforeText}) : "", t("revealSaid", {name: sideLabel(view, view.youSide), word: said[view.youSide].toUpperCase()}),
     t("revealSaid", {name: sideLabel(view, view.otherSide), word: said[view.otherSide].toUpperCase()}),
     remark ? t("revealSaid", {name: characterName(view), word: remark}) : "",
+    $("revealCheer")?.textContent || "",
     move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : !beat && move.status === "EXHAUSTED" ? t("gameOverTitle") : ""].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : ct(view, "keepPlaying"));
   result.append(button);
@@ -997,11 +1025,15 @@ function playPanel(view, move) {
       : first
         ? [h("p", {class: "instruction"}, solo ? ct(view, "firstSolo", {name: otherName}) : t("firstFamily", {name: otherName})), ...(solo && view.rematch ? [rematchGreeting(view)] : [])]
         : [h("p", {class: "instruction"}, t("promptCopy"))]);
+  // Near the end, say so plainly: a few moves left to find a match.
+  const left = (view.maxMoves || MAX_MOVES) - move.number + 1;
+  if (!waiting && left <= 3) panel.append(h("p", {class: "notice moves-warning", id: "movesWarning", role: "status"}, left > 1 ? t("movesWarning", {n: left}) : t("movesWarningLast")));
   if (!first) {
     // The "+" is glued to the second word so it never dangles at the end of a line.
     panel.append(h("div", {class: "prompt", id: "prompt", lang: view.language},
       h("span", {class: "tile"}, move.prompts[0]),
       h("span", {class: "join"}, h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "tile"}, move.prompts[1]))));
+    if (!solo) panel.append(closeEnoughBlock(view, move));
   }
 
   if (waiting) {
@@ -1040,20 +1072,97 @@ function playPanel(view, move) {
   return panel;
 }
 
+/**
+ * "Close enough?" (Together, after a reveal): about the pair on screen (the latest revealed one).
+ * The asker waits; the other player answers Yes (an agreed match for both) or No (play goes on).
+ * The server decides everything under a lock; this only shows its state for this player.
+ */
+function closeEnoughBlock(view, move) {
+  const ce = view.closeEnough;
+  if (!ce || ce.move !== move.number - 1) return null;
+  const name = view.otherName || t("friend");
+  const [a, b] = move.prompts.map(w => w.toUpperCase());
+  if (ce.state === "asked") {
+    return h("div", {class: "close-ask", id: "closeAsk", role: "group", "aria-labelledby": "closeAskText"},
+      h("p", {id: "closeAskText"}, t("closeAskText", {name, a, b})),
+      h("div", {class: "row center close-actions"},
+        h("button", {class: "btn", type: "button", id: "closeYes", onclick: event => closeEnoughAction(view, "yes", event.currentTarget)}, t("closeYes")),
+        h("button", {class: "btn ghost", type: "button", id: "closeNo", onclick: event => closeEnoughAction(view, "no", event.currentTarget)}, t("closeNo"))));
+  }
+  if (ce.state === "waiting") return h("p", {class: "notice close-note", id: "closeWaiting", role: "status"}, t("closeWaiting", {name, a, b}));
+  if (ce.state === "declined" && ce.by === "you") return h("p", {class: "close-note muted", id: "closeDeclined"}, t("closeDeclinedNote", {name}));
+  if (!ce.canAsk) return null;
+  return h("div", {class: "close-row"},
+    h("button", {class: "btn small ghost close-btn", type: "button", id: "closeBtn", disabled: !state.online, title: t("closeBtnHint"),
+      onclick: event => closeEnoughAction(view, "ask", event.currentTarget)}, t("closeBtn")));
+}
+
+async function closeEnoughAction(view, action, button) {
+  const ce = view.closeEnough;
+  if (!ce || !state.player || state.busy) return;
+  state.busy = true;
+  if (button) button.disabled = true;
+  try {
+    const data = await api("/api/games/close-enough", {player_id: state.player.id, game_id: view.id, move: ce.move, action});
+    if (action === "no") toast(t("closeNoToast", {name: view.otherName || t("friend")}));
+    if (data.game.status === "AGREED" && state.game?.status !== "AGREED") state.agreedFresh = view.id;
+    state.busy = false;
+    applyServerGame(data.game);
+  } catch (error) {
+    state.busy = false;
+    // The request moved on (a new pair, an answer, the game ended): show where things are now.
+    if (error.data?.game) {
+      if (state.game?.id === view.id && error.data.game.status === "AGREED" && state.game.status !== "AGREED") state.agreedFresh = view.id;
+      applyServerGame(error.data.game);
+      if (error.code === "STALE_REQUEST" || error.code === "NO_REQUEST") toast(t("closeStale"));
+      else toast(errorText(error.code), {kind: "error"});
+    } else {
+      toast(errorText(error.code), {kind: "error"});
+      if (button?.isConnected) button.disabled = false;
+    }
+  } finally {
+    state.busy = false;
+  }
+}
+
 function endPanel(view, last, fresh) {
-  const matched = view.status === "MATCHED";
+  const matched = view.status === "MATCHED", agreed = view.status === "AGREED";
   const solo = isSoloLike(view);
   if (matched && solo) return soloWinCard(view, last, fresh);
   if (view.status === "ENDED") return endedPanel(view);
   const shownAt = performance.now();
-  // No match before the internal cap: a neutral, graceful ending (never "out of moves" or a loss).
-  return h("div", {class: `end ${matched ? "win" : "over"}`},
-    matched
-      ? h("div", {class: "end-icon win-burst", "aria-hidden": "true"}, h("span", {class: "burst-star"}, "★"))
-      : solo ? garyGoodbye(view, fresh && !reducedMotion()) : sleepyToken(fresh && !reducedMotion()),
-    h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : t("gameOverTitle")),
-    matched ? h("p", {}, t("winCopy", {n: last.number})) : null,
+  // Close enough: the pair both players agreed on (the latest revealed one when they agreed).
+  const move = agreed ? view.moves.find(m => m.number === view.agreedMove && m.words) || last : last;
+  const mine = move?.words?.[view.youSide] || "", theirs = move?.words?.[view.otherSide] || "";
+  const kind = matched ? "win" : agreed ? "agreed" : "over";
+  return h("div", {class: `end ${matched || agreed ? "win" : "over"} ${agreed ? "agreed" : ""}`, id: agreed ? "agreedPanel" : null},
+    solo && !matched ? garyGoodbye(view, fresh && !reducedMotion()) : duoArt(view, kind, matched ? [mine] : agreed ? [mine, theirs] : [], fresh && !reducedMotion()),
+    h("h1", {id: "boardTitle", class: "board-title"}, matched ? t("winTitle") : agreed ? t("agreedTitle") : t("gameOverTitle")),
+    h("p", {id: "endCopy"}, matched ? t("winCopy", {n: last.number})
+      : agreed ? t("agreedCopy", {name: view.otherName || t("friend"), a: mine.toUpperCase(), b: theirs.toUpperCase(), n: move.number})
+      : t("outOfMovesCopy")),
     endActions(view, shownAt));
+}
+
+/**
+ * The Together end graphic: both players' badges meeting in the middle. A match puts the shared word
+ * between them with a burst of confetti (a celebration of two people matching, not a trophy); "close
+ * enough" shows both words with a wavy equals; 20 moves without a match shows a friendly dotted trail.
+ */
+function duoArt(view, kind, words, animate) {
+  const mid = kind === "win" ? h("span", {class: "duo-word", lang: view.language}, words[0])
+    : kind === "agreed" ? h("span", {class: "duo-word two", lang: view.language}, words[0], h("b", {class: "duo-approx"}, "≈"), words[1])
+    : h("span", {class: "duo-trail"}, h("i"), h("i"), h("i"));
+  return h("div", {class: `duo-art ${kind} ${animate ? "animate" : ""}`, id: "duoArt", "aria-hidden": "true"},
+    kind === "over" ? null : h("span", {class: "duo-confetti"}, ...["c1", "c2", "c3", "c4", "c5", "c6"].map(c => h("i", {class: c}))),
+    badge(view.youName || state.player?.display_name || t("you"), {cls: "you duo-badge left"}),
+    mid,
+    badge(view.otherName || t("friend"), {cls: "other duo-badge right"}));
+}
+
+/** "Beta": Solo is still learning. Small and friendly, never louder than the title. */
+function betaBadge() {
+  return h("span", {class: "beta-badge", title: t("betaTitle")}, t("betaLabel"));
 }
 
 /**
@@ -1247,7 +1356,7 @@ function garyGoodbye(view, animate) {
   const one = h("span", {class: "bye-line", "aria-hidden": "true"});
   const two = h("span", {class: "bye-line later", "aria-hidden": "true"});
   const block = h("div", {class: `gary-end ${animate ? "animate" : ""}`},
-    characterArt(view.character, "sleepy", "end-art"),
+    characterArt(view.character, "meh", "end-art"),
     h("p", {class: "gary-bye", id: "garyBye"}, one, two, h("span", {class: "sr-only"}, `${characterName(view)}: ${[first, second].filter(Boolean).join(" ")}`)));
   if (!animate) {
     one.textContent = first;
@@ -1308,13 +1417,6 @@ function showCharacterIntro(id = "gary", {onDone} = {}) {
 }
 
 /** A round sleepy token: it droops and yawns once, then rests. Purely decorative. */
-function sleepyToken(animate) {
-  return h("div", {class: `sleepy ${animate ? "animate" : ""}`, "aria-hidden": "true"},
-    h("span", {class: "sleepy-face"},
-      h("i", {class: "eye left"}), h("i", {class: "eye right"}), h("i", {class: "mouth"})),
-    h("span", {class: "zzz"}, h("b", {}, "z"), h("b", {}, "z"), h("b", {}, "Z")));
-}
-
 async function playAgain(view, button) {
   // Solo: a new game with the same character (changing character happens from home).
   if (isSoloLike(view)) return startSolo(state.lang, {who: view.character, rematch: true});
@@ -1766,7 +1868,7 @@ function celebrate() {
 // The bell lists news from GET /api/notifications. Entries are keyed by id, so a refresh never
 // duplicates them, and nothing is marked read until the player opens one or taps "Mark all as read".
 const notifs = {items: new Map(), unread: 0, status: "idle", loadedFor: null, inflight: null};
-const NOTIF_TEXT = {YOUR_TURN: "notifYourTurn", READY_TO_REVEAL: "notifReveal", PLAYER_JOINED: "notifJoined", GAME_COMPLETE: "notifMatch", GAME_EXHAUSTED: "notifComplete", REMATCH: "notifRematch", PLAYER_LEFT: "notifLeft"};
+const NOTIF_TEXT = {YOUR_TURN: "notifYourTurn", READY_TO_REVEAL: "notifReveal", PLAYER_JOINED: "notifJoined", GAME_COMPLETE: "notifMatch", GAME_EXHAUSTED: "notifComplete", REMATCH: "notifRematch", PLAYER_LEFT: "notifLeft", CLOSE_ENOUGH: "notifCloseAsk", CLOSE_DECLINED: "notifCloseNo", GAME_AGREED: "notifAgreed"};
 const bellAllowed = () => Boolean(state.player?.id && state.player.display_name?.trim() && state.online);
 
 function renderBell() {
@@ -1940,17 +2042,17 @@ function ensurePlayer(next) {
   // Family features need the internet, even for a player who already has a name.
   if (!state.online) return toast(t("familyOffline"), {kind: "error"});
   if (state.apiDown) return toast(t("familyUnavailable"), {kind: "error"});
-  if (state.player) return next();
-  const d = dialog(t("nameTitle"), t("nameCopy"), field("nameInput", t("nameLabel"), {placeholder: t("namePlaceholder"), maxlength: "24", autocomplete: "nickname"}), {
+  // Always ask before a Together game: a new player types their name; a saved name is shown so
+  // they can confirm it or change it. A name is never made up for them.
+  const saved = realName(state.player);
+  const d = dialog(t("nameTitle"), saved ? t("nameConfirmCopy") : t("nameCopy"), field("nameInput", t("nameLabel"), {placeholder: t("namePlaceholder"), maxlength: "24", autocomplete: "nickname", value: saved}), {
     label: t("continue"),
     submit: async () => {
-      const name = $("nameInput").value.trim();
-      if (!name) return d.error(t("errUNKNOWN_PLAYER"));
+      const name = $("nameInput").value.replace(/\s+/g, " ").trim();
+      if (!name) return d.error(t("errEMPTY_NAME"));
       if (looksLikeRoomCode(name)) return d.error(t("errBAD_NAME"));
       try {
-        const player = await api("/api/player", {display_name: name});
-        state.player = player;
-        store.setPlayer(player);
+        await savePlayerName(name);
         d.close();
         renderChrome();
         next();
@@ -1958,8 +2060,18 @@ function ensurePlayer(next) {
         d.error(errorText(error.code));
       }
     },
-    extra: h("button", {class: "link", type: "button", onclick: () => recoveryDialog(next)}, t("haveRecovery"))
+    // A recovered player still confirms (or changes) their name before the game.
+    extra: state.player ? null : h("button", {class: "link", type: "button", onclick: () => recoveryDialog(() => ensurePlayer(next))}, t("haveRecovery"))
   });
+}
+
+/**
+ * The player's own saved name, or "" when there isn't one to show: earlier releases stored "Player"
+ * for a blank name, and that was never the player's choice, so they are asked again.
+ */
+function realName(player) {
+  const name = player?.display_name?.replace(/\s+/g, " ").trim() || "";
+  return name === "Player" ? "" : name;
 }
 
 function recoveryDialog(next) {
@@ -2006,11 +2118,11 @@ function joinDialog(prefill) {
 
 /** Step two of joining: "What should we call you?", then join the room with that name. */
 function joinNameDialog(code) {
-  const d = dialog(t("nameTitle"), t("joinNameCopy"), field("nameInput", t("nameLabel"), {placeholder: t("namePlaceholder"), maxlength: "24", autocomplete: "nickname", value: state.player?.display_name || ""}), {
+  const d = dialog(t("nameTitle"), t("joinNameCopy"), field("nameInput", t("nameLabel"), {placeholder: t("namePlaceholder"), maxlength: "24", autocomplete: "nickname", value: realName(state.player)}), {
     label: t("join"),
     submit: async () => {
       const name = $("nameInput").value.replace(/\s+/g, " ").trim();
-      if (!name) return d.error(t("errUNKNOWN_PLAYER"));
+      if (!name) return d.error(t("errEMPTY_NAME"));
       if (looksLikeRoomCode(name)) return d.error(t("errBAD_NAME"));
       try {
         await savePlayerName(name);
@@ -2050,9 +2162,30 @@ function profileDialog() {
     dialog(t("solo"), t("profileSolo"), null, {cancelLabel: t("close"), extra: [h("button", {class: "link", type: "button", onclick: () => recoveryDialog(null)}, t("haveRecovery")), ...meetGary]});
     return;
   }
-  dialog(t("profileTitle", {name: state.player.display_name}), t("profileCopy"),
-    h("div", {}, h("p", {class: "code"}, state.player.recovery_code || "—"), h("p", {class: "muted"}, t("profileSolo"))),
-    {cancelLabel: t("close"), extra: meetGary});
+  // Clicking the avatar: change the name (shown everywhere: games, results, history), and see the recovery code.
+  const d = dialog(t("profileTitle", {name: state.player.display_name}), null,
+    h("div", {class: "profile-body"},
+      field("nameInput", t("nameLabel"), {maxlength: "24", autocomplete: "nickname", value: realName(state.player)}),
+      h("p", {class: "muted", id: "profileCopy"}, t("profileCopy")),
+      h("p", {class: "code"}, state.player.recovery_code || "—"),
+      h("p", {class: "muted"}, t("profileSolo"))),
+    {label: t("saveName"), cancelLabel: t("close"), extra: meetGary, submit: async () => {
+      const name = $("nameInput").value.replace(/\s+/g, " ").trim();
+      if (!name) return d.error(t("errEMPTY_NAME"));
+      if (looksLikeRoomCode(name)) return d.error(t("errBAD_NAME"));
+      if (!state.online) return d.error(t("familyOffline"));
+      try {
+        await savePlayerName(name);
+        d.close();
+        toast(t("nameSaved", {name}), {kind: "success"});
+        rerender();
+        // Show the new name right away in an open Together game (its history and results come from the server).
+        if (state.screen === "game" && state.game && !isSoloLike(state.game)) pollNow();
+        else if (state.screen === "home") refreshDashboard();
+      } catch (error) {
+        d.error(errorText(error.code));
+      }
+    }});
 }
 
 // ---------- boot ----------

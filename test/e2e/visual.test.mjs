@@ -139,15 +139,17 @@ test("visual: reaching the internal move cap ends gracefully: tidy, lit up, neut
     await playDistinct(page, 20);
     await continueReveal(page);
     await page.waitForSelector(".end.over");
-    assert.match(await page.locator(".end .board-title").innerText(), /^That one got away from us\.$/);
-    assert.doesNotMatch(await page.locator("main").innerText(), /no moves left|20 moves|out of moves|you lost|last chance|game over|of 20/i);
+    assert.match(await page.locator(".end .board-title").innerText(), /^That’s all 20 moves!$/);
+    assert.match(await page.locator("#endCopy").innerText(), /^No match this time, but what a word trail\. Ready for another round\?$/);
+    assert.doesNotMatch(await page.locator("main").innerText(), /no moves left|out of moves|you lost|last chance|game over|of 20/i);
     for (const id of ["#newGameBtn", "#homeBtn", "#historyBtn"]) assert.equal(await page.isVisible(id), true, `${id} visible`);
     assert.equal(await page.locator("#word, #lockBtn").count(), 0, "no input once the game is over");
     // Finale: every stone lit, never an empty bar.
     assert.equal(await page.locator(".stone.lit").count(), 20);
     assert.equal(await page.getAttribute("#progress", "data-move"), "20");
     assert.equal(await page.locator("[role=progressbar]").count(), 0, "no bar that implies a limit");
-    assert.equal(await page.locator(".gary-end").count(), 1, "sleepy Gary rests on the Solo game-over screen");
+    assert.equal(await page.locator(".gary-end").count(), 1, "Gary says goodbye on the Solo game-over screen");
+    assert.equal(await page.locator(".zzz, .sleepy").count(), 0, "no sleeping animation");
     // Gary's FOLLOW-UP from his exhausted beat (one of three lines; none mentions the cap).
     assert.match(await page.locator("#garyBye").innerText(), /two people can think near each other|suspiciously close to teamwork|formally conclude whatever this was/);
     await check(page, `game over ${viewport.width}`);

@@ -52,7 +52,11 @@
 //    the single best one, logged as `anchored`.
 // 5. Recovery mode. When no candidate is high quality or anchored (or an input is not understood), the bot
 //    deliberately plays a simple, broad, familiar, concrete hub word tied to both inputs (never a
-//    narrow word for only one of them) and the decision is marked `recovery`.
+//    narrow word for only one of them) and the decision is marked `recovery`. engine-2.4: the hub
+//    must be a DIRECT link of at least one of the two latest words, so the player can always see
+//    where it came from without reconstructing the trail (no hub reached only through shared
+//    neighbours: DESSERT + PENCIL → HOME is gone). With no hub left, the broadest familiar direct
+//    word of the stronger side.
 // 6. Tie-breakers (light, only among the candidates already in the near-best range, and only from
 //    rounds that have been revealed): the player's style (what kind of words they have played) and
 //    near-miss momentum (when the last two revealed words were closely related, favour candidates
@@ -65,7 +69,7 @@ import {understandWord} from "./understand.js";
 import {wordKey} from "./words.js";
 import {hashString, seededRandom} from "./rules.js";
 
-export const ENGINE_VERSION = "engine-2.3";
+export const ENGINE_VERSION = "engine-2.4";
 
 /** Everything that shapes a decision (logged with it, so a decision can be replayed exactly). */
 export const ENGINE_CONFIG = Object.freeze({
@@ -92,6 +96,7 @@ export const ENGINE_CONFIG = Object.freeze({
   // Recovery: a broad, familiar, concrete hub tied to both inputs.
   // `anchored`: a bonus for a hub directly tied to one word and clearly (2+ shared neighbours) to the other.
   // `direct`: a bonus for a hub that is a direct link of at least one of the two words.
+  // `direct` is now required (engine-2.4): a hub must be a direct link of at least one of the two words.
   recovery: {breadth: 0.20, familiarity: 0.20, connection: 0.35, concrete: 0.10, plausibility: 0.15, anchored: 0.15, direct: 0.10, minWeak: 0.12},
   // Tie-breakers among near-equal candidates (from revealed rounds only).
   // style: bonus × the share of the candidate's word class among the player's earlier words;
@@ -443,11 +448,11 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
   // Recovery: nothing clears the floor. A broad, familiar, concrete hub tied to both inputs.
   const r = config.recovery;
   const bothDirect = s => DIRECT_KINDS.has(s.kindA) && DIRECT_KINDS.has(s.kindB);
-  const hubs = pool.filter(s => s.weak >= r.minWeak && (!VAGUE.has(s.concept.id) || bothDirect(s)) && !GLOOMY.has(s.concept.id)).map(s => {
-    const direct = DIRECT_KINDS.has(s.kindA) || DIRECT_KINDS.has(s.kindB) ? 1 : 0;
-    const anchored = direct && s.weak >= config.stages.indirect ? 1 : 0;
+  const oneDirect = s => DIRECT_KINDS.has(s.kindA) || DIRECT_KINDS.has(s.kindB);
+  const hubs = pool.filter(s => s.weak >= r.minWeak && oneDirect(s) && (!VAGUE.has(s.concept.id) || bothDirect(s)) && !GLOOMY.has(s.concept.id)).map(s => {
+    const anchored = s.weak >= config.stages.indirect ? 1 : 0;
     const v = round3(r.breadth * breadthOf(s.concept) + r.familiarity * s.familiarity + r.connection * s.connection + r.concrete * isConcrete(s.concept) + r.plausibility * s.plausibility
-      + r.anchored * anchored + r.direct * direct - s.piece);
+      + r.anchored * anchored + r.direct - s.piece);
     return {...s, final: v, profileScore: v};
   });
   decision.recovery = true;
@@ -458,7 +463,8 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
   // Nothing ties to both: the broadest familiar word of the stronger side (its category or a hub).
   decision.recoveryReason = "nothing connects both words";
   const broad = pool.filter(s => Math.max(s.relA, s.relB) >= 0.7 && !VAGUE.has(s.concept.id) && !GLOOMY.has(s.concept.id)).map(s => {
-    const v = round3(0.4 * breadthOf(s.concept) + 0.3 * s.familiarity + 0.3 * s.strong);
+    // Still prefer a word with some tie (a shared neighbour or topic) to the other word.
+    const v = round3(0.4 * breadthOf(s.concept) + 0.3 * s.familiarity + 0.3 * s.strong + 0.3 * Math.min(1, s.weak / r.minWeak));
     return {...s, final: v, profileScore: v};
   });
   return choose(broad, "one-input-only", true, {recovery: true, all: pool});
