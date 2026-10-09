@@ -35,7 +35,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your player");
   // Milo's bio in purple, Gary's in red, with "or" between them.
   const colours = await page.evaluate(() => ["bio-milo", "bio-or", "bio-gary"].map(c => { const el = document.querySelector(`.solo-card .${c}`); return [el.textContent.trim(), getComputedStyle(el).color]; }));
-  assert.deepEqual(colours, [["Milo finished his homework early, so now he’s free to play.", "rgb(123, 79, 201)"], ["or", "rgb(107, 78, 99)"], ["We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building.", "rgb(196, 64, 47)"]]);
+  assert.deepEqual(colours, [["Milo finished his homework early, so now he’s free to play.", "rgb(123, 79, 201)"], ["or", "rgb(107, 78, 99)"], ["We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building.", "rgb(18, 122, 113)"]]);
   assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|We heard you had no friends|There is no cake|Plays offline too/);
   assert.doesNotMatch(solo, /without internet/i);
   const together = await page.locator(".family-card").innerText();

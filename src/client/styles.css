@@ -174,9 +174,9 @@ main:focus { outline: none; }
 .start-copy { flex: 1; display: grid; align-content: start; gap: 10px; }
 .start-copy p { margin: 0; line-height: 1.45; }
 .start-copy p:first-child { color: var(--ink); font-weight: 800; }
-/* Solo tile: Milo in purple, Gary in red (the darker red: bright coral is too light to read as text), "or" between */
+/* Solo tile: Milo in purple, Gary in aqua (the darker teal: bright teal is too light to read as text), "or" between */
 .solo-bios p.bio-milo { color: var(--grape); }
-.solo-bios p.bio-gary { color: var(--coral-dark); }
+.solo-bios p.bio-gary { color: var(--teal-dark); }
 .bio-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .8rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
 .bio-or::before, .bio-or::after { content: ""; flex: 1; border-top: 2px dashed var(--line); }
 .start-note { margin: 0; font-size: .92rem; font-weight: 700; }
