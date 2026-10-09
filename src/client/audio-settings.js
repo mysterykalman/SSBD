@@ -1,5 +1,9 @@
 // Device-local sound system and settings UI.
 // Audio comes from Mcamento8/open-game-sfx-index. The selected files are CC0/public domain.
+// We use a small curated set of event-specific sounds, never the full index.
+
+import {getLexicon} from "../shared/lexicon/index.js";
+import {closeness} from "./reactions.js";
 
 const STORAGE_KEY = "ssbd.audio.v1";
 const DEFAULTS = Object.freeze({enabled: true, game: 0.7, notifications: 0.5, ui: 0.3});
@@ -8,11 +12,56 @@ const BASE = "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/ma
 const SOUND = Object.freeze({
   uiClick: {channel: "ui", url: `${BASE}/ui-audio/click2.ogg`},
   uiToggle: {channel: "ui", url: `${BASE}/ui-audio/switch12.ogg`},
-  gameLock: {channel: "game", url: `${BASE}/interface-sounds/confirmation_001.ogg`},
-  gameReveal: {channel: "game", url: `${BASE}/interface-sounds/drop_002.ogg`},
-  gameWin: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI01.ogg`},
+  lock1: {channel: "game", url: `${BASE}/interface-sounds/confirmation_001.ogg`},
+  lock2: {channel: "game", url: `${BASE}/interface-sounds/confirmation_002.ogg`},
+  revealDrop: {channel: "game", url: `${BASE}/interface-sounds/drop_002.ogg`},
   notify: {channel: "notifications", url: `${BASE}/interface-sounds/confirmation_002.ogg`},
-  notifyError: {channel: "notifications", url: `${BASE}/interface-sounds/error_001.ogg`}
+  notifyError: {channel: "notifications", url: `${BASE}/interface-sounds/error_001.ogg`},
+
+  // Short, playful musical punctuation. These are deliberately reused across a few moments
+  // so the game has a recognizable sound language rather than dozens of unrelated noises.
+  piz00: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI00.ogg`},
+  piz01: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI01.ogg`},
+  piz02: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI02.ogg`},
+  piz03: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI03.ogg`},
+  piz04: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI04.ogg`},
+  piz05: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI05.ogg`},
+  piz06: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI06.ogg`},
+  piz07: {channel: "game", url: `${BASE}/music-jingles/jingles_PIZZI07.ogg`},
+  hit00: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT00.ogg`},
+  hit02: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT02.ogg`},
+  hit03: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT03.ogg`},
+  hit06: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT06.ogg`},
+  hit10: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT10.ogg`},
+  hit12: {channel: "game", url: `${BASE}/music-jingles/jingles_HIT12.ogg`},
+  nes00: {channel: "game", url: `${BASE}/music-jingles/jingles_NES00.ogg`},
+  nes09: {channel: "game", url: `${BASE}/music-jingles/jingles_NES09.ogg`},
+  nes10: {channel: "game", url: `${BASE}/music-jingles/jingles_NES10.ogg`},
+  downer: {channel: "game", url: `${BASE}/oga-levelup-powerup/Downer01.wav`},
+  rise1: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise01.wav`},
+  rise2: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise02.wav`},
+  rise3: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise03.wav`},
+  rise4: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise04.wav`},
+  rise5: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise05.wav`},
+  rise6: {channel: "game", url: `${BASE}/oga-levelup-powerup/Rise06.wav`},
+  coin: {channel: "game", url: `${BASE}/oga-levelup-powerup/Coin01.wav`}
+});
+
+const POOL = Object.freeze({
+  lock: ["lock1", "lock2"],
+  reveal: ["revealDrop", "piz00", "hit00"],
+  revealClose: ["rise1", "rise2", "piz02"],
+  revealRelated: ["piz04", "hit03", "rise3"],
+  revealApart: ["downer", "hit06", "piz06"],
+  revealNeutral: ["revealDrop", "piz00", "hit00"],
+  win: ["piz01", "piz03", "nes00", "rise4"],
+  closeEnoughAsk: ["rise6", "piz00"],
+  closeEnoughYes: ["rise5", "piz05", "hit10"],
+  closeEnoughNo: ["downer", "hit06", "piz07"],
+  fail: ["downer", "piz07", "nes09"],
+  draw: ["piz04", "hit12", "nes10"],
+  quit: ["hit02", "downer"],
+  rating: ["coin", "lock2"]
 });
 
 function clamp(value) {
@@ -37,6 +86,7 @@ function loadSettings() {
 
 let settings = loadSettings();
 const lastPlayed = new Map();
+const lastPoolPick = new Map();
 
 function saveSettings() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch {}
@@ -48,7 +98,7 @@ function play(name, {preview = false} = {}) {
   const volume = clamp(settings[spec.channel]);
   if (volume <= 0) return;
   const now = performance.now();
-  if (!preview && now - (lastPlayed.get(name) || 0) < 70) return;
+  if (!preview && now - (lastPlayed.get(name) || 0) < 90) return;
   lastPlayed.set(name, now);
   try {
     const audio = new Audio(spec.url);
@@ -56,6 +106,16 @@ function play(name, {preview = false} = {}) {
     audio.volume = volume;
     audio.play().catch(() => {});
   } catch {}
+}
+
+function playPool(poolName, options) {
+  const pool = POOL[poolName];
+  if (!pool?.length) return;
+  const previous = lastPoolPick.get(poolName);
+  const choices = pool.length > 1 ? pool.filter(name => name !== previous) : pool;
+  const name = choices[Math.floor(Math.random() * choices.length)] || pool[0];
+  lastPoolPick.set(poolName, name);
+  play(name, options);
 }
 
 function lang() {
@@ -69,7 +129,7 @@ const copy = {
     soundOn: "Enable sound",
     soundHint: "Adjust each type separately. Your levels are remembered when sound is turned off.",
     game: "Game sounds",
-    gameHint: "Lock-ins, reveals and wins",
+    gameHint: "Reveals, wins, fails and other game moments",
     notifications: "Notification sounds",
     notificationsHint: "Updates, alerts and errors",
     ui: "UI sounds",
@@ -81,7 +141,7 @@ const copy = {
     soundOn: "Activer le son",
     soundHint: "Réglez chaque type séparément. Vos niveaux sont conservés lorsque le son est désactivé.",
     game: "Sons du jeu",
-    gameHint: "Validation, révélations et victoires",
+    gameHint: "Révélations, victoires, défaites et autres moments du jeu",
     notifications: "Sons de notification",
     notificationsHint: "Mises à jour, alertes et erreurs",
     ui: "Sons de l’interface",
@@ -179,7 +239,7 @@ function enhanceProfileDialog() {
   toggle.setAttribute("aria-label", text.soundOn);
   master.append(toggle);
   const rows = [
-    channelRow("game", text.game, text.gameHint, "gameReveal"),
+    channelRow("game", text.game, text.gameHint, "piz01"),
     channelRow("notifications", text.notifications, text.notificationsHint, "notify"),
     channelRow("ui", text.ui, text.uiHint, "uiClick")
   ];
@@ -205,23 +265,64 @@ function installUiSounds() {
     if (!isUiControl(event.target)) return;
     const button = event.target.closest("button");
     if (button?.disabled) return;
+
+    // Important game actions get their own joke/punctuation instead of the generic click.
     if (button?.id === "lockBtn") return;
+    if (button?.id === "closeBtn") { playPool("closeEnoughAsk"); return; }
+    if (button?.id === "closeNo") { playPool("closeEnoughNo"); return; }
+    if (button?.id === "quitConfirm") { playPool("quit"); return; }
+    if (button?.classList.contains("wc-star")) { playPool("rating"); return; }
     play("uiClick");
   }, true);
   document.addEventListener("submit", event => {
-    if (event.target?.id === "wordForm") play("gameLock");
+    if (event.target?.id === "wordForm") playPool("lock");
   }, true);
 }
 
-let previousPhase = null;
-function inspectGamePhase() {
+function revealPool() {
+  const modal = document.getElementById("revealModal");
+  if (!modal) return "reveal";
+  if (modal.classList.contains("match")) return "reveal";
+  const a = modal.querySelector(".rv-word.you .chip-word")?.textContent?.trim();
+  const bNode = modal.querySelector(".rv-word.other .chip-word:not(#garyWord)");
+  const b = bNode?.textContent?.trim();
+  if (!a || !b) return "reveal";
+  try {
+    const group = closeness(getLexicon(lang()), a, b);
+    if (group === "close") return "revealClose";
+    if (group === "related") return "revealRelated";
+    if (group === "apart") return "revealApart";
+    return "revealNeutral";
+  } catch {
+    return "reveal";
+  }
+}
+
+let lastGameCue = null;
+function inspectGameAudio() {
   const app = document.getElementById("app");
   if (!app) return;
-  const phase = app.dataset.phase || null;
-  if (phase === previousPhase) return;
-  previousPhase = phase;
-  if (phase === "revealing") play("gameReveal");
-  if (phase === "gameOver" && app.querySelector(".end.win, #agreedPanel, .duo-art.win, .duo-art.agreed")) play("gameWin");
+  const phase = app.dataset.phase || "";
+  let cue = null;
+  let signature = null;
+
+  if (phase === "revealing") {
+    cue = revealPool();
+    const modal = document.getElementById("revealModal");
+    const words = [...(modal?.querySelectorAll(".rv-word .chip-word") || [])].map(node => node.textContent.trim()).join("|");
+    signature = `reveal:${cue}:${words}`;
+  } else if (phase === "gameOver") {
+    if (document.getElementById("agreedPanel")) cue = "closeEnoughYes";
+    else if (document.querySelector(".end.win")) cue = "win";
+    else if (document.getElementById("endedPanel")) cue = "quit";
+    else if (document.querySelector(".end.over .gary-end")) cue = "fail";
+    else if (document.querySelector(".end.over")) cue = "draw";
+    if (cue) signature = `end:${cue}:${document.getElementById("boardTitle")?.textContent || ""}`;
+  }
+
+  if (!cue || !signature || signature === lastGameCue) return;
+  lastGameCue = signature;
+  playPool(cue);
 }
 
 let bellCount = 0;
@@ -235,7 +336,7 @@ function inspectBell() {
 
 function installObservers() {
   const app = document.getElementById("app");
-  if (app) new MutationObserver(inspectGamePhase).observe(app, {attributes: true, attributeFilter: ["data-phase"], childList: true, subtree: true});
+  if (app) new MutationObserver(inspectGameAudio).observe(app, {attributes: true, attributeFilter: ["data-phase"], childList: true, subtree: true});
   const toasts = document.getElementById("toasts");
   if (toasts) new MutationObserver(records => {
     for (const record of records) for (const node of record.addedNodes) {
@@ -250,7 +351,7 @@ function installObservers() {
   document.addEventListener("click", event => {
     if (event.target instanceof Element && event.target.closest("#profileBtn")) queueMicrotask(enhanceProfileDialog);
   });
-  inspectGamePhase();
+  inspectGameAudio();
   inspectBell();
 }
 
