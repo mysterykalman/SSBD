@@ -1,6 +1,6 @@
 # Same Same but Different
 
-A warm, playful word-connection game for kids and families. Two words appear;
+A ridiculous word game for people who think they know each other. Two words appear;
 each side picks one word that connects them; both words are revealed together
 and become the next two prompts. Say the same word to win, within 20 moves.
 
