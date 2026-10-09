@@ -953,3 +953,34 @@ See `docs/BOT_ENGINE.md` for the details: root causes, formula, stages, licensin
   - No migration is needed: `games.status` is free text, and who left comes from the notification.
   - An ended game cannot be rematched or joined.
 - **Commentary width.** Character bubbles have one fixed, responsive width (`min(100%, 520px)`) that is independent of the text. The typewriter never resizes them and the avatar stays anchored. `test/e2e/commentary.test.mjs` checks this.
+
+## Status update: names, Close enough?, reveal reactions, 20-move end, Solo beta, engine-2.4 (2026-10-09)
+
+- **Together names.**
+  - The name is asked before every Together game (start or join). A saved name is prefilled under "Is this still you?" so the player can keep it or change it.
+  - `POST /api/player` now refuses a blank name (`EMPTY_NAME`); there is no "Player" fallback. An old "Player" name is not prefilled.
+  - Clicking the avatar opens a profile dialog to rename. The server name is used everywhere: game header, results, history and the other player's view.
+- **Close enough? (Together).** `POST /api/games/close-enough` takes `{player_id, game_id, move, action: ask|yes|no}`.
+  - The request is about the latest revealed pair, while the next move is open.
+  - It is stored as notifications: `CLOSE_ENOUGH` goes to the asked player and `CLOSE_DECLINED` back to the asker, with deterministic ids `close-{move}` and `close-no-{move}`.
+  - Yes sets `games.status = 'AGREED'`, a finished win, and sends `GAME_AGREED` to the asker. The open move that never happened is dropped from the view.
+  - Concurrency: everything runs under the game row lock, and reveals now take the same lock and never overwrite a finished game.
+    - Both players asking at once counts as a Yes.
+    - Retries are idempotent.
+    - A request about an older pair is `STALE_REQUEST`.
+  - The view has `closeEnough {move, state: asked|waiting|declined|null, by, canAsk}` and `agreedMove`.
+  - No migration is needed.
+  - Tests: `test/close-enough.test.mjs` (API) and `test/e2e/together-close.test.mjs` (both players' views).
+- **Reveal reactions (Together).** `src/client/reactions.js`.
+  - Closeness comes from the lexicon: close, related, apart or neutral (neutral for unknown words).
+  - Four lines per group, EN and FR. The choice is deterministic per game and move, so both players see the same line. Lines rotate and never repeat in consecutive rounds.
+- **20-move end.**
+  - A friendly heads-up on moves 18-20: "Heads up: only {n} moves left…" and "Last move!".
+  - The end screen says "That’s all 20 moves!" with "No match this time, but what a word trail…".
+  - The sleeping Gary animation is gone. Gary and Milo still never mention the limit (`test/hidden-cap.test.mjs`).
+- **Win graphics (Together).** `duoArt` shows both players' badges meeting around the matched word (with confetti), the two agreed words joined by "≈", or a dotted trail after 20 moves. The yellow star circle is gone.
+- **Solo beta badge.** A small "Beta" pill next to "Solo Play" and in the Solo game header.
+- **Engine-2.4.** Every Solo answer (Gary and Milo) is a direct link of at least one of the two latest words.
+  - Recovery hubs reached only through shared neighbours (DESSERT + PENCIL → HOME) are gone: about 2 % of simulated rounds before, 0 % now.
+  - When nothing links directly to one word and ties to the other, the broad fallback prefers a word with some tie to the other word.
+  - Tests: `test/latest-word.test.mjs`. `test/lexicon.test.mjs` now checks the direct-link rule and allows a one-sided pick only when no linked two-sided word existed.

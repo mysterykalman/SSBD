@@ -123,7 +123,9 @@ test("homepage copy", () => {
   }
   // No technical "works without internet" phrasing, and no special copy for inflected matches.
   for (const lang of ["en", "fr"]) {
-    // (Gary's approved script may say "close enough to be concerning": that is not match copy.)
-    assert.doesNotMatch(Object.entries(STRINGS[lang]).filter(([key]) => !key.startsWith("gn.")).map(([, v]) => v).join(" "), /without internet|sans internet|close enough|schmural|ça compte/i);
+    // (Gary's approved script may say "close enough to be concerning": that is not match copy. The
+    // Together "Close enough?" request is a separate, player-agreed ending, never an inflected match.)
+    const closeEnoughFeature = key => /^(close|agreed|notifClose|notifAgreed|statusAgreed|progressAgreed)/.test(key);
+    assert.doesNotMatch(Object.entries(STRINGS[lang]).filter(([key]) => !key.startsWith("gn.") && !closeEnoughFeature(key)).map(([, v]) => v).join(" "), /without internet|sans internet|close enough|schmural|ça compte/i);
   }
 });

@@ -149,7 +149,7 @@ test("shared Solo copy suits both characters; each character's own wording keeps
   assert.equal(STRINGS.en[copyKey("gary", "botReady")], "Gary has a word. Apparently we're doing this.");
   // The neutral ending at the internal move cap is shared system copy (never Gary's "twenty moves").
   assert.equal(copyKey("gary", "gameOverCopy"), "gameOverCopy");
-  assert.equal(STRINGS.en.gameOverTitle, "That one got away from us.");
+  assert.equal(STRINGS.en.gameOverTitle, "That’s all 20 moves!");
   assert.equal(STRINGS.en[copyKey("gary", "keepPlaying")], "Keep playing");
 });
 

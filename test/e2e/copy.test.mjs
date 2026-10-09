@@ -29,9 +29,9 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.equal(await page.locator(".hero .hero-rules").innerText(), "You each secretly pick any word. Match and you win. Miss and your two words become the next clue. Keep connecting the dots until your brains finally cooperate.");
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
-  // The tile, exactly: title, two short paragraphs, the button, and nothing else.
-  assert.equal(solo.trim().replace(/\s+/g, " "), "Solo Play Milo finished his homework early, so now he’s free to play. We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building. Choose your player");
-  assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play");
+  // The tile, exactly: title (with its small Beta badge), two short paragraphs, the button, and nothing else.
+  assert.equal(solo.trim().replace(/\s+/g, " "), "Solo Play BETA Milo finished his homework early, so now he’s free to play. We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building. Choose your player");
+  assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play BETA");
   assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your player");
   assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|We heard you had no friends|There is no cake|Plays offline too/);
   assert.doesNotMatch(solo, /without internet/i);
@@ -45,7 +45,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   await page.click('[data-lang="fr"]');
   assert.match(await page.locator(".hero").innerText(), /Essayez de lire dans les pensées de l’autre\./);
   assert.match(await page.locator(".hero .hero-rules").innerText(), /^Choisissez chacun un mot en secret\. Les mêmes mots[\s\u202f]\? Vous gagnez[\s\u202f]! Sinon, vos deux mots deviennent le prochain indice\. Continuez à faire des liens jusqu’à ce que vos cerveaux coopèrent enfin\.$/);
-  assert.match(await page.locator(".solo-card").innerText(), /^Jeu en solo\s+Milo a fini ses devoirs en avance, alors maintenant il est libre de jouer\.\s+On n’a trouvé personne d’autre, alors on a fait venir Gary de la comptabilité\. Les RH disent que c’est du team building\.\s+Choisis ton joueur$/);
+  assert.match(await page.locator(".solo-card").innerText(), /^Jeu en solo\s+BÊTA\s+Milo a fini ses devoirs en avance, alors maintenant il est libre de jouer\.\s+On n’a trouvé personne d’autre, alors on a fait venir Gary de la comptabilité\. Les RH disent que c’est du team building\.\s+Choisis ton joueur$/);
   assert.match(await page.locator(".family-card").innerText(), /Jouer ensemble/);
   assert.doesNotMatch(await visibleText(page), EMOJI);
   await context.close();
@@ -115,11 +115,13 @@ test("Family: valid names go straight into create and join (also on a database t
       const {ana, ben, ctxA, ctxB} = await familyPair(url);
       assert.match(await ben.locator(".mode-chip").innerText(), /Ana/);
       assert.match(await ana.locator(".mode-chip").innerText(), /Élodie/);
-      // Returning players are never asked again.
+      // Returning players see their saved name to confirm (or change); one tap and they're in.
       await ana.goto(url);
       await ana.click("#createFamily");
+      await ana.waitForSelector("dialog #nameInput");
+      assert.equal(await ana.inputValue("#nameInput"), "Ana");
+      await ana.click('dialog button[type="submit"]');
       await ana.waitForSelector("#joinCode");
-      assert.equal(await ana.locator("#nameInput").count(), 0);
       await ctxA.close();
       await ctxB.close();
     }
@@ -137,7 +139,7 @@ test("Family name entry: blank names are refused before any request; real server
   await page.click("#createFamily");
   await page.fill("#nameInput", "   ");
   await page.click('dialog button[type="submit"]');
-  await page.waitForFunction(() => /Pick a name first!/.test(document.getElementById("dialogError")?.textContent || ""));
+  await page.waitForFunction(() => /Type your name first!/.test(document.getElementById("dialogError")?.textContent || ""));
   assert.equal(posts.length, 0, "no request for an invalid name");
   // A genuine server failure shows its own friendly message (not swallowed, not generic).
   await page.route("**/api/player", route => route.fulfill({status: 500, contentType: "application/json", body: JSON.stringify({error: "x", code: "PLAYER_CREATE_FAILED"})}));

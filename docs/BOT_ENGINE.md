@@ -1,8 +1,10 @@
 # Solo bot engine, game logs and review
 
-This covers how Gary and Milo choose their word (engine-2.3, dataset lexicon-4), how they talk (their narratives), how Solo games are logged, how to review them, and how to replay decisions. Section 0 is the current engine; sections 1–2 are the history it builds on (engine-2.2 is frozen in `src/shared/engine-2.2.js` for replay only).
+This covers how Gary and Milo choose their word (engine-2.4, dataset lexicon-4), how they talk (their narratives), how Solo games are logged, how to review them, and how to replay decisions. Section 0 is the current engine; sections 1–2 are the history it builds on (engine-2.2 is frozen in `src/shared/engine-2.2.js` for replay only).
 
-## 0. Engine-2.3: the human-first Solo engine (current)
+## 0. Engine-2.4: the human-first Solo engine (current)
+
+Engine-2.4 is engine-2.3 with one rule added (2026-10-09): **every answer is a direct link of at least one of the two latest words**, so the player can always see where Gary's or Milo's word came from without reconstructing the trail. Recovery hubs reached only through shared neighbours or two-step paths (DESSERT + PENCIL → HOME, SWIM + PENCIL → PARK) are gone; in 1,200 simulated games they were about 2 % of rounds, now 0 %. `test/latest-word.test.mjs` checks it for both characters in English and French. Everything below about engine-2.3 still applies.
 
 Playing Solo should feel like trying to get on the same wavelength as a character. The player should almost always understand why the character chose their word.
 
@@ -28,7 +30,7 @@ When something clears the floor, the pick is always one of those words (`stage: 
 
 ### Recovery mode
 
-Recovery replaces "low quality but valid". When no answer is high quality or anchored, the bot deliberately plays a **simple, broad, familiar, concrete hub word related to both inputs**: it ranks connected candidates (weak side ≥ 0.12) by breadth, familiarity, connection, concreteness and plausibility, with bonuses for a hub that is a direct link of at least one word and one that is also clearly tied to the other. Vague words (THING, NICE…, unless directly tied to both words) and gloomy ones are never recovery words, and a recovery word is never a narrow word for only one input. Recovery is always the single most readable hub (no variety). When nothing connects both, the broadest familiar word of the stronger side is used. An input still not understood after spelling, spacing and inflection checks is also recovery (a broad answer from the known word). Every recovery decision is logged with `recovery: true` and a `recoveryReason`.
+Recovery replaces "low quality but valid". When no answer is high quality or anchored, the bot deliberately plays a **simple, broad, familiar, concrete hub word related to both inputs**: it ranks connected candidates (weak side ≥ 0.12) by breadth, familiarity, connection, concreteness and plausibility, with a bonus for one that is also clearly tied to the other. Since engine-2.4 the hub **must** be a direct link of at least one of the two words. Vague words (THING, NICE…, unless directly tied to both words) and gloomy ones are never recovery words, and a recovery word is never a narrow word for only one input. Recovery is always the single most readable hub (no variety). When nothing connects both, the broadest familiar word of the stronger side is used. An input still not understood after spelling, spacing and inflection checks is also recovery (a broad answer from the known word). Every recovery decision is logged with `recovery: true` and a `recoveryReason`.
 
 ### Milo and Gary: same engine, two difficulty profiles
 

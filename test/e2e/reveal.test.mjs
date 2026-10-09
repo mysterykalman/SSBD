@@ -285,8 +285,8 @@ for (const [name, viewport] of [["phone 390x844", {width: 390, height: 844}], ["
       assert.equal(await page.locator("#app .trail-row").count(), move);
     }
     await page.waitForSelector("#app .end.over");
-    assert.match(await page.locator("#app .end").innerText(), /That one got away from us\./);
-    assert.doesNotMatch(await page.locator("main").innerText(), /20 moves|out of moves|you lost|last chance|of 20/i, "the internal cap is never mentioned");
+    assert.match(await page.locator("#app .end").innerText(), /That’s all 20 moves!/);
+    assert.doesNotMatch(await page.locator("main").innerText(), /out of moves|you lost|last chance|of 20/i, "a friendly end, never a loss");
     assert.equal(await page.locator("#word").count(), 0, "no input after game over");
     assert.equal(await page.locator("#lockBtn").count(), 0);
     assert.equal(await page.getAttribute("#progress", "data-move"), "20");

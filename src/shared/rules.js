@@ -31,7 +31,7 @@ export const SCHEMA_VERSION = 2;
 /** @type {readonly Side[]} */
 export const SIDES = ["a", "b"];
 /** @type {ReadonlySet<string>} */
-export const FINISHED = new Set(["MATCHED", "EXHAUSTED", "ENDED"]);
+export const FINISHED = new Set(["MATCHED", "EXHAUSTED", "AGREED", "ENDED"]);
 
 /**
  * The status a move gets when it is revealed with these two words.

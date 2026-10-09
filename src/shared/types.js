@@ -15,7 +15,8 @@
 
 /**
  * ENDED: a player quit (Solo) or left (Together). Never a win or a loss.
- * @typedef {"ACTIVE" | "MATCHED" | "EXHAUSTED" | "ENDED"} GameStatus
+ * AGREED: Together only, both players agreed the last revealed pair was "close enough" (a win).
+ * @typedef {"ACTIVE" | "MATCHED" | "EXHAUSTED" | "AGREED" | "ENDED"} GameStatus
  */
 
 /** Game status as the API reports it; WAITING is a family game with one player. */
@@ -111,6 +112,8 @@
  * @property {ViewStatus} status
  * @property {boolean} waitingForPlayer
  * @property {"you" | "other" | null} leftBy who left a game that ended early (status ENDED)
+ * @property {number | null} agreedMove status AGREED: the move whose pair both players called close enough
+ * @property {{move: number, state: "asked" | "waiting" | "declined" | null, by: "you" | "other" | null, canAsk: boolean} | null} closeEnough Together, while playing after a reveal: where "Close enough?" stands
  * @property {string} createdAt
  * @property {string} updatedAt
  * @property {number} maxMoves
@@ -130,7 +133,7 @@
  * @property {string | null} revealedAt
  */
 
-/** @typedef {"YOUR_TURN" | "READY_TO_REVEAL" | "PLAYER_JOINED" | "GAME_COMPLETE" | "GAME_EXHAUSTED" | "REMATCH" | "PLAYER_LEFT"} NotificationKind */
+/** @typedef {"YOUR_TURN" | "READY_TO_REVEAL" | "PLAYER_JOINED" | "GAME_COMPLETE" | "GAME_EXHAUSTED" | "REMATCH" | "PLAYER_LEFT" | "CLOSE_ENOUGH" | "CLOSE_DECLINED" | "GAME_AGREED"} NotificationKind */
 
 /**
  * `GET /api/notifications` item. Ids are deterministic (`${gameId}:${key}:${playerId}`).

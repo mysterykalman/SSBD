@@ -278,6 +278,16 @@ test("compound and plural prompts resolve; unknown words resolve to nothing", ()
 
 // Independent judge for bot quality: 3 = direct link or phrase, 2.5 / 2 = shares
 // three / two neighbours, 1 = one shared neighbour or tag, 0 = unrelated.
+/** The pick is a category or a member of one of the prompts (the engine's other direct links). */
+function directKind(lex, prompts, word) {
+  const c = lex.resolve(word);
+  return prompts.some(p => { const id = lex.resolve(p); return Boolean(id && c) && (lex.concepts.get(id).kinds.has(c) || lex.concepts.get(c).kinds.has(id)); });
+}
+/** The pick shares at least one neighbour with the prompt (the engine's weakest two-sided tie). */
+function sharesNeighbour(lex, promptId, pickId) {
+  const p = lex.concepts.get(promptId), c = lex.concepts.get(pickId);
+  return Boolean(p && c) && [...c.near].some(n => p.near.has(n));
+}
 function judgeSide(lex, promptId, pickId) {
   if (!promptId || !pickId || promptId === pickId) return 0;
   const p = lex.concepts.get(promptId), c = lex.concepts.get(pickId);
@@ -306,15 +316,18 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
       // The engine's single strongest answer (before varying among equally good ones).
       const t = lex.resolve(top);
       const ta = judgeSide(lex, a, t), tb = judgeSide(lex, b, t);
-      let strongPossible = false;
+      let strongPossible = false, linkedPossible = false;
       for (const x of all) {
         if (x.id === a || x.id === b || isUsed(used, x.key)) continue;
-        if (judgeSide(lex, a, x.id) === 3 && judgeSide(lex, b, x.id) === 3) { strongPossible = true; break; }
+        const xa = judgeSide(lex, a, x.id), xb = judgeSide(lex, b, x.id);
+        if (xa === 3 && xb === 3) { strongPossible = true; break; }
+        // A word linked directly to one prompt that shares a neighbour with the other.
+        if (Math.max(xa, xb) === 3 && sharesNeighbour(lex, xa === 3 ? b : a, x.id)) linkedPossible = true;
       }
       // Was a meaningful two-sided word available at all (engine stages 1-4)? The engine logs the
       // stage it reached; a lazy piece of a prompt (BASKET for BASKETBALL) is never counted as a bridge.
       const bridgeable = BRIDGE_STAGES.has(stage);
-      records.push({prompts, word, sa, sb, ta, tb, strongPossible, source, bridgeable});
+      records.push({prompts, word, sa, sb, ta, tb, strongPossible, linkedPossible: strongPossible || linkedPossible, source, bridgeable});
     };
     // Realistic games: the "player" answers with a word related to one or both prompts.
     for (let g = 0; g < 60; g++) {
@@ -368,7 +381,16 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     // exists (the bot never falls back to a one-sided word instead), and it stays rare.
     const gaps = records.filter(r => Math.min(r.sa, r.sb) === 0);
     for (const r of gaps) assert.ok(!r.bridgeable, `${lang}: ${r.prompts.join("+")} -> ${r.word} although a two-sided word existed`);
-    assert.ok(gaps.length <= records.length * 0.04, `${lang}: ${gaps.length}/${records.length} unbridgeable picks`);
+    // engine-2.4: every pick is a DIRECT link of at least one of the two latest words (no hub reached
+    // only through shared neighbours, which the player would have to reconstruct). So when nothing
+    // links directly to one word and also ties to the other, the pick relates to one word only; that
+    // is the only case a one-sided pick is allowed (random concept pairs like JAR + TOMORROW produce
+    // many of these; real games few).
+    for (const r of records) assert.ok(Math.max(r.sa, r.sb) === 3 || directKind(lex, r.prompts, r.word), `${lang}: ${r.prompts.join("+")} -> ${r.word} is not directly linked to either word`);
+    const avoidable = gaps.filter(r => r.linkedPossible);
+    assert.ok(avoidable.length <= records.length * 0.01, `${lang}: ${avoidable.length}/${records.length} one-sided picks although a linked two-sided word existed`);
+    const gameRecords = records.filter(r => r.source === "game");
+    assert.ok(gaps.filter(r => r.source === "game").length <= gameRecords.length * 0.12, `${lang}: one-sided picks in games`);
     t.diagnostic(`${lang}: unbridgeable random pairs ${gaps.length} (${unrelated.length} unrelated to both)`);
     // Whenever a direct-both word existed, the bot never settled for a one-sided word.
     for (const r of possible) assert.ok(Math.min(r.sa, r.sb) >= 2, `${lang}: ${r.prompts.join("+")} -> ${r.word}`);

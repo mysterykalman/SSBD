@@ -104,6 +104,10 @@ test("a returning player is still asked for their name (prefilled), and a new na
   // Ben finishes, then joins a new room from home with the name prefilled, and changes it.
   await host.goto(server.url);
   await host.click("#createFamily");
+  // The host's saved name is shown to confirm before the new game.
+  await host.waitForSelector("dialog #nameInput");
+  assert.notEqual(await host.inputValue("#nameInput"), "", "the host's name is prefilled");
+  await host.click('dialog button[type="submit"]');
   await host.waitForSelector("#joinCode");
   const code = (await host.locator("#joinCode").innerText()).trim();
   await friend.goto(`${server.url}/join/${code}`);

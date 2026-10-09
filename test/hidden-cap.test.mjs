@@ -1,6 +1,7 @@
-// The 20-move cap is an internal safety limit: the player never sees it. No player-facing copy and no
-// line Gary or Milo can say mentions it (a count, a "last chance", running out of moves), in English
-// or French, and reaching it ends gracefully ("That one got away from us."), never as a loss.
+// The 20-move limit stays out of the way: Gary and Milo never mention it (a count, a "last chance",
+// running out of moves), in English or French, and no other copy does either, except the friendly
+// heads-up near the end (moves 18-20: "only 3 moves left", "Last move!") and the end screen at move 20
+// ("That’s all 20 moves!"), never as a loss.
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {STRINGS} from "../src/client/i18n.js";
@@ -33,10 +34,23 @@ test("Milo never reveals the hidden limit (every branch, every one-off line, EN 
   for (const lang of ["en", "fr"]) assert.deepEqual(offenders(lang, keys), []);
 });
 
-test("no player-facing copy reveals the limit; the cap ending is neutral", () => {
-  for (const lang of ["en", "fr"]) assert.deepEqual(offenders(lang, Object.keys(STRINGS[lang])), []);
-  assert.equal(STRINGS.en.gameOverTitle, "That one got away from us.");
-  assert.equal(STRINGS.en.progressFinale, "That one got away from us.");
+/** The only copy that may mention the limit: the near-the-end heads-up and the 20-move end screen. */
+const LIMIT_COPY = new Set(["movesWarning", "movesWarningLast", "gameOverTitle", "progressFinale"]);
+
+test("only the near-the-end heads-up and the end screen mention the limit; the ending is friendly", () => {
+  for (const lang of ["en", "fr"]) assert.deepEqual(offenders(lang, Object.keys(STRINGS[lang]).filter(k => !LIMIT_COPY.has(k))), []);
+  assert.equal(STRINGS.en.gameOverTitle, "That’s all 20 moves!");
+  assert.equal(STRINGS.en.progressFinale, "That’s all 20 moves!");
+  assert.equal(STRINGS.en.outOfMovesCopy, "No match this time, but what a word trail. Ready for another round?");
+  assert.equal(STRINGS.en.movesWarning, "Heads up: only {n} moves left to find a match!");
+  assert.equal(STRINGS.en.movesWarningLast, "Last move! One more try to find a match.");
+  for (const lang of ["en", "fr"]) {
+    for (const key of [...LIMIT_COPY, "outOfMovesCopy"]) {
+      assert.ok(STRINGS[lang][key], `${lang}.${key}`);
+      // Never a loss, never "game over".
+      assert.doesNotMatch(STRINGS[lang][key], /\b(you lost|we lost|game over|lose|loser)\b|perdu|partie terminée/i, `${lang}.${key}`);
+    }
+  }
   assert.equal(STRINGS.en.moveN, "Move {n}");
   for (const removed of ["moveOf", "movesLeft", "progressToGo", "gameOverCopy", "exhaustedCopy"]) assert.equal(STRINGS.en[removed], undefined, removed);
   // The exhausted beats still exist (the game still ends there), each with a follow-up for the end screen.

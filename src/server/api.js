@@ -41,7 +41,7 @@ import {logBatch, reviewRoute} from "./logs.js";
  * @typedef {{id: string, join_code: string, status: string, round_number: number, created_at: string, updated_at: string, language?: string | null, rematch_of?: string | null}} GameRow
  * @typedef {{player_id: string, slot: number, display_name: string | null}} MemberRow
  * @typedef {{id: string, number: number, prompts: [string, string] | null, status: MoveStatus, openedAt: string, revealedAt: string | null, words: {a: string, b: string} | null, submitted: Partial<Record<Side, Submission>>, botQuality: any}} LoadedMove
- * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, stayed: string | null, rules: {status: GameStatus, language: string, moves: LoadedMove[]}}} LoadedGame
+ * @typedef {{row: GameRow, members: MemberRow[], moves: LoadedMove[], slotOf: Map<string, Side>, rematchId: string | null, stayed: string | null, close: Map<number, {asked: Set<string>, declined: Set<string>}>, rules: {status: GameStatus, language: string, moves: LoadedMove[]}}} LoadedGame
  *   stayed: in a game someone left (ENDED), the player who was told (the one who did not leave)
  * @typedef {{joinCode: () => string, recoveryDigits: () => number}} Codes
  * @typedef {{store?: Store | null, codes?: Partial<Codes>, reviewToken?: string}} ApiEnv
@@ -49,7 +49,7 @@ import {logBatch, reviewRoute} from "./logs.js";
 
 const BOT = "BOT";
 /** Finished game statuses, including COMPLETE from earlier releases (read as MATCHED). */
-const FINISHED = new Set(["MATCHED", "EXHAUSTED", "COMPLETE", "ENDED"]);
+const FINISHED = new Set(["MATCHED", "EXHAUSTED", "AGREED", "COMPLETE", "ENDED"]);
 /** @param {GameRow} row */
 const isPlayable = row => row.status !== "WAITING" && !FINISHED.has(row.status);
 /** Notification kinds the API creates (family games only). */
@@ -144,10 +144,12 @@ async function loadGame(db, gameId) {
     if (FINISHED.has(game.status)) linked = await first(q, "SELECT id FROM games WHERE id = $1 AND rematch_of = $2", [await rematchIdFor(game.id), game.id]);
     // A game someone left: the player who stayed is the one the PLAYER_LEFT notification went to.
     const stayed = game.status === "ENDED" ? await first(q, "SELECT player_id FROM notifications WHERE game_id = $1 AND kind = 'PLAYER_LEFT' LIMIT 1", [gameId]) : null;
-    return {game, members, rounds, submissions, linked, stayed};
+    // "Close enough?" requests and answers (CLOSE_ENOUGH goes to the asked player, CLOSE_DECLINED back to the asker).
+    const closeRows = await all(q, "SELECT id, player_id, kind FROM notifications WHERE game_id = $1 AND kind IN ('CLOSE_ENOUGH', 'CLOSE_DECLINED')", [gameId]);
+    return {game, members, rounds, submissions, linked, stayed, closeRows};
   });
   if (!raw) return null;
-  const {game, members, rounds, submissions, linked, stayed} = raw;
+  const {game, members, rounds, submissions, linked, stayed, closeRows} = raw;
   /** @type {Map<string, Side>} */
   const slotOf = new Map(members.map(m => [m.player_id, m.slot === 1 ? "a" : "b"]));
   /** @type {LoadedMove[]} */
@@ -173,9 +175,57 @@ async function loadGame(db, gameId) {
       botQuality: round.bot_quality || null
     };
   });
-  /** @type {GameStatus} */
-  const status = game.status === "COMPLETE" ? "MATCHED" : game.status === "MATCHED" || game.status === "EXHAUSTED" || game.status === "ENDED" ? game.status : "ACTIVE";
-  return {row: game, members, moves, slotOf, rematchId: linked ? linked.id : null, stayed: stayed ? stayed.player_id : null, rules: {status, language: game.language === "fr" ? "fr" : "en", moves}};
+  const status = game.status === "COMPLETE" ? "MATCHED" : FINISHED.has(game.status) ? /** @type {GameStatus} */ (game.status) : "ACTIVE";
+  // An agreed game ends on the pair both players called close enough: the move that was open then never happened.
+  const kept = game.status === "AGREED" ? moves.filter(m => m.status !== "OPEN") : moves;
+  return {row: game, members, moves: kept, slotOf, rematchId: linked ? linked.id : null, stayed: stayed ? stayed.player_id : null,
+    close: closeRecords(closeRows || []), rules: {status, language: game.language === "fr" ? "fr" : "en", moves: kept}};
+}
+
+/**
+ * "Close enough?" records, by revealed move: who was asked (`asked`, the CLOSE_ENOUGH recipients) and
+ * whose request was declined (`declined`, the CLOSE_DECLINED recipients, i.e. the askers). Ids are
+ * deterministic (`${gameId}:close-${move}:${player}` and `${gameId}:close-no-${move}:${player}`).
+ * @param {Array<{id: string, player_id: string, kind: string}>} rows
+ * @returns {Map<number, {asked: Set<string>, declined: Set<string>}>}
+ */
+function closeRecords(rows) {
+  const byMove = new Map();
+  for (const row of rows) {
+    const found = /:close-(?:no-)?(\d+):/.exec(row.id);
+    if (!found) continue;
+    const move = Number(found[1]);
+    if (!byMove.has(move)) byMove.set(move, {asked: new Set(), declined: new Set()});
+    byMove.get(move)[row.kind === "CLOSE_ENOUGH" ? "asked" : "declined"].add(row.player_id);
+  }
+  return byMove;
+}
+
+/**
+ * Where "Close enough?" stands for one player. A request is about the latest revealed pair and only
+ * while the next move is open: once another pair is revealed (or the game ends) it is no longer
+ * pending. `state`: "asked" (the other player asked you: answer Yes or No), "waiting" (you asked),
+ * "declined" (the request for this pair was turned down; `by` says whose request it was), or null.
+ * @param {LoadedGame} loaded
+ * @param {string} playerId
+ * @returns {{move: number, state: "asked" | "waiting" | "declined" | null, by: "you" | "other" | null, canAsk: boolean} | null}
+ */
+function closeState(loaded, playerId) {
+  const {row, members, moves, close} = loaded;
+  const last = moves[moves.length - 1];
+  if (row.status !== "ACTIVE" || isLegacySolo(loaded) || members.length !== 2 || !last || last.status !== "OPEN" || last.number < 2) return null;
+  const move = last.number - 1;
+  const other = members.find(m => m.player_id !== playerId)?.player_id;
+  const rec = close.get(move) || {asked: new Set(), declined: new Set()};
+  // I asked = the other player got a CLOSE_ENOUGH; my request was declined = I got a CLOSE_DECLINED.
+  const iAsked = Boolean(other && rec.asked.has(other)), theyAsked = rec.asked.has(playerId);
+  const mineDeclined = rec.declined.has(playerId), theirsDeclined = Boolean(other && rec.declined.has(other));
+  const base = {move, canAsk: !iAsked && !(theyAsked && !theirsDeclined)};
+  if (theyAsked && !theirsDeclined) return {...base, state: "asked", by: "other"};
+  if (iAsked && !mineDeclined) return {...base, state: "waiting", by: "you"};
+  if (iAsked && mineDeclined) return {...base, state: "declined", by: "you"};
+  if (theyAsked && theirsDeclined) return {...base, state: "declined", by: "other"};
+  return {...base, state: null, by: null};
 }
 
 /**
@@ -206,6 +256,9 @@ function viewFor(loaded, playerId) {
     waitingForPlayer: status === "WAITING",
     // Someone left: "other" for the player who stayed (they are told), "you" for the one who left.
     leftBy: status === "ENDED" ? (loaded.stayed === playerId ? "other" : "you") : null,
+    // The pair both players agreed was close enough (status AGREED): always the last revealed move.
+    agreedMove: status === "AGREED" ? moves[moves.length - 1]?.number ?? null : null,
+    closeEnough: closeState(loaded, playerId),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     maxMoves: MAX_MOVES,
@@ -224,6 +277,74 @@ function viewFor(loaded, playerId) {
       otherLocked: move.status === "OPEN" ? Boolean(move.submitted[otherSide]) : false
     }))
   };
+}
+
+/**
+ * "Close enough?" (Together): one player asks whether the latest revealed pair counts as a match;
+ * the other answers Yes (the game ends as an agreed match, status AGREED) or No (play goes on).
+ * Everything runs under the game row lock, so a reveal, a leave and a second answer take turns:
+ * - `ask` while the other player's request for the same pair is pending counts as Yes (both asked);
+ * - asking or answering twice (a retry, a double tap) changes nothing;
+ * - a request about an older pair (another move was revealed meanwhile) is refused as STALE_REQUEST,
+ *   and answering a request that no longer exists is refused as NO_REQUEST, both with the current game.
+ * @param {Store} db
+ * @param {any} body {player_id, game_id, move, action: "ask" | "yes" | "no"}
+ */
+async function closeEnough(db, body) {
+  const playerId = String(body.player_id || ""), gameId = String(body.game_id || "");
+  const action = ["ask", "yes", "no"].includes(body.action) ? body.action : null;
+  if (!action) return fail(400, "BAD_ACTION", "Unknown action.");
+  const player = await first(db, "SELECT id, display_name FROM players WHERE id = $1", [playerId]);
+  if (!player) return fail(403, "UNKNOWN_PLAYER", "Please choose a name first.");
+  const result = await db.tx(async q => {
+    const game = await first(q, "SELECT * FROM games WHERE id = $1 FOR UPDATE", [gameId]);
+    if (!game) return "missing";
+    const members = await all(q, "SELECT player_id FROM game_players WHERE game_id = $1", [gameId]);
+    if (!members.some(m => m.player_id === playerId)) return "stranger";
+    if (members.some(m => m.player_id === BOT)) return "solo";
+    // Already agreed (the other player's Yes, or both asked at once): a retry or a late tap just sees the result.
+    if (game.status === "AGREED") return "done";
+    if (game.status !== "ACTIVE" || members.length !== 2) return "over";
+    const open = await first(q, "SELECT round_number FROM rounds WHERE game_id = $1 AND status = 'OPEN' ORDER BY round_number DESC LIMIT 1", [gameId]);
+    const move = open ? Number(open.round_number) - 1 : 0;
+    if (move < 1) return "too-early";
+    if (Number(body.move) !== move) return "stale";
+    const other = members.find(m => m.player_id !== playerId)?.player_id;
+    const rows = await all(q, "SELECT id, player_id, kind FROM notifications WHERE game_id = $1 AND kind IN ('CLOSE_ENOUGH', 'CLOSE_DECLINED')", [gameId]);
+    const rec = closeRecords(rows).get(move) || {asked: new Set(), declined: new Set()};
+    const theyAskedMe = rec.asked.has(playerId) && !rec.declined.has(other);
+    const at = now();
+    const agree = async () => {
+      await q.query("UPDATE games SET status = 'AGREED', updated_at = $1 WHERE id = $2 AND status = 'ACTIVE'", [at, gameId]);
+      await q.query("UPDATE notifications SET read_at = $1 WHERE player_id = $2 AND game_id = $3 AND kind = 'CLOSE_ENOUGH' AND read_at IS NULL", [at, playerId, gameId]);
+      await notify(q, other, gameId, "GAME_AGREED", `${player.display_name} agreed: close enough!`, "end", at);
+      return "agreed";
+    };
+    if (action === "ask") {
+      if (theyAskedMe) return agree(); // both asked at the same time: that is a yes from both
+      if (rec.asked.has(other)) return "same"; // asked already (pending or declined): no second request for this pair
+      await notify(q, other, gameId, "CLOSE_ENOUGH", `${player.display_name} thinks your words are close enough!`, `close-${move}`, at);
+      await q.query("UPDATE games SET updated_at = $1 WHERE id = $2", [at, gameId]);
+      return "asked";
+    }
+    if (!theyAskedMe) return rec.asked.has(playerId) ? "same" : "no-request"; // already declined, or never asked
+    if (action === "yes") return agree();
+    await notify(q, other, gameId, "CLOSE_DECLINED", `${player.display_name} said not quite. Play on!`, `close-no-${move}`, at);
+    await q.query("UPDATE notifications SET read_at = $1 WHERE player_id = $2 AND game_id = $3 AND kind = 'CLOSE_ENOUGH' AND read_at IS NULL", [at, playerId, gameId]);
+    await q.query("UPDATE games SET updated_at = $1 WHERE id = $2", [at, gameId]);
+    return "declined";
+  });
+  if (result === "missing") return fail(404, "GAME_NOT_FOUND", "Game not found");
+  if (result === "stranger") return fail(403, "NOT_A_MEMBER", "You are not part of this game");
+  if (result === "solo") return fail(409, "NOT_TOGETHER", "Close enough is for games with a friend.");
+  const loaded = await loadGame(db, gameId);
+  if (!loaded) return fail(404, "GAME_NOT_FOUND", "Game not found");
+  const game = viewFor(loaded, playerId);
+  if (result === "over") return fail(409, "GAME_OVER", MESSAGES.GAME_OVER, {game});
+  if (result === "too-early") return fail(409, "TOO_EARLY", "Reveal a pair of words first.", {game});
+  if (result === "stale") return fail(409, "STALE_REQUEST", "Those words have moved on. Here is the latest.", {game});
+  if (result === "no-request") return fail(409, "NO_REQUEST", "There is no request to answer.", {game});
+  return json({ok: true, result, game});
 }
 
 /**
@@ -293,6 +414,9 @@ async function revealIfReady(db, loaded) {
   // Notifications are for family games only; legacy Solo games never get any.
   const humans = isLegacySolo(loaded) ? [] : members;
   await db.tx(async q => {
+    // Lock the game row first: a "Close enough?" answer or a leave that finished the game wins, and the reveal does nothing.
+    const game = await first(q, "SELECT status FROM games WHERE id = $1 FOR UPDATE", [row.id]);
+    if (!game || !isPlayable(game)) return;
     const closed = await q.query("UPDATE rounds SET status = $1, revealed_at = $2 WHERE id = $3 AND status = 'OPEN' RETURNING id", [outcome, at, move.id]);
     if (closed.rowCount !== 1) return; // another request revealed this move first
     if (outcome === "REVEALED") {
@@ -301,7 +425,7 @@ async function revealIfReady(db, loaded) {
       for (const m of humans) await notify(q, m.player_id, row.id, "READY_TO_REVEAL", "New move ready! Find the next connection!", `reveal-${move.number}`, at);
     } else {
       await q.query("UPDATE games SET status = $1, updated_at = $2 WHERE id = $3 AND status = 'ACTIVE'", [outcome, at, row.id]);
-      for (const m of humans) await notify(q, m.player_id, row.id, outcome === "MATCHED" ? "GAME_COMPLETE" : "GAME_EXHAUSTED", outcome === "MATCHED" ? "You matched! Same thing!" : "That one got away from us. Try a rematch!", "end", at);
+      for (const m of humans) await notify(q, m.player_id, row.id, outcome === "MATCHED" ? "GAME_COMPLETE" : "GAME_EXHAUSTED", outcome === "MATCHED" ? "You matched! Same thing!" : "That’s all 20 moves! Try a rematch?", "end", at);
     }
   });
   return true;
@@ -581,7 +705,9 @@ async function route(request, db, codes, reviewToken) {
 
   if (path === "/api/player" && request.method === "POST") {
     const created = now(), playerId = uuid();
-    const displayName = cleanName(body.display_name) || "Player";
+    // A name is always the player's own: never made up (no "Player", no piece of the recovery code).
+    const displayName = cleanName(body.display_name);
+    if (!displayName) return fail(400, "EMPTY_NAME", "Please type your name.");
     if (looksLikeRoomCode(displayName)) return fail(400, "BAD_NAME", "That looks like a game code. Please type your name.");
     const base = displayName.normalize("NFD").replace(/\p{M}/gu, "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10) || "PLAYER";
     try {
@@ -741,6 +867,8 @@ async function route(request, db, codes, reviewToken) {
   if (path === "/api/games/rematch" && request.method === "POST") return rematch(db, body, codes);
 
   if (path === "/api/games/leave" && request.method === "POST") return leave(db, body);
+
+  if (path === "/api/games/close-enough" && request.method === "POST") return closeEnough(db, body);
 
   if (path === "/api/game" && request.method === "GET") {
     const playerId = url.searchParams.get("player_id") || "";

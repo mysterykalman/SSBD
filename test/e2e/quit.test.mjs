@@ -89,24 +89,33 @@ test("Solo Quit during a long game and in French", async () => {
   await context.close();
 });
 
-test("reaching the internal cap: a neutral ending ('That one got away from us.'), Play again and Return home, the cap never shown", async () => {
+test("the 20-move end: no countdown before move 18, a friendly heads-up on moves 18-20, then a clear end ('That’s all 20 moves!')", async () => {
   const context = await browser.newContext({reducedMotion: "reduce"});
   const page = await context.newPage();
   await page.goto(server.url);
   await startSolo(page, "milo");
   await page.waitForSelector("#word");
   for (let n = 0; n < 20; n++) {
-    assert.doesNotMatch(await page.locator("main").innerText(), HIDDEN_CAP, `move ${n + 1}`);
+    const move = n + 1;
+    if (move < 18) {
+      assert.doesNotMatch(await page.locator("main").innerText(), HIDDEN_CAP, `move ${move}: no countdown yet`);
+      assert.equal(await page.locator("#movesWarning").count(), 0, `move ${move}`);
+    } else {
+      const warning = (await page.locator("#movesWarning").innerText()).trim();
+      assert.equal(warning, move === 20 ? "Last move! One more try to find a match." : `Heads up: only ${21 - move} moves left to find a match!`, `move ${move}`);
+      assert.equal(await page.getAttribute("#movesWarning", "role"), "status");
+    }
     await playDistinct(page, 1);
     if ((await soloRecord(page)).status === "MATCHED") return context.close(); // a real match: no cap to reach
     const modal = await page.locator("#revealModal").count() ? await page.locator("#revealModal").innerText() : "";
-    assert.doesNotMatch(modal, HIDDEN_CAP, `reveal ${n + 1}`);
+    assert.doesNotMatch(modal, HIDDEN_CAP, `reveal ${move}`);
     await continueReveal(page);
   }
   await page.waitForSelector(".end.over");
-  assert.equal((await page.locator(".end .board-title").innerText()).trim(), "That one got away from us.");
-  assert.doesNotMatch(await page.locator("main").innerText(), HIDDEN_CAP);
-  assert.doesNotMatch(await page.locator("main").innerText(), /game over|lost/i);
+  assert.equal((await page.locator(".end .board-title").innerText()).trim(), "That’s all 20 moves!");
+  assert.equal((await page.locator("#endCopy").innerText()).trim(), "No match this time, but what a word trail. Ready for another round?");
+  assert.doesNotMatch(await page.locator("main").innerText(), /game over|you lost|tu as perdu/i);
+  assert.equal(await page.locator(".zzz, .sleepy").count(), 0, "no sleeping animation");
   assert.ok(await page.isVisible("#newGameBtn") && await page.isVisible("#homeBtn"));
   assert.equal(await page.locator("#quitBtn").count(), 0, "nothing to quit once it has ended");
   await context.close();
@@ -161,6 +170,10 @@ test("Together Leave: confirmation, the other player is told who left and can go
   assert.match(await ben.locator("#endedPanel").innerText(), /You left this game\./);
   // "Start a new game" opens a fresh invite for Ana.
   await ana.click("#endedPanel #newGameBtn");
+  // Her saved name is shown to confirm (or change) first.
+  await ana.waitForSelector("dialog #nameInput");
+  assert.equal(await ana.inputValue("#nameInput"), "Ana");
+  await ana.click('dialog button[type="submit"]');
   await ana.waitForSelector("#joinCode");
   await ctxA.close(); await ctxB.close();
 });

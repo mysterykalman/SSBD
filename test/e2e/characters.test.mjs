@@ -27,7 +27,9 @@ test("the homepage tile: 'Solo Play', Gary and Milo side by side at the same siz
     const page = await context.newPage();
     await page.goto(server.url);
     await page.waitForSelector("#startSolo");
-    assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play");
+    // The title, with the small Beta badge beside it.
+    assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play BETA");
+    assert.equal((await page.locator(".solo-card h2 .beta-badge").innerText()).trim(), "BETA");
     assert.deepEqual((await page.locator(".solo-card .start-copy p").allInnerTexts()).map(x => x.trim()), ["Milo finished his homework early, so now he’s free to play.",
       "We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building."]);
     assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your player");
