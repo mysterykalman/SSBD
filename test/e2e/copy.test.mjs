@@ -30,9 +30,12 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
   // The tile, exactly: title (with its small Beta badge), two short paragraphs, the button, and nothing else.
-  assert.equal(solo.trim().replace(/\s+/g, " "), "Solo Play BETA Milo finished his homework early, so now he’s free to play. We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building. Choose your player");
+  assert.equal(solo.trim().replace(/\s+/g, " "), "Solo Play BETA Milo finished his homework early, so now he’s free to play. OR We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building. Choose your player");
   assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play BETA");
   assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your player");
+  // Milo's bio in purple, Gary's in red, with "or" between them.
+  const colours = await page.evaluate(() => ["bio-milo", "bio-or", "bio-gary"].map(c => { const el = document.querySelector(`.solo-card .${c}`); return [el.textContent.trim(), getComputedStyle(el).color]; }));
+  assert.deepEqual(colours, [["Milo finished his homework early, so now he’s free to play.", "rgb(123, 79, 201)"], ["or", "rgb(107, 78, 99)"], ["We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building.", "rgb(196, 64, 47)"]]);
   assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|We heard you had no friends|There is no cake|Plays offline too/);
   assert.doesNotMatch(solo, /without internet/i);
   const together = await page.locator(".family-card").innerText();
@@ -45,7 +48,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   await page.click('[data-lang="fr"]');
   assert.match(await page.locator(".hero").innerText(), /Essayez de lire dans les pensées de l’autre\./);
   assert.match(await page.locator(".hero .hero-rules").innerText(), /^Choisissez chacun un mot en secret\. Les mêmes mots[\s\u202f]\? Vous gagnez[\s\u202f]! Sinon, vos deux mots deviennent le prochain indice\. Continuez à faire des liens jusqu’à ce que vos cerveaux coopèrent enfin\.$/);
-  assert.match(await page.locator(".solo-card").innerText(), /^Jeu en solo\s+BÊTA\s+Milo a fini ses devoirs en avance, alors maintenant il est libre de jouer\.\s+On n’a trouvé personne d’autre, alors on a fait venir Gary de la comptabilité\. Les RH disent que c’est du team building\.\s+Choisis ton joueur$/);
+  assert.match(await page.locator(".solo-card").innerText(), /^Jeu en solo\s+BÊTA\s+Milo a fini ses devoirs en avance, alors maintenant il est libre de jouer\.\s+OU\s+On n’a trouvé personne d’autre, alors on a fait venir Gary de la comptabilité\. Les RH disent que c’est du team building\.\s+Choisis ton joueur$/);
   assert.match(await page.locator(".family-card").innerText(), /Jouer ensemble/);
   assert.doesNotMatch(await visibleText(page), EMOJI);
   await context.close();

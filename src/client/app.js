@@ -483,7 +483,8 @@ function renderHome() {
         // Both characters, side by side and the same size: "Choose someone" lets the player pick either.
         h("div", {class: "start-icon pair", id: "soloPair", "aria-hidden": "true"}, ...CHARACTER_IDS.map(id => badge(null, {bot: true, who: id, cls: `pair-${id}`}))),
         h("h2", {id: "soloTitle"}, t("soloTitle"), " ", betaBadge()),
-        h("div", {class: "start-copy"}, h("p", {}, t("soloBody")), h("p", {}, t("soloBody2"))),
+        // Milo or Gary: each bio in its character's colour, with "or" between them (pick either one).
+        h("div", {class: "start-copy solo-bios"}, h("p", {class: "bio-milo"}, t("soloBody")), h("div", {class: "bio-or"}, t("soloOr")), h("p", {class: "bio-gary"}, t("soloBody2"))),
         h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))),
       h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
         h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {cls: "other"})),
