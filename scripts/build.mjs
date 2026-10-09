@@ -17,6 +17,7 @@ const audioBundle = await build({entryPoints: [src("client/audio-settings.js")],
 const audioJs = audioBundle.outputFiles[0].text;
 const css = await readFile(src("client/styles.css"), "utf8");
 const soundsPreview = await readFile(src("client/sounds.html"), "utf8");
+const soundLab = await readFile(src("client/sound-lab.html"), "utf8");
 // The app icon (favicon, home-screen and install icons), generated from the supplied artwork.
 const ICONS = ["favicon.ico", "favicon-32.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const icons = Object.fromEntries(await Promise.all(ICONS.map(async name => [`/${name}`, await readFile(src(`client/icons/${name}`))])));
@@ -32,7 +33,7 @@ const swTemplate = await readFile(src("client/sw.js"), "utf8");
 // change produces a new cache and a clean, all-at-once switch.
 const iconHash = createHash("sha256");
 for (const body of Object.values(icons)) iconHash.update(body);
-const version = hash(appJs + audioJs + css + html + soundsPreview + iconHash.digest("hex") + manifest + swTemplate);
+const version = hash(appJs + audioJs + css + html + soundsPreview + soundLab + iconHash.digest("hex") + manifest + swTemplate);
 // The page carries its own version so it can tell when a newer worker has taken over.
 const page = html.replace("%APP_VERSION%", version);
 const swSource = swTemplate
@@ -44,6 +45,7 @@ const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true
 const files = {
   "/index.html": page,
   "/sounds/index.html": soundsPreview,
+  "/sound-lab/index.html": soundLab,
   [appName]: appJs,
   [audioName]: audioJs,
   [cssName]: css,
