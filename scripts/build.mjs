@@ -14,8 +14,7 @@ const src = p => join(root, "src", p);
 const appBundle = await build({entryPoints: [src("client/app.js")], bundle: true, loader: {".webp": "dataurl"}, format: "esm", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
 const appJs = appBundle.outputFiles[0].text;
 const audioBundle = await build({entryPoints: [src("client/audio-settings.js")], bundle: true, format: "esm", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
-const characterConfirmBundle = await build({entryPoints: [src("client/character-confirm-sound.js")], bundle: true, format: "esm", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
-const audioJs = `${audioBundle.outputFiles[0].text}\n${characterConfirmBundle.outputFiles[0].text}`;
+const audioJs = audioBundle.outputFiles[0].text;
 const css = await readFile(src("client/styles.css"), "utf8");
 // The app icon (favicon, home-screen and install icons), generated from the supplied artwork.
 const ICONS = ["favicon.ico", "favicon-32.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
