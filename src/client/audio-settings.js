@@ -27,7 +27,8 @@ const SOUND = Object.freeze({
   finalReveal: {channel: "game", url: `${FUN_BASE}/shock%20gasp.mp3`, gain: 0.26, fadeIn: 110, fadeOut: 380, major: true},
   winClap: {channel: "game", url: `${FUN_BASE}/golf%20clap.mp3`, gain: 0.27, fadeIn: 140, fadeOut: 520, major: true, maxMs: 2200},
   winHallelujah: {channel: "game", url: `${FUN_BASE}/hallelujah.mp3`, gain: 0.23, fadeIn: 140, fadeOut: 500, major: true, maxMs: 2400},
-  quitBye: {channel: "game", url: `${FUN_BASE}/bye%20bye.mp3`, gain: 0.24, fadeIn: 100, fadeOut: 350, major: true}
+  quitSlide: {channel: "game", url: `${FUN_BASE}/flute%20slide%20cartoon%20falling.mp3`, gain: 0.22, fadeIn: 90, fadeOut: 360, major: true, maxMs: 1400},
+  quitRadio: {channel: "game", url: `${FUN_BASE}/radio%20mic%20off%20MDC1200.mp3`, gain: 0.20, fadeIn: 80, fadeOut: 300, major: true, maxMs: 1100}
 });
 
 const POOL = Object.freeze({
@@ -35,7 +36,7 @@ const POOL = Object.freeze({
   start: ["startRoll"],
   finalReveal: ["finalReveal"],
   win: ["winClap", "winHallelujah"],
-  quit: ["quitBye"]
+  quit: ["quitSlide", "quitRadio"]
 });
 
 function clamp(value) {
