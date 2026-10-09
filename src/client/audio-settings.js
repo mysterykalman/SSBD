@@ -2,8 +2,6 @@
 // Audio comes from Mcamento8/open-game-sfx-index. The selected files are CC0/public domain.
 // We use a small curated set of event-specific sounds, never the full index.
 
-import {getLexicon} from "../shared/lexicon/index.js";
-import {closeness} from "./reactions.js";
 
 const STORAGE_KEY = "ssbd.audio.v1";
 const DEFAULTS = Object.freeze({enabled: true, game: 0.7, notifications: 0.5, ui: 0.3});
@@ -154,7 +152,6 @@ function injectStyles() {
   const style = document.createElement("style");
   style.id = "audioSettingsStyle";
   style.textContent = `
-    #profileBtn.audio-settings-gear{font-size:1.22rem;line-height:1;font-family:system-ui,sans-serif}
     .audio-settings-panel{border-top:1px solid rgba(36,31,25,.14);margin-top:.85rem;padding-top:.85rem;text-align:left}
     .audio-settings-heading{font-size:1rem;margin:0 0 .3rem;font-weight:800}
     .audio-settings-hint{margin:0 0 .8rem;font-size:.84rem;opacity:.72;line-height:1.35}
@@ -169,15 +166,6 @@ function injectStyles() {
     .audio-settings-panel.muted .audio-channel{opacity:.5}
   `;
   document.head.append(style);
-}
-
-function setGear() {
-  const button = document.getElementById("profileBtn");
-  if (!button) return;
-  if (button.textContent !== "⚙") button.textContent = "⚙";
-  button.classList.add("audio-settings-gear");
-  button.setAttribute("aria-label", copy[lang()].settings);
-  button.setAttribute("title", copy[lang()].settings);
 }
 
 function channelRow(channel, title, hint, previewSound) {
@@ -283,19 +271,13 @@ function revealPool() {
   const modal = document.getElementById("revealModal");
   if (!modal) return "reveal";
   if (modal.classList.contains("match")) return "reveal";
-  const a = modal.querySelector(".rv-word.you .chip-word")?.textContent?.trim();
-  const bNode = modal.querySelector(".rv-word.other .chip-word:not(#garyWord)");
-  const b = bNode?.textContent?.trim();
-  if (!a || !b) return "reveal";
-  try {
-    const group = closeness(getLexicon(lang()), a, b);
-    if (group === "close") return "revealClose";
-    if (group === "related") return "revealRelated";
-    if (group === "apart") return "revealApart";
-    return "revealNeutral";
-  } catch {
-    return "reveal";
-  }
+  // The game marks how close the two words were (src/client/reactions.js), so this bundle needs no lexicon.
+  const group = modal.dataset.closeness;
+  if (group === "close") return "revealClose";
+  if (group === "related") return "revealRelated";
+  if (group === "apart") return "revealApart";
+  if (group === "neutral") return "revealNeutral";
+  return "reveal";
 }
 
 let lastGameCue = null;
@@ -336,7 +318,9 @@ function inspectBell() {
 
 function installObservers() {
   const app = document.getElementById("app");
-  if (app) new MutationObserver(inspectGameAudio).observe(app, {attributes: true, attributeFilter: ["data-phase"], childList: true, subtree: true});
+  // Only the phase attribute (set on every render): watching the whole subtree ran this on every
+  // typed letter and timer tick, which made the game sluggish.
+  if (app) new MutationObserver(inspectGameAudio).observe(app, {attributes: true, attributeFilter: ["data-phase"]});
   const toasts = document.getElementById("toasts");
   if (toasts) new MutationObserver(records => {
     for (const record of records) for (const node of record.addedNodes) {
@@ -346,8 +330,6 @@ function installObservers() {
   }).observe(toasts, {childList: true});
   const count = document.getElementById("notifCount");
   if (count) new MutationObserver(inspectBell).observe(count, {childList: true, characterData: true, subtree: true, attributes: true});
-  const profile = document.getElementById("profileBtn");
-  if (profile) new MutationObserver(setGear).observe(profile, {childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["aria-label"]});
   document.addEventListener("click", event => {
     if (event.target instanceof Element && event.target.closest("#profileBtn")) queueMicrotask(enhanceProfileDialog);
   });
@@ -356,6 +338,5 @@ function installObservers() {
 }
 
 injectStyles();
-setGear();
 installUiSounds();
 installObservers();

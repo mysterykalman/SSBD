@@ -785,3 +785,10 @@ main:focus { outline: none; }
 
 /* Together: a kind word after each reveal, based on how close the two words were */
 .rv-cheer { margin: 10px 0 0; font-weight: 900; font-size: 1.1rem; color: var(--grape); }
+
+/* The ✕ in every modal's top corner (44px touch target) */
+.dialog-body, .pick-body, .gi-body, .rv-body { position: relative; }
+.dialog-x { position: absolute; top: 8px; right: 8px; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink); font: inherit; font-size: 1.9rem; font-weight: 700; line-height: 1; cursor: pointer; }
+.dialog-x:hover { background: rgba(43, 27, 61, .08); }
+.dialog-x:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
+.dialog-body > h2, .pick-body > h2 { padding-right: 40px; }

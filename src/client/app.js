@@ -11,7 +11,7 @@ import {correctionFor, understandWord} from "../shared/understand.js";
 import {garyDiagnosticsEnabled, logGaryDecision, trace} from "./diagnostics.js";
 import {languageName, translator} from "./i18n.js";
 import {createStore} from "./store.js";
-import {reactionKeys} from "./reactions.js";
+import {closeness, reactionKeys} from "./reactions.js";
 import {hasMet, markMet, typeInto} from "./gary.js";
 import {CHARACTER_IDS, TAKING_A_WHILE_MS, character, characterId, connectionStrength, copyKey, rematchLine, revealKind} from "./characters.js";
 import {characterArt} from "./gary-art.js";
@@ -620,6 +620,7 @@ function pickCharacter() {
   };
   const dlg = h("dialog", {id: "characterPicker", class: "character-picker", "aria-labelledby": "pickTitle", onclose: () => $("characterPicker")?.remove()},
     h("form", {method: "dialog", class: "pick-body", onsubmit: event => { event.preventDefault(); close(); startSolo(state.lang, {who: chosen}); }},
+      closeX(close),
       h("h2", {id: "pickTitle"}, t("pickTitle")),
       h("div", {class: "pick-cards", role: "radiogroup", "aria-labelledby": "pickTitle"}, ...CHARACTER_IDS.map(card)),
       h("div", {class: "row end"},
@@ -810,6 +811,8 @@ function startReveal(view, move) {
         move.status === "MATCHED" ? h("p", {class: "rv-outcome rv-step"}, h("span", {class: "rv-headline"}, t("revealMatchTitle")), " ", h("span", {class: "rv-subline"}, matchCopy(view, move)))
           : !beat && move.status === "EXHAUSTED" ? h("p", {class: "rv-outcome rv-step"}, t("gameOverTitle")) : null,
         ended ? null : h("p", {class: "rv-next rv-step", id: "revealNext"}, ...nextStartsText(view, move)))));
+  // How close the two words were, for the reveal sound (src/client/audio-settings.js).
+  if (move.status === "REVEALED" && move.words) dlg.dataset.closeness = closeness(getLexicon(view.language), move.words.a, move.words.b);
   document.body.append(dlg);
   dlg.showModal();
   runReveal(view, move, ended, token);
@@ -985,6 +988,8 @@ async function runReveal(view, move, ended, token) {
     move.status === "MATCHED" ? `${t("revealMatchTitle")} ${matchCopy(view, move)}` : !beat && move.status === "EXHAUSTED" ? t("gameOverTitle") : ""].filter(Boolean).join(" "), `reveal:${view.id}:${move.number}`);
   const button = h("button", {class: "btn big rv-continue", type: "button", id: "revealContinue", onclick: finishReveal}, ended ? t("revealSeeEnd") : ct(view, "keepPlaying"));
   result.append(button);
+  // Dismissable once everything is shown (closing early would skip the reveal).
+  $("revealModal")?.querySelector(".rv-body")?.prepend(closeX(finishReveal));
   setRevealPhase("ready");
   button.focus();
 }
@@ -1194,6 +1199,7 @@ function confirmQuit(view) {
   const dlg = h("dialog", {id: "quitDialog", class: "dialog quit-dialog", "aria-labelledby": "quitTitle", "aria-describedby": "quitBody",
     oncancel: event => { event.preventDefault(); keep(); }},
     h("div", {class: "dialog-body"},
+    closeX(keep),
     h("h2", {id: "quitTitle"}, solo ? t("quitTitle") : t("leaveTitle")),
     h("p", {id: "quitBody"}, solo ? t("quitBody") : t("leaveBody")),
     h("div", {class: "row center quit-actions"},
@@ -1407,6 +1413,7 @@ function showCharacterIntro(id = "gary", {onDone} = {}) {
   const dlg = h("dialog", {id: "garyIntro", class: `gary-intro ${reducedMotion() ? "" : "animate"}`, "data-character": c.id, "aria-labelledby": "garyIntroTitle", "aria-describedby": "garyIntroSays",
     oncancel: event => { event.preventDefault(); done(); }},
     h("div", {class: "gi-body"},
+      closeX(done),
       h("p", {class: "rv-kicker"}, t(intro.kicker)),
       characterArt(c.id, "meh", "intro-art"),
       h("h2", {class: "gi-title", id: "garyIntroTitle"}, t(c.title)),
@@ -2013,6 +2020,7 @@ function dialog(title, copy, body, actions) {
   }
   dlg.replaceChildren(
     h("form", {method: "dialog", class: "dialog-body", onsubmit: event => { event.preventDefault(); actions.submit?.(); }},
+      closeX(close),
       h("h2", {id: "dialogTitle"}, title),
       copy ? h("p", {id: "dialogCopy"}, copy) : null,
       body,
@@ -2034,6 +2042,11 @@ function dialog(title, copy, body, actions) {
     input?.setAttribute("aria-invalid", message ? "true" : "false");
     if (message) input?.focus();
   }};
+}
+
+/** The ✕ in a modal's top corner: every modal can be dismissed without hunting for a button. */
+function closeX(onclick) {
+  return h("button", {class: "dialog-x", type: "button", "aria-label": t("close"), title: t("close"), onclick}, h("span", {"aria-hidden": "true"}, "×"));
 }
 
 function field(id, label, attrs = {}) {
