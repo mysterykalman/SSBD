@@ -12,7 +12,7 @@
 <body>
 <main class="wrap">
   <div class="top"><div><h1>SSBD Soundboard</h1><p class="sub">Every sound currently used by Same Same but Different. The preview applies the same reduced gain and gentle fade-in/fade-out as the game.</p></div><a class="back" href="/">Back to game</a></div>
-  <div class="note"><strong>One live palette.</strong> NES jingles handle the small state changes. Bigger studio/cartoon sounds are reserved for character choice, starting, the winning reveal, winning, and quitting.</div>
+  <div class="note"><strong>One live palette.</strong> NES jingles handle small state changes. Shock gasp plays on the final matching reveal. On the win screen, Hallelujah plays first and is followed by the golf clap as the confetti comes down.</div>
   <div id="groups"></div>
   <p class="footer">Routine sounds are intentionally quiet and short. Major sounds are also reduced in volume so they act like punctuation rather than interrupting the game.</p>
 </main>
@@ -36,9 +36,9 @@ const groups=[
   ['Cartoon boing','One option when choosing Gary or Milo','boing%20cartoon.mp3',FUN,.30,90,320,null],
   ['Ding bell','One option when choosing Gary or Milo','ding%20bell.mp3',FUN,.28,90,320,null],
   ['Timpani roll','Starting a new game','announcement%20timpani%20roll.mp3',FUN,.24,120,420,1800],
-  ['Shock gasp','Reveal only when the final words actually match','shock%20gasp.mp3',FUN,.26,110,380,null],
-  ['Golf clap','One win-screen option','golf%20clap.mp3',FUN,.27,140,520,2200],
-  ['Hallelujah','One win-screen option','hallelujah.mp3',FUN,.23,140,500,2400],
+  ['Shock gasp','Final reveal only when the two words actually match','shock%20gasp.mp3',FUN,.26,110,380,null],
+  ['Hallelujah','Win screen: plays first as the celebration begins','hallelujah.mp3',FUN,.23,140,420,1900],
+  ['Golf clap','Win screen: follows Hallelujah during the confetti','golf%20clap.mp3',FUN,.27,140,520,2200],
   ['Flute slide','One quit / leave option','flute%20slide%20cartoon%20falling.mp3',FUN,.22,90,360,1400],
   ['Radio mic off','One quit / leave option','radio%20mic%20off%20MDC1200.mp3',FUN,.20,80,300,1100]
  ]]
