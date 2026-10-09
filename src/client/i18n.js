@@ -183,6 +183,9 @@ const EN = {
   miloName: "Milo",
   miloCard1: "I’ve been waiting, like, all day.",
   miloCard2: "Are you ready to play already?",
+  miloMeet: "Your teammate",
+  miloMeetCta: "Okay, Milo. Let’s play!",
+  miloMeetAgain: "Meet Milo again",
   // Milo's rotating ordinary lines (results and the occasional remark); milestones above stay fixed.
   miloRate1: "Okay, important question.",
   miloRate2: "How much fun was that?",
@@ -459,6 +462,9 @@ const FR = {
   miloName: "Milo",
   miloCard1: "Je t’attends depuis, genre, toute la journée.",
   miloCard2: "Alors, on peut jouer maintenant ?",
+  miloMeet: "Ton coéquipier",
+  miloMeetCta: "OK, Milo. On joue !",
+  miloMeetAgain: "Revoir Milo",
   miloRate1: "OK, question importante.",
   miloRate2: "C’était amusant à quel point ?",
   // Round 2 : parcours, ton, fin de partie, notifications, revanche, badges.

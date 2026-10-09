@@ -1394,6 +1394,8 @@ function seededPick(id) {
 /** First Solo game with a character: a short "Meet your rival" / "Say hi to Milo" moment. Shown once per character; can be reopened from the profile badge. */
 function showCharacterIntro(id = "gary", {onDone} = {}) {
   const c = character(id);
+  // Gary's first-game intro, or (Milo) the lines replayed from "Meet Milo again".
+  const intro = c.intro || c.replay;
   $("garyIntro")?.remove();
   const done = () => {
     markMet(c.id);
@@ -1404,13 +1406,13 @@ function showCharacterIntro(id = "gary", {onDone} = {}) {
   const dlg = h("dialog", {id: "garyIntro", class: `gary-intro ${reducedMotion() ? "" : "animate"}`, "data-character": c.id, "aria-labelledby": "garyIntroTitle", "aria-describedby": "garyIntroSays",
     oncancel: event => { event.preventDefault(); done(); }},
     h("div", {class: "gi-body"},
-      h("p", {class: "rv-kicker"}, t(c.intro.kicker)),
+      h("p", {class: "rv-kicker"}, t(intro.kicker)),
       characterArt(c.id, "meh", "intro-art"),
       h("h2", {class: "gi-title", id: "garyIntroTitle"}, t(c.title)),
       h("div", {class: "gi-says", id: "garyIntroSays"},
-        ...c.intro.lines.map((key, i) => h("p", {class: "gi-line", style: `--i:${i}`}, t(key))),
-        h("p", {class: "gi-aside", style: `--i:${c.intro.lines.length}`}, t(c.intro.aside))),
-      h("button", {class: "btn big", type: "button", id: "garyIntroGo", onclick: done}, t(c.intro.cta))));
+        ...intro.lines.map((key, i) => h("p", {class: "gi-line", style: `--i:${i}`}, t(key))),
+        intro.aside ? h("p", {class: "gi-aside", style: `--i:${intro.lines.length}`}, t(intro.aside)) : null),
+      h("button", {class: "btn big", type: "button", id: "garyIntroGo", onclick: done}, t(intro.cta))));
   document.body.append(dlg);
   dlg.showModal();
   $("garyIntroGo").focus();
@@ -2157,7 +2159,7 @@ async function savePlayerName(name) {
 }
 
 function profileDialog() {
-  const meetGary = CHARACTER_IDS.filter(id => character(id).intro).map(id => h("button", {class: "link", type: "button", id: `meet${id[0].toUpperCase()}${id.slice(1)}Again`, onclick: () => { $("dialog")?.close(); showCharacterIntro(id); }}, t(character(id).meetAgain)));
+  const meetGary = CHARACTER_IDS.filter(id => character(id).meetAgain).map(id => h("button", {class: "link", type: "button", id: `meet${id[0].toUpperCase()}${id.slice(1)}Again`, onclick: () => { $("dialog")?.close(); showCharacterIntro(id); }}, t(character(id).meetAgain)));
   if (!state.player) {
     dialog(t("solo"), t("profileSolo"), null, {cancelLabel: t("close"), extra: [h("button", {class: "link", type: "button", onclick: () => recoveryDialog(null)}, t("haveRecovery")), ...meetGary]});
     return;

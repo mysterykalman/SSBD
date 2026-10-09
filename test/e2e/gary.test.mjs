@@ -48,6 +48,17 @@ test("first Solo game introduces Gary once; the intro can be reopened from the p
   await page.waitForSelector("#garyIntro[open]");
   await page.keyboard.press("Escape");
   await page.waitForSelector("#garyIntro", {state: "detached"});
+  // Milo can be met again too: his picker card lines, in the same dialog.
+  await page.click("#profileBtn");
+  assert.deepEqual((await page.locator("dialog .link").allInnerTexts()).filter(x => /^Meet/.test(x.trim())).map(x => x.trim()), ["Meet Gary again", "Meet Milo again"]);
+  await page.click("#meetMiloAgain");
+  await page.waitForSelector("#garyIntro[open][data-character=milo]");
+  const milo = await page.locator("#garyIntro").innerText();
+  assert.match(milo, /YOUR TEAMMATE/i);
+  assert.match(milo, /I’ve been waiting, like, all day\.\s+Are you ready to play already\?/);
+  assert.match(await page.locator("#garyIntroGo").innerText(), /Okay, Milo\. Let’s play!/);
+  await page.click("#garyIntroGo");
+  await page.waitForSelector("#garyIntro", {state: "detached"});
   await context.close();
 });
 
