@@ -41,6 +41,9 @@ test("Gary and Milo share one config system: id, name, card, avatar, personality
     assert.equal(c.pools, undefined, `${id} has no rotating pools`);
   }
   assert.equal(CHARACTERS.milo.intro, null, "the picker card is Milo's introduction");
+  // "Meet Milo again" replays exactly his picker card lines.
+  assert.deepEqual(CHARACTERS.milo.replay.lines, CHARACTERS.milo.card);
+  assert.equal(CHARACTERS.milo.meetAgain, "miloMeetAgain");
   for (const id of CHARACTER_IDS) {
     assert.deepEqual(Object.values(CHARACTERS[id].lines.mismatch), []);
     assert.deepEqual(CHARACTERS[id].results, {});
@@ -97,7 +100,7 @@ test("Milo's old one-line script is gone; every Milo line is his name, card, rat
   const milo = CHARACTERS.milo;
   for (const lang of ["en", "fr"]) {
     for (const key of OLD_MILO_KEYS) assert.equal(STRINGS[lang][key], undefined, `${lang}.${key} is gone`);
-    for (const key of Object.keys(STRINGS[lang]).filter(k => k.startsWith("milo"))) assert.ok([milo.name, ...milo.card, ...milo.rating].includes(key), `${lang}.${key} is not his name, card or rating`);
+    for (const key of Object.keys(STRINGS[lang]).filter(k => k.startsWith("milo"))) assert.ok([milo.name, ...milo.card, ...milo.rating, milo.replay.kicker, milo.replay.cta, milo.meetAgain].includes(key), `${lang}.${key} is not his name, card, rating or "Meet Milo again"`);
     for (const key of characterKeys("milo")) assert.ok(STRINGS[lang][key], `${lang}.${key}`);
   }
   assert.deepEqual(milo.rating.map(key => STRINGS.en[key]), ["Okay, important question.", "How much fun was that?"], "his rating question, exactly");

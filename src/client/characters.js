@@ -14,7 +14,8 @@ import {MILO_NARRATIVE} from "./milo-narrative.js";
  * @typedef {{
  *   id: string, name: string, title: string, card: string[], personality: string,
  *   voiceId: string | null, voiceStyle: string, art: string,
- *   intro: {kicker: string, lines: string[], aside: string, cta: string} | null, meetAgain: string | null, rating: string[], copy: Record<string, string>,
+ *   intro: {kicker: string, lines: string[], aside: string, cta: string} | null,
+ *   replay: {kicker: string, lines: string[], aside: string | null, cta: string} | null, meetAgain: string | null, rating: string[], copy: Record<string, string>,
  *   narrative: Narrative,
  *   results: Partial<Record<Strength, string[]>>, resultAvoid: Partial<Record<Strength, string[]>>,
  *   lines: {
@@ -39,6 +40,7 @@ export const CHARACTERS = {
     voiceStyle: "flat, tired, deadpan; short sighs",
     art: "gary",
     intro: {kicker: "garyMeet", lines: ["garyIntro1", "garyIntro2", "garyIntro3"], aside: "garyIntroSigh", cta: "garyIntroCta"},
+    replay: null, // "Meet Gary again" replays his intro
     meetAgain: "garyMeetAgain",
     rating: ["garyRate1", "garyRate2"], // the 1–5 star question on the win card
     // Shared Solo copy in this character's own words (anything not listed uses the shared key).
@@ -59,8 +61,10 @@ export const CHARACTERS = {
     voiceId: null, // no recorded voice yet
     voiceStyle: "bright, warm, a little impatient to play",
     art: "milo",
-    intro: null, // the picker card is his introduction
-    meetAgain: null,
+    intro: null, // the picker card is his introduction (no first-game intro)
+    // "Meet Milo again" (from the profile badge) replays his picker card lines in the intro dialog.
+    replay: {kicker: "miloMeet", lines: ["miloCard1", "miloCard2"], aside: null, cta: "miloMeetCta"},
+    meetAgain: "miloMeetAgain",
     rating: ["miloRate1", "miloRate2"], // the 1–5 star question on the win card
     copy: {},
     // Milo speaks through his branching narrative (src/client/milo-narrative.js): the same branches
@@ -83,7 +87,8 @@ export const character = id => CHARACTERS[characterId(id)];
 /** Every i18n key a character uses (for tests). */
 export function characterKeys(id) {
   const c = character(id);
-  const keys = new Set([c.name, c.title, ...c.card, ...c.rating, ...(c.intro ? [c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta] : []), ...(c.meetAgain ? [c.meetAgain] : []),
+  const keys = new Set([c.name, c.title, ...c.card, ...c.rating, ...(c.intro ? [c.intro.kicker, ...c.intro.lines, c.intro.aside, c.intro.cta] : []),
+    ...(c.replay ? [c.replay.kicker, ...c.replay.lines, ...(c.replay.aside ? [c.replay.aside] : []), c.replay.cta] : []), ...(c.meetAgain ? [c.meetAgain] : []),
     ...Object.values(c.copy), ...Object.values(c.results).flat()]);
   const n = c.narrative;
   for (const branch of n.BRANCHES) for (const pair of n.pairsOf(branch)) for (const key of Object.values(n.pairKeys(branch, pair))) keys.add(key);
