@@ -10,7 +10,6 @@
   "rewrites": [
     {"source": "/api/:path*", "destination": "/api?__path=:path*"},
     {"source": "/sounds", "destination": "/sounds/index.html"},
-    {"source": "/sound-lab", "destination": "/sound-lab/index.html"},
     {"source": "/games/:path*", "destination": "/index.html"},
     {"source": "/join/:path*", "destination": "/index.html"},
     {"source": "/solo/:path*", "destination": "/index.html"},
