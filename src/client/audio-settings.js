@@ -10,8 +10,6 @@ const FUN_BASE = "https://raw.githubusercontent.com/jonjonsson/SoundMonster/main
 const SOUND = Object.freeze({
   uiClick: {channel: "ui", url: `${BASE}/jingles_NES00.ogg`, gain: 0.18, fadeIn: 35, fadeOut: 130, maxMs: 430},
   uiToggle: {channel: "ui", url: `${BASE}/jingles_NES10.ogg`, gain: 0.18, fadeIn: 35, fadeOut: 140, maxMs: 520},
-  lock: {channel: "game", url: `${BASE}/jingles_NES01.ogg`, gain: 0.19, fadeIn: 40, fadeOut: 150, maxMs: 520},
-  nextRound: {channel: "game", url: `${BASE}/jingles_NES02.ogg`, gain: 0.16, fadeIn: 35, fadeOut: 140, maxMs: 500},
   closeAsk: {channel: "game", url: `${BASE}/jingles_NES04.ogg`, gain: 0.17, fadeIn: 40, fadeOut: 150, maxMs: 560},
   closeYes: {channel: "game", url: `${BASE}/jingles_NES05.ogg`, gain: 0.18, fadeIn: 40, fadeOut: 160, maxMs: 620},
   closeNo: {channel: "game", url: `${BASE}/jingles_NES06.ogg`, gain: 0.16, fadeIn: 40, fadeOut: 170, maxMs: 620},
@@ -154,14 +152,14 @@ const copy = {
   en: {
     sound: "Sound", soundOn: "Enable sound",
     soundHint: "Adjust each type separately. Your levels are remembered when sound is turned off.",
-    game: "Game sounds", gameHint: "Round changes, close-enough decisions, character choice, game start, matching reveal, wins and quitting",
+    game: "Game sounds", gameHint: "Close-enough decisions, character choice, game start, matching reveal, wins and quitting",
     notifications: "Notification sounds", notificationsHint: "Updates, alerts and errors",
     ui: "UI sounds", uiHint: "Buttons and controls"
   },
   fr: {
     sound: "Son", soundOn: "Activer le son",
     soundHint: "Réglez chaque type séparément. Vos niveaux sont conservés lorsque le son est désactivé.",
-    game: "Sons du jeu", gameHint: "Changements de manche, décisions presque identiques, choix du personnage, début, victoire et départ",
+    game: "Sons du jeu", gameHint: "Décisions presque identiques, choix du personnage, début, victoire et départ",
     notifications: "Sons de notification", notificationsHint: "Mises à jour, alertes et erreurs",
     ui: "Sons de l’interface", uiHint: "Boutons et commandes"
   }
@@ -263,7 +261,7 @@ function installInteractionSounds() {
     if (button.id === "closeBtn") { play("closeAsk"); return; }
     if (button.id === "closeYes") { play("closeYes"); return; }
     if (button.id === "closeNo") { play("closeNo"); return; }
-    if (button.id === "revealContinue") { play("nextRound"); return; }
+    if (button.id === "revealContinue") return;
     if (button.classList?.contains("wc-star")) { play("rating"); return; }
     if (button.id === "lockBtn") return;
     play("uiClick");
@@ -272,10 +270,6 @@ function installInteractionSounds() {
   document.addEventListener("change", event => {
     const input = event.target instanceof HTMLInputElement ? event.target : null;
     if (input?.name === "character") playPool("choose");
-  }, true);
-
-  document.addEventListener("submit", event => {
-    if (event.target?.id === "wordForm") play("lock");
   }, true);
 }
 
