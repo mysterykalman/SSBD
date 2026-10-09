@@ -11,7 +11,12 @@ const SOUND = Object.freeze({
   // Routine cues: deliberately quiet and short so the game never becomes noisy.
   uiClick: {channel: "ui", url: `${BASE}/jingles_NES00.ogg`, gain: 0.18, fadeIn: 35, fadeOut: 130, maxMs: 430},
   uiToggle: {channel: "ui", url: `${BASE}/jingles_NES10.ogg`, gain: 0.18, fadeIn: 35, fadeOut: 140, maxMs: 520},
-  lock: {channel: "game", url: `${BASE}/jingles_NES00.ogg`, gain: 0.20, fadeIn: 45, fadeOut: 150, maxMs: 520},
+  lock: {channel: "game", url: `${BASE}/jingles_NES01.ogg`, gain: 0.19, fadeIn: 40, fadeOut: 150, maxMs: 520},
+  nextRound: {channel: "game", url: `${BASE}/jingles_NES02.ogg`, gain: 0.16, fadeIn: 35, fadeOut: 140, maxMs: 500},
+  closeAsk: {channel: "game", url: `${BASE}/jingles_NES04.ogg`, gain: 0.17, fadeIn: 40, fadeOut: 150, maxMs: 560},
+  closeYes: {channel: "game", url: `${BASE}/jingles_NES05.ogg`, gain: 0.18, fadeIn: 40, fadeOut: 160, maxMs: 620},
+  closeNo: {channel: "game", url: `${BASE}/jingles_NES06.ogg`, gain: 0.16, fadeIn: 40, fadeOut: 170, maxMs: 620},
+  rating: {channel: "game", url: `${BASE}/jingles_NES07.ogg`, gain: 0.16, fadeIn: 35, fadeOut: 150, maxMs: 520},
   notify: {channel: "notifications", url: `${BASE}/jingles_NES10.ogg`, gain: 0.20, fadeIn: 45, fadeOut: 170, maxMs: 620},
   notifyError: {channel: "notifications", url: `${BASE}/jingles_NES09.ogg`, gain: 0.18, fadeIn: 45, fadeOut: 180, maxMs: 680},
 
@@ -20,7 +25,7 @@ const SOUND = Object.freeze({
   chooseDing: {channel: "game", url: `${FUN_BASE}/ding%20bell.mp3`, gain: 0.28, fadeIn: 90, fadeOut: 320, major: true},
   startRoll: {channel: "game", url: `${FUN_BASE}/announcement%20timpani%20roll.mp3`, gain: 0.24, fadeIn: 120, fadeOut: 420, major: true, maxMs: 1800},
   finalReveal: {channel: "game", url: `${FUN_BASE}/shock%20gasp.mp3`, gain: 0.26, fadeIn: 110, fadeOut: 380, major: true},
-  winApplause: {channel: "game", url: `${FUN_BASE}/applause.mp3`, gain: 0.27, fadeIn: 140, fadeOut: 520, major: true, maxMs: 2600},
+  winClap: {channel: "game", url: `${FUN_BASE}/golf%20clap.mp3`, gain: 0.27, fadeIn: 140, fadeOut: 520, major: true, maxMs: 2200},
   winHallelujah: {channel: "game", url: `${FUN_BASE}/hallelujah.mp3`, gain: 0.23, fadeIn: 140, fadeOut: 500, major: true, maxMs: 2400},
   quitBye: {channel: "game", url: `${FUN_BASE}/bye%20bye.mp3`, gain: 0.24, fadeIn: 100, fadeOut: 350, major: true}
 });
@@ -29,7 +34,7 @@ const POOL = Object.freeze({
   choose: ["chooseBoing", "chooseDing"],
   start: ["startRoll"],
   finalReveal: ["finalReveal"],
-  win: ["winApplause", "winHallelujah"],
+  win: ["winClap", "winHallelujah"],
   quit: ["quitBye"]
 });
 
@@ -140,14 +145,14 @@ const copy = {
   en: {
     sound: "Sound", soundOn: "Enable sound",
     soundHint: "Adjust each type separately. Your levels are remembered when sound is turned off.",
-    game: "Game sounds", gameHint: "Character choice, game start, winning reveal, wins and quitting",
+    game: "Game sounds", gameHint: "Round changes, close-enough decisions, character choice, game start, winning reveal, wins and quitting",
     notifications: "Notification sounds", notificationsHint: "Updates, alerts and errors",
     ui: "UI sounds", uiHint: "Buttons and controls"
   },
   fr: {
     sound: "Son", soundOn: "Activer le son",
     soundHint: "Réglez chaque type séparément. Vos niveaux sont conservés lorsque le son est désactivé.",
-    game: "Sons du jeu", gameHint: "Choix du personnage, début, révélation gagnante, victoire et départ",
+    game: "Sons du jeu", gameHint: "Changements de manche, décisions presque identiques, choix du personnage, début, victoire et départ",
     notifications: "Sons de notification", notificationsHint: "Mises à jour, alertes et erreurs",
     ui: "Sons de l’interface", uiHint: "Boutons et commandes"
   }
@@ -198,7 +203,7 @@ function enhanceProfileDialog() {
   const master = document.createElement("label"); master.className = "audio-master"; master.append(document.createTextNode(text.soundOn));
   const toggle = document.createElement("input"); toggle.type = "checkbox"; toggle.checked = settings.enabled; master.append(toggle);
   const rows = [
-    channelRow("game", text.game, text.gameHint, "winApplause"),
+    channelRow("game", text.game, text.gameHint, "winClap"),
     channelRow("notifications", text.notifications, text.notificationsHint, "notify"),
     channelRow("ui", text.ui, text.uiHint, "uiClick")
   ];
@@ -222,6 +227,11 @@ function installInteractionSounds() {
     if (button.id === "quitConfirm") { playPool("quit"); return; }
     if (button.id === "startCharacter") { pendingStart = true; return; }
     if (button.id === "createFamily" || button.id === "joinFamily") pendingStart = true;
+    if (button.id === "closeBtn") { play("closeAsk"); return; }
+    if (button.id === "closeYes") { play("closeYes"); return; }
+    if (button.id === "closeNo") { play("closeNo"); return; }
+    if (button.id === "revealContinue") { play("nextRound"); return; }
+    if (button.classList?.contains("wc-star")) { play("rating"); return; }
     if (button.id === "lockBtn") return;
     play("uiClick");
   }, true);
