@@ -216,8 +216,7 @@ function channelRow(channel, title, hint, previewSound) {
 function enhanceProfileDialog() {
   const dlg = document.getElementById("dialog");
   if (!dlg?.open || dlg.querySelector(".audio-settings-panel")) return;
-  const form = dlg.querySelector(".dialog-body");
-  if (!form) return;
+  const form = dlg.querySelector(".dialog-body") || dlg.querySelector("form") || dlg;
   const text = copy[lang()];
   const panel = document.createElement("section");
   panel.className = `audio-settings-panel${settings.enabled ? "" : " muted"}`;
@@ -237,7 +236,14 @@ function enhanceProfileDialog() {
   });
   panel.append(heading, hint, master, ...rows);
   const error = form.querySelector("#dialogError");
-  form.insertBefore(panel, error || form.querySelector(".row.end") || null);
+  const actions = form.querySelector(".row.end");
+  form.insertBefore(panel, error || actions || null);
+}
+
+function scheduleProfileEnhance() {
+  queueMicrotask(enhanceProfileDialog);
+  requestAnimationFrame(enhanceProfileDialog);
+  setTimeout(enhanceProfileDialog, 50);
 }
 
 function installInteractionSounds() {
@@ -248,7 +254,11 @@ function installInteractionSounds() {
     if (!button || button.disabled) return;
 
     if (button.id === "quitConfirm") { playPool("quit"); return; }
-    if (button.id === "startCharacter") { pendingStart = true; return; }
+    if (button.id === "startCharacter") {
+      play("chooseDing");
+      pendingStart = true;
+      return;
+    }
     if (button.id === "createFamily" || button.id === "joinFamily") pendingStart = true;
     if (button.id === "closeBtn") { play("closeAsk"); return; }
     if (button.id === "closeYes") { play("closeYes"); return; }
@@ -281,7 +291,7 @@ function inspectGameAudio() {
 
   if (pendingStart && phase === "playing" && (/^\/solo\//.test(location.pathname) || /^\/games\//.test(location.pathname))) {
     pendingStart = false;
-    playPool("start");
+    setTimeout(() => playPool("start"), 260);
     return;
   }
 
@@ -318,7 +328,7 @@ function installObservers() {
   const count = document.getElementById("notifCount");
   if (count) new MutationObserver(inspectBell).observe(count, {childList: true, characterData: true, subtree: true, attributes: true});
   document.addEventListener("click", event => {
-    if (event.target instanceof Element && event.target.closest("#profileBtn")) queueMicrotask(enhanceProfileDialog);
+    if (event.target instanceof Element && event.target.closest("#profileBtn")) scheduleProfileEnhance();
   });
   window.addEventListener("resize", () => requestAnimationFrame(syncHomeGamesCard), {passive: true});
   inspectGameAudio(); inspectBell(); requestAnimationFrame(syncHomeGamesCard);
