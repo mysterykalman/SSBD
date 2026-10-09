@@ -30,7 +30,7 @@ test("Solo Quit: low-emphasis header action, confirmation, Keep playing changes 
   await quitSolo(page);
   assert.equal((await page.locator("#quitTitle").innerText()).trim(), "Quit this game?");
   assert.equal((await page.locator("#quitBody").innerText()).trim(), "Your current game will end.");
-  assert.deepEqual((await page.locator("#quitDialog button").allInnerTexts()).map(x => x.trim()), ["Keep playing", "Quit game"]);
+  assert.deepEqual((await page.locator("#quitDialog .quit-actions button").allInnerTexts()).map(x => x.trim()), ["Keep playing", "Quit game"]);
   assert.equal(await page.evaluate(() => document.activeElement?.id), "quitKeep", "the safe choice has focus");
   // Keep playing: nothing changes.
   const before = await soloRecord(page);
@@ -151,7 +151,7 @@ test("Together Leave: confirmation, the other player is told who left and can go
   await ben.waitForSelector("#quitDialog[open]");
   assert.equal((await ben.locator("#quitTitle").innerText()).trim(), "Leave this game?");
   assert.equal((await ben.locator("#quitBody").innerText()).trim(), "The other player will be told that you left.");
-  assert.deepEqual((await ben.locator("#quitDialog button").allInnerTexts()).map(x => x.trim()), ["Keep playing", "Leave game"]);
+  assert.deepEqual((await ben.locator("#quitDialog .quit-actions button").allInnerTexts()).map(x => x.trim()), ["Keep playing", "Leave game"]);
   await ben.click("#quitKeep");
   await ben.waitForSelector("#quitDialog", {state: "detached"});
   assert.equal(await ben.locator("#word").count(), 1, "Keep playing changes nothing");

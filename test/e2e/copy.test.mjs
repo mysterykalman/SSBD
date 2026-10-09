@@ -39,7 +39,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|We heard you had no friends|There is no cake|Plays offline too/);
   assert.doesNotMatch(solo, /without internet/i);
   const together = await page.locator(".family-card").innerText();
-  assert.equal(together.trim().replace(/\s+/g, " ").replace(/^.*?(?=Play Together)/, ""), "Play Together Challenge a friend, sibling, cousin, or future ex-best friend to prove they can think exactly like you. Do you go together like peanut butter and... uh, peanut butter? Or more like peanut butter and... pickles? Start a game Join a game");
+  assert.equal(together.trim().replace(/\s+/g, " ").replace(/^.*?(?=Play Together)/, ""), "Play Together Challenge a friend, sibling, cousin, or anyone nearby to see if your brains are secretly connected. Pick the same word and feel like geniuses. Miss completely and blame each other. Start a game Join a game");
   assert.equal((await page.locator("#createFamily").innerText()).trim(), "Start a game");
   assert.equal((await page.locator("#joinFamily").innerText()).trim(), "Join a game");
   const games = await page.locator(".games").innerText();
