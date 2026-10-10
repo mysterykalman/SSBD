@@ -5,21 +5,20 @@ import {Script} from "node:vm";
 const root=new URL("../src/client/mom-mode/",import.meta.url);
 const read=name=>readFile(new URL(name,root),"utf8");
 test("Mom Mode scripts parse and keep the engine isolated",async()=>{
- for(const name of ["copy.js","adapter.js","app.js"])assert.doesNotThrow(()=>new Script(await read(name),{filename:name}));
+ for(const name of ["knowledge.js","engine.js","copy.js","adapter.js","app.js"])assert.doesNotThrow(()=>new Script(await read(name),{filename:name}));
  const adapter=await read("adapter.js");
- for(const name of ["connected","supportedAnswers","start()","answer()","confirm()","reset()"])assert.ok(adapter.includes(name),"missing "+name);
- assert.match(adapter,/engine not connected/);
+ for(const name of ["connected:true","supportedAnswers","startGame","getNextQuestion","submitAnswer","getProgress","getGuess","confirmGuess","resetGame"])assert.ok(adapter.includes(name),"missing "+name);
+ assert.doesNotMatch(adapter,/engine not connected/i);
 });
-test("Mom Mode is clearly a preview, not a guessing engine",async()=>{
+test("Mom Mode is a live five-answer guessing game",async()=>{
  const html=await read("index.html");
- assert.match(html,/DESIGN PREVIEW/);
- assert.match(html,/Answers here do not affect Pam/);
+ assert.doesNotMatch(html,/DESIGN PREVIEW|Answers here do not affect Pam/);
  assert.match(html,/aria-live="polite"/);
- for(const answer of ["yes","no","probably","unknown"])assert.ok(html.includes('data-answer="'+answer+'"'));
+ for(const answer of ["yes","probably","unknown","probably_not","no"])assert.ok(html.includes('data-answer="'+answer+'"'));
  const image=await stat(new URL("pam.webp",root));
  assert.ok(image.size>1000);
 });
-test("Pam has complete character states",async()=>{
+test("Pam has complete character states and contextual asides",async()=>{
  const copy=await read("copy.js");
- for(const term of ["bio:","intro:","early:","middle:","close:","guess:","correct:","incorrect:","replay:","exit:","Janice"])assert.ok(copy.includes(term),term);
+ for(const term of ["bio:","intro:","early:","middle:","close:","surprise:","guess:","correct:","incorrect:","fast:","long:","Janice"])assert.ok(copy.includes(term),term);
 });

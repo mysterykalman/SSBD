@@ -9,6 +9,8 @@
   },
   "rewrites": [
     {"source": "/api/:path*", "destination": "/api?__path=:path*"},
+    {"source": "/mom", "destination": "/mom/index.html"},
+    {"source": "/mom/", "destination": "/mom/index.html"},
     {"source": "/mom-mode", "destination": "/mom-mode/index.html"},
     {"source": "/mom-mode/", "destination": "/mom-mode/index.html"},
     {"source": "/games/:path*", "destination": "/index.html"},
