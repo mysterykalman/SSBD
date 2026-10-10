@@ -17,3 +17,4 @@ const bundle = await build({
 const js = bundle.outputFiles[0].text;
 const css = await readFile(source("styles.css"), "utf8");
 const license = await readFile(source("LICENSE-FergusGriggs.txt"), "utf8");
+const jsPath = "/20Q/assets/app." + hash(js) + ".js";
