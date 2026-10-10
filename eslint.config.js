@@ -20,6 +20,8 @@ export default [
   // The Family-mode API runs as a Vercel Function on Node.js.
   {files: ["src/server/**/*.js", "api/**/*.js"], languageOptions: {globals: {...globals.node}}},
   {files: ["src/client/**/*.js"], languageOptions: {globals: {...globals.browser}}},
+  // Mom Mode's inference/data files have a guarded CommonJS export for direct engine tests.
+  {files: ["src/client/mom-mode/engine.js", "src/client/mom-mode/knowledge.js"], languageOptions: {globals: {...globals.browser, module: "readonly"}}},
   {files: ["scripts/**/*.mjs", "test/**/*.mjs", "eslint.config.js"], languageOptions: {globals: {...globals.node}}},
   // Playwright page.evaluate callbacks run in the browser.
   // Follow-up: test/e2e/family.test.mjs has an unused `name` parameter; drop this relaxation once it is fixed.
