@@ -6,15 +6,15 @@ on:
       people:
         description: "Notable people to request from Wikidata"
         required: false
-        default: "5000"
+        default: "4000"
       fictional:
         description: "Fictional characters to request from Wikidata"
         required: false
-        default: "1500"
+        default: "500"
       places:
         description: "Places and landmarks to request from Wikidata"
         required: false
-        default: "2500"
+        default: "700"
   # Changing this workflow on the feature branch also bootstraps a real snapshot once.
   # The generated-data commit does not touch this file, so it cannot recurse.
   push:
@@ -41,9 +41,9 @@ jobs:
       - run: npm ci
       - name: Build local Wikimedia knowledge snapshot
         env:
-          PEOPLE: ${{ inputs.people || '5000' }}
-          FICTIONAL: ${{ inputs.fictional || '1500' }}
-          PLACES: ${{ inputs.places || '2500' }}
+          PEOPLE: ${{ inputs.people || '4000' }}
+          FICTIONAL: ${{ inputs.fictional || '500' }}
+          PLACES: ${{ inputs.places || '700' }}
         run: npm run mom:knowledge -- --people="$PEOPLE" --fictional="$FICTIONAL" --places="$PLACES"
       - name: Validate Mom Mode
         run: |
