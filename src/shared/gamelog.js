@@ -62,8 +62,9 @@ export function gameRecord(game, meta = {}) {
  * @param {number | null} decisionMs
  * @param {object | null} [input] how the player's word was read: what they typed, any spelling
  *   suggestion and whether they took it, and how the game understood it (spacing, inflection...)
+ * @param {object | null} [analysis] the post-reveal round analysis (src/shared/round-analysis.js)
  */
-export function roundRecord(game, move, decision, decisionMs, input = null) {
+export function roundRecord(game, move, decision, decisionMs, input = null, analysis = null) {
   const {config: _config, ...compact} = decision || {};
   return {
     schema: LOG_SCHEMA,
@@ -80,7 +81,22 @@ export function roundRecord(game, move, decision, decisionMs, input = null) {
     stage: decision?.stage ?? null,
     low_quality: decision ? Boolean(decision.lowQuality) : null,
     decision: decision ? compact : null,
-    player_input: cleanInput(input)
+    player_input: cleanInput(input),
+    analysis: cleanAnalysis(analysis)
+  };
+}
+
+const unit = v => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(1, Math.round(v * 1000) / 1000)) : null);
+const kind = v => (typeof v === "string" ? v.slice(0, 20) : null);
+/** The post-reveal round analysis, reduced to known short fields (or null). */
+export function cleanAnalysis(a) {
+  if (!a || typeof a !== "object") return null;
+  const pair = (v, f) => (Array.isArray(v) && v.length === 2 ? v.map(f) : null);
+  return {
+    user_understood: typeof a.user_understood === "boolean" ? a.user_understood : null,
+    user_rel: pair(a.user_rel, unit), user_kinds: pair(a.user_kinds, kind),
+    user_bot_rel: unit(a.user_bot_rel), user_bot_kind: kind(a.user_bot_kind),
+    user_rank: Number.isInteger(a.user_rank) && a.user_rank >= 1 && a.user_rank <= 50 ? a.user_rank : null
   };
 }
 
@@ -139,7 +155,8 @@ export function cleanRound(r) {
     decision_ms: Number.isFinite(r.decision_ms) && r.decision_ms >= 0 && r.decision_ms < 60000 ? r.decision_ms : null,
     stage: typeof r.stage === "string" ? r.stage.slice(0, 40) : null, low_quality: typeof r.low_quality === "boolean" ? r.low_quality : null,
     decision,
-    player_input: cleanInput(r.player_input)
+    player_input: cleanInput(r.player_input),
+    analysis: cleanAnalysis(r.analysis)
   };
 }
 
@@ -185,6 +202,44 @@ export function roundQuality(r) {
     nearMatch: Boolean(q.nearMatch),
     styleTieBreak: Boolean(q.style?.applied && q.tieBreak?.used),
     tieChanged: Boolean(q.tieBreak?.changed)
+  };
+}
+
+/** A pick whose weaker side is below this is one-sided (the engine-2.5 recovery `minWeak`). */
+export const ONE_SIDED_WEAK = 0.3;
+
+/**
+ * The playtest summary of one game, computed from its stored rounds (never stored itself, so every
+ * export uses the same definitions):
+ *  character, moves (revealed rounds), result (matched / exhausted / ended / in_progress / abandoned)
+ *  low_quality_rounds     rounds the engine flagged low quality (recovery, unknown input…)
+ *  unknown_input_rounds   rounds where a clue was not understood (or only guessed)
+ *  one_sided_picks        paired rounds whose pick ties to its weaker clue below ONE_SIDED_WEAK
+ *  avg_balance            mean weak side / strong side of the pick (1 = equally tied to both clues)
+ *  near_match_rounds / trajectory_rounds   rounds where near-match momentum or the player's revealed
+ *                         direction influenced the ranking (trajectory: it favoured the pick)
+ *  profile_changed_rounds / varied_rounds  the character's profile changed the top answer / a
+ *                         near-best alternative was played
+ * @param {any} g a game with `rounds_list`
+ * @param {number} [now]
+ */
+export function gameSummary(g, now = Date.now()) {
+  const rounds = (g.rounds_list || []).map(r => ({r, q: roundQuality(r), d: r.decision || r.quality || {}}));
+  const paired = rounds.filter(x => x.q.paired);
+  const balances = paired.map(({d}) => (typeof d.pickBalance === "number" ? d.pickBalance
+    : typeof d.pickWeak === "number" && typeof d.pickStrong === "number" && d.pickStrong > 0 ? d.pickWeak / d.pickStrong : null)).filter(x => x !== null);
+  return {
+    character: g.character || null,
+    moves: g.rounds ?? rounds.length,
+    result: reportedStatus(g, now),
+    low_quality_rounds: rounds.filter(x => x.r.low_quality === true).length,
+    unknown_input_rounds: paired.filter(x => x.q.unresolved).length,
+    one_sided_picks: paired.filter(x => x.q.weak !== null && x.q.weak < ONE_SIDED_WEAK).length,
+    avg_balance: balances.length ? Math.round((balances.reduce((a, b) => a + b, 0) / balances.length) * 1000) / 1000 : null,
+    near_match_rounds: paired.filter(({d}) => Boolean(d.nearMatch?.applied || d.selection?.nearMatchApplied)).length,
+    trajectory_rounds: paired.filter(({d}) => Boolean(d.selection?.trajectory?.applied)).length,
+    profile_changed_rounds: paired.filter(({d}) => Boolean(d.selection?.profileChanged)).length,
+    varied_rounds: paired.filter(({d}) => Boolean(d.selection?.varied)).length
   };
 }
 

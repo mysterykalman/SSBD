@@ -1005,3 +1005,11 @@ From the engine-2.4 playtest logs (random-feeling, one-sided answers). Details a
   - The move-count gap between Milo and Gary is modest in simulation; calibrate it from real playtest logs.
 - **New simulation player:** a `casual` stand-in in `scripts/convergence.mjs`.
 - **Tests:** `test/engine-2.5.test.mjs` and `test/lexicon-coverage.test.mjs`.
+
+## Status update: engine-2.5.1, frozen for the playtest (2026-10-10)
+
+- **Gary's obviousness:** Gary now weighs human obviousness too, at 0.12 against Milo's 0.30. It was 0 in engine-2.5.
+- **Freeze:** no more Solo engine tuning (move count, thresholds, weights, lexicon, recovery) until the playtest results are in.
+- **Per-round export:** each round gains `decision.roundAnalysis`, logged at the reveal (`src/shared/round-analysis.js`). It records how the player's word relates to both clues and to the bot's word, and its rank in the bot's list.
+- **Per-game export:** each game in the JSON export and the review games list has a `summary` from `gameSummary`, computed from the rounds rather than stored.
+- **Reading guide:** `docs/BOT_ENGINE.md` section 0, "Playtest export".

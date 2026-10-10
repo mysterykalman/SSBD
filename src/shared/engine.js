@@ -48,7 +48,8 @@
 //                   between answers that are virtually equal (≤ 0.03 apart; 85 % the top one). He is
 //                   easier because he plays the obvious shared answer, never because he helps (he
 //                   never sees the player's word) or because he accepts sloppier links.
-//    Gary (harder)  ignores consensus and weighs the player's direction lightly; a wider near-best
+//    Gary (harder)  weighs consensus less (0.12 × consensus: "I can see why he went there") and the
+//                   player's direction lightly; a wider near-best
 //                   range (≤ 0.25 apart, up to 4; 30/30/25/15 %), so he plays the 2nd or 3rd
 //                   genuinely strong answer more often. The range only ever holds high-quality
 //                   candidates: he is never given a weaker, one-sided or stranger word. In a
@@ -84,7 +85,8 @@ import {phoneticKey, understandWord} from "./understand.js";
 import {wordKey} from "./words.js";
 import {hashString, seededRandom} from "./rules.js";
 
-export const ENGINE_VERSION = "engine-2.5";
+// engine-2.5.1: Gary weighs human obviousness too (less than Milo). Frozen for the playtest.
+export const ENGINE_VERSION = "engine-2.5.1";
 
 /** Everything that shapes a decision (logged with it, so a decision can be replayed exactly). */
 export const ENGINE_CONFIG = Object.freeze({
@@ -107,14 +109,15 @@ export const ENGINE_CONFIG = Object.freeze({
   // words); `window` is the near-best range; `weights` how often each place in it is played.
   // engine-2.5: `consensus` (how much the human-obviousness score counts), `trajectory` (the player's
   // revealed direction) and `nearMatch` (closely related last pair) are per character. Milo is strongly
-  // consensus-seeking and follows the player's direction; Gary weighs them lightly and plays the 2nd or
+  // consensus-seeking and follows the player's direction; Gary weighs obviousness less (engine-2.5.1:
+  // still part of his score, never ignored) and the player's direction lightly, and plays the 2nd or
   // 3rd genuinely good answer more often. Neither ever gets a weaker word: the near-best range only ever
   // holds high-quality candidates.
   profiles: {
     milo: {difficulty: "easier", bias: {familiarity: 0.04, concrete: 0.03, cue: 0.05}, consensus: 0.30, trajectory: 0.12, nearMatch: 0.20,
       window: {margin: 0.03, plausibility: 0.05, size: 2}, weights: [0.85, 0.15], recoveryWindow: null},
     // recoveryWindow: in a "balanced" recovery round only, Gary may play a near-equal second bridge.
-    gary: {difficulty: "harder", bias: {familiarity: 0, concrete: 0, cue: 0}, consensus: 0, trajectory: 0.02, nearMatch: 0.06,
+    gary: {difficulty: "harder", bias: {familiarity: 0, concrete: 0, cue: 0}, consensus: 0.12, trajectory: 0.02, nearMatch: 0.06,
       window: {margin: 0.25, plausibility: 0.15, size: 4}, weights: [0.3, 0.3, 0.25, 0.15], recoveryWindow: {margin: 0.05, size: 2, weights: [0.55, 0.45]}}
   },
   // engine-2.5 human obviousness ("what would another person most likely type?"), 0..1, logged per

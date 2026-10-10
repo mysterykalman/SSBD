@@ -1,8 +1,56 @@
 # Solo bot engine, game logs and review
 
-This covers how Gary and Milo choose their word (engine-2.5, dataset lexicon-5), how they talk (their narratives), how Solo games are logged, how to review them, and how to replay decisions. Section 0 is the current engine; sections 1–2 are the history it builds on (engine-2.2 is frozen in `src/shared/engine-2.2.js` for replay only).
+This covers how Gary and Milo choose their word (engine-2.5.1, dataset lexicon-5), how they talk (their narratives), how Solo games are logged, how to review them, and how to replay decisions. Section 0 is the current engine; sections 1–2 are the history it builds on (engine-2.2 is frozen in `src/shared/engine-2.2.js` for replay only).
 
-## 0. Engine-2.5 / lexicon-5 (current, 2026-10-10)
+## 0. Engine-2.5.1: frozen for the playtest (2026-10-10)
+
+engine-2.5.1 is engine-2.5 with one change: **Gary weighs human obviousness too** (`profiles.gary.consensus` 0 → 0.12; Milo stays at 0.30). Obviousness is part of both characters' scores. Milo plays the answer a person would most likely pick ("Yep, that's probably what I would have picked"). Gary weighs it less and plays the 2nd or 3rd genuinely strong answer more often ("Ah, okay, I can see why he went there"). Gary never becomes harder by choosing something obscure, one-sided or less human. `test/engine-2.5.test.mjs` bounds how far his pick's obviousness can sit below the most obvious high-quality answer.
+
+**Frozen.** No further tuning of move counts, thresholds, candidate weights, lexicon coverage or recovery logic during this playtest phase, so every game measures the same engine. Games log `engine_version: "engine-2.5.1"`.
+
+What the playtest measures (not targets to optimise): Milo ≈ 5–7 moves and Gary ≈ 8–15 moves for a typical competent player, with early wins possible for either and games able to reach 20.
+
+### Playtest export
+Export with `/api/review/export?format=json` (review token). Nothing is asked of the player during the game.
+
+**Per game: `summary`.** Computed from the stored rounds by `gameSummary` (src/shared/gamelog.js), with the same definitions in every export:
+
+| field | meaning |
+|---|---|
+| `character` | which character played |
+| `moves` | number of rounds played |
+| `result` | matched, exhausted, ended, in_progress or abandoned |
+| `low_quality_rounds` | rounds the engine flagged as low quality |
+| `unknown_input_rounds` | rounds where a clue wasn't understood |
+| `one_sided_picks` | picks whose weaker clue scored below 0.3 |
+| `avg_balance` | average of weak side ÷ strong side across picks |
+| `near_match_rounds` | rounds where near-match momentum influenced the pick |
+| `trajectory_rounds` | rounds where the player's direction influenced the pick |
+| `profile_changed_rounds` | rounds where the character's profile changed the top answer |
+| `varied_rounds` | rounds where a near-best alternative was played |
+
+**Per round.** Each round has `pair_a`, `pair_b`, `user_word`, `bot_word`, `matched`, `stage` and `low_quality`, plus `decision`:
+
+- **The bot's side:** `inputs[].known/understood/guessed`, `fallback`, `recoveryTier`, the logged `candidates` (`relA/relB`, kinds, `consensus`, `trajectory`, `highQuality`), and `pickWeak/pickStrong/pickBalance/pickConsensus`.
+- **Why the pick won (`selection`):** `semanticTop`, `profileTop`, `profileChanged`, `varied`, `trajectory`, `nearMatchApplied`, and `alternatives` with how far behind each was.
+- **The player's side (`decision.roundAnalysis`, logged at the reveal):**
+  - `user_understood`
+  - `user_rel` and `user_kinds`: how the player's word relates to clue A and clue B
+  - `user_bot_rel` and `user_bot_kind`: how close the two words are
+  - `user_rank`: where the player's word sat in the bot's own list, or null
+
+Suggested reading of a round:
+
+| class | what to look for |
+|---|---|
+| random / inexplicable | `stage` is a fallback (`one-input-only`, `no-candidates`), or a faint pick (`pickWeak` < 0.12) with low `pickConsensus` |
+| one-sided | `pickWeak` < 0.3 while `pickStrong` ≥ 0.7 |
+| understandable but frustrating | a high-quality pick, but `user_rank` is small (1–3) and the player's word had higher `consensus` than the pick (see `alternatives`) |
+| good miss | both words are sound answers (`user_rel` ≥ 0.6 on both clues; the pick `highQuality`) but `user_bot_rel` is low |
+| "I almost picked that" | `user_bot_rel` ≥ 0.7, or the player's word in the bot's top three (`user_rank` ≤ 3) |
+| genuinely fun surprise | a high-quality, balanced pick (`pickBalance` ≥ 0.7) that wasn't the most obvious one (`selection.varied`, or lower `pickConsensus` than `profileTop`), with the player's word unrelated to it |
+
+## 0b. Engine-2.5 / lexicon-5 (2026-10-10)
 
 Built from the engine-2.4 / lexicon-4 playtest logs. The problem was not simply difficulty: answers felt random, one-sided or frustrating even when the scoring could justify them.
 
@@ -19,7 +67,7 @@ Built from the engine-2.4 / lexicon-4 playtest logs. The problem was not simply 
 - **One-sidedness costs more** in the main score (gap 0.35, factor 0.45).
 - **Recovery rebuilt as the least-bad genuinely shared bridge:** the weak side dominates (0.70 / 0.70 beats 1.00 / 0.12). Tiers: balanced, loose (2+ shared neighbours both sides), weak (direct on one, a shared neighbour with the other). Never a faint bridge on both sides; with nothing shared, a broad word of the stronger input (category or hub, never a compound).
 - **Unknown input:** the least-bad broad answer from the known word (category or familiar hub; never a compound or narrow member), logged low quality.
-- **Profiles:** Milo is strongly consensus-seeking (+0.30 × consensus, also in recovery), follows the player's revealed direction (trajectory 0.12) and near-match momentum (0.20). Gary ignores consensus, weighs direction lightly (0.02 / 0.06) and draws from a wider near-best range of high-quality answers only (≤ 0.25, up to 4; 30/30/25/15 %), plus a near-equal second bridge in a balanced recovery round. Neither ever gets a weaker word for difficulty; exact matches are never dodged (the engine never sees the open word).
+- **Profiles:** Milo is strongly consensus-seeking (+0.30 × consensus, also in recovery), follows the player's revealed direction (trajectory 0.12) and near-match momentum (0.20). Gary weighs consensus less (engine-2.5.1: +0.12; it was 0 in engine-2.5), weighs direction lightly (0.02 / 0.06) and draws from a wider near-best range of high-quality answers only (≤ 0.25, up to 4; 30/30/25/15 %), plus a near-equal second bridge in a balanced recovery round. Neither ever gets a weaker word for difficulty; exact matches are never dodged (the engine never sees the open word).
 - **Openings** are derived on the lexicon-4 graph they were tuned on (the extra links would otherwise let weak openers like "cozy" or "sink" in).
 - **Diagnostics** in every decision: `inputs[].known / understood / guessed`, `fallback`, `recoveryTier`, per-candidate `consensus` and `trajectory`, `pickStrong / pickBalance / pickConsensus`, and `selection` (best by meaning, best for the profile, `profileChanged`, `varied`, trajectory and near-match influence, runners-up with how far behind). Shown in the `?debug=gary` panel and the review screen.
 

@@ -9,6 +9,7 @@
 // Nothing identifying is stored or sent: no name, player id or email (see src/shared/gamelog.js).
 
 import {gameRecord, roundRecord, toCsv} from "../shared/gamelog.js";
+import {roundAnalysis} from "../shared/round-analysis.js";
 import {ENGINE_CONFIG, ENGINE_VERSION} from "../shared/engine.js";
 import {DATASET_VERSION} from "../shared/lexicon/index.js";
 
@@ -60,7 +61,9 @@ export function logRound(game, move, decision, ms, input = null) {
     const data = load();
     const key = `${game.id}#${move.number}`;
     if (!data.rounds[key]) {
-      data.rounds[key] = roundRecord(game, move, decision, ms, input);
+      let analysis = null;
+      try { analysis = roundAnalysis(move, decision, game.language); } catch {}
+      data.rounds[key] = roundRecord(game, move, decision, ms, input, analysis);
       queue(data.pending.rounds, key);
     }
     data.games[game.id] = gameRecord(game, meta());
