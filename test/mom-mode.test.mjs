@@ -5,7 +5,10 @@ import {Script} from "node:vm";
 const root=new URL("../src/client/mom-mode/",import.meta.url);
 const read=name=>readFile(new URL(name,root),"utf8");
 test("Mom Mode scripts parse and keep the engine isolated",async()=>{
- for(const name of ["knowledge.js","engine.js","copy.js","adapter.js","app.js"])assert.doesNotThrow(()=>new Script(await read(name),{filename:name}));
+ for(const name of ["knowledge.js","engine.js","copy.js","adapter.js","app.js"]){
+  const source=await read(name);
+  assert.doesNotThrow(()=>new Script(source,{filename:name}));
+ }
  const adapter=await read("adapter.js");
  for(const name of ["connected:true","supportedAnswers","startGame","getNextQuestion","submitAnswer","getProgress","getGuess","confirmGuess","resetGame"])assert.ok(adapter.includes(name),"missing "+name);
  assert.doesNotMatch(adapter,/engine not connected/i);
