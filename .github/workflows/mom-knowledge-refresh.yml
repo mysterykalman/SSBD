@@ -15,6 +15,13 @@ on:
         description: "Places and landmarks to request from Wikidata"
         required: false
         default: "2500"
+  # Changing this workflow on the feature branch also bootstraps a real snapshot once.
+  # The generated-data commit does not touch this file, so it cannot recurse.
+  push:
+    branches:
+      - feature/mom-mode-stump-mom
+    paths:
+      - .github/workflows/mom-knowledge-refresh.yml
   schedule:
     - cron: "17 5 * * 0"
 
