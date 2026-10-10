@@ -57,7 +57,7 @@ function asideFor(q,n){if((Number(n)||1)%3===1)return"";const hit=copy.asides.fi
 function leadFor(n,max,surprise){if(surprise)return pick(copy.surprise,n);if(n>=Math.max(6,max-4))return pick(copy.close,n);if(n>=5)return pick(copy.middle,n);return pick(copy.early,n);}
 function guessLead(n,wrong=0){return wrong?pick(["I’m trying again.","Okay, new guess.","You bought yourself time. Not much."],n+wrong):pick(copy.guess,n);}
 function wrongGuessLead(name,n){return`${pick(copy.wrongGuess,n)} ${name} is out.`;}
-function wrongGuessAside(name){return`That miss cost me a turn. I still have questions.`;}
+function wrongGuessAside(_name){return`That miss cost me a turn. I still have questions.`;}
 function stumpedAside(result){return pick(copy.stumpedAsides,(result.turns||20)+(result.wrongGuesses||0));}
 function resultLine(result){
  if(result.winner==="player")return pick(copy.stumped,(result.turns||20)+(result.wrongGuesses||0));
