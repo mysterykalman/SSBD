@@ -1,1 +1,6 @@
-// Offline support for /20Q only.
+// Independent /20Q offline worker; never controls the main game.
+const CACHE = "twentyq-%VERSION%";
+const PRECACHE = %PRECACHE%;
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
+});
