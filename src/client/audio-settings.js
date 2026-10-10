@@ -1,22 +1,16 @@
-// Device-local sound system and settings UI.
-// Routine feedback uses playful NES-style jingles at low volume. Larger studio/comedy cues are
-// reserved for major moments. Every sound is softened with a short fade-in and fade-out.
+// Device-local game sound system and settings UI.
+// Sounds are reserved for meaningful game moments and softened with fade-in/fade-out.
 
 const STORAGE_KEY = "ssbd.audio.v1";
-const DEFAULTS = Object.freeze({enabled: true, game: 0.7, notifications: 0.5, ui: 0.3});
+const DEFAULTS = Object.freeze({enabled: true, game: 0.7});
 const BASE = "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/music-jingles";
 const FUN_BASE = "https://raw.githubusercontent.com/jonjonsson/SoundMonster/main/Public%20domain";
 
 const SOUND = Object.freeze({
-  uiClick: {channel: "ui", url: `${BASE}/jingles_NES00.ogg`, gain: 0.18, fadeIn: 35, fadeOut: 130, maxMs: 430},
-  uiToggle: {channel: "ui", url: `${BASE}/jingles_NES10.ogg`, gain: 0.18, fadeIn: 35, fadeOut: 140, maxMs: 520},
   closeAsk: {channel: "game", url: `${BASE}/jingles_NES04.ogg`, gain: 0.17, fadeIn: 40, fadeOut: 150, maxMs: 560},
   closeYes: {channel: "game", url: `${BASE}/jingles_NES05.ogg`, gain: 0.18, fadeIn: 40, fadeOut: 160, maxMs: 620},
   closeNo: {channel: "game", url: `${BASE}/jingles_NES06.ogg`, gain: 0.16, fadeIn: 40, fadeOut: 170, maxMs: 620},
   rating: {channel: "game", url: `${BASE}/jingles_NES07.ogg`, gain: 0.16, fadeIn: 35, fadeOut: 150, maxMs: 520},
-  notify: {channel: "notifications", url: `${BASE}/jingles_NES10.ogg`, gain: 0.20, fadeIn: 45, fadeOut: 170, maxMs: 620},
-  notifyError: {channel: "notifications", url: `${BASE}/jingles_NES09.ogg`, gain: 0.18, fadeIn: 45, fadeOut: 180, maxMs: 680},
-
   chooseBoing: {channel: "game", url: `${FUN_BASE}/boing%20cartoon.mp3`, gain: 0.30, fadeIn: 90, fadeOut: 320, major: true},
   chooseDing: {channel: "game", url: `${FUN_BASE}/ding%20bell.mp3`, gain: 0.28, fadeIn: 90, fadeOut: 320, major: true},
   startRoll: {channel: "game", url: `${FUN_BASE}/announcement%20timpani%20roll.mp3`, gain: 0.24, fadeIn: 120, fadeOut: 420, major: true, maxMs: 1800},
@@ -45,9 +39,7 @@ function loadSettings() {
     if (!saved || typeof saved !== "object") return {...DEFAULTS};
     return {
       enabled: saved.enabled !== false,
-      game: clamp(saved.game ?? DEFAULTS.game),
-      notifications: clamp(saved.notifications ?? DEFAULTS.notifications),
-      ui: clamp(saved.ui ?? DEFAULTS.ui)
+      game: clamp(saved.game ?? DEFAULTS.game)
     };
   } catch {
     return {...DEFAULTS};
@@ -105,7 +97,7 @@ function scheduleFade(audio, spec) {
 function play(name, {preview = false} = {}) {
   const spec = SOUND[name];
   if (!spec || !settings.enabled) return;
-  const target = clamp(settings[spec.channel] * (spec.gain ?? 1));
+  const target = clamp(settings.game * (spec.gain ?? 1));
   if (target <= 0) return;
   const now = performance.now();
   if (!preview && now - (lastPlayed.get(name) || 0) < 120) return;
@@ -151,17 +143,13 @@ function lang() {
 const copy = {
   en: {
     sound: "Sound", soundOn: "Enable sound",
-    soundHint: "Adjust each type separately. Your levels are remembered when sound is turned off.",
-    game: "Game sounds", gameHint: "Close-enough decisions, character choice, game start, matching reveal, wins and quitting",
-    notifications: "Notification sounds", notificationsHint: "Updates, alerts and errors",
-    ui: "UI sounds", uiHint: "Buttons and controls"
+    soundHint: "Control the sounds used for important game moments.",
+    game: "Game sounds", gameHint: "Close-enough decisions, character choice, game start, matching reveal, wins and quitting"
   },
   fr: {
     sound: "Son", soundOn: "Activer le son",
-    soundHint: "Réglez chaque type séparément. Vos niveaux sont conservés lorsque le son est désactivé.",
-    game: "Sons du jeu", gameHint: "Décisions presque identiques, choix du personnage, début, victoire et départ",
-    notifications: "Sons de notification", notificationsHint: "Mises à jour, alertes et erreurs",
-    ui: "Sons de l’interface", uiHint: "Boutons et commandes"
+    soundHint: "Contrôlez les sons utilisés pour les moments importants du jeu.",
+    game: "Sons du jeu", gameHint: "Décisions presque identiques, choix du personnage, début, victoire et départ"
   }
 };
 
@@ -222,15 +210,10 @@ function enhanceProfileDialog() {
   const hint = document.createElement("p"); hint.className = "audio-settings-hint"; hint.textContent = text.soundHint;
   const master = document.createElement("label"); master.className = "audio-master"; master.append(document.createTextNode(text.soundOn));
   const toggle = document.createElement("input"); toggle.type = "checkbox"; toggle.checked = settings.enabled; master.append(toggle);
-  const rows = [
-    channelRow("game", text.game, text.gameHint, "winHallelujah"),
-    channelRow("notifications", text.notifications, text.notificationsHint, "notify"),
-    channelRow("ui", text.ui, text.uiHint, "uiClick")
-  ];
+  const rows = [channelRow("game", text.game, text.gameHint, "winHallelujah")];
   toggle.addEventListener("change", () => {
     settings.enabled = toggle.checked; saveSettings(); panel.classList.toggle("muted", !settings.enabled);
     for (const range of panel.querySelectorAll('input[type="range"]')) range.disabled = !settings.enabled;
-    if (settings.enabled) play("uiToggle", {preview: true});
   });
   panel.append(heading, hint, master, ...rows);
   const error = form.querySelector("#dialogError");
@@ -261,10 +244,7 @@ function installInteractionSounds() {
     if (button.id === "closeBtn") { play("closeAsk"); return; }
     if (button.id === "closeYes") { play("closeYes"); return; }
     if (button.id === "closeNo") { play("closeNo"); return; }
-    if (button.id === "revealContinue") return;
     if (button.classList?.contains("wc-star")) { play("rating"); return; }
-    if (button.id === "lockBtn") return;
-    play("uiClick");
   }, true);
 
   document.addEventListener("change", event => {
@@ -297,35 +277,18 @@ function inspectGameAudio() {
   if (phase === "gameOver" && document.querySelector(".end.win")) playWinSequence();
 }
 
-let bellCount = 0;
-function inspectBell() {
-  const node = document.getElementById("notifCount");
-  if (!node) return;
-  const next = Number.parseInt(node.textContent || "0", 10) || 0;
-  if (next > bellCount) play("notify");
-  bellCount = next;
-}
-
 function installObservers() {
   const app = document.getElementById("app");
   if (app) {
     new MutationObserver(inspectGameAudio).observe(app, {attributes: true, attributeFilter: ["data-phase"]});
     new MutationObserver(() => requestAnimationFrame(syncHomeGamesCard)).observe(app, {childList: true, subtree: true});
   }
-  const toasts = document.getElementById("toasts");
-  if (toasts) new MutationObserver(records => {
-    for (const record of records) for (const node of record.addedNodes) {
-      if (!(node instanceof Element) || !node.classList.contains("toast")) continue;
-      play(node.classList.contains("error") ? "notifyError" : "notify");
-    }
-  }).observe(toasts, {childList: true});
-  const count = document.getElementById("notifCount");
-  if (count) new MutationObserver(inspectBell).observe(count, {childList: true, characterData: true, subtree: true, attributes: true});
   document.addEventListener("click", event => {
     if (event.target instanceof Element && event.target.closest("#profileBtn")) scheduleProfileEnhance();
   });
   window.addEventListener("resize", () => requestAnimationFrame(syncHomeGamesCard), {passive: true});
-  inspectGameAudio(); inspectBell(); requestAnimationFrame(syncHomeGamesCard);
+  inspectGameAudio();
+  requestAnimationFrame(syncHomeGamesCard);
 }
 
 injectStyles();
