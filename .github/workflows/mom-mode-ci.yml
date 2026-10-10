@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/mom-mode-pam-ui
+      - feature/mom-mode-stump-mom
   pull_request:
     branches:
       - main
