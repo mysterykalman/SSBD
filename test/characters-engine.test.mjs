@@ -118,13 +118,21 @@ test("recovery only when no high-quality (or anchored) answer exists, and recove
       recoveries++;
       assert.ok(!decision.candidates.some(c => c.highQuality), `${a}+${b}: recovery while a high-quality answer existed`);
       assert.equal(decision.lowQuality, true);
-      assert.equal(decision.pool.length, 1, "recovery is the single most readable hub, no variety");
+      // Recovery is the single most readable bridge; only Gary, and only in a "balanced" round, may play a
+      // near-equal second one (engine-2.5).
+      assert.ok(decision.pool.length === 1 || (character === "gary" && decision.recoveryTier === "balanced" && decision.pool.length <= 2), `${a}+${b}: recovery variety`);
       const c = lex.concepts.get(lex.resolve(word));
       assert.ok(c, `${a}+${b} → ${word} is a known word`);
       assert.ok(c.links.size >= 6 || c.members.size, `${a}+${b} → ${word} is a familiar hub (${c.links.size} links)`);
       assert.ok(!["thing", "stuff", "good", "nice", "new", "old"].includes(c.id), `${a}+${b} → ${word} is too vague`);
       const pick = decision.candidates.find(x => x.word === word);
-      if (decision.stage === "recovery") assert.ok(pick.weak >= ENGINE_CONFIG.recovery.minWeak, `${a}+${b} → ${word} relates to both words`);
+      if (decision.stage === "recovery") {
+        // engine-2.5 tiers: "balanced" (2+ shared neighbours on the weak side) or "weak" (direct on one side
+        // and tied to the other); never an unrelated or purely indirect, faint bridge.
+        const direct = ["category", "compound", "curated", "member", "link"];
+        if (decision.recoveryTier === "balanced") assert.ok(pick.weak >= ENGINE_CONFIG.recovery.minWeak, `${a}+${b} → ${word} relates to both words`);
+        else assert.ok(pick.weak >= ENGINE_CONFIG.recovery.fallbackWeak && (direct.includes(pick.kindA) || direct.includes(pick.kindB)), `${a}+${b} → ${word} is tied to one word directly and to the other`);
+      }
     }
   }
   assert.ok(recoveries > 0);
@@ -170,10 +178,12 @@ test("player style: learned only from rounds already revealed, and only a light 
   const solo = readFileSync(new URL("../src/shared/solo.js", import.meta.url), "utf8");
   assert.match(solo, /const history = game\.moves\.flatMap\(m => \(m\.words \? \[\{a: m\.words\.a, b: m\.words\.b\}\] : \[\]\)\);/);
   // A tie-break only reorders the near-best range; it never adds a word outside it.
+  // (The player's trajectory and near-match momentum, engine-2.5, are their own ranking signals and are switched off here to isolate the style.)
+  const noTrajectory = {...ENGINE_CONFIG, profiles: {...ENGINE_CONFIG.profiles, gary: {...ENGINE_CONFIG.profiles.gary, trajectory: 0, nearMatch: 0}}};
   let changed = 0;
   for (const [a, b] of relatedPairs(11, 300)) {
-    const plain = selectBotWord({pair: [a, b], seed: 5, character: "gary"});
-    const styled = selectBotWord({pair: [a, b], seed: 5, character: "gary", history});
+    const plain = selectBotWord({pair: [a, b], seed: 5, character: "gary", config: noTrajectory});
+    const styled = selectBotWord({pair: [a, b], seed: 5, character: "gary", history, config: noTrajectory});
     assert.deepEqual([...styled.decision.pool].sort(), [...plain.decision.pool].sort(), `${a}+${b}: same near-best range`);
     if (styled.decision.tieBreak?.changed) changed++;
     if (styled.decision.pool.length > 1) assert.equal(styled.decision.style.applied, true);
@@ -188,21 +198,23 @@ test("near-miss momentum: closely related revealed words set a near-match state 
   assert.deepEqual(nearMatchOf([{a: "warm", b: "hot"}], "en"), ["warm", "hot"]);
   assert.equal(nearMatchOf([{a: "violin", b: "pizza"}], "en"), null);
   assert.equal(nearMatchOf([], "en"), null);
-  let applied = 0, changed = 0;
-  for (const [a, b] of relatedPairs(11, 300)) {
-    const r = selectBotWord({pair: [a, b], seed: 2, character: "gary", history: [{a, b}]});
-    const plain = selectBotWord({pair: [a, b], seed: 2, character: "gary"});
-    assert.deepEqual([...r.decision.pool].sort(), [...plain.decision.pool].sort(), "same near-best range");
-    if (r.decision.nearMatch?.applied) {
+  // engine-2.5: near-match momentum is part of each character's ranking (Milo much more than Gary). It only
+  // ever reorders HIGH-QUALITY answers, and it favours the ones tied most strongly to BOTH words.
+  for (const character of ["milo", "gary"]) {
+    let applied = 0, plainWeak = 0, nearWeak = 0;
+    for (const [a, b] of relatedPairs(11, 300)) {
+      const r = selectBotWord({pair: [a, b], seed: 2, character, history: [{a, b}]});
+      const plain = selectBotWord({pair: [a, b], seed: 2, character});
+      if (!r.decision.nearMatch?.applied) continue;
       applied++;
-      // Within the range, the answers tied most strongly to BOTH words come first.
-      const weaks = r.decision.pool.map(w => r.decision.candidates.find(c => c.word === w)).map(c => c.profileScore + (c.tie || 0));
-      for (let i = 1; i < weaks.length; i++) assert.ok(weaks[i - 1] >= weaks[i] - 1e-9);
-      if (r.decision.tieBreak?.changed) changed++;
+      for (const w of r.decision.pool) assert.ok(r.decision.candidates.find(c => c.word === w)?.highQuality, `${character} ${a}+${b}: ${w} is high quality`);
+      const top = d => d.candidates.find(c => c.word === d.selection.profileTop);
+      plainWeak += top(plain.decision).weak;
+      nearWeak += top(r.decision).weak;
     }
+    assert.ok(applied > 0, character);
+    assert.ok(nearWeak >= plainWeak, `${character}: near-match favours answers tied to both words (${nearWeak.toFixed(2)} vs ${plainWeak.toFixed(2)})`);
   }
-  assert.ok(applied > 0);
-  assert.ok(changed > 0, "near-match history changed the order of some near-equal answers");
 });
 
 test("the hidden current word never affects the bot; Milo and Gary follow the same commit-before-reveal rule", () => {

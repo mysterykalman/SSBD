@@ -8,7 +8,7 @@
 // seed. It never receives the player's word for the round it is choosing for, and the game commits
 // its choice before the round is revealed (src/shared/solo.js).
 //
-// Goal (engine-2.3): human first. Each answer should be a word another ordinary person could
+// Goal (engine-2.3, sharpened in engine-2.5): human first. Each answer should be a word another ordinary person could
 // plausibly blurt out within a few seconds for BOTH words, so the player almost always sees why it
 // was said. Difficulty comes from how predictable the character is, never from worse or stranger
 // words: DIFFICULTY MUST NEVER BE CREATED BY CHOOSING IMPLAUSIBLE WORDS.
@@ -38,30 +38,45 @@
 //    side matters as much as the strong one), its plausibility is ≥ 0.78 (a generic word is marked
 //    down, so it rarely passes), and it is not a piece of an input. Shared-neighbour hops,
 //    half-compounds, tag matches and two-step paths never pass, however strong the other side is.
-// 4. Character profiles (same lexicon, same scoring, same fairness rules):
-//    Milo (easier)  ranks by the score plus a small bonus for familiar, concrete, first-thought
-//                   words, and only varies between answers that are virtually equal (≤ 0.02 apart;
-//                   80 % the top one). He converges fast because he is predictable, not because he
-//                   helps: he never sees the player's word.
-//    Gary (harder)  a slightly wider near-best range (≤ 0.15 apart, up to 3; 45/35/20 %), so he
-//                   sometimes plays the second or third genuinely strong reading. The range only
-//                   ever holds high-quality candidates, so he is never given a weaker word to
-//                   make the game longer.
+// 4. Human obviousness (engine-2.5, `consensus`, 0..1, logged per candidate): "what would another
+//    person most likely type for these two clues?" Mostly how first-thought the word is for the WEAKER
+//    clue (near the top of both clues' curated lists scores high; a bare category or link less), then
+//    balance (weak / strong side), familiarity, concreteness and being specific rather than generic.
+// 5. Character profiles (same lexicon, same scoring, same fairness rules):
+//    Milo (easier)  strongly consensus-seeking: the score plus 0.30 × consensus, and he follows the
+//                   player's revealed direction (trajectory) and near-match momentum. He varies only
+//                   between answers that are virtually equal (≤ 0.03 apart; 85 % the top one). He is
+//                   easier because he plays the obvious shared answer, never because he helps (he
+//                   never sees the player's word) or because he accepts sloppier links.
+//    Gary (harder)  ignores consensus and weighs the player's direction lightly; a wider near-best
+//                   range (≤ 0.25 apart, up to 4; 30/30/25/15 %), so he plays the 2nd or 3rd
+//                   genuinely strong answer more often. The range only ever holds high-quality
+//                   candidates: he is never given a weaker, one-sided or stranger word. In a
+//                   "balanced" recovery round he may play a near-equal second bridge.
 //    Anchored (below the threshold, not recovery): when nothing is high quality, a first-thought word
 //    for one input that is clearly tied to the other (3+ shared neighbours: DESSERT + EGG → CAKE),
 //    the single best one, logged as `anchored`.
-// 5. Recovery mode. When no candidate is high quality or anchored (or an input is not understood), the bot
-//    deliberately plays a simple, broad, familiar, concrete hub word tied to both inputs (never a
-//    narrow word for only one of them) and the decision is marked `recovery`. engine-2.4: the hub
-//    must be a DIRECT link of at least one of the two latest words, so the player can always see
-//    where it came from without reconstructing the trail (no hub reached only through shared
-//    neighbours: DESSERT + PENCIL → HOME is gone). With no hub left, the broadest familiar direct
-//    word of the stronger side.
-// 6. Tie-breakers (light, only among the candidates already in the near-best range, and only from
-//    rounds that have been revealed): the player's style (what kind of words they have played) and
-//    near-miss momentum (when the last two revealed words were closely related, favour candidates
-//    tied strongly to both). They reorder near-equal answers; they never add a weaker one.
-// 7. Openings come from a derived pool of familiar, bridgeable, child-friendly words.
+// 6. Recovery (engine-2.5): nothing clears the floor, so the least-bad GENUINELY SHARED bridge. The
+//    weaker side dominates the score, so a balanced 0.70 / 0.70 beats a lopsided 1.00 / 0.12. Tiers,
+//    first non-empty wins: "balanced" (2+ shared neighbours or direct on the weak side, and direct on
+//    one side or 3+ shared on both), "loose" (2+ shared neighbours on both), "weak" (direct on one
+//    side, one shared neighbour with the other). Never a bridge with only faint ties on both sides
+//    (WAKE + JEWEL → TOWER). With nothing tied to both: a broad word of the stronger input (its
+//    category or a hub, never a compound). Logged as `recovery` with `recoveryTier`.
+//    An input the engine does not understand, or only GUESSED (a word-part guess, or a spelling
+//    correction the player kept as typed: stump is not stamp), is handled as not understood: the
+//    least-bad broad answer from the known word (its category or a familiar hub; never a compound or
+//    a narrow member: TREE → APPLE for "apple tree" is gone), logged as low quality.
+// 7. Ranking signals from revealed rounds only: the player's direction (trajectory: candidates tied to
+//    the player's earlier words) and near-miss momentum (the last two revealed words were closely
+//    related: favour candidates tied strongly to both) are part of each character's ranking (Milo
+//    much more than Gary); the player's style stays a light tie-breaker inside the near-best range.
+// 8. Openings come from a derived pool of familiar, bridgeable, child-friendly words (derived on the
+//    lexicon-4 graph it was tuned on).
+// Diagnostics: every decision logs how each input was understood (and whether it was trusted), the
+// fallback and recovery tier, both relations and the consensus of each leading candidate, and a
+// `selection` record: the best by meaning, the best for the profile, whether the profile or the
+// player's direction changed the pick, and how far behind the runners-up were.
 
 import {getLexicon, DATASET_VERSION} from "./lexicon/index.js";
 import {lemmaKeys} from "./morph.js";
@@ -69,13 +84,14 @@ import {understandWord} from "./understand.js";
 import {wordKey} from "./words.js";
 import {hashString, seededRandom} from "./rules.js";
 
-export const ENGINE_VERSION = "engine-2.4";
+export const ENGINE_VERSION = "engine-2.5";
 
 /** Everything that shapes a decision (logged with it, so a decision can be replayed exactly). */
 export const ENGINE_CONFIG = Object.freeze({
   weights: {connection: 0.60, plausibility: 0.15, familiarity: 0.10, cue: 0.15},
   connection: {weak: 0.65, strong: 0.35},
-  oneSided: {gap: 0.45, factor: 0.30},
+  // engine-2.5: one-sidedness costs more (a 1.00 / 0.12 pair is not a shared answer).
+  oneSided: {gap: 0.35, factor: 0.45},
   genericPenalty: 0.10,
   piecePenalty: 0.10,
   compoundPart: 0.45,
@@ -89,24 +105,48 @@ export const ENGINE_CONFIG = Object.freeze({
   floor: {plausibility: 0.78, weak: 0.6},
   // Selection profiles. `bias` is added to the score for ranking (familiar, concrete, first-thought
   // words); `window` is the near-best range; `weights` how often each place in it is played.
+  // engine-2.5: `consensus` (how much the human-obviousness score counts), `trajectory` (the player's
+  // revealed direction) and `nearMatch` (closely related last pair) are per character. Milo is strongly
+  // consensus-seeking and follows the player's direction; Gary weighs them lightly and plays the 2nd or
+  // 3rd genuinely good answer more often. Neither ever gets a weaker word: the near-best range only ever
+  // holds high-quality candidates.
   profiles: {
-    milo: {difficulty: "easier", bias: {familiarity: 0.04, concrete: 0.03, cue: 0.05}, window: {margin: 0.02, plausibility: 0.05, size: 2}, weights: [0.8, 0.2]},
-    gary: {difficulty: "harder", bias: {familiarity: 0, concrete: 0, cue: 0}, window: {margin: 0.15, plausibility: 0.12, size: 3}, weights: [0.45, 0.35, 0.2]}
+    milo: {difficulty: "easier", bias: {familiarity: 0.04, concrete: 0.03, cue: 0.05}, consensus: 0.30, trajectory: 0.12, nearMatch: 0.20,
+      window: {margin: 0.03, plausibility: 0.05, size: 2}, weights: [0.85, 0.15], recoveryWindow: null},
+    // recoveryWindow: in a "balanced" recovery round only, Gary may play a near-equal second bridge.
+    gary: {difficulty: "harder", bias: {familiarity: 0, concrete: 0, cue: 0}, consensus: 0, trajectory: 0.02, nearMatch: 0.06,
+      window: {margin: 0.25, plausibility: 0.15, size: 4}, weights: [0.3, 0.3, 0.25, 0.15], recoveryWindow: {margin: 0.05, size: 2, weights: [0.55, 0.45]}}
   },
-  // Recovery: a broad, familiar, concrete hub tied to both inputs.
-  // `anchored`: a bonus for a hub directly tied to one word and clearly (2+ shared neighbours) to the other.
-  // `direct`: a bonus for a hub that is a direct link of at least one of the two words.
-  // `direct` is now required (engine-2.4): a hub must be a direct link of at least one of the two words.
-  recovery: {breadth: 0.20, familiarity: 0.20, connection: 0.35, concrete: 0.10, plausibility: 0.15, anchored: 0.15, direct: 0.10, minWeak: 0.12},
+  // engine-2.5 human obviousness ("what would another person most likely type?"), 0..1, logged per
+  // candidate: `mutual` = how first-thought the word is for the WEAKER of the two clues (a word near
+  // the top of both clues' curated lists scores high); `balance` = weak side / strong side; plus
+  // familiar, concrete and specific (not generic). `side` scores each kind of link for one clue.
+  consensus: {weights: {mutual: 0.40, balance: 0.20, familiarity: 0.15, concrete: 0.15, specific: 0.10},
+    side: {compound: 0.8, member: 0.6, category: 0.55, link: 0.45, reverse: 0.9}},
+  // Recovery (engine-2.5): the least-bad GENUINELY SHARED bridge. The weaker side dominates the score
+  // (0.70 / 0.70 beats 1.00 / 0.12), then consensus, familiarity, breadth and plausibility. Tiers, first
+  // non-empty wins: "balanced" (weak ≥ minWeak, i.e. 2+ shared neighbours or direct, and direct on one
+  // side or 3+ shared on both), "loose" (weak ≥ minWeak), then "weak" (direct on one side, weak ≥
+  // fallbackWeak on the other).
+  recovery: {weak: 0.45, strong: 0.10, consensus: 0.15, familiarity: 0.12, breadth: 0.08, plausibility: 0.10, minWeak: 0.3, fallbackWeak: 0.12},
   // Tie-breakers among near-equal candidates (from revealed rounds only).
   // style: bonus × the share of the candidate's word class among the player's earlier words;
   // nearMatch: bonus × how much more than the floor the candidate ties to the WEAKER word.
   tieBreak: {style: 0.05, styleMinRounds: 2, nearMatch: 0.15, nearMatchRelation: 0.7},
   // How sure we are of each input, by how it was understood (src/shared/understand.js).
-  inputConfidence: {certain: 1, high: 1, medium: 0.9, low: 0.75},
-  // One input still not understood: prefer broad, familiar words of the other input.
-  unknown: {relation: 0.5, familiarity: 0.2, breadth: 0.3},
-  opening: {minLinks: 12, maxLength: 7, minBridges: 8},
+  // engine-2.5: a guessed reading counts less (forecast → forest, orchard → hard were misreads), and a
+  // word-part guess ("component", low) is treated as not understood.
+  inputConfidence: {certain: 1, high: 1, medium: 0.75, low: 0.5},
+  untrusted: ["low"],
+  // A spelling correction is never trusted: the browser always offers it ("Did you mean?") before the
+  // word is locked in, so a word that reaches the engine misspelled was KEPT as typed by the player
+  // (stump is not stamp, tackle is not tickle). It is handled as not understood.
+  fuzzy: {untrusted: ["high", "medium"]},
+  // One input not understood: the least-bad shared answer. Never a narrow word or a compound of the
+  // known word (TREE → APPLE for "apple tree"): its category or a broad, familiar hub, which has the
+  // best chance of also fitting the unknown word. Logged as low quality.
+  unknown: {relation: 0.30, familiarity: 0.25, breadth: 0.45, category: 0.15},
+  opening: {minLinks: 12, maxLength: 7, minBridges: 8, dataset: "lexicon-4"},
   logCandidates: 8
 });
 
@@ -114,11 +154,15 @@ export const ENGINE_CONFIG = Object.freeze({
 export const STRONGEST_CONFIG = Object.freeze({...ENGINE_CONFIG, window: {size: 1}});
 
 /** Broad words: fine when nothing better connects, but a more specific shared bridge should win. */
-const GENERIC = new Set(["food", "thing", "stuff", "animal", "people", "person", "place", "fun", "good", "nice", "big", "small", "color", "toy", "eat", "drink", "happy", "new", "time"]);
+const GENERIC = new Set(["food", "thing", "stuff", "animal", "people", "person", "place", "fun", "good", "nice", "big", "small", "color", "toy", "eat", "drink", "happy", "new", "time",
+  "human", "device", "system", "information", "data", "make", "create", "bad", "same", "different", "normal", "special", "change"]);
 /** Too vague to be a readable answer even in recovery. */
-const VAGUE = new Set(["thing", "stuff", "good", "nice", "new", "old", "big", "small", "happy", "sad", "fun", "people", "person", "place", "time", "word", "pair"]);
+const VAGUE = new Set(["thing", "stuff", "good", "nice", "new", "old", "big", "small", "happy", "sad", "fun", "people", "person", "place", "time", "word", "pair",
+  "bad", "same", "different", "normal", "special", "system", "change", "make", "create", "human", "information", "data"]);
 const GLOOMY = new Set(["nightmare", "scary", "fear", "ghost", "monster", "haunted_house", "skeleton", "zombie", "witch", "spider", "snake", "shark", "sad", "angry", "cry", "storm", "volcano", "dark", "war", "fight", "army", "soldier", "tank", "sewer", "trash",
-  "hurt", "sick", "medicine", "hospital", "bite", "sting", "punch", "hit", "danger", "lonely", "nervous", "broken", "dirty", "smell", "rat", "mosquito", "wasp", "scorpion", "vampire", "cauldron", "potion", "skunk", "hurricane", "tornado"]);
+  "hurt", "sick", "medicine", "hospital", "bite", "sting", "punch", "hit", "danger", "lonely", "nervous", "broken", "dirty", "smell", "rat", "mosquito", "wasp", "scorpion", "vampire", "cauldron", "potion", "skunk", "hurricane", "tornado",
+  "virus", "germ", "flu", "fever", "cough", "pain", "ouch", "headache", "blood", "thief", "steal", "prison", "evil", "villain", "bully", "mean", "ugly", "rotten", "garbage", "pollution",
+  "punishment", "failure", "lie", "earthquake", "tsunami", "flood", "avalanche", "drought", "blizzard", "hacker", "spooky"]);
 /** Openings people reach for first. Always in the pool when the dataset has them (the pool itself is derived). */
 const OPENING_SEEDS = ["dog", "school", "beach", "pizza", "music", "car", "rain", "movie", "home", "game", "book", "summer", "food", "family", "park", "water", "party", "night", "tree", "snow"];
 /** Vetting: derived words that are poor first words (a verb or colour with nothing to latch onto, a utensil, a narrow word). */
@@ -259,6 +303,38 @@ function stageOf(weak, strong, cfg) {
 }
 export const STAGE_NAMES = {1: "shared-direct", 2: "direct-plus-indirect", 3: "indirect-both", 4: "weak-fallback", 5: "best-available", 6: "one-input-only"};
 
+/**
+ * How first-thought a candidate is for ONE clue (0..1): a curated association near the top of the
+ * clue's own list scores highest, then the clue near the top of the candidate's list, then a compound,
+ * a member, the clue's category, any other link.
+ */
+function sideObviousness(lex, ids, candidate, kind, config) {
+  const side = (config.consensus || ENGINE_CONFIG.consensus).side;
+  let best = 0;
+  for (const id of ids) {
+    const input = lex.concepts.get(id);
+    if (!input) continue;
+    const rank = input.out.get(candidate.id), back = candidate.out.get(id);
+    if (rank !== undefined) best = Math.max(best, 1 / (1 + 0.25 * rank));
+    if (back !== undefined) best = Math.max(best, side.reverse / (1 + 0.25 * back));
+  }
+  const byKind = {compound: side.compound, member: side.member, category: side.category, link: side.link, curated: side.link};
+  return Math.max(best, byKind[kind] ?? 0);
+}
+
+/**
+ * engine-2.5 human obviousness: "what would another person most likely type for these two clues?"
+ * 0..1, logged per candidate. Mostly how first-thought the word is for the WEAKER clue, then balance,
+ * familiarity, concreteness and being specific rather than generic.
+ */
+function consensusOf(lex, resolved, c, kindA, kindB, weak, strong, familiarityScore, generic, config) {
+  const w = (config.consensus || ENGINE_CONFIG.consensus).weights;
+  const a = sideObviousness(lex, resolved[0]?.ids || [], c, kindA, config), b = sideObviousness(lex, resolved[1]?.ids || [], c, kindB, config);
+  const mutual = resolved.length === 2 ? Math.min(a, b) : a;
+  const balance = strong > 0 ? weak / strong : 0;
+  return round3(w.mutual * mutual + w.balance * balance + w.familiarity * familiarityScore + w.concrete * isConcrete(c) + w.specific * (generic ? 0 : 1));
+}
+
 /** One side a first-thought word (category, compound or curated, ≥ 0.8), the other 3+ shared neighbours. */
 export function isAnchored(s, config = ENGINE_CONFIG) {
   const strongSide = (kind, rel) => ["category", "compound", "curated"].includes(kind) && rel >= 0.8;
@@ -284,7 +360,9 @@ const openingCache = new Map();
  * the everyday seeds people reach for first. Derived from the dataset, not a fixed list.
  */
 export function openingPool(language = "en", config = ENGINE_CONFIG) {
-  const lex = getLexicon(language);
+  // Derived on the graph the rule was tuned on (`opening.dataset`): later datasets add links, which would
+  // otherwise let weak openers (cozy, fabric, sink, win) into the pool and make the first pair harder.
+  const lex = getLexicon(language, config.opening.dataset);
   const key = `${lex.language}:${lex.dataset}`;
   if (openingCache.has(key)) return openingCache.get(key);
   const o = config.opening;
@@ -306,16 +384,17 @@ export function openingPool(language = "en", config = ENGINE_CONFIG) {
 /**
  * @typedef {{word: string, rank: number, stage: number, sources: string[], relA: number, relB: number, kindA: string, kindB: string,
  *   weak: number, strong: number, connection: number, plausibility: number, familiarity: number, cue: number, oneSided: number,
- *   generic: number, piece: number, final: number, highQuality?: boolean, profileScore?: number, tie?: number}} ScoredWord
+ *   generic: number, piece: number, final: number, highQuality?: boolean, profileScore?: number, tie?: number, consensus?: number, trajectory?: number}} ScoredWord
  * @typedef {{word: string, ids: string[], known: boolean, method: string, confidence: string | null, via: string | null,
- *   spacing: boolean, morphology: boolean, fuzzy: boolean}} EngineInput
+ *   spacing: boolean, morphology: boolean, fuzzy: boolean, understood?: boolean, guessed?: string | null}} EngineInput
  * @typedef {{margin: number, plausibilityMargin: number, topFinal: number, minFinal: number, topPlausibility: number, minPlausibility: number, size: number}} QualityWindow
  * @typedef {{engine: string, dataset: string, config: typeof ENGINE_CONFIG, seed: number, language: string, character: string, profile: string,
  *   pair: string[] | null, inputs: EngineInput[], unresolvedInputs: number, blockedCount: number, stage: string, lowQuality: boolean, recovery: boolean,
  *   recoveryReason?: string, highQuality: boolean, candidates: ScoredWord[], rejected: {word: string, reason: string}[], pool: string[], selected: string,
  *   quality: string, generated: number, pickRank: number | null, pickPlausibility: number | null, pickWeak: number | null,
  *   window?: QualityWindow, fallback?: string, style?: {rounds: number, shares: Record<string, number>, applied: boolean},
- *   nearMatch?: {words: string[], applied: boolean} | null, tieBreak?: {used: boolean, changed: boolean}}} EngineDecision
+ *   nearMatch?: {words: string[], applied: boolean} | null, tieBreak?: {used: boolean, changed: boolean},
+ *   recoveryTier?: string, pickStrong?: number | null, pickBalance?: number | null, pickConsensus?: number | null, selection?: object}} EngineDecision
  */
 
 /**
@@ -339,7 +418,10 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
   /** @type {EngineInput[]} */
   const resolved = inputs.map(word => {
     const u = understandWord(word, lang, lex);
-    return {word, ids: u.ids, known: !u.unresolved, method: u.method, confidence: u.confidence, via: u.via, spacing: u.spacing, morphology: u.morphology, fuzzy: u.fuzzy};
+    // engine-2.5: a low-confidence guess (a piece of an unknown word: orchard → hard) is not trusted.
+    const doubtfulFix = u.fuzzy && (config.fuzzy?.untrusted || []).includes(u.confidence);
+    const trusted = !u.unresolved && !(config.untrusted || []).includes(u.confidence) && !doubtfulFix;
+    return {word, ids: trusted ? u.ids : [], known: trusted, understood: !u.unresolved, guessed: u.unresolved ? null : u.via, method: u.method, confidence: u.confidence, via: u.via, spacing: u.spacing, morphology: u.morphology, fuzzy: u.fuzzy};
   });
   const sure = r => (r?.known ? config.inputConfidence[r.confidence || "certain"] ?? 1 : 0);
   /** @type {EngineDecision} */
@@ -347,6 +429,13 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
     inputs: resolved, unresolvedInputs: resolved.filter(r => !r.known).length, blockedCount: new Set(blockedWords.map(wordKey)).size, stage: "", lowQuality: false, recovery: false,
     highQuality: false, candidates: [], rejected: [], pool: [], selected: "", quality: "", generated: 0, pickRank: null, pickPlausibility: null, pickWeak: null};
 
+  // The player's revealed direction (engine-2.5): their words from the rounds before the latest one.
+  // Only revealed words, never the open move's.
+  const trail = (history || []).slice(0, -1).slice(-3).map(r => understandWord(r?.a ?? "", lang, lex).ids[0]).filter(Boolean);
+  const trajectoryOf = c => (trail.length ? round3(trail.filter(id => id !== c.id && lex.concepts.get(id)?.near.has(c.id)).length / trail.length) : 0);
+  // Near-match momentum (the last revealed pair was closely related): part of each character's ranking,
+  // favouring candidates tied strongly to BOTH words (Milo much more than Gary).
+  const nearState = nearMatchOf(history, lang, lex, config);
   const valid = concept => !isBlocked(concept.label, blockedSet, lang);
   const friendly = concept => concept.links.size >= 7 && !concept.label.includes(" ") && !GLOOMY.has(concept.id);
   const finish = (word, quality, stage, lowQuality) => {
@@ -398,7 +487,11 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
       relA, relB, kindA: a.kind, kindB: b.kind, weak, strong, connection: round3(connection), plausibility: round3(plaus), familiarity: round3(fam), cue: round3(cue),
       oneSided: round3(oneSided), generic, piece, final: round3(final)};
     s.highQuality = resolved.length === 2 && passesFloor(s, config);
-    s.profileScore = round3(s.final + profile.bias.familiarity * fam + profile.bias.concrete * isConcrete(c) + profile.bias.cue * cue);
+    s.consensus = consensusOf(lex, resolved, c, a.kind, b.kind, weak, strong, fam, generic > 0, config);
+    s.trajectory = trajectoryOf(c);
+    const nearBonus = nearState ? (profile.nearMatch ?? 0) * Math.max(0, weak - config.floor.weak) : 0;
+    s.profileScore = round3(s.final + profile.bias.familiarity * fam + profile.bias.concrete * isConcrete(c) + profile.bias.cue * cue
+      + (profile.consensus ?? 0) * s.consensus + (profile.trajectory ?? 0) * s.trajectory + nearBonus);
     return s;
   };
   /** @type {{word: string, reason: string, final: number}[]} */
@@ -425,14 +518,17 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
   if (resolved.length === 2 && resolved.some(r => !r.known)) {
     const knownIndex = resolved[0].known ? 0 : 1;
     const u = config.unknown;
-    pool = pool.filter(s => DIRECT_KINDS.has(knownIndex === 0 ? s.kindA : s.kindB) && !VAGUE.has(s.concept.id)).map(s => {
-      const rel = knownIndex === 0 ? s.relA : s.relB;
-      const v = round3(u.relation * rel + u.familiarity * s.familiarity + u.breadth * breadthOf(s.concept) - s.piece);
+    // engine-2.5: never a compound or a narrow member of the known word (TREE → APPLE): its category
+    // or a broad, familiar hub, the answer most likely to fit the unknown word too.
+    const SAFE = new Set(["category", "curated", "link", "member"]);
+    pool = pool.filter(s => SAFE.has(knownIndex === 0 ? s.kindA : s.kindB) && !VAGUE.has(s.concept.id) && !GLOOMY.has(s.concept.id) && !s.piece).map(s => {
+      const rel = knownIndex === 0 ? s.relA : s.relB, kind = knownIndex === 0 ? s.kindA : s.kindB;
+      const v = round3(u.relation * rel + u.familiarity * s.familiarity + u.breadth * breadthOf(s.concept) + (u.category ?? 0) * (kind === "category" ? 1 : 0));
       return {...s, final: v, profileScore: v};
     });
-    decision.fallback = "broad-known-side";
+    decision.fallback = "least-bad-known-side";
     decision.recovery = true;
-    decision.recoveryReason = "an input was not understood";
+    decision.recoveryReason = resolved[1 - knownIndex].understood ? "an input was only guessed (not trusted)" : "an input was not understood";
     return choose(pool, "unknown-input", true, {recovery: true});
   }
 
@@ -442,34 +538,59 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
   // Anchored: no answer is direct on both sides, but one is a first-thought word for one input and
   // clearly tied to the other (3+ shared neighbours: DESSERT + EGG → CAKE). Below the high-quality
   // threshold (logged as such), still a real shared answer, so not recovery. The single best one.
-  const anchored = pool.filter(s => isAnchored(s, config)).map(s => ({...s, profileScore: s.final}));
+  const anchored = pool.filter(s => isAnchored(s, config)).map(s => ({...s, profileScore: round3(s.final + (profile.consensus ?? 0) * (s.consensus ?? 0))}));
   if (anchored.length) return choose(anchored, "anchored", false, {recovery: false, single: true, all: pool});
 
-  // Recovery: nothing clears the floor. A broad, familiar, concrete hub tied to both inputs.
+  // Recovery (engine-2.5): nothing clears the floor. The least-bad GENUINELY SHARED bridge: the weaker
+  // side dominates the score, so a balanced 0.70 / 0.70 beats a lopsided 1.00 / 0.12. First non-empty tier
+  // wins: "balanced" (2+ shared neighbours or direct on the weak side, and direct on one side or 3+ shared
+  // on both), "loose" (2+ shared neighbours on both sides), then "weak" (direct on one side, at least one
+  // shared neighbour with the other).
   const r = config.recovery;
   const bothDirect = s => DIRECT_KINDS.has(s.kindA) && DIRECT_KINDS.has(s.kindB);
   const oneDirect = s => DIRECT_KINDS.has(s.kindA) || DIRECT_KINDS.has(s.kindB);
-  const hubs = pool.filter(s => s.weak >= r.minWeak && oneDirect(s) && (!VAGUE.has(s.concept.id) || bothDirect(s)) && !GLOOMY.has(s.concept.id)).map(s => {
-    const anchored = s.weak >= config.stages.indirect ? 1 : 0;
-    const v = round3(r.breadth * breadthOf(s.concept) + r.familiarity * s.familiarity + r.connection * s.connection + r.concrete * isConcrete(s.concept) + r.plausibility * s.plausibility
-      + r.anchored * anchored + r.direct - s.piece);
-    return {...s, final: v, profileScore: v};
+  const bridges = pool.filter(s => (!VAGUE.has(s.concept.id) || bothDirect(s)) && !GLOOMY.has(s.concept.id)).map(s => {
+    const v = round3(r.weak * s.weak + r.strong * s.strong + r.consensus * (s.consensus ?? 0) + r.familiarity * s.familiarity + r.breadth * breadthOf(s.concept)
+      + r.plausibility * s.plausibility - s.piece);
+    // The character's own consensus preference counts here too (half weight): Milo keeps to the obvious bridge.
+    return {...s, final: v, profileScore: round3(v + 0.5 * (profile.consensus ?? 0) * (s.consensus ?? 0))};
   });
+  // A bridge with clear ties to BOTH words beats one that is strong for one word and barely touches the
+  // other. No tier ever holds a bridge with only faint ties on both sides (one shared neighbour each:
+  // WAKE + JEWEL → TOWER): with nothing better, the broad answer below.
+  const tiers = [
+    ["balanced", bridges.filter(s => s.weak >= r.minWeak && (oneDirect(s) || s.weak >= config.stages.indirect + 0.1))],
+    ["loose", bridges.filter(s => s.weak >= r.minWeak)],
+    ["weak", bridges.filter(s => s.weak >= r.fallbackWeak && oneDirect(s))]
+  ];
   decision.recovery = true;
-  if (hubs.length) {
+  const tier = tiers.find(([, list]) => list.length);
+  if (tier) {
     decision.recoveryReason = "no high-quality shared answer";
-    return choose(hubs, "recovery", true, {recovery: true, all: pool});
+    decision.recoveryTier = /** @type {string} */ (tier[0]);
+    return choose(/** @type {any[]} */ (tier[1]), "recovery", true, {recovery: true, all: pool, vary: tier[0] === "balanced" ? profile.recoveryWindow : null});
   }
-  // Nothing ties to both: the broadest familiar word of the stronger side (its category or a hub).
+  // Nothing ties to both: the broadest familiar word of the stronger side (its category or a hub),
+  // logged as the lowest quality.
   decision.recoveryReason = "nothing connects both words";
-  const broad = pool.filter(s => Math.max(s.relA, s.relB) >= 0.7 && !VAGUE.has(s.concept.id) && !GLOOMY.has(s.concept.id)).map(s => {
+  decision.recoveryTier = "one-sided";
+  // Never a compound of the stronger word (TREE → FAMILY for "family tree"): its category or a broad hub.
+  const SAFE_BROAD = new Set(["category", "curated", "link", "member"]);
+  const broad = pool.filter(s => Math.max(s.relA, s.relB) >= 0.7 && SAFE_BROAD.has(s.relA >= s.relB ? s.kindA : s.kindB) && !VAGUE.has(s.concept.id) && !GLOOMY.has(s.concept.id) && !s.piece).map(s => {
     // Still prefer a word with some tie (a shared neighbour or topic) to the other word.
-    const v = round3(0.4 * breadthOf(s.concept) + 0.3 * s.familiarity + 0.3 * s.strong + 0.3 * Math.min(1, s.weak / r.minWeak));
+    const v = round3(0.4 * breadthOf(s.concept) + 0.3 * s.familiarity + 0.3 * s.strong + 0.3 * Math.min(1, s.weak / r.fallbackWeak)
+      + 0.15 * ((s.relA >= s.relB ? s.kindA : s.kindB) === "category" ? 1 : 0));
     return {...s, final: v, profileScore: v};
   });
   return choose(broad, "one-input-only", true, {recovery: true, all: pool});
 
-  function choose(ranked, stage, lowQuality, {recovery, single = false, all = ranked}) {
+  /**
+   * @param {any[]} ranked
+   * @param {string} stage
+   * @param {boolean} lowQuality
+   * @param {{recovery: boolean, single?: boolean, all?: any[], vary?: {margin: number, size: number, weights: number[]} | null}} options
+   */
+  function choose(ranked, stage, lowQuality, {recovery, single = false, all = ranked, vary = null}) {
     const everything = ranked.slice().sort((x, y) => (recovery || single ? 0 : Number(Boolean(y.highQuality)) - Number(Boolean(x.highQuality))) || y.profileScore - x.profileScore || y.final - x.final || x.word.localeCompare(y.word));
     everything.forEach((s, i) => { s.rank = i + 1; });
     const eligibleBase = recovery || single ? everything : everything.filter(s => s.highQuality);
@@ -488,7 +609,8 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
     // The near-best range: the top answer, and only answers as good as it for this character.
     // Recovery is always the single most readable hub (no variety where clarity matters most).
     const top = eligibleBase[0];
-    const w = recovery || single ? {margin: 0, plausibility: 0, size: 1} : profile.window;
+    // (Gary only: a near-equal second bridge in a balanced recovery round, `vary`.)
+    const w = vary ? {margin: vary.margin, plausibility: 1, size: vary.size} : recovery || single ? {margin: 0, plausibility: 0, size: 1} : profile.window;
     const minFinal = round3(top.profileScore - (w.margin ?? 0)), minPlausibility = round3(top.plausibility - (w.plausibility ?? 0));
     let eligible = eligibleBase.filter(s => s === top || (s.profileScore >= minFinal && s.plausibility >= minPlausibility && !s.generic && !s.piece)).slice(0, Math.max(1, w.size ?? 1));
     // Tie-breakers among the near-equal answers only (revealed rounds only).
@@ -502,15 +624,15 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
       for (const s of eligible) {
         let tie = 0;
         if (style.rounds >= t.styleMinRounds) tie += t.style * (style.shares[wordClass(s.concept)] || 0);
-        if (near) tie += t.nearMatch * Math.max(0, Math.min(s.relA, s.relB) - config.floor.weak);
         s.tie = round3(tie);
       }
       eligible = eligible.slice().sort((x, y) => (y.profileScore + (y.tie || 0)) - (x.profileScore + (x.tie || 0)) || x.word.localeCompare(y.word));
       if (style.rounds >= t.styleMinRounds) decision.style.applied = true;
-      if (near && decision.nearMatch) decision.nearMatch.applied = true;
     }
+    // Near-match momentum is part of the ranking itself (engine-2.5), so it applies whenever the state is set.
+    if (near && decision.nearMatch && !recovery) decision.nearMatch.applied = true;
     decision.tieBreak = {used: eligible.length > 1 && (decision.style.applied || Boolean(decision.nearMatch?.applied)), changed: eligible.map(s => s.word).join() !== before.join()};
-    const weights = recovery || single ? [1] : profile.weights;
+    const weights = vary ? vary.weights : recovery || single ? [1] : profile.weights;
     let roll = rng() * eligible.reduce((sum, _, i) => sum + (weights[i] ?? 0), 0), index = 0;
     for (; index < eligible.length - 1; index++) { roll -= weights[index] ?? 0; if (roll < 0) break; }
     const pick = eligible[index];
@@ -520,6 +642,23 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
     decision.pickRank = pick.rank;
     decision.pickPlausibility = pick.plausibility;
     decision.pickWeak = pick.weak;
+    // engine-2.5 diagnostics: how the pick relates to both clues, how obvious it is, and why it won.
+    decision.pickStrong = pick.strong;
+    decision.pickBalance = pick.strong > 0 ? round3(pick.weak / pick.strong) : 0;
+    decision.pickConsensus = pick.consensus ?? null;
+    const semanticTop = eligibleBase.slice().sort((x, y) => y.final - x.final || x.word.localeCompare(y.word))[0];
+    decision.selection = {
+      semanticTop: semanticTop.word,   // best by semantic score alone
+      profileTop: top.word,            // best once the profile's consensus/trajectory weighting is added
+      pick: pick.word,
+      profileChanged: semanticTop.word !== top.word,
+      varied: pick.word !== top.word,  // a near-best alternative was played (Gary more often)
+      trajectory: trail.length ? {words: trail.map(id => lex.concepts.get(id)?.label), applied: (pick.trajectory ?? 0) > 0} : null,
+      nearMatchApplied: Boolean(decision.nearMatch?.applied),
+      lowQuality,
+      alternatives: everything.slice(0, 4).map(s => ({word: s.word, relA: s.relA, relB: s.relB, consensus: s.consensus ?? null, trajectory: s.trajectory ?? 0,
+        final: s.final, profileScore: s.profileScore, behind: round3(pick.profileScore - s.profileScore)}))
+    };
     // Notable rejections: blocked or lazy words that would otherwise have ranked near the top.
     decision.rejected = rejected.filter(x => x.final >= top.final - 0.15).sort((x, y) => y.final - x.final).slice(0, 6).map(({word, reason}) => ({word, reason}));
     // Strong one-sided words that lost to the floor (why the obvious word was not chosen).

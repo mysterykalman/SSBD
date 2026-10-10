@@ -3,7 +3,8 @@
 import {CATEGORIES, CONCEPTS, PHRASES} from "./data.js";
 import {ADDED_CONCEPTS, ADDED_LINKS, ADDED_PHRASES, ALIASES} from "./additions.js";
 import {ADDED_CONCEPTS_3, ADDED_LINKS_3, ADDED_MEMBERS_3, ADDED_PHRASES_3, ALIASES_3, DATASET_VERSION as DATASET_3} from "./additions3.js";
-import {ADDED_CONCEPTS_4, ADDED_LINKS_4, ADDED_MEMBERS_4, ADDED_PHRASES_4, ALIASES_4, DATASET_VERSION, EXTRA_WORDS_4} from "./additions4.js";
+import {ADDED_CONCEPTS_4, ADDED_LINKS_4, ADDED_MEMBERS_4, ADDED_PHRASES_4, ALIASES_4, DATASET_VERSION as DATASET_4, EXTRA_WORDS_4} from "./additions4.js";
+import {ADDED_CONCEPTS_5, ADDED_LINKS_5, ADDED_PHRASES_5, ALIASES_5, DATASET_VERSION, EXTRA_WORDS_5} from "./additions5.js";
 import {EXTRA_WORDS} from "./vocab.js";
 import {wordKey} from "../words.js";
 
@@ -18,13 +19,13 @@ const DERIVATIONAL = ["y", "ie", "ish", "ly", "ful", "less", "ness"];
 /** The original curated graph, kept so older engine decisions can be replayed on the data they used. */
 export const BASE_DATASET = "lexicon-1";
 /** Every dataset version that can be loaded, oldest first (each one adds to the previous). */
-export const DATASETS = [BASE_DATASET, "lexicon-2", DATASET_3, DATASET_VERSION];
+export const DATASETS = [BASE_DATASET, "lexicon-2", DATASET_3, DATASET_4, DATASET_VERSION];
 export {DATASET_VERSION};
 
 /**
  * The lookup graph for a language. `dataset` picks the data version (default: the current one);
  * "lexicon-1" is the original graph, "lexicon-2" adds the first additions, "lexicon-3" the second,
- * "lexicon-4" the engine-2.3 vocabulary audit.
+ * "lexicon-4" the engine-2.3 vocabulary audit, "lexicon-5" the engine-2.5 everyday-word audit.
  */
 export function getLexicon(language = "en", dataset = DATASET_VERSION) {
   const lang = language === "fr" ? "fr" : "en";
@@ -37,8 +38,8 @@ export function getLexicon(language = "en", dataset = DATASET_VERSION) {
 function buildLexicon(lang, version) {
   const labelIndex = lang === "fr" ? 2 : 1;
   const level = DATASETS.indexOf(version);
-  const extended = level >= 1, third = level >= 2, fourth = level >= 3;
-  const rows = [...CONCEPTS, ...(extended ? ADDED_CONCEPTS : []), ...(third ? ADDED_CONCEPTS_3 : []), ...(fourth ? ADDED_CONCEPTS_4 : [])];
+  const extended = level >= 1, third = level >= 2, fourth = level >= 3, fifth = level >= 4;
+  const rows = [...CONCEPTS, ...(extended ? ADDED_CONCEPTS : []), ...(third ? ADDED_CONCEPTS_3 : []), ...(fourth ? ADDED_CONCEPTS_4 : []), ...(fifth ? ADDED_CONCEPTS_5 : [])];
   const concepts = new Map();
   for (const [id, en, fr, tags] of rows) {
     concepts.set(id, {id, label: lang === "fr" ? fr : en, key: wordKey(lang === "fr" ? fr : en), tags, links: new Set(), phrases: new Set(), near: new Set(), out: new Map(), kinds: new Map(), members: new Set()});
@@ -56,7 +57,7 @@ function buildLexicon(lang, version) {
     }
   }
   if (extended) {
-    for (const [a, b] of [...ADDED_LINKS, ...(third ? ADDED_LINKS_3 : []), ...(fourth ? ADDED_LINKS_4 : [])]) {
+    for (const [a, b] of [...ADDED_LINKS, ...(third ? ADDED_LINKS_3 : []), ...(fourth ? ADDED_LINKS_4 : []), ...(fifth ? ADDED_LINKS_5 : [])]) {
       if (!concepts.has(a) || !concepts.has(b) || a === b) continue;
       concepts.get(a).links.add(b);
       concepts.get(b).links.add(a);
@@ -64,7 +65,7 @@ function buildLexicon(lang, version) {
   }
   // Phrases and compounds are language-specific ("snow" + "ball" in English,
   // "pomme" + "terre" in French) and undirected.
-  for (const [a, b] of [...(PHRASES[lang] || []), ...(extended ? ADDED_PHRASES[lang] || [] : []), ...(third ? ADDED_PHRASES_3[lang] || [] : []), ...(fourth ? ADDED_PHRASES_4[lang] || [] : [])]) {
+  for (const [a, b] of [...(PHRASES[lang] || []), ...(extended ? ADDED_PHRASES[lang] || [] : []), ...(third ? ADDED_PHRASES_3[lang] || [] : []), ...(fourth ? ADDED_PHRASES_4[lang] || [] : []), ...(fifth ? ADDED_PHRASES_5[lang] || [] : [])]) {
     if (!concepts.has(a) || !concepts.has(b) || a === b) continue;
     concepts.get(a).phrases.add(b);
     concepts.get(b).phrases.add(a);
@@ -91,7 +92,7 @@ function buildLexicon(lang, version) {
   for (const concept of concepts.values()) if (!byKey.has(concept.key)) byKey.set(concept.key, concept.id);
   // Synonyms and variants: only where no concept already has that spelling.
   const aliases = new Map();
-  const aliasRows = [...(extended ? Object.entries(ALIASES[lang] || {}) : []), ...(third ? Object.entries(ALIASES_3[lang] || {}) : []), ...(fourth ? Object.entries(ALIASES_4[lang] || {}) : [])];
+  const aliasRows = [...(extended ? Object.entries(ALIASES[lang] || {}) : []), ...(third ? Object.entries(ALIASES_3[lang] || {}) : []), ...(fourth ? Object.entries(ALIASES_4[lang] || {}) : []), ...(fifth ? Object.entries(ALIASES_5[lang] || {}) : [])];
   const aliasWords = new Map(); // key → the alias as written ("surfing"), for "Did you mean?"
   for (const [word, id] of aliasRows) {
     const k = wordKey(word.replace(/_/g, " "));
@@ -99,7 +100,7 @@ function buildLexicon(lang, version) {
   }
   // Real words the speller knows (graph labels and the everyday vocabulary): never split into
   // pieces or matched by a prefix ("carpet" is not car + pet, "sandal" is not sand).
-  const vocabulary = new Set([...byKey.keys(), ...(EXTRA_WORDS[lang] || []).map(w => wordKey(w)), ...(fourth ? [...aliases.keys(), ...(EXTRA_WORDS_4[lang] || []).map(w => wordKey(w))] : [])]);
+  const vocabulary = new Set([...byKey.keys(), ...(EXTRA_WORDS[lang] || []).map(w => wordKey(w)), ...(fourth ? [...aliases.keys(), ...(EXTRA_WORDS_4[lang] || []).map(w => wordKey(w))] : []), ...(fifth ? (EXTRA_WORDS_5[lang] || []).map(w => wordKey(w)) : [])]);
   const knownKeys = [...byKey.keys()].sort((x, y) => y.length - x.length);
 
   function exact(key) {
@@ -160,6 +161,6 @@ function buildLexicon(lang, version) {
     return resolveAll(raw)[0] ?? null;
   }
 
-  const words = [...concepts.values()].map(c => c.label).concat(EXTRA_WORDS[lang] || [], fourth ? EXTRA_WORDS_4[lang] || [] : []);
+  const words = [...concepts.values()].map(c => c.label).concat(EXTRA_WORDS[lang] || [], fourth ? EXTRA_WORDS_4[lang] || [] : [], fifth ? EXTRA_WORDS_5[lang] || [] : []);
   return {language: lang, dataset: version, labelIndex, concepts, byKey, aliases, aliasWords, vocabulary, exact, resolve, resolveAll, words};
 }

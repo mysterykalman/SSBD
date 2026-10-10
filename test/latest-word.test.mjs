@@ -1,6 +1,7 @@
-// engine-2.4: every Solo answer (Gary's and Milo's) is directly connected to at least one of the two
-// latest words, so the player can see where it came from without reconstructing the whole trail.
-// No answer is reached only through shared neighbours or two-step paths (DESSERT + PENCIL → HOME).
+// engine-2.4/2.5: every Solo answer (Gary's and Milo's) is directly connected to at least one of the two
+// latest words, or clearly tied to both (3+ shared neighbours each), so the player can see where it came
+// from without reconstructing the whole trail. No answer is reached only through faint shared neighbours
+// or two-step paths (DESSERT + PENCIL → HOME).
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {selectBotWord} from "../src/shared/engine.js";
@@ -34,8 +35,9 @@ for (const language of ["en", "fr"]) {
         if (decision.recovery) recovery++;
         const pick = decision.candidates.find(c => c.word === word);
         assert.ok(pick, `${a} + ${b} → ${word} is a scored candidate`);
-        assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB), `${character}: ${a} + ${b} → ${word} (${pick.kindA}/${pick.kindB}, ${decision.stage}) is tied directly to ${a} or ${b}`);
-        assert.ok(directlyTied(lex, language, a, word) || directlyTied(lex, language, b, word), `${a} + ${b} → ${word}: the link is in the word graph`);
+        const clearlyBoth = pick.kindA === "shared-3" && pick.kindB === "shared-3";
+        assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB) || clearlyBoth, `${character}: ${a} + ${b} → ${word} (${pick.kindA}/${pick.kindB}, ${decision.stage}) is tied directly to ${a} or ${b}`);
+        if (!clearlyBoth) assert.ok(directlyTied(lex, language, a, word) || directlyTied(lex, language, b, word), `${a} + ${b} → ${word}: the link is in the word graph`);
       }
     }
     assert.ok(recovery > 20, "the sample includes hard (recovery) pairs");
@@ -46,9 +48,9 @@ test("the old leaps are gone: recovery hubs reached only through shared neighbou
   for (const [a, b, leap] of [["dessert", "pencil", "home"], ["swim", "pencil", "park"], ["tea", "car", "water"], ["pirate", "warm", "beach"]]) {
     for (const character of ["milo", "gary"]) {
       const {word, decision} = selectBotWord({pair: [a, b], language: "en", character, seed: 3});
-      assert.notEqual(word, leap, `${character}: ${a} + ${b}`);
       const pick = decision.candidates.find(c => c.word === word);
-      assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB), `${character}: ${a} + ${b} → ${word}`);
+      assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB) || (pick.kindA === "shared-3" && pick.kindB === "shared-3"), `${character}: ${a} + ${b} → ${word} (${pick.kindA}/${pick.kindB})`);
+      if (word === leap) assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB), `${a} + ${b} → ${leap} is only allowed now that it is a direct link`);
     }
   }
 });

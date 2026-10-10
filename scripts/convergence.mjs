@@ -46,6 +46,36 @@ export const PLAYERS = {
     for (; i < top.length - 1; i++) { roll -= weights[i]; if (roll < 0) break; }
     return top.length ? top[i] : d.selected;
   },
+  // A competent but independent person (engine-2.5): about half the time one of the words tied to BOTH
+  // clues (the more first-thought ones more often, but any of them), otherwise a first thought about one
+  // clue or any word linked to either. It does not rank words the way the engine does, so it is the
+  // stand-in that shows how much a character's own predictability matters.
+  casual: ({pair, blocked, language, seed}) => {
+    const rng = seededRandom(seed);
+    if (!pair) return selectBotWord({pair, blocked, language, seed: seed ^ 0x2468ace}).word;
+    const lex = getLexicon(language);
+    const used = new Set([...blocked, ...pair].flatMap(w => [...lemmaKeys(w, language)]));
+    const ok = id => { const c = lex.concepts.get(id); return c && ![...lemmaKeys(c.label, language)].some(k => used.has(k)); };
+    const [a, b] = pair.map(w => understandWord(w, language, lex).ids[0]).map(id => (id ? lex.concepts.get(id) : null));
+    const pick = list => list[Math.floor(rng() * list.length)];
+    const roll = rng();
+    if (a && b && roll < 0.5) {
+      const both = [...a.near].filter(id => b.near.has(id) && ok(id));
+      if (both.length) {
+        // First-thought words for both clues are likelier, without being certain.
+        const rank = id => (a.out.get(id) ?? 12) + (b.out.get(id) ?? 12);
+        const sorted = both.sort((x, y) => rank(x) - rank(y));
+        const i = Math.min(sorted.length - 1, Math.floor(-Math.log(1 - rng() * 0.95) * 1.5));
+        return lex.concepts.get(sorted[i]).label;
+      }
+    }
+    const side = rng() < 0.5 ? a || b : b || a;
+    if (!side) return selectBotWord({pair, blocked, language, seed}).word;
+    const firsts = [...side.out.entries()].sort((x, y) => x[1] - y[1]).map(([id]) => id).filter(ok);
+    if (roll < 0.8 && firsts.length) return lex.concepts.get(pick(firsts.slice(0, 5))).label;
+    const any = [...side.near].filter(ok);
+    return any.length ? lex.concepts.get(pick(any)).label : selectBotWord({pair, blocked, language, seed}).word;
+  },
   // The original human-prediction model (engine-1): what a typical person would most likely say.
   predictor: ({pair, blocked, language, seed}) => {
     if (!pair) return selectBotWord({pair, blocked, language, seed: seed ^ 0x1234567}).word;
