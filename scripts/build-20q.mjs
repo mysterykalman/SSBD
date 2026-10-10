@@ -18,3 +18,23 @@ const js = bundle.outputFiles[0].text;
 const css = await readFile(source("styles.css"), "utf8");
 const license = await readFile(source("LICENSE-FergusGriggs.txt"), "utf8");
 const jsPath = "/20Q/assets/app." + hash(js) + ".js";
+const cssPath = "/20Q/assets/styles." + hash(css) + ".css";
+const html = (await readFile(source("index.html"), "utf8"))
+  .replace("%TWENTYQ_JS%", jsPath).replace("%TWENTYQ_CSS%", cssPath);
+const workerTemplate = await readFile(source("sw.js"), "utf8");
+const version = hash(js + css + html + workerTemplate + license);
+const precache = ["/20Q", "/20Q/", "/20Q/index.html", jsPath, cssPath, "/20Q/LICENSE.txt"];
+const worker = workerTemplate.replace("%VERSION%", version).replace("%PRECACHE%", JSON.stringify(precache));
+const files = {
+  "/20Q/index.html": html,
+  [jsPath]: js,
+  [cssPath]: css,
+  "/20Q/sw.js": worker,
+  "/20Q/LICENSE.txt": license
+};
+for (const [path, body] of Object.entries(files)) {
+  const destination = join(dist, path);
+  await mkdir(dirname(destination), {recursive: true});
+  await writeFile(destination, body);
+}
+console.log("Built isolated /20Q experiment (" + version + ")");
