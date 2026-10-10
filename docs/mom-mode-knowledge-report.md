@@ -1,10 +1,12 @@
 # Mom Mode knowledge snapshot
 
-Generated seed snapshot included with the Stump Mom implementation.
+Generated: 2026-10-10T23:02:05.590Z
 
-- Curated generated concepts: 200
-- Additional core concepts: 167 at the time the feature branch was created
-- Generated question traits: 127
-- Live gameplay dependency on Wikimedia: none
+- Curated seed concepts: 200
+- Wikidata people: 3918
+- Wikidata fictional characters: 500
+- Wikidata places/landmarks: 0
+- Generated concepts total: 4545
+- Generated question traits: 831
 
-Run `npm run mom:knowledge` or the **Refresh Mom Mode knowledge** workflow to replace the seed expansion with the larger Wikidata-backed snapshot. Wikidata structured data is CC0.
+Wikidata structured data is published under CC0. Gameplay reads this generated local snapshot and does not query Wikimedia during a round.
