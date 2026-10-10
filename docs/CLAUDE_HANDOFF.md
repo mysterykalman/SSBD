@@ -984,3 +984,24 @@ See `docs/BOT_ENGINE.md` for the details: root causes, formula, stages, licensin
   - Recovery hubs reached only through shared neighbours (DESSERT + PENCIL → HOME) are gone: about 2 % of simulated rounds before, 0 % now.
   - When nothing links directly to one word and ties to the other, the broad fallback prefers a word with some tie to the other word.
   - Tests: `test/latest-word.test.mjs`. `test/lexicon.test.mjs` now checks the direct-link rule and allows a one-sided pick only when no linked two-sided word existed.
+
+## Status update: engine-2.5 / lexicon-5 (2026-10-10)
+
+From the engine-2.4 playtest logs (random-feeling, one-sided answers). Details and measured results are in `docs/BOT_ENGINE.md` section 0.
+
+- **lexicon-5:** about 500 everyday concepts, missing links, aliases and a real-word guard. French labels are distinct, and lexicon-4 stays loadable for replay.
+- **Engine:**
+  - A guessed reading is not trusted (word-part guesses, or a kept spelling fix that changes a letter).
+  - Human obviousness (`consensus`) is logged per candidate, and one-sidedness costs more.
+  - Recovery picks the least-bad shared bridge: the weak side dominates, and a bridge with only faint ties on both sides is never chosen.
+  - Unknown input gets the known word's category or a broad hub, never a compound.
+  - Milo seeks consensus and follows the player's revealed direction. Gary weighs those lightly and plays from a wider range of high-quality answers only.
+  - Openings are derived on the lexicon-4 graph.
+  - New `selection` diagnostics on every decision.
+- **Simulations:**
+  - One-sided picks: 13.5% → 3.7% (Milo) and 13.7% → 3.4% (Gary).
+  - Unknown-input on everyday pairs: 30.3% → 0.7%.
+  - Balance: 0.64 → 0.73.
+  - The move-count gap between Milo and Gary is modest in simulation; calibrate it from real playtest logs.
+- **New simulation player:** a `casual` stand-in in `scripts/convergence.mjs`.
+- **Tests:** `test/engine-2.5.test.mjs` and `test/lexicon-coverage.test.mjs`.

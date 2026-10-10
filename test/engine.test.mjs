@@ -155,7 +155,8 @@ test("quality-constrained variety: only answers inside the character's near-best
         if (!r.decision.window) continue;
         assert.ok(r.decision.pool.includes(r.word), `${a}+${b}: ${r.word} was drawn from its range`);
         assert.deepEqual(selectBotWord({pair: [a, b], seed, character}), r, "the same seed gives the same word");
-        assert.ok(r.decision.pool.length <= (r.decision.recovery || r.decision.stage === "anchored" ? 1 : w.size));
+        const recoverySize = character === "gary" && r.decision.recoveryTier === "balanced" ? ENGINE_CONFIG.profiles.gary.recoveryWindow.size : 1;
+        assert.ok(r.decision.pool.length <= (r.decision.recovery ? recoverySize : r.decision.stage === "anchored" ? 1 : w.size));
         assert.equal(r.decision.window.size, r.decision.pool.length);
         for (const word of r.decision.pool) {
           const c = r.decision.candidates.find(x => x.word === word);
@@ -190,7 +191,7 @@ test("explicit, safe fallback: unknown inputs, heavy blocking and sparse options
   const unknown = selectBotWord({pair: ["zorblax", "pizza"], seed: 1});
   assert.equal(unknown.decision.stage, "unknown-input");
   assert.equal(unknown.decision.lowQuality, true);
-  assert.equal(unknown.decision.fallback, "broad-known-side");
+  assert.equal(unknown.decision.fallback, "least-bad-known-side");
   assert.ok(lex.concepts.get(lex.resolve(unknown.word)).near.has("pizza"), "answered from the known word, and says so");
   const none = selectBotWord({pair: ["zorblax", "quuxify"], seed: 1});
   assert.equal(none.decision.stage, "no-known-input");
@@ -287,8 +288,14 @@ test("10:56 game: CHICKEN + SEA is never HORSE (seahorse is a word fragment, not
   }
   const later = [...before, "chicken", "sea", "tuna", "horse", "seahorse", "ride", "surfing", "tail", "wave", "cat"];
   for (let seed = 0; seed < 100; seed++) assert.equal(selectBotWord({pair: ["paw", "fish"], blocked: later, seed}).word, "pet", `seed ${seed}`);
-  // TREES + BIRD: the nest, not a random far word.
-  for (let seed = 0; seed < 50; seed++) assert.equal(selectBotWord({pair: ["trees", "bird"], blocked: ["battleship", "barn", "wood", "farm"], seed}).word, "nest");
+  // TREES + BIRD: Milo (consensus-seeking) always plays the nest; Gary may play another answer tied
+  // directly to both words, never a random far word.
+  for (let seed = 0; seed < 50; seed++) assert.equal(selectBotWord({pair: ["trees", "bird"], blocked: ["battleship", "barn", "wood", "farm"], seed, character: "milo"}).word, "nest");
+  for (let seed = 0; seed < 50; seed++) {
+    const r = selectBotWord({pair: ["trees", "bird"], blocked: ["battleship", "barn", "wood", "farm"], seed, character: "gary"});
+    const pick = r.decision.candidates.find(c => c.word === r.word);
+    assert.ok(pick.highQuality && pick.weak >= ENGINE_CONFIG.floor.weak, `gary trees + bird → ${r.word}`);
+  }
 });
 
 test("one unknown word: a broad answer from the known word, not a narrow continuation of it", () => {

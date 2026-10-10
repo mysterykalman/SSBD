@@ -273,7 +273,7 @@ test("compound and plural prompts resolve; unknown words resolve to nothing", ()
   assert.deepEqual(en.resolveAll("firetruck"), ["fire", "truck"]);
   assert.deepEqual(en.resolveAll("snowy"), ["snow"]);
   assert.deepEqual(fr.resolveAll("pommes de terre"), ["potato"]);
-  for (const odd of ["s", "I", "a", "", "zorblax", "velvet", "marble"]) assert.deepEqual(en.resolveAll(odd), [], odd);
+  for (const odd of ["s", "I", "a", "", "zorblax", "velvet", "kumquat"]) assert.deepEqual(en.resolveAll(odd), [], odd);
 });
 
 // Independent judge for bot quality: 3 = direct link or phrase, 2.5 / 2 = shares
@@ -381,12 +381,11 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     // exists (the bot never falls back to a one-sided word instead), and it stays rare.
     const gaps = records.filter(r => Math.min(r.sa, r.sb) === 0);
     for (const r of gaps) assert.ok(!r.bridgeable, `${lang}: ${r.prompts.join("+")} -> ${r.word} although a two-sided word existed`);
-    // engine-2.4: every pick is a DIRECT link of at least one of the two latest words (no hub reached
-    // only through shared neighbours, which the player would have to reconstruct). So when nothing
-    // links directly to one word and also ties to the other, the pick relates to one word only; that
-    // is the only case a one-sided pick is allowed (random concept pairs like JAR + TOMORROW produce
-    // many of these; real games few).
-    for (const r of records) assert.ok(Math.max(r.sa, r.sb) === 3 || directKind(lex, r.prompts, r.word), `${lang}: ${r.prompts.join("+")} -> ${r.word} is not directly linked to either word`);
+    // engine-2.5: every pick is a DIRECT link of at least one of the two latest words, or clearly tied to
+    // both (2+ shared neighbours each); never a faint bridge the player would have to reconstruct. When
+    // nothing like that exists the pick relates to one word only (random concept pairs like
+    // JAR + TOMORROW produce many of these; real games few).
+    for (const r of records) assert.ok(Math.max(r.sa, r.sb) === 3 || directKind(lex, r.prompts, r.word) || Math.min(r.sa, r.sb) >= 2, `${lang}: ${r.prompts.join("+")} -> ${r.word} is not directly linked to either word`);
     const avoidable = gaps.filter(r => r.linkedPossible);
     assert.ok(avoidable.length <= records.length * 0.01, `${lang}: ${avoidable.length}/${records.length} one-sided picks although a linked two-sided word existed`);
     const gameRecords = records.filter(r => r.source === "game");

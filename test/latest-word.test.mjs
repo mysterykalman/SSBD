@@ -1,6 +1,7 @@
-// engine-2.4: every Solo answer (Gary's and Milo's) is directly connected to at least one of the two
-// latest words, so the player can see where it came from without reconstructing the whole trail.
-// No answer is reached only through shared neighbours or two-step paths (DESSERT + PENCIL → HOME).
+// engine-2.4/2.5: every Solo answer (Gary's and Milo's) is directly connected to at least one of the two
+// latest words, or clearly tied to both (2+ shared neighbours each: a balanced bridge beats a lopsided
+// one), so the player can see where it came from without reconstructing the whole trail. No answer is
+// reached only through faint shared neighbours (one each) or two-step paths.
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {selectBotWord} from "../src/shared/engine.js";
@@ -34,8 +35,11 @@ for (const language of ["en", "fr"]) {
         if (decision.recovery) recovery++;
         const pick = decision.candidates.find(c => c.word === word);
         assert.ok(pick, `${a} + ${b} → ${word} is a scored candidate`);
-        assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB), `${character}: ${a} + ${b} → ${word} (${pick.kindA}/${pick.kindB}, ${decision.stage}) is tied directly to ${a} or ${b}`);
-        assert.ok(directlyTied(lex, language, a, word) || directlyTied(lex, language, b, word), `${a} + ${b} → ${word}: the link is in the word graph`);
+        // A clear tie: 2+ shared neighbours, or half of a real compound (HUG → BEAR for "bear hug").
+        const SHARED = new Set(["shared-2", "shared-3", "compound-part"]);
+        const clearlyBoth = SHARED.has(pick.kindA) && SHARED.has(pick.kindB);
+        assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB) || clearlyBoth, `${character}: ${a} + ${b} → ${word} (${pick.kindA}/${pick.kindB}, ${decision.stage}) is tied directly to ${a} or ${b}`);
+        if (!clearlyBoth) assert.ok(directlyTied(lex, language, a, word) || directlyTied(lex, language, b, word), `${a} + ${b} → ${word}: the link is in the word graph`);
       }
     }
     assert.ok(recovery > 20, "the sample includes hard (recovery) pairs");
@@ -46,9 +50,12 @@ test("the old leaps are gone: recovery hubs reached only through shared neighbou
   for (const [a, b, leap] of [["dessert", "pencil", "home"], ["swim", "pencil", "park"], ["tea", "car", "water"], ["pirate", "warm", "beach"]]) {
     for (const character of ["milo", "gary"]) {
       const {word, decision} = selectBotWord({pair: [a, b], language: "en", character, seed: 3});
-      assert.notEqual(word, leap, `${character}: ${a} + ${b}`);
       const pick = decision.candidates.find(c => c.word === word);
-      assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB), `${character}: ${a} + ${b} → ${word}`);
+      const shared = k => k === "shared-2" || k === "shared-3" || k === "compound-part";
+      assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB) || (shared(pick.kindA) && shared(pick.kindB)), `${character}: ${a} + ${b} → ${word} (${pick.kindA}/${pick.kindB})`);
+      assert.ok(!(pick.kindA === "shared-1" && pick.kindB === "shared-1"), `${a} + ${b} → ${word} is not a faint leap`);
+      // The old answer is only acceptable if the richer graph now ties it clearly to both words.
+      if (word === leap) assert.ok(pick.weak >= 0.3, `${a} + ${b} → ${leap} (${pick.kindA}/${pick.kindB}) is still a leap`);
     }
   }
 });

@@ -1,8 +1,50 @@
 # Solo bot engine, game logs and review
 
-This covers how Gary and Milo choose their word (engine-2.4, dataset lexicon-4), how they talk (their narratives), how Solo games are logged, how to review them, and how to replay decisions. Section 0 is the current engine; sections 1–2 are the history it builds on (engine-2.2 is frozen in `src/shared/engine-2.2.js` for replay only).
+This covers how Gary and Milo choose their word (engine-2.5, dataset lexicon-5), how they talk (their narratives), how Solo games are logged, how to review them, and how to replay decisions. Section 0 is the current engine; sections 1–2 are the history it builds on (engine-2.2 is frozen in `src/shared/engine-2.2.js` for replay only).
 
-## 0. Engine-2.4: the human-first Solo engine (current)
+## 0. Engine-2.5 / lexicon-5 (current, 2026-10-10)
+
+Built from the engine-2.4 / lexicon-4 playtest logs. The problem was not simply difficulty: answers felt random, one-sided or frustrating even when the scoring could justify them.
+
+### What was wrong
+1. **Ordinary words were not in the graph** (frame, peripheral, accessory, goggles, protection, solar, structure, spatula…). An audit of ~1,000 everyday words (`test/fixtures/common-words.json`) found 21 % missing. Each one sent the bot down `unknown-input` / `broad-known-side`, answering only the other word (`frame + tree → apple`, `goggles + sun → flower`). On random everyday pairs, 30 % of decisions were unknown-input.
+2. **Real words were misread** as a different known word by the speller: speaker → shoe, chain → chair, wifi → wife, password → passport, cough → sofa, speed → seed, forecast → forest, stump → stamp, tackle → tickle, orchard → hard (a word-part guess).
+3. **Lopsided bridges survived recovery.** engine-2.4 required a direct link to one word but allowed 0.12 on the other, so `computer + night → mouse` (0.88 / 0.12) won.
+4. **No notion of human obviousness.** Among several strong answers the bot could pick a semantically fine but less obvious one (`fur + zoo → cat` partly because zoo was not even linked to bear).
+
+### What changed
+- **lexicon-5** (`src/shared/lexicon/additions5.js`): ~500 new everyday concepts with ordinary first-thought links (household objects and tools, tech, nature, body and health, places and structures, people, school and money, food, clothes, sport, describing words, abstract ideas), obvious missing links between existing words (zoo ↔ bear, game night, movie night), aliases, and a larger "real word" guard so unknown real words are no longer "corrected" into others. French labels are distinct (no label reads back as another word). lexicon-4 stays loadable for replay.
+- **Inputs:** a guessed reading is not trusted. A word-part guess (low confidence) is handled as not understood. A spelling correction the player kept as typed (the browser always offers "Did you mean?" before lock-in) is trusted only for slips that are almost always typos of the intended word: spelled the way it sounds (elefant), neighbouring letters swapped (chikcen), a letter left out or doubled. A changed letter often makes another real word (stump is not stamp, tackle is not tickle), and a doubtful correction is a guess: both are handled as not understood.
+- **Human obviousness (`consensus`, 0..1, logged per candidate):** mostly how first-thought the word is for the weaker clue, then balance, familiarity, concreteness and specificity.
+- **One-sidedness costs more** in the main score (gap 0.35, factor 0.45).
+- **Recovery rebuilt as the least-bad genuinely shared bridge:** the weak side dominates (0.70 / 0.70 beats 1.00 / 0.12). Tiers: balanced, loose (2+ shared neighbours both sides), weak (direct on one, a shared neighbour with the other). Never a faint bridge on both sides; with nothing shared, a broad word of the stronger input (category or hub, never a compound).
+- **Unknown input:** the least-bad broad answer from the known word (category or familiar hub; never a compound or narrow member), logged low quality.
+- **Profiles:** Milo is strongly consensus-seeking (+0.30 × consensus, also in recovery), follows the player's revealed direction (trajectory 0.12) and near-match momentum (0.20). Gary ignores consensus, weighs direction lightly (0.02 / 0.06) and draws from a wider near-best range of high-quality answers only (≤ 0.25, up to 4; 30/30/25/15 %), plus a near-equal second bridge in a balanced recovery round. Neither ever gets a weaker word for difficulty; exact matches are never dodged (the engine never sees the open word).
+- **Openings** are derived on the lexicon-4 graph they were tuned on (the extra links would otherwise let weak openers like "cozy" or "sink" in).
+- **Diagnostics** in every decision: `inputs[].known / understood / guessed`, `fallback`, `recoveryTier`, per-candidate `consensus` and `trajectory`, `pickStrong / pickBalance / pickConsensus`, and `selection` (best by meaning, best for the profile, `profileChanged`, `varied`, trajectory and near-match influence, runners-up with how far behind). Shown in the `?debug=gary` panel and the review screen.
+
+### Results (simulations, 2026-10-10; engine-2.4 → engine-2.5)
+The stand-in players share the engine's word graph, so every game converges far faster than real ones: treat move counts as relative, not as a forecast. The `casual` stand-in (new) is the most independent of the engine.
+
+| | engine-2.4 | engine-2.5 |
+|---|---|---|
+| one-sided picks (weak side < 0.3), `human` stand-in, Milo / Gary | 13.5 % / 13.7 % | 3.7 % / 3.4 % |
+| low-quality (recovery) rounds, Milo / Gary | 34.8 % / 34.0 % | 32.2 % / 33.4 % |
+| average balance (weak / strong) of the pick | 0.64 / 0.65 | 0.73 / 0.72 |
+| unknown-input on random everyday pairs | 30.3 % | 0.7 % |
+| everyday audit words understood | 78.7 % | 100 % |
+| a fresh, untouched list of 274 everyday words understood | 70.4 % | 77.0 % |
+| `casual` stand-in, Milo: median / mean moves | 4 / 5.3 | 4 / 5.4 |
+| `casual` stand-in, Gary: median / mean moves | 4 / 5.5 | 5 / 5.6 |
+
+Milo and Gary separate only modestly in simulation: most matches happen in rounds with a single high-quality answer, which any sensible bot plays, and Gary's extra variety is confined to genuinely strong answers by design. Real players diverge from the graph far more than the stand-ins, so real games run longer for both; calibrate the move-count targets (Milo ≈ 5–7, Gary ≈ 8–15) from playtest logs, which now record `selection.varied`, `profileChanged` and the trajectory influence per round.
+
+### Remaining limitations
+- The graph is hand-curated (~1,700 concepts). On a fresh list, about 23 % of everyday words are still unknown (toothpick, glitter, stroller, receipt, chore, dominoes…), and many misses are halves of phrases (roller coaster, ferris wheel). Those fall back to the least-bad known-side answer, logged as low quality.
+- New concepts have fewer links (5–10) than the original core, so they are weaker bridges.
+- Consensus comes from the curated link order, not from real human association norms.
+
+## 0a. Engine-2.4: the human-first Solo engine (previous)
 
 Engine-2.4 is engine-2.3 with one rule added (2026-10-09): **every answer is a direct link of at least one of the two latest words**, so the player can always see where Gary's or Milo's word came from without reconstructing the trail. Recovery hubs reached only through shared neighbours or two-step paths (DESSERT + PENCIL → HOME, SWIM + PENCIL → PARK) are gone; in 1,200 simulated games they were about 2 % of rounds, now 0 %. `test/latest-word.test.mjs` checks it for both characters in English and French. Everything below about engine-2.3 still applies.
 
