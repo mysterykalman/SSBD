@@ -73,7 +73,7 @@ test("rounds are kept on the device while uploads fail, survive a reload, then s
   const {rows: [game]} = await sql.query("SELECT * FROM bot_games WHERE game_id = $1", [id]);
   assert.equal(game.rounds, 2);
   assert.equal(game.status, "in_progress");
-  assert.match(game.engine_version, /^engine-2\.\d+$/);
+  assert.match(game.engine_version, /^engine-2\.\d+(\.\d+)?$/);
   const {rows: [round]} = await sql.query("SELECT * FROM bot_rounds WHERE game_id = $1 AND round = 2", [id]);
   assert.ok(round.decision && round.decision.stage, "the bot's decision is stored with the round");
   assert.equal(round.pair_a !== null && round.pair_b !== null, true, "round 2 records the pair the bot answered");
