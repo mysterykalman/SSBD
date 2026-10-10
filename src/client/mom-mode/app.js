@@ -41,12 +41,6 @@ function progress(number,max){
 function dialogue(lead,question,aside){
  text("pam-lead",lead);text("pam-question",question);text("pam-aside",aside);hide("pam-aside",!aside);
 }
-function knowledgeLine(){
- const meta=adapter.knowledgeMeta||{};
- const live=Number(meta.wikidataPeople||0)+Number(meta.wikidataFictional||0)+Number(meta.wikidataPlaces||0);
- const source=live>0?"Wikidata-backed local knowledge":"local knowledge";
- return`${adapter.knowledgeSize.toLocaleString()} things · ${adapter.questionCount.toLocaleString()} possible clues · ${source}`;
-}
 function intro(){
  stage="intro";roundRecorded=false;adapter.reset();
  text("stage-label","STUMP MOM");
@@ -87,7 +81,6 @@ function answer(value){if(stage!=="question")return;renderState(adapter.answer(v
 function confirm(correct){if(stage!=="guess")return;renderState(adapter.confirm(correct));}
 
 text("pam-bio",script.copy.bio);
-text("knowledge-note",knowledgeLine());
 byId("start-btn").addEventListener("click",start);
 document.querySelectorAll("[data-answer]").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.answer)));
 byId("correct-btn").addEventListener("click",()=>confirm(true));
