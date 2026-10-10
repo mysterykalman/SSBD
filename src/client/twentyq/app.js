@@ -40,3 +40,30 @@ function renderStart() {
   action(box, "I'm thinking of something →", "primary", start);
   add(box, "p", "fineprint", "Experimental starter brain: " + KNOWLEDGE.items.length + " possible things. It might guess spectacularly wrong.");
 }
+function renderQuestion() {
+  const box = screen();
+  box.classList.add("question-card");
+  const number = game.history.length + 1;
+  add(box, "p", "eyebrow", "QUESTION " + number + " OF " + MAX_QUESTIONS);
+  const bar = add(box, "div", "progress");
+  bar.setAttribute("role", "progressbar");
+  bar.setAttribute("aria-valuenow", String(game.history.length));
+  bar.setAttribute("aria-valuemin", "0");
+  bar.setAttribute("aria-valuemax", String(MAX_QUESTIONS));
+  bar.setAttribute("aria-label", "Questions answered");
+  const fill = add(bar, "span", "progress-fill");
+  fill.style.width = (100 * game.history.length / MAX_QUESTIONS) + "%";
+  add(box, "p", "question-intro", "Okay, tell me this…");
+  add(box, "h1", "question", KNOWLEDGE.questions[game.questionIndex]);
+  add(box, "p", "hint", "Go with your first instinct.");
+  const buttons = add(box, "div", "answers");
+  buttons.setAttribute("role", "group");
+  buttons.setAttribute("aria-label", "Your answer");
+  for (const [answer, label] of [["yes", "Yes"], ["no", "No"], ["sometimes", "Sometimes"], ["unknown", "Don't know"]]) {
+    action(buttons, label, "answer " + answer, () => {
+      game = answerQuestion(game, answer, KNOWLEDGE);
+      render();
+    });
+  }
+  action(box, "Start over", "text-button", renderStart);
+}
