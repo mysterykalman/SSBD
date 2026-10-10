@@ -41,7 +41,7 @@ const swSource = swTemplate
 if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEHOLDER%");
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
-const momAssets = ["index.html", "styles.css", "knowledge.js", "engine.js", "copy.js", "adapter.js", "app.js", "pam.webp"];
+const momAssets = ["index.html", "styles.css", "knowledge.generated.js", "knowledge.js", "engine.js", "copy.js", "adapter.js", "app.js", "pam.webp"];
 const files = {
   "/index.html": page,
   [appName]: appJs,
