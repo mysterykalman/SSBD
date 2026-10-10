@@ -2,10 +2,11 @@
 "use strict";
 const base=global.MOM_KNOWLEDGE;
 if(!base) throw new Error("Mom knowledge not loaded");
+const general=global.MOM_GENERAL_KNOWLEDGE||{FEATURES:[],OBJECTS:[],meta:{}};
 const extra=global.MOM_GENERATED_KNOWLEDGE||{FEATURES:[],OBJECTS:[],meta:{}};
 
 const featureMap=new Map();
-for(const source of [base.FEATURES||[],extra.FEATURES||[]]){
+for(const source of [base.FEATURES||[],general.FEATURES||[],extra.FEATURES||[]]){
  for(const f of source){
   if(!f||!f.id||!f.q)continue;
   if(!featureMap.has(f.id))featureMap.set(f.id,{id:f.id,q:f.q,label:f.label||f.id,group:f.group||null,requires:f.requires||null});
@@ -15,7 +16,7 @@ const FEATURES=[...featureMap.values()];
 const idx=Object.fromEntries(FEATURES.map((f,i)=>[f.id,i]));
 
 const objectMap=new Map();
-for(const source of [base.OBJECTS||[],extra.OBJECTS||[]]){
+for(const source of [base.OBJECTS||[],general.OBJECTS||[],extra.OBJECTS||[]]){
  for(const raw of source){
   if(!raw||!raw.name)continue;
   const key=String(raw.name).trim().toLocaleLowerCase("en");
@@ -175,7 +176,6 @@ function rejectGuess(game,q){
  if(game.turn>=game.budget){game.status="stumped";return result(game);}
  return choose(game);
 }
-// Backward-compatible confirmation API. Wrong guesses now continue instead of ending the round.
 function confirm(game,q,correct){return correct?acceptGuess(game,q):rejectGuess(game,q);}
 function oracle(secret,q){
  if(q.kind==="guess")return q.index===secret?"yes":"no";
@@ -194,7 +194,7 @@ function selfPlay(secret,opts={}){
  return{kind:"result",winner:"player",correct:false,turns:g.turn,guess:top(g)?.object?.name||null};
 }
 global.MomBayes={
- FEATURES,OBJECTS,N,F,meta:{baseObjects:(base.OBJECTS||[]).length,generatedObjects:(extra.OBJECTS||[]).length,...(extra.meta||{})},
+ FEATURES,OBJECTS,N,F,meta:{baseObjects:(base.OBJECTS||[]).length,generalObjects:(general.OBJECTS||[]).length,generatedObjects:(extra.OBJECTS||[]).length,...(extra.meta||{})},
  createGame,choose,answer,confirm,acceptGuess,rejectGuess,top,selfPlay,oracle,entropy,truthAt
 };
 if(typeof module!=="undefined")module.exports=global.MomBayes;
