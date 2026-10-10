@@ -1,0 +1,16 @@
+:root{--paper:#fff5e6;--card:#fffdf7;--ink:#22233b;--muted:#686978;--coral:#ef776b;--blue:#c8e6f5;--yellow:#ffe09a}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink);font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif}button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible{outline:4px solid #2668c7;outline-offset:4px}
+.page{width:min(100%,980px);min-height:100vh;margin:auto;padding:0 clamp(16px,4vw,40px);display:flex;flex-direction:column}
+.topbar{min-height:85px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #d6d0c9}
+.back{font-weight:800;font-size:14px;color:var(--ink);text-decoration:none}.back:hover{text-decoration:underline}
+.experiment{border:2px solid var(--ink);border-radius:999px;background:var(--yellow);padding:7px 11px;font-size:10px;font-weight:900;letter-spacing:.1em;transform:rotate(3deg);white-space:nowrap}
+.game{flex:1;display:grid;place-items:center;padding:30px 0 48px}
+.card{width:min(100%,650px);padding:clamp(24px,5vw,48px);background:var(--card);border:3px solid var(--ink);border-radius:27px;box-shadow:8px 8px 0 var(--ink);text-align:center}
+.eyebrow{color:#6b4760;font-size:12px;letter-spacing:.12em;font-weight:900;text-transform:uppercase}
+.twenty-mark{width:140px;height:140px;display:grid;place-items:center;margin:22px auto;border:3px solid var(--ink);border-radius:38% 62% 46% 54%;background:var(--yellow);font-size:68px;font-weight:900;transform:rotate(-8deg)}
+h1{font-size:clamp(29px,6vw,48px);letter-spacing:-.04em;line-height:1.14;margin:18px 0}
+.lede{color:#414358;font-size:clamp(16px,3.5vw,19px);line-height:1.6;max-width:510px;margin:20px auto 28px}
+.primary,.secondary{width:100%;min-height:58px;padding:14px 22px;border:3px solid var(--ink);border-radius:15px;font-size:17px;font-weight:900}
+.primary{background:var(--coral);color:var(--ink);box-shadow:4px 4px 0 var(--ink)}
+.secondary{background:var(--card);color:var(--ink)}
+.fineprint{font-size:13px;color:var(--muted);line-height:1.5;margin:22px auto 0;max-width:420px}
