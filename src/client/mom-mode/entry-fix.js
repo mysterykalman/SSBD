@@ -1,5 +1,14 @@
 (function(){
 "use strict";
-function update(){const card=document.querySelector('.mom-card');if(!card)return false;card.querySelector('.mom-preview')?.remove();const link=card.querySelector('a.btn');if(link){link.href='/mom/';link.textContent='Play Mom Mode →';}const img=card.querySelector('.mom-card-art');if(img)img.src='/mom/pam.webp';return true;}
-if(!update()){const observer=new MutationObserver(()=>{if(update())observer.disconnect();});observer.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),10000);}
+function update(){
+ const card=document.querySelector('.mom-card');if(!card)return;
+ card.querySelector('.mom-preview')?.remove();
+ const link=card.querySelector('a.btn');
+ if(link&&link.getAttribute('href')!=='/mom/')link.setAttribute('href','/mom/');
+ if(link&&link.textContent!=='Play Mom Mode →')link.textContent='Play Mom Mode →';
+ const img=card.querySelector('.mom-card-art');
+ if(img&&img.getAttribute('src')!=='/mom/pam.webp')img.setAttribute('src','/mom/pam.webp');
+}
+update();
+const app=document.getElementById('app');if(app)new MutationObserver(update).observe(app,{childList:true,subtree:true});
 })();
