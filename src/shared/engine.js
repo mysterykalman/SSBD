@@ -63,8 +63,8 @@
 //    side, one shared neighbour with the other). Never a bridge with only faint ties on both sides
 //    (WAKE + JEWEL → TOWER). With nothing tied to both: a broad word of the stronger input (its
 //    category or a hub, never a compound). Logged as `recovery` with `recoveryTier`.
-//    An input the engine does not understand, or only GUESSED (a word-part guess, or a spelling
-//    correction the player kept as typed: stump is not stamp), is handled as not understood: the
+//    An input the engine does not understand, or only GUESSED (a word-part guess, or a kept spelling
+//    correction that changes a letter: stump is not stamp), is handled as not understood: the
 //    least-bad broad answer from the known word (its category or a familiar hub; never a compound or
 //    a narrow member: TREE → APPLE for "apple tree" is gone), logged as low quality.
 // 7. Ranking signals from revealed rounds only: the player's direction (trajectory: candidates tied to
@@ -80,7 +80,7 @@
 
 import {getLexicon, DATASET_VERSION} from "./lexicon/index.js";
 import {lemmaKeys} from "./morph.js";
-import {understandWord} from "./understand.js";
+import {phoneticKey, understandWord} from "./understand.js";
 import {wordKey} from "./words.js";
 import {hashString, seededRandom} from "./rules.js";
 
@@ -138,10 +138,12 @@ export const ENGINE_CONFIG = Object.freeze({
   // word-part guess ("component", low) is treated as not understood.
   inputConfidence: {certain: 1, high: 1, medium: 0.75, low: 0.5},
   untrusted: ["low"],
-  // A spelling correction is never trusted: the browser always offers it ("Did you mean?") before the
-  // word is locked in, so a word that reaches the engine misspelled was KEPT as typed by the player
-  // (stump is not stamp, tackle is not tickle). It is handled as not understood.
-  fuzzy: {untrusted: ["high", "medium"]},
+  // A spelling correction the player kept as typed (the browser always offers it before lock-in):
+  // trusted only for the slips that are almost always typos of the intended word (spelled the way it
+  // sounds: elefant; neighbouring letters swapped: chikcen; a letter left out or doubled). A changed letter often turns one real word into
+  // another (stump is not stamp, tackle is not tickle), and a doubtful (medium) correction is a guess:
+  // both are handled as not understood.
+  fuzzy: {untrusted: ["medium"], trustedSlips: ["sound", "swap", "omission", "doubled"]},
   // One input not understood: the least-bad shared answer. Never a narrow word or a compound of the
   // known word (TREE → APPLE for "apple tree"): its category or a broad, familiar hub, which has the
   // best chance of also fitting the unknown word. Logged as low quality.
@@ -304,6 +306,34 @@ function stageOf(weak, strong, cfg) {
 export const STAGE_NAMES = {1: "shared-direct", 2: "direct-plus-indirect", 3: "indirect-both", 4: "weak-fallback", 5: "best-available", 6: "one-input-only"};
 
 /**
+ * The kind of single slip between a typed key and the word it was corrected to: "sound" (spelled the
+ * way it sounds), "swap" (neighbouring letters swapped), "omission" (a letter left out), "doubled" (a letter typed twice), "insertion"
+ * (another extra letter) or "substitution" (a letter changed); null when it is not one slip.
+ * @param {string} typed
+ * @param {string} target
+ */
+export function slipKind(typed, target) {
+  // Spelled the way it sounds (elefant → elephant): a typo of the intended word.
+  if (typed !== target && phoneticKey(typed) === phoneticKey(target)) return "sound";
+  if (typed.length === target.length) {
+    const diff = [];
+    for (let i = 0; i < typed.length; i++) if (typed[i] !== target[i]) diff.push(i);
+    if (diff.length === 2 && diff[1] === diff[0] + 1 && typed[diff[0]] === target[diff[1]] && typed[diff[1]] === target[diff[0]]) return "swap";
+    return diff.length === 1 ? "substitution" : null;
+  }
+  if (typed.length + 1 === target.length) {
+    for (let i = 0; i < target.length; i++) if (target.slice(0, i) + target.slice(i + 1) === typed) return "omission";
+    return null;
+  }
+  if (typed.length === target.length + 1) {
+    for (let i = 0; i < typed.length; i++) {
+      if (typed.slice(0, i) + typed.slice(i + 1) === target) return typed[i] === typed[i - 1] || typed[i] === typed[i + 1] ? "doubled" : "insertion";
+    }
+  }
+  return null;
+}
+
+/**
  * How first-thought a candidate is for ONE clue (0..1): a curated association near the top of the
  * clue's own list scores highest, then the clue near the top of the candidate's list, then a compound,
  * a member, the clue's category, any other link.
@@ -419,7 +449,8 @@ export function selectBotWord({pair, blocked = [], history = [], language = "en"
   const resolved = inputs.map(word => {
     const u = understandWord(word, lang, lex);
     // engine-2.5: a low-confidence guess (a piece of an unknown word: orchard → hard) is not trusted.
-    const doubtfulFix = u.fuzzy && (config.fuzzy?.untrusted || []).includes(u.confidence);
+    const doubtfulFix = u.fuzzy && ((config.fuzzy?.untrusted || []).includes(u.confidence)
+      || (config.fuzzy?.trustedSlips && !config.fuzzy.trustedSlips.includes(slipKind(u.key, wordKey(u.via || "")))));
     const trusted = !u.unresolved && !(config.untrusted || []).includes(u.confidence) && !doubtfulFix;
     return {word, ids: trusted ? u.ids : [], known: trusted, understood: !u.unresolved, guessed: u.unresolved ? null : u.via, method: u.method, confidence: u.confidence, via: u.via, spacing: u.spacing, morphology: u.morphology, fuzzy: u.fuzzy};
   });

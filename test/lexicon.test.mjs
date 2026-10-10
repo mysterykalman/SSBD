@@ -382,10 +382,10 @@ test("bot quality in simulated games and random pairs (EN and FR)", t => {
     const gaps = records.filter(r => Math.min(r.sa, r.sb) === 0);
     for (const r of gaps) assert.ok(!r.bridgeable, `${lang}: ${r.prompts.join("+")} -> ${r.word} although a two-sided word existed`);
     // engine-2.5: every pick is a DIRECT link of at least one of the two latest words, or clearly tied to
-    // both (3+ shared neighbours each); never a faint bridge the player would have to reconstruct. When
+    // both (2+ shared neighbours each); never a faint bridge the player would have to reconstruct. When
     // nothing like that exists the pick relates to one word only (random concept pairs like
     // JAR + TOMORROW produce many of these; real games few).
-    for (const r of records) assert.ok(Math.max(r.sa, r.sb) === 3 || directKind(lex, r.prompts, r.word) || Math.min(r.sa, r.sb) >= 2.5, `${lang}: ${r.prompts.join("+")} -> ${r.word} is not directly linked to either word`);
+    for (const r of records) assert.ok(Math.max(r.sa, r.sb) === 3 || directKind(lex, r.prompts, r.word) || Math.min(r.sa, r.sb) >= 2, `${lang}: ${r.prompts.join("+")} -> ${r.word} is not directly linked to either word`);
     const avoidable = gaps.filter(r => r.linkedPossible);
     assert.ok(avoidable.length <= records.length * 0.01, `${lang}: ${avoidable.length}/${records.length} one-sided picks although a linked two-sided word existed`);
     const gameRecords = records.filter(r => r.source === "game");

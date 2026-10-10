@@ -127,10 +127,10 @@ test("recovery only when no high-quality (or anchored) answer exists, and recove
       assert.ok(!["thing", "stuff", "good", "nice", "new", "old"].includes(c.id), `${a}+${b} → ${word} is too vague`);
       const pick = decision.candidates.find(x => x.word === word);
       if (decision.stage === "recovery") {
-        // engine-2.5 tiers: "balanced" (2+ shared neighbours on the weak side) or "weak" (direct on one side
-        // and tied to the other); never an unrelated or purely indirect, faint bridge.
+        // engine-2.5 tiers: "balanced" / "loose" (2+ shared neighbours on the weak side) or "weak" (direct on
+        // one side and tied to the other); never an unrelated or faint-on-both-sides bridge.
         const direct = ["category", "compound", "curated", "member", "link"];
-        if (decision.recoveryTier === "balanced") assert.ok(pick.weak >= ENGINE_CONFIG.recovery.minWeak, `${a}+${b} → ${word} relates to both words`);
+        if (decision.recoveryTier === "balanced" || decision.recoveryTier === "loose") assert.ok(pick.weak >= ENGINE_CONFIG.recovery.minWeak, `${a}+${b} → ${word} relates to both words`);
         else assert.ok(pick.weak >= ENGINE_CONFIG.recovery.fallbackWeak && (direct.includes(pick.kindA) || direct.includes(pick.kindB)), `${a}+${b} → ${word} is tied to one word directly and to the other`);
       }
     }

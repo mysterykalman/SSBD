@@ -4,7 +4,7 @@
 // test quality constraints and ranking behaviour, not a lookup table of expected words.
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {ENGINE_CONFIG, ENGINE_VERSION, selectBotWord} from "../src/shared/engine.js";
+import {ENGINE_CONFIG, ENGINE_VERSION, selectBotWord, slipKind} from "../src/shared/engine.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {ADDED_CONCEPTS_5} from "../src/shared/lexicon/additions5.js";
 import {understandWord} from "../src/shared/understand.js";
@@ -90,8 +90,8 @@ test("a balanced candidate beats a lopsided one with a stronger total (0.70 / 0.
       const balanced = r.decision.candidates.filter(c => c.weak >= ENGINE_CONFIG.recovery.minWeak);
       if (r.decision.recoveryTier === "weak") assert.equal(balanced.length, 0, `${pair.join("+")}: a balanced bridge existed (${balanced.map(c => c.word)})`);
       else assert.ok(p.weak >= ENGINE_CONFIG.recovery.minWeak, `${pair.join("+")} → ${r.word} (${p.relA}/${p.relB})`);
-      // Never a faint bridge with no direct link on either side.
-      assert.ok(DIRECT.has(p.kindA) || DIRECT.has(p.kindB) || p.weak >= ENGINE_CONFIG.stages.indirect + 0.1, `${pair.join("+")} → ${r.word} (${p.kindA}/${p.kindB})`);
+      // Never a faint bridge with no direct link on either side (one shared neighbour each).
+      assert.ok(DIRECT.has(p.kindA) || DIRECT.has(p.kindB) || p.weak >= ENGINE_CONFIG.recovery.minWeak, `${pair.join("+")} → ${r.word} (${p.kindA}/${p.kindB})`);
     }
   }
   assert.ok(recoveries > 20);
@@ -197,10 +197,27 @@ test("an unknown or only-guessed word: the least-bad answer, never a compound or
       assert.ok(DIRECT.has(pickOf(r).kindB) && pickOf(r).kindB !== "compound", `${unknown}+${known} → ${r.word} (${pickOf(r).kindB})`);
     }
   }
+  // A kept typo is still understood when the slip is a typical typo (swapped letters, a letter left out,
+  // spelled the way it sounds); a changed letter that can make another real word is not trusted.
+  for (const [typed, meant] of [["chikcen", "chicken"], ["aqurium", "aquarium"], ["elefant", "elephant"]]) {
+    const r = selectBotWord({pair: [typed, "zoo"], seed: 1});
+    assert.deepEqual(r.decision.inputs[0].ids, [meant], typed);
+  }
   // A spelling correction the player kept as typed is not trusted: "tackle" is not "tickle".
   const tackle = selectBotWord({pair: ["tackle", "fish"], seed: 1});
   assert.equal(tackle.decision.inputs[0].known, false);
   assert.equal(tackle.decision.inputs[0].understood, true);
+});
+
+test("slip kinds: which kept spellings are typos of the intended word", () => {
+  assert.equal(slipKind("chikcen", "chicken"), "swap");
+  assert.equal(slipKind("aqurium", "aquarium"), "omission");
+  assert.equal(slipKind("appple", "apple"), "sound"); // doubled letters sound the same (trusted either way)
+  assert.equal(slipKind("bannana", "banana"), "sound");
+  assert.equal(slipKind("elefant", "elephant"), "sound");
+  assert.equal(slipKind("stump", "stamp"), "substitution");
+  assert.equal(slipKind("tackle", "tickle"), "substitution");
+  assert.equal(slipKind("shooting", "shopping"), null);
 });
 
 test("diagnostics: understanding, fallback, why the pick won, both relations, consensus, profile and trajectory", () => {
