@@ -1,42 +1,31 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#fff4df">
-<title>Mom Mode | Same Same but Different</title>
-<meta name="description" content="Meet Pam. She already has a pretty good idea what you're thinking.">
+<meta name="theme-color" content="#fff4df"><title>Mom Mode | Same Same but Different</title>
+<meta name="description" content="Pam can read your mind. She has eyes in the back of her head.">
 <link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="./styles.css">
 </head><body>
 <a class="skip" href="#mom-app">Skip to Mom Mode</a>
 <header class="topbar"><a class="brand" href="/">Same Same<small>but different</small></a><a class="back" href="/">← All games</a></header>
 <main id="mom-app" class="wrap">
-<div class="mode-heading"><span class="pill">A little mind reading</span><span class="preview-label">DESIGN PREVIEW</span></div>
+<div class="mode-heading"><span class="pill">A little mind reading</span></div>
 <div class="layout">
 <section class="character" aria-labelledby="mode-title">
-  <div class="portrait-frame"><img class="portrait" src="./pam.webp" alt="Pam smiling knowingly in her kitchen" width="480" height="480"></div>
-  <div class="bio-card"><p class="eyebrow">MEET PAM</p><h1 id="mode-title">Mom Mode<span class="title-dot">.</span></h1>
-    <p class="tagline">Pam can read your mind. She has eyes in the back of her head.</p>
-    <p class="tiny-joke">Also, no running with scissors.</p>
-    <details class="about"><summary>A little about Pam</summary><p id="pam-bio"></p></details>
-  </div>
+ <div class="portrait-frame"><img class="portrait" src="./pam.webp" alt="Pam smiling knowingly in her kitchen" width="480" height="480"></div>
+ <div class="bio-card"><p class="eyebrow">MEET PAM</p><h1 id="mode-title">Mom Mode<span class="title-dot">.</span></h1><p class="tagline">Pam can read your mind. She has eyes in the back of her head.</p><p class="tiny-joke">Also, no running with scissors.</p><details class="about"><summary>A little about Pam</summary><p id="pam-bio"></p><p id="knowledge-note" class="knowledge-note"></p></details></div>
 </section>
 <section class="game-card" aria-label="Mom Mode game">
  <div class="game-top"><span id="stage-label" class="eyebrow">PAM'S KITCHEN TABLE</span><span id="question-counter" class="counter" hidden></span></div>
  <div class="progress-track" role="progressbar" aria-label="Questions asked" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><div id="progress-fill"></div></div>
  <div class="speech" aria-live="polite" aria-atomic="true"><p id="pam-lead" class="lead"></p><h2 id="pam-question" class="question"></h2><p id="pam-aside" class="aside"></p></div>
- <div id="intro-actions" class="actions"><button class="btn primary" id="start-btn" type="button">Preview a round →</button></div>
- <div id="answer-actions" class="answers" role="group" aria-label="Answer Pam's question" hidden>
-  <button type="button" data-answer="yes" class="btn yes">Yes</button>
-  <button type="button" data-answer="no" class="btn no">No</button>
-  <button type="button" data-answer="probably" class="btn probably">Probably</button>
-  <button type="button" data-answer="unknown" class="btn unknown">Don't know</button>
-  <button type="button" data-answer="probably_not" class="btn probably-not" hidden>Probably not</button>
+ <div id="intro-actions" class="actions"><button class="btn primary" id="start-btn" type="button">I’m thinking of something</button></div>
+ <div id="answer-actions" class="answers five" role="group" aria-label="Answer Pam's question" hidden>
+  <button type="button" data-answer="yes" class="btn yes">Yes</button><button type="button" data-answer="probably" class="btn probably">Probably</button><button type="button" data-answer="unknown" class="btn unknown">Not sure</button><button type="button" data-answer="probably_not" class="btn probably-not">Probably not</button><button type="button" data-answer="no" class="btn no">No</button>
  </div>
- <div id="guess-actions" class="actions" hidden><button class="btn primary" id="correct-btn" type="button">You got it!</button><button class="btn ghost" id="wrong-btn" type="button">Not quite</button></div>
- <div id="result-actions" class="actions" hidden><button class="btn primary" id="again-btn" type="button">One more round</button><a class="btn ghost" href="/">Back to the games</a></div>
- <p id="preview-note" class="footnote">Interactive design preview only. Answers here do not affect Pam's sample guess. A real game engine is not connected yet.</p>
+ <div id="guess-actions" class="actions" hidden><button class="btn primary" id="correct-btn" type="button">You got it!</button><button class="btn ghost" id="wrong-btn" type="button">Nope</button></div>
+ <div id="result-actions" class="actions" hidden><button class="btn primary" id="again-btn" type="button">Think of something else</button><a class="btn ghost" href="/">Fine. I’ll take a jacket.</a></div>
 </section>
-</div>
-<footer class="footer">You think of something. Pam asks questions and tries to guess it. No word-matching required.</footer>
+</div><footer class="footer">You think of something. Pam asks questions and tries to guess it. No LLM, no paid API, no internet required after the game loads.</footer>
 </main>
-<script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script>
+<script src="./knowledge.js" defer></script><script src="./engine.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script>
 </body></html>

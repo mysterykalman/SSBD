@@ -20,6 +20,7 @@ const css = await readFile(src("client/styles.css"), "utf8");
 const ICONS = ["favicon.ico", "favicon-32.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const icons = Object.fromEntries(await Promise.all(ICONS.map(async name => [`/${name}`, await readFile(src(`client/icons/${name}`))])));
 const manifest = await readFile(src("client/manifest.webmanifest"), "utf8");
+const momLaunch = await readFile(src("client/mom-mode/entry-fix.js"), "utf8");
 
 const hash = value => createHash("sha256").update(value).digest("hex").slice(0, 10);
 const appName = `/assets/app.${hash(appJs)}.js`;
@@ -31,26 +32,32 @@ const swTemplate = await readFile(src("client/sw.js"), "utf8");
 // change produces a new cache and a clean, all-at-once switch.
 const iconHash = createHash("sha256");
 for (const body of Object.values(icons)) iconHash.update(body);
-const version = hash(appJs + audioJs + css + html + iconHash.digest("hex") + manifest + swTemplate);
+const version = hash(appJs + audioJs + css + html + momLaunch + iconHash.digest("hex") + manifest + swTemplate);
 // The page carries its own version so it can tell when a newer worker has taken over.
 const page = html.replace("%APP_VERSION%", version);
 const swSource = swTemplate
   .replace("%VERSION%", version)
-  .replace("%PRECACHE%", JSON.stringify(["/", appName, audioName, cssName, "/favicon.ico", "/favicon-32.png", "/manifest.webmanifest"]));
+  .replace("%PRECACHE%", JSON.stringify(["/", appName, audioName, cssName, "/mom-launch.js", "/favicon.ico", "/favicon-32.png", "/manifest.webmanifest"]));
 if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEHOLDER%");
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
-const momAssets = ["index.html", "styles.css", "copy.js", "adapter.js", "app.js", "pam.webp"];
+const momAssets = ["index.html", "styles.css", "knowledge.js", "engine.js", "copy.js", "adapter.js", "app.js", "pam.webp"];
 const files = {
   "/index.html": page,
   [appName]: appJs,
   [audioName]: audioJs,
   [cssName]: css,
+  "/mom-launch.js": momLaunch,
   "/sw.js": sw,
   ...icons,
   "/manifest.webmanifest": manifest
 };
-for (const name of momAssets) files[`/mom-mode/${name}`] = await readFile(src(`client/mom-mode/${name}`));
+for (const name of momAssets) {
+  const body = await readFile(src(`client/mom-mode/${name}`));
+  files[`/mom/${name}`] = body;
+  // Keep the old preview path working for bookmarks while product navigation moves to /mom/.
+  files[`/mom-mode/${name}`] = body;
+}
 
 await rm(dist, {recursive: true, force: true});
 for (const [path, body] of Object.entries(files)) {
