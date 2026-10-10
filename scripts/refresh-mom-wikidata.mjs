@@ -166,7 +166,7 @@ for(const p of people.values()){
   if(p.birth>=0){const d=Math.floor(p.birth/10)*10,tag=`wd_born_decade_${d}`;addFeature(tag,`Were they born in the ${d}s?`,"person","specificPerson");yes.push(tag);}
  }
  const occupationText=[...p.occupations].join(" | ");
- for(const [id,re,label] of broadDomains)if(re.test(occupationText))yes.push(`wd_domain_${id}`);
+ for(const [id,re,_label] of broadDomains)if(re.test(occupationText))yes.push(`wd_domain_${id}`);
  for(const country of p.countries){
   if((countryCounts.get(country)||0)<4)continue;
   const tag=`wd_person_country_${slug(country)}`;addFeature(tag,`Are they strongly associated with ${country}?`,"person","specificPerson");yes.push(tag);
