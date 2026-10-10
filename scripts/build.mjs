@@ -40,6 +40,7 @@ const swSource = swTemplate
 if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEHOLDER%");
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
+const momAssets = ["index.html", "styles.css", "copy.js", "adapter.js", "app.js", "pam.webp"];
 const files = {
   "/index.html": page,
   [appName]: appJs,
@@ -49,6 +50,7 @@ const files = {
   ...icons,
   "/manifest.webmanifest": manifest
 };
+for (const name of momAssets) files[`/mom-mode/${name}`] = await readFile(src(`client/mom-mode/${name}`));
 
 await rm(dist, {recursive: true, force: true});
 for (const [path, body] of Object.entries(files)) {

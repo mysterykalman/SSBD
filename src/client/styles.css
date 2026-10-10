@@ -792,3 +792,10 @@ main:focus { outline: none; }
 .dialog-x:hover { background: rgba(43, 27, 61, .08); }
 .dialog-x:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
 .dialog-body > h2, .pick-body > h2 { padding-right: 40px; }
+
+/* Mom Mode preview tile, separate from Solo and Together. */
+.mom-card{display:grid;grid-template-columns:110px minmax(0,1fr) auto;align-items:center;gap:16px;margin:18px 0;padding:18px 24px;background:#fffaf0}
+.mom-card-art{display:block;width:105px;height:105px;object-fit:cover;border-radius:50%;border:3px solid var(--ink)}
+.mom-card-copy{min-width:0}.mom-card-copy h2{margin:3px 0 5px}.mom-card-copy p{font-size:.88rem;line-height:1.4}
+.mom-preview{color:var(--coral-dark);font-size:.67rem!important;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+@media(max-width:700px){.mom-card{grid-template-columns:75px minmax(0,1fr);padding:16px;gap:12px}.mom-card-art{width:75px;height:75px}.mom-card>a{grid-column:1/-1;width:100%;text-align:center}}
