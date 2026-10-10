@@ -8,5 +8,5 @@ self.addEventListener("activate", event => {
   event.waitUntil(self.clients.claim());
 });
 self.addEventListener("fetch", event => {
-  event.respondWith(fetch(event.request));
+  event.respondWith(caches.open(CACHE).then(cache => cache.match(event.request)).then(hit => hit || fetch(event.request)));
 });
