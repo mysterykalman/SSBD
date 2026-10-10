@@ -102,3 +102,8 @@ function render() {
   return renderResult();
 }
 render();
+
+// The /20Q worker has a narrower scope than the main game's worker.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/20Q/sw.js", {scope: "/20Q"}).catch(() => {});
+}
