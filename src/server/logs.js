@@ -14,7 +14,7 @@
 // review endpoints do not exist (404). It is never sent to the browser by the server.
 
 import {timingSafeEqual} from "node:crypto";
-import {REVIEW_FLAGS, cleanGame, cleanRound, computeMetrics, firstBadRound, gameHighlights, metricsBy, reportedStatus, roundQuality, toCsv} from "../shared/gamelog.js";
+import {REVIEW_FLAGS, cleanGame, cleanRound, computeMetrics, firstBadRound, gameHighlights, gameSummary, metricsBy, reportedStatus, roundQuality, toCsv} from "../shared/gamelog.js";
 
 const MAX_GAMES = 40, MAX_ROUNDS = 200;
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), {status, headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers}});
@@ -76,8 +76,10 @@ export async function logBatch(db, body) {
     if (missing.length) for (const row of (await q.query("SELECT game_id FROM bot_games WHERE game_id = ANY($1)", [missing])).rows) known.add(row.game_id);
     for (const r of rounds) {
       if (!known.has(r.game_id)) continue; // a round always travels with (or after) its game record
-      // How the player's word was read travels inside the round's decision record (no schema change).
-      const decision = r.decision || r.player_input ? {...(r.decision || {}), ...(r.player_input ? {playerInput: r.player_input} : {})} : null;
+      // How the player's word was read, and the post-reveal round analysis, travel inside the round's
+      // decision record (no schema change).
+      const decision = r.decision || r.player_input || r.analysis
+        ? {...(r.decision || {}), ...(r.player_input ? {playerInput: r.player_input} : {}), ...(r.analysis ? {roundAnalysis: r.analysis} : {})} : null;
       await q.query(`INSERT INTO bot_rounds (game_id, round, pair_a, pair_b, user_word, bot_word, user_key, bot_key, matched, revealed_at, decision_ms, stage, low_quality, decision, received_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) ON CONFLICT (game_id, round) DO NOTHING`,
       [r.game_id, r.round, r.pair_a, r.pair_b, r.user_word, r.bot_word, r.user_key, r.bot_key, r.matched, r.revealed_at, r.decision_ms, r.stage, r.low_quality, decision && JSON.stringify(decision), received]);
@@ -142,7 +144,7 @@ export async function reviewRoute(request, db, token, body = {}) {
     return json({games: list.map(({rounds_list, config: _c, ...g}) => ({...g,
       flagged_rounds: rounds_list.filter(r => r.flags.length).length, low_quality_rounds: rounds_list.filter(r => r.low_quality).length,
       recovery_rounds: rounds_list.filter(r => roundQuality(r).recovery && roundQuality(r).paired).length,
-      highlights: gameHighlights({...g, rounds_list}), first_bad_round: firstBadRound({rounds_list})}))});
+      highlights: gameHighlights({...g, rounds_list}), first_bad_round: firstBadRound({rounds_list}), summary: gameSummary({...g, rounds_list})}))});
   }
   if (path === "/api/review/game" && request.method === "GET") {
     const [game] = await loadGames(db, new URLSearchParams({id: params.get("id") || ""}), {decisions: true});
@@ -165,7 +167,7 @@ export async function reviewRoute(request, db, token, body = {}) {
     if (format === "csv") {
       return new Response(toCsv(list), {headers: {"content-type": "text/csv; charset=utf-8", "cache-control": "no-store", "content-disposition": `attachment; filename="ssbd-bot-rounds-${stamp}.csv"`}});
     }
-    return json({exported_at: now(), games: list}, 200, {"content-disposition": `attachment; filename="ssbd-bot-games-${stamp}.json"`});
+    return json({exported_at: now(), games: list.map(g => ({...g, summary: gameSummary(g)}))}, 200, {"content-disposition": `attachment; filename="ssbd-bot-games-${stamp}.json"`});
   }
   if (path === "/api/review/metrics" && request.method === "GET") {
     const list = await loadGames(db, params);

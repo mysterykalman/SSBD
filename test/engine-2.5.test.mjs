@@ -20,7 +20,7 @@ const SEEDS = Array.from({length: 12}, (_, i) => i + 1);
 const PLAYTEST = [["oven", "cake"], ["pan", "kitchen"], ["fur", "zoo"], ["computer", "night"], ["screen", "mouse"], ["goggles", "sun"], ["frame", "tree"], ["peripheral", "phone"]];
 
 test("engine and dataset versions", () => {
-  assert.equal(ENGINE_VERSION, "engine-2.5");
+  assert.equal(ENGINE_VERSION, "engine-2.5.1");
   assert.equal(lex.dataset, "lexicon-5");
 });
 
@@ -147,6 +147,37 @@ test("Gary can select a less-obvious answer, but only another genuinely strong o
     if (r.decision.stage === "shared-direct" && r.decision.selection.varied) miloVaried++;
   }
   assert.ok(miloVaried < varied, `Milo varies less (${miloVaried}) than Gary (${varied})`);
+});
+
+test("engine-2.5.1: Gary weighs human obviousness too, less than Milo, and never plays an obscure answer", () => {
+  const {milo, gary} = ENGINE_CONFIG.profiles;
+  assert.ok(gary.consensus > 0, "obviousness is part of Gary's score");
+  assert.ok(milo.consensus > gary.consensus, "Milo weighs it more strongly");
+  // On related pairs, both play high-quality answers; Milo's is (nearly) the most obvious one, Gary's
+  // stays close to it ("I can see why he went there"), and Gary varies more often.
+  const words = [...lex.concepts.values()].filter(c => c.links.size >= 10 && !c.label.includes(" "));
+  const gaps = {milo: [], gary: []}, varied = {milo: 0, gary: 0};
+  for (const character of ["milo", "gary"]) {
+    const rnd = seededRandom(31);
+    for (let i = 0; i < 600; i++) {
+      const hub = words[Math.floor(rnd() * words.length)];
+      const near = [...hub.links].map(id => lex.concepts.get(id)).filter(c => c && !c.label.includes(" "));
+      if (near.length < 2) continue;
+      const pair = [near[Math.floor(rnd() * near.length)].label, near[Math.floor(rnd() * near.length)].label];
+      if (pair[0] === pair[1]) continue;
+      const r = selectBotWord({pair, seed: i, character});
+      if (r.decision.stage !== "shared-direct") continue;
+      const best = Math.max(...r.decision.candidates.filter(c => c.highQuality).map(c => c.consensus));
+      assert.ok(pickOf(r).highQuality, `${character} ${pair.join("+")} → ${r.word}`);
+      gaps[character].push(best - pickOf(r).consensus);
+      if (r.decision.selection.varied) varied[character]++;
+    }
+  }
+  const p95 = xs => xs.slice().sort((a, b) => a - b)[Math.floor(xs.length * 0.95)];
+  assert.ok(p95(gaps.milo) <= 0.1, `Milo plays the obvious answer (p95 gap ${p95(gaps.milo)})`);
+  assert.ok(p95(gaps.gary) <= 0.25, `Gary stays close to the obvious answer (p95 gap ${p95(gaps.gary)})`);
+  assert.ok(Math.max(...gaps.gary) <= 0.45, `Gary never plays an obscure answer (max gap ${Math.max(...gaps.gary)})`);
+  assert.ok(varied.gary > varied.milo * 3, `Gary varies more often (${varied.gary} vs ${varied.milo})`);
 });
 
 test("exact legitimate matches are never delayed: the bot never sees the open word, and a clear answer is played", () => {
