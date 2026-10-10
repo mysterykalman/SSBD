@@ -67,3 +67,38 @@ function renderQuestion() {
   }
   action(box, "Start over", "text-button", renderStart);
 }
+function renderGuess() {
+  const box = screen();
+  box.classList.add("result-card");
+  add(box, "p", "eyebrow", "MY FINAL ANSWER");
+  add(box, "div", "result-icon", "?");
+  add(box, "p", "question-intro", "After " + game.history.length + " questions, I'm going with…");
+  const name = game.guess;
+  add(box, "h1", "guess", name[0].toUpperCase() + name.slice(1));
+  add(box, "p", "hint", "Did I get it right?");
+  const actions = add(box, "div", "guess-actions");
+  action(actions, "Nailed it!", "primary", () => { game = finishGame(game, true, KNOWLEDGE); render(); });
+  action(actions, "Nope, try harder", "secondary", () => { game = finishGame(game, false, KNOWLEDGE); render(); });
+}
+function renderResult() {
+  const won = game.status === "won";
+  const box = screen();
+  box.classList.add("result-card");
+  add(box, "p", "eyebrow", won ? "MIND READING: SUCCESSFUL" : "MIND READING: QUESTIONABLE");
+  add(box, "div", "result-icon " + (won ? "success" : "failure"), won ? "★" : "!");
+  add(box, "h1", "title", won ? "I knew it. Obviously." : "Well, that's embarrassing.");
+  add(box, "p", "lede", won
+    ? "Got it in " + game.history.length + " questions. Don't worry, I won't let it go to my head."
+    : "This little brain only knows a limited set of things. You may have stumped it fair and square.");
+  if (!won && game.alternatives.length) add(box, "p", "alternatives", "Other things I considered: " + game.alternatives.join(", ") + ".");
+  action(box, "Play another round →", "primary", start);
+  const link = add(box, "a", "text-button home-link", "Back to Same Same but Different");
+  link.href = "/";
+}
+function render() {
+  if (!game) return renderStart();
+  if (game.status === "asking") return renderQuestion();
+  if (game.status === "guessing") return renderGuess();
+  return renderResult();
+}
+render();
