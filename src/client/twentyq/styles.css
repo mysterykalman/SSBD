@@ -14,3 +14,23 @@ h1{font-size:clamp(29px,6vw,48px);letter-spacing:-.04em;line-height:1.14;margin:
 .primary{background:var(--coral);color:var(--ink);box-shadow:4px 4px 0 var(--ink)}
 .secondary{background:var(--card);color:var(--ink)}
 .fineprint{font-size:13px;color:var(--muted);line-height:1.5;margin:22px auto 0;max-width:420px}
+.progress{width:100%;height:12px;background:#ece8e0;border:2px solid var(--ink);border-radius:20px;overflow:hidden;margin:20px 0 40px}
+.progress-fill{display:block;height:100%;background:var(--coral);border-radius:inherit}
+.question-intro{font-size:15px;font-weight:800;color:#6b4760;margin:0 0 12px}
+.question{min-height:130px;display:grid;place-items:center;font-size:clamp(31px,6vw,46px)}
+.hint{font-size:15px;color:var(--muted);line-height:1.5;margin:18px 0 28px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.answer{min-height:78px;border:3px solid var(--ink);border-radius:17px;font-size:20px;font-weight:900;box-shadow:4px 4px 0 var(--ink)}
+.answer.yes{background:#bde8cf}.answer.no{background:#ffc2b8}.answer.sometimes{background:#ffe29e}.answer.unknown{background:var(--blue)}
+.primary:hover,.secondary:hover,.answer:hover{transform:translateY(-2px)}
+.primary:active,.secondary:active,.answer:active{transform:translateY(2px);box-shadow:none}
+.text-button{display:inline-block;margin-top:28px;padding:8px;border:0;background:transparent;color:var(--muted);font-size:14px;font-weight:800;text-decoration:underline}
+.result-icon{width:110px;height:110px;display:grid;place-items:center;margin:22px auto;border:3px solid var(--ink);border-radius:50%;background:var(--blue);font-size:68px;font-weight:900;transform:rotate(-10deg)}
+.result-icon.success{background:var(--yellow)}.result-icon.failure{background:#ffc2b8}
+.guess{text-transform:capitalize;font-size:clamp(42px,9vw,68px);overflow-wrap:anywhere}
+.guess-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.alternatives{font-size:14px;color:var(--muted);line-height:1.6}
+.home-link{color:var(--ink)}
+.footer{padding:24px 0 28px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;border-top:2px solid #d6d0c9;color:var(--muted);font-size:12px}.footer a{color:var(--ink)}
+@media(max-width:540px){.topbar{min-height:74px}.back{font-size:12px;max-width:170px}.experiment{font-size:9px;padding:6px 8px}.card{border-radius:20px;box-shadow:6px 6px 0 var(--ink)}.twenty-mark{width:108px;height:108px;font-size:54px}.question{min-height:110px}.answers{gap:11px}.answer{min-height:70px;font-size:17px}.guess-actions{grid-template-columns:1fr}.footer{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
