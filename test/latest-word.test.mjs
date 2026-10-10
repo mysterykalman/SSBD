@@ -54,6 +54,8 @@ test("the old leaps are gone: recovery hubs reached only through shared neighbou
       const shared = k => k === "shared-2" || k === "shared-3" || k === "compound-part";
       assert.ok(DIRECT.has(pick.kindA) || DIRECT.has(pick.kindB) || (shared(pick.kindA) && shared(pick.kindB)), `${character}: ${a} + ${b} → ${word} (${pick.kindA}/${pick.kindB})`);
       assert.ok(!(pick.kindA === "shared-1" && pick.kindB === "shared-1"), `${a} + ${b} → ${word} is not a faint leap`);
+      // The old answer is only acceptable if the richer graph now ties it clearly to both words.
+      if (word === leap) assert.ok(pick.weak >= 0.3, `${a} + ${b} → ${leap} (${pick.kindA}/${pick.kindB}) is still a leap`);
     }
   }
 });
