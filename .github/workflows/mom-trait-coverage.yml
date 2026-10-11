@@ -8,6 +8,7 @@ on:
     paths:
       - scripts/analyze-mom-trait-coverage.mjs
       - scripts/extract-wordnet-traits.py
+      - scripts/extract-mom-extra-public-traits.py
       - scripts/mom-controlled-traits.mjs
       - scripts/build-mom-controlled-profiles.mjs
       - src/client/mom-mode/engine.js
@@ -22,7 +23,7 @@ permissions:
 jobs:
   coverage:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,16 +55,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .dev-data/trait-sources
+          mkdir -p .dev-data/trait-sources .dev-data/trait-sources/visual-genome .dev-data/trait-sources/paco
           git clone --depth 1 https://github.com/danoneata/seeing-what-tastes-good.git .dev-data/trait-sources/seeing-what-tastes-good
           git clone --depth 1 https://github.com/cardiffnlp/trait-concept-datasets.git .dev-data/trait-sources/trait-concept-datasets
           curl -L --fail --retry 3 --retry-delay 5 -o .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz
-          ls -lh .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz
+
+          # Visual Genome gives repeated real-world attributes and object relationships.
+          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/vg-attributes.zip https://visualgenome.org/static/data/dataset/attributes.json.zip
+          unzip -q /tmp/vg-attributes.zip -d .dev-data/trait-sources/visual-genome
+          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/vg-relationships.zip https://visualgenome.org/static/data/dataset/relationships.json.zip
+          unzip -q /tmp/vg-relationships.zip -d .dev-data/trait-sources/visual-genome
+
+          # PACO contributes high-quality object/material/part annotations for common objects.
+          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/paco-lvis.zip https://dl.fbaipublicfiles.com/paco/annotations/paco_lvis_v1.zip
+          unzip -q /tmp/paco-lvis.zip -d .dev-data/trait-sources/paco
+
+          ls -lh .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz /tmp/vg-attributes.zip /tmp/vg-relationships.zip /tmp/paco-lvis.zip
       - name: Build Open English WordNet evidence
         shell: bash
         run: |
           python -m pip install --quiet wn
           python scripts/extract-wordnet-traits.py
+      - name: Build Visual Genome and PACO evidence
+        run: python scripts/extract-mom-extra-public-traits.py
       - name: Measure public trait coverage with Wikidata
         run: node scripts/analyze-mom-trait-coverage.mjs
       - name: Build controlled Pam profiles
@@ -86,4 +100,5 @@ jobs:
             .dev-data/mom-trait-coverage/
             .dev-data/mom-controlled-profiles/
             .dev-data/mom-benchmark/
+            .dev-data/trait-sources/extra-public-evidence.json
           retention-days: 14
