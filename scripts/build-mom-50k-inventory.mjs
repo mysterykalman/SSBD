@@ -7,23 +7,29 @@ const OUT_DIR=new URL("../.dev-data/mom-50k/",import.meta.url);
 const ROOT_CATEGORY="Category:Wikipedia level-5 vital articles";
 const wikiApi="https://en.wikipedia.org/w/api.php";
 const wikidataApi="https://www.wikidata.org/w/api.php";
-const userAgent="SSBD-MomMode/3.1 (50k inventory builder for mysterykalman/SSBD)";
+const userAgent="SSBD-MomMode/3.2 (50k inventory builder for mysterykalman/SSBD)";
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const norm=s=>String(s||"").trim().toLocaleLowerCase("en").replace(/\s+/g," ");
 const csvCell=v=>{const s=String(v??"");return /[",\n\r]/.test(s)?`"${s.replaceAll('"','""')}"`:s;};
 const toCsv=rows=>rows.map(row=>row.map(csvCell).join(",")).join("\n")+"\n";
 const wikiUrl=title=>`https://en.wikipedia.org/wiki/${encodeURIComponent(title.replaceAll(" ","_"))}`;
 
-async function getJson(url,label,{attempts=5}={}){
+async function getJson(url,label,{attempts=8}={}){
  let last;
  for(let i=1;i<=attempts;i++){
   try{
    const response=await fetch(url,{headers:{"user-agent":userAgent,accept:"application/json"}});
+   if(response.status===429){
+    const retrySeconds=Number(response.headers.get("retry-after"))||Math.min(20,2*i);
+    console.log(`${label}: rate limited; waiting ${retrySeconds}s`);
+    await sleep(retrySeconds*1000);
+    continue;
+   }
    if(!response.ok)throw new Error(`${label}: HTTP ${response.status}`);
    return response.json();
-  }catch(error){last=error;if(i<attempts)await sleep(750*i);}
+  }catch(error){last=error;if(i<attempts)await sleep(Math.min(10000,1000*i));}
  }
- throw last;
+ throw last||new Error(`${label}: exhausted retries`);
 }
 
 async function categoryMembers(category){
@@ -35,7 +41,7 @@ async function categoryMembers(category){
   const json=await getJson(`${wikiApi}?${p}`,`category ${category}`);
   members.push(...(json.query?.categorymembers||[]));
   cont=json.continue?.cmcontinue||"";
-  if(cont)await sleep(40);
+  if(cont)await sleep(400);
  }while(cont);
  return members;
 }
@@ -55,7 +61,7 @@ async function fetchVitalTitles(){
   }
   console.log(`Vital crawl: ${pages.size} articles across ${seenCategories.size} categories; ${queue.length} categories queued`);
   if(pages.size>=TARGET)break;
-  await sleep(40);
+  await sleep(400);
  }
  return [...pages.values()];
 }
@@ -96,7 +102,7 @@ async function enrichTitles(titles){
    result.set(norm(title),{qid:entity.id||"",description:entity.descriptions?.en?.value||"",aliases:(entity.aliases?.en||[]).map(a=>a.value).filter(Boolean)});
   }
   console.log(`Enriched ${Math.min(i+50,titles.length)}/${titles.length}`);
-  await sleep(60);
+  await sleep(250);
  }
  return result;
 }
