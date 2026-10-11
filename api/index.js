@@ -1,9 +1,10 @@
 // @ts-check
 // Vercel Function for every /api/* request (vercel.json rewrites them here).
-// Family mode uses normalized server state. Solo and Mom Mode remain device-first,
-// with a small opaque progress snapshot so the existing recovery code can restore them.
+// Together mode uses normalized server state. Solo and Mom Mode remain device-first,
+// with a small cloud snapshot tied to the same player account.
 
 import {handleApi} from "../src/server/api.js";
+import {handleAccountApi} from "../src/server/account.js";
 import {storeFromEnv} from "../src/server/db.js";
 
 /**
@@ -70,9 +71,9 @@ async function progressRoute(request, store) {
   if (!store) return json({error: "Database is not configured", code: "NO_DATABASE"}, 503);
   if (request.method === "GET") {
     const playerId = String(url.searchParams.get("player_id") || "");
-    const result = await store.query("SELECT id, display_name, recovery_code, cloud_progress FROM players WHERE id = $1", [playerId]);
+    const result = await store.query("SELECT id, display_name, username, cloud_progress FROM players WHERE id = $1", [playerId]);
     const player = result.rows[0];
-    return player ? json({player: {id: player.id, display_name: player.display_name, recovery_code: player.recovery_code}, progress: object(player.cloud_progress)}) : json({error: "Player not found", code: "UNKNOWN_PLAYER"}, 404);
+    return player ? json({player: {id: player.id, display_name: player.display_name, username: player.username}, progress: object(player.cloud_progress)}) : json({error: "Player not found", code: "UNKNOWN_PLAYER"}, 404);
   }
   if (request.method === "POST") {
     let body = {};
@@ -96,6 +97,8 @@ export async function handle(request, env) {
   try {
     const restored = await restorePath(request);
     const runtime = env || {store: storeFromEnv(), reviewToken: process.env.REVIEW_TOKEN || undefined};
+    const account = await handleAccountApi(restored, runtime.store);
+    if (account) return account;
     const progress = await progressRoute(restored, runtime.store);
     if (progress) return progress;
     // REVIEW_TOKEN (server-side only) unlocks the private bot-review endpoints; without it they are off.
