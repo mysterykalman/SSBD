@@ -6,7 +6,7 @@ const savePlayer = player => { localStorage.setItem(PLAYER_KEY, JSON.stringify(p
 
 const style = document.createElement("style");
 style.textContent = `
-.account-card{position:relative;display:grid;gap:16px;padding:22px}.account-card>h2{padding-right:42px}.account-grid{display:grid;gap:12px}.account-grid label{display:grid;gap:6px;font-weight:900}.account-grid input{width:100%;font:inherit;padding:11px 12px;border:3px solid var(--ink,#2b1b3d);border-radius:12px;background:#fff}.account-actions{display:flex;gap:10px;flex-wrap:wrap}.account-note{margin:0;color:var(--muted,#6b4e63);font-size:.9rem;line-height:1.45}.account-error{margin:0;color:#a52222;font-weight:800}.account-user{margin:0;font-weight:900}.account-divider{height:1px;background:rgba(43,27,61,.16);margin:2px 0}.account-signin-link{background:none;border:0;padding:4px 0;color:var(--grape,#7b4fc9);text-decoration:underline;text-underline-offset:3px;font:inherit;font-weight:800;cursor:pointer}.account-pin{letter-spacing:.2em;font-variant-numeric:tabular-nums}.settings-card{position:relative;display:grid;gap:0;padding:22px}.settings-card>h2{padding-right:42px;margin-bottom:4px}.settings-section{display:grid;gap:10px;padding:16px 0;border-top:1px solid rgba(43,27,61,.15)}.settings-section:first-of-type{border-top:0;padding-top:10px}.settings-section h3{margin:0;font-size:1rem}.settings-section .btn{justify-self:start}.settings-player{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}.settings-player-name{margin:0;font-size:1.05rem;font-weight:900}.settings-handle{color:var(--muted,#6b4e63);font-size:.88rem;font-weight:800}.settings-setup-actions{display:flex;gap:10px;flex-wrap:wrap}.settings-setup-actions .btn{min-height:46px;padding:9px 16px}.settings-signed-actions{display:flex;gap:8px;flex-wrap:wrap}.settings-signed-actions .btn{min-height:44px;padding:8px 14px;font-size:.92rem}.settings-name-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.settings-name-row label{display:grid;gap:6px;font-weight:900}.settings-name-row input{width:100%;min-height:48px;font:inherit;padding:9px 12px;border:3px solid var(--ink,#2b1b3d);border-radius:12px;background:#fff}.settings-name-row .btn{min-height:48px;padding:9px 16px}.settings-status{margin:0;color:var(--muted,#6b4e63);font-size:.88rem;line-height:1.4}.account-dialog{overflow:auto}@media(max-width:480px){.account-card,.settings-card{padding:18px 16px}.settings-name-row{grid-template-columns:1fr}.settings-name-row .btn,.settings-setup-actions .btn{width:100%}.settings-signed-actions{display:grid}.settings-signed-actions .btn{width:100%}}`;
+.account-card{position:relative;display:grid;gap:16px;padding:22px}.account-card>h2{padding-right:42px}.account-grid{display:grid;gap:12px}.account-grid label{display:grid;gap:6px;font-weight:900}.account-grid input{width:100%;font:inherit;padding:11px 12px;border:3px solid var(--ink,#2b1b3d);border-radius:12px;background:#fff}.account-actions{display:flex;gap:10px;flex-wrap:wrap}.account-note{margin:0;color:var(--muted,#6b4e63);font-size:.9rem;line-height:1.45}.account-error{margin:0;color:#a52222;font-weight:800}.account-user{margin:0;font-weight:900}.account-divider{height:1px;background:rgba(43,27,61,.16);margin:2px 0}.account-signin-link{background:none;border:0;padding:4px 0;color:var(--grape,#7b4fc9);text-decoration:underline;text-underline-offset:3px;font:inherit;font-weight:800;cursor:pointer}.account-pin{letter-spacing:.2em;font-variant-numeric:tabular-nums}.settings-card{position:relative;display:grid;gap:0;padding:22px}.settings-card>h2{padding-right:42px;margin-bottom:4px}.settings-section{display:grid;gap:10px;padding:16px 0;border-top:1px solid rgba(43,27,61,.15)}.settings-section:first-of-type{border-top:0;padding-top:10px}.settings-section h3{margin:0;font-size:1rem}.settings-section .btn{justify-self:start}.settings-player{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}.settings-player-name{margin:0;font-size:1.05rem;font-weight:900}.settings-handle{color:var(--muted,#6b4e63);font-size:.88rem;font-weight:800}.settings-setup-actions{display:flex;gap:10px;flex-wrap:wrap}.settings-setup-actions .btn{min-height:46px;padding:9px 16px}.settings-signed-actions{display:flex;gap:8px;flex-wrap:wrap}.settings-signed-actions .btn{min-height:44px;padding:8px 14px;font-size:.92rem}.settings-name-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.settings-name-row label{display:grid;gap:6px;font-weight:900}.settings-name-row input{width:100%;min-height:48px;font:inherit;padding:9px 12px;border:3px solid var(--ink,#2b1b3d);border-radius:12px;background:#fff}.settings-name-row .btn{min-height:48px;padding:9px 16px}.settings-status{margin:0;color:var(--muted,#6b4e63);font-size:.88rem;line-height:1.4}.account-dialog{overflow:auto}.settings-card .audio-settings-panel{margin:0;padding:16px 0;border-top:1px solid rgba(43,27,61,.15);display:grid;gap:10px}.settings-card .audio-settings-heading{margin:0;font-size:1rem}.settings-card .audio-settings-hint,.settings-card .audio-channel small{display:none}.settings-card .audio-master{margin:0}.settings-card .audio-channel{margin:0;display:grid;gap:6px}.settings-card .audio-channel label{font-weight:900}.settings-card .audio-range-row{margin:0}.settings-card .audio-settings-panel.muted .audio-channel{opacity:.5}@media(max-width:480px){.account-card,.settings-card{padding:18px 16px}.settings-name-row{grid-template-columns:1fr}.settings-name-row .btn,.settings-setup-actions .btn{width:100%}.settings-signed-actions{display:grid}.settings-signed-actions .btn{width:100%}}`;
 document.head.append(style);
 
 function dialogEl() { return document.getElementById("dialog"); }
@@ -159,6 +159,16 @@ function changePinDialog(player) {
   showDialog("Change PIN",grid,{kind:"auth"});
 }
 
+function tidySettingsDialog(){
+  const d=dialogEl();
+  if(!d?.open||d.dataset.dialogKind!=="settings")return;
+  const wrap=d.querySelector(".settings-card"), panel=d.querySelector(".audio-settings-panel");
+  if(!wrap||!panel)return;
+  const hint=panel.querySelector(".audio-settings-hint"); if(hint)hint.remove();
+  for(const small of panel.querySelectorAll(".audio-channel small"))small.remove();
+  if(panel.parentElement!==wrap)wrap.append(panel);
+}
+
 // Settings owns the global player identity. Capture prevents the old recovery-code profile from opening.
 document.addEventListener("click", event=>{
   const target=event.target instanceof Element ? event.target.closest("#profileBtn") : null;
@@ -174,8 +184,10 @@ document.addEventListener("click", event=>{
   createAccountDialog({after:()=>location.reload()});
 }, true);
 
-// Recovery codes are replaced by player-name + PIN sign-in. Hide legacy recovery links that older dialogs may render.
+// Recovery codes are replaced by player-name + PIN sign-in. Also keep the profile modal compact if
+// the sound module adds its controls after this module has opened the settings view.
 const observer=new MutationObserver(()=>{
   for(const el of document.querySelectorAll("button.link")) if(/recovery code/i.test(el.textContent||"")) el.hidden=true;
+  tidySettingsDialog();
 });
 observer.observe(document.documentElement,{subtree:true,childList:true});
