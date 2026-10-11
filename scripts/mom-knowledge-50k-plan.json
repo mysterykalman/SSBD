@@ -1,0 +1,25 @@
+{
+  "targetUniqueConcepts": 50000,
+  "batchSizeGuidance": "2,000-6,000 accepted concepts per batch",
+  "qualityRules": {
+    "requiresEnglishWikipedia": true,
+    "minimumUsefulTraits": 4,
+    "dedupeBy": ["wikidata_qid", "normalized_name"],
+    "rejectRawQidLabels": true,
+    "rejectDisambiguationAndListPages": true
+  },
+  "batches": [
+    {"id":"people","target":9000,"roots":["Q5"],"minSitelinks":35},
+    {"id":"fictional","target":5000,"roots":["Q95074"],"minSitelinks":18},
+    {"id":"places-landmarks","target":4500,"roots":["Q515","Q41176","Q570116","Q8502","Q23413"],"minSitelinks":20},
+    {"id":"animals-plants","target":4000,"roots":["Q729","Q756"],"minSitelinks":12},
+    {"id":"food-drink","target":3000,"roots":["Q2095","Q40050"],"minSitelinks":10},
+    {"id":"objects-inventions","target":5000,"roots":["Q488383","Q121182"],"minSitelinks":15},
+    {"id":"artworks-architecture","target":3500,"roots":["Q838948","Q811979","Q4989906"],"minSitelinks":18},
+    {"id":"books-written-works","target":4000,"roots":["Q571","Q7725634"],"minSitelinks":18},
+    {"id":"film-tv","target":5000,"roots":["Q11424","Q5398426"],"minSitelinks":20},
+    {"id":"music","target":3000,"roots":["Q7366","Q482994","Q207628"],"minSitelinks":18},
+    {"id":"history-science-myth","target":3000,"roots":["Q13418847","Q309","Q1656682","Q9134"],"minSitelinks":15},
+    {"id":"brands-products-sports","target":4000,"roots":["Q431289","Q2424752","Q16510064","Q349"],"minSitelinks":15}
+  ]
+}
