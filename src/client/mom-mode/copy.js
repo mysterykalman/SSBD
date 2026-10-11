@@ -1,7 +1,7 @@
 (function(global){
 "use strict";
 const copy={
- bio:"She remembers where you left your shoes, what you said three Tuesdays ago, and exactly when you started making up an excuse. This is less a skill than a condition of motherhood.",
+ bio:"I’m a mom, a cat wrangler, and a finder of things everyone swears are missing. I know things. Usually before you tell me. Pick something good, honey. I’d hate to crush your spirit before dinner.",
  intro:{lead:"Okay, honey.",question:"Think of a person, place, animal, food, or thing. Don’t tell me.",aside:"I get up to 20 questions and one guess. No changing your mind halfway through. I’ll know."},
  early:["Mhm.","Okay.","Alright.","Good."],
  middle:["That helps.","I’m getting somewhere.","Okay. I have a direction.","Interesting."],
