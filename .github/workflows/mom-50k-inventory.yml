@@ -24,12 +24,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Build 50k candidate inventory and enrichment batch 01
+
+      - name: Build exact 50k candidate inventory
+        env:
+          MOM_ENRICH_LIMIT: "0"
         run: node scripts/build-mom-50k-inventory.mjs
+
       - name: Validate exact quantity
         run: |
           node -e 'const fs=require("fs");const s=JSON.parse(fs.readFileSync(".dev-data/mom-50k/summary.json","utf8"));if(s.uniqueConcepts!==50000)throw new Error(`Expected 50000, got ${s.uniqueConcepts}`);console.log(s)'
-      - name: Upload Mom knowledge inventory
+
+      - name: Upload base 50k inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: mom-50k-inventory-base
+          path: |
+            .dev-data/mom-50k/inventory.csv
+            .dev-data/mom-50k/summary.json
+          retention-days: 14
+
+      - name: Enrich first 5k concepts
+        env:
+          MOM_ENRICH_LIMIT: "5000"
+        run: node scripts/build-mom-50k-inventory.mjs
+
+      - name: Upload enriched inventory
         uses: actions/upload-artifact@v4
         with:
           name: mom-50k-inventory
