@@ -1,7 +1,7 @@
 (function(global){
 "use strict";
 const copy={
- bio:"She calls it paying attention. You might call it impossible to get away with anything.",
+ bio:"She remembers where you left your shoes, what you said three Tuesdays ago, and exactly when you started making up an excuse.",
  intro:{lead:"Okay, honey.",question:"Think of a person, place, animal, food, or thing. Don’t tell me.",aside:"I get up to 20 questions and one guess. No changing your mind halfway through. I’ll know."},
  early:["Mhm.","Okay.","Alright.","Good."],
  middle:["That helps.","I’m getting somewhere.","Okay. I have a direction.","Interesting."],
@@ -11,7 +11,7 @@ const copy={
  hunchAside:["You can make me say it, or buy me another question.","Your call. I can guess now, or keep asking.","You can make me lock it in, or give me one more question."],
  guess:["Alright. I have it.","Okay. Here’s what you’re thinking.","I know this one."],
  correct:["I knew it.","There it is.","Of course.","That’s what I thought."],
- fast:["That was practically written on your face.","See? This is why moms don’t need instructions.","You made that very easy for me."],
+ fast:["That was practically written on your face.","See? I pay attention.","You made that very easy for me."],
  long:["You picked a good one.","Okay, you made me work for that.","That was more complicated than it needed to be."],
  loss:["Okay. You got me.","Fine. That was a good one.","Alright. I’ll give you that."],
  stumped:["Twenty questions.","Alright.","Fine."],
@@ -74,11 +74,7 @@ function resultLine(result){
  if(result.correct)return pick(copy.correct,result.turns);
  return pick(copy.loss,result.turns);
 }
-function resultAside(result){
- if(result.stumped)return`You made it through all 20. ${result.score} points.`;
- if(result.correct)return`${result.score} points. ${result.fast?"You were not subtle.":result.long?"And with very little cooperation.":"Mom knows."}`;
- return`${result.score} points. A wrong guess is still a wrong guess.`;
-}
+function resultAside(){return"";}
 function milestoneLine(points){return copy.milestones[points]||"";}
 global.PamCopy={copy,leadFor,hunchLead,hunchAside,guessLead,resultLine,resultAside,reactionFor,milestoneLine};
 })(window);
