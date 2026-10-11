@@ -21,7 +21,8 @@ test("Mom Mode is a live five-answer guessing game",async()=>{
  const image=await stat(new URL("pam.webp",root));
  assert.ok(image.size>1000);
 });
-test("Pam has complete character states and contextual asides",async()=>{
+test("Pam has a point of view, conversational states, and callbacks",async()=>{
  const copy=await read("copy.js");
- for(const term of ["bio:","intro:","early:","middle:","close:","surprise:","guess:","correct:","incorrect:","fast:","long:","Janice"])assert.ok(copy.includes(term),term);
+ for(const term of ["bio:","intro:","early:","middle:","close:","surprise:","guess:","correct:","wrongGuess:","uncertain:","callbacks:","rare:","I’ll know","This is very you"])assert.ok(copy.includes(term),term);
+ assert.doesNotMatch(copy,/Save room for dinner|Okay\. Recalculating/);
 });
