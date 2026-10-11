@@ -2,52 +2,51 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#fff4df"><title>Stump Mom | Same Same but Different</title>
-<meta name="description" content="Pam knows everything. Find the thing she doesn't.">
+<meta name="description" content="Mom knows everything. Find the thing she doesn't.">
 <link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="./styles.css">
 </head><body>
 <a class="skip" href="#mom-app">Skip to Stump Mom</a>
 <header class="topbar"><a class="brand" href="/">Same Same<small>but different</small></a><a class="back" href="/">← All games</a></header>
 <main id="mom-app" class="wrap">
-<div class="mode-heading"><div><p class="eyebrow">MEET PAM</p><h1>Stump Mom<span class="title-dot">.</span></h1><p class="mode-subtitle">Pam knows everything. Your job is to find the thing she doesn’t.</p></div></div>
+<div class="mode-heading"><div><p class="eyebrow">MOM MODE</p><h1>Stump Mom<span class="title-dot">.</span></h1><p class="mode-subtitle">Moms know everything. Your job is to find the thing she doesn’t.</p></div></div>
 <div class="layout">
-<aside class="pam-card" aria-label="About Pam">
- <div class="portrait-frame"><img class="portrait" src="./pam.webp" alt="Pam smiling knowingly in her kitchen" width="480" height="480"></div>
+<aside class="pam-card" aria-label="About Mom">
+ <div class="portrait-frame"><img class="portrait" src="./pam.webp" alt="Mom smiling knowingly in her kitchen" width="480" height="480"></div>
  <div class="pam-copy">
-  <h2>Pam</h2>
-  <p class="pam-role">Mom. Knows everything. Allegedly.</p>
-  <p class="pam-teaser">She knows a lot, asks annoyingly good questions, and takes being stumped a little personally.</p>
-  <details class="about"><summary>A little about Pam</summary><p id="pam-bio"></p></details>
+  <h2>Mom</h2>
+  <p class="pam-role">Knows everything. Allegedly.</p>
+  <p class="pam-teaser">She remembers where you left your shoes, what you said three Tuesdays ago, and exactly when you started making up an excuse.</p>
+  <p id="pam-bio" class="about-copy"></p>
  </div>
 </aside>
 <div class="game-stack">
 <section class="score-panel" aria-label="Your Stump Mom score">
- <div class="score-main"><span class="score-label">YOUR PAM SCORE</span><strong id="pam-score">0</strong><span id="pam-rank" class="rank-badge">Pam Is Unconcerned</span></div>
+ <div class="score-main"><span class="score-label">YOUR MOM SCORE</span><strong id="pam-score">0</strong><span id="pam-rank" class="rank-badge">Not On Mom's Radar</span></div>
  <div class="score-side">
   <div class="mini-stat"><span>Streak</span><strong id="pam-streak">0</strong></div>
   <div class="mini-stat"><span>Best round</span><strong id="pam-best">0</strong></div>
  </div>
- <div class="rank-progress-wrap"><div class="rank-progress-copy"><span id="rank-progress-label">100 points to the next rank</span><span id="best-streak-label">Best streak: 0</span></div><div class="rank-progress"><div id="rank-progress-fill"></div></div></div>
+ <div class="rank-progress-wrap"><div class="rank-progress-copy"><span id="rank-progress-label">Next rank: On Mom's Radar · 100 points</span><span id="best-streak-label">Best streak: 0</span></div><div class="rank-progress"><div id="rank-progress-fill"></div></div></div>
 </section>
 <section class="game-card" aria-label="Stump Mom game">
- <div class="game-top"><span id="stage-label" class="eyebrow">PAM'S KITCHEN TABLE</span><span id="question-counter" class="counter" hidden></span></div>
+ <div class="game-top"><span id="stage-label" class="eyebrow">MOM'S KITCHEN TABLE</span><span id="question-counter" class="counter" hidden></span></div>
  <div class="progress-track" role="progressbar" aria-label="Questions used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><div id="progress-fill"></div></div>
  <div class="speech" aria-live="polite" aria-atomic="true"><p id="pam-lead" class="lead"></p><h2 id="pam-question" class="question"></h2><p id="pam-aside" class="aside"></p></div>
  <div id="round-score" class="round-score" hidden><span>THIS ROUND</span><strong id="round-score-value">+0 points</strong><small id="round-score-total"></small></div>
  <div id="intro-actions" class="actions"><button class="btn primary" id="start-btn" type="button">I’m thinking of something</button></div>
- <div id="answer-actions" class="answers five" role="group" aria-label="Answer Pam's question" hidden>
+ <div id="answer-actions" class="answers five" role="group" aria-label="Answer Mom's question" hidden>
   <button type="button" data-answer="yes" class="btn yes">Yes</button><button type="button" data-answer="probably" class="btn probably">Probably</button><button type="button" data-answer="unknown" class="btn unknown">Not sure</button><button type="button" data-answer="probably_not" class="btn probably-not">Probably not</button><button type="button" data-answer="no" class="btn no">No</button>
  </div>
- <div id="hunch-actions" class="actions hunch-actions" hidden><button class="btn primary" id="guess-now-btn" type="button">Make Pam guess</button><button class="btn ghost" id="keep-asking-btn" type="button">Keep asking · costs 2 pts</button></div>
+ <div id="hunch-actions" class="actions hunch-actions" hidden><button class="btn primary" id="guess-now-btn" type="button">Make Mom guess</button><button class="btn ghost" id="keep-asking-btn" type="button">Keep asking · costs 2 pts</button></div>
  <div id="guess-actions" class="actions" hidden><button class="btn primary" id="correct-btn" type="button">You got it</button><button class="btn ghost" id="wrong-btn" type="button">Nope</button></div>
- <div id="result-actions" class="actions" hidden><button class="btn primary" id="again-btn" type="button">Try to stump Pam again</button><a class="btn ghost" href="/">Back to games</a></div>
+ <div id="result-actions" class="actions" hidden><button class="btn primary" id="again-btn" type="button">Try to stump Mom again</button><a class="btn ghost" href="/">Back to games</a></div>
 </section>
 <section class="rules-card" aria-labelledby="rules-title">
- <p class="eyebrow">HOW IT WORKS</p><h2 id="rules-title">Stump Pam. Build your score.</h2>
+ <p class="eyebrow">HOW IT WORKS</p><h2 id="rules-title">Stump Mom. Build your score.</h2>
  <div class="rule-grid">
-  <div><strong>20 questions. One guess.</strong><p>If Pam guesses wrong, or reaches 20 without guessing, you beat her.</p></div>
+  <div><strong>20 questions. One guess.</strong><p>Mom can guess once. If she uses all 20 questions and still won’t lock in an answer, you stumped her.</p></div>
   <div><strong>Every question is worth a point.</strong><p>A wrong guess or a full stump adds a 10-point bonus.</p></div>
-  <div><strong>Push your luck.</strong><p>When Pam has a strong hunch, make her guess or let her ask another question for 2 points.</p></div>
-  <div><strong>Your Pam Score keeps growing.</strong><p>Points, streaks and ranks stay inside Stump Mom. More rewards can come later.</p></div>
+  <div><strong>Push your luck.</strong><p>When Mom has a strong hunch, make her guess or let her ask another question for 2 points.</p></div>
  </div>
 </section>
 </div>
