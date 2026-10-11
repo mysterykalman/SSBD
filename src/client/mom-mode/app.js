@@ -4,13 +4,13 @@ const script=window.PamCopy,adapter=window.MomModeAdapter;
 const byId=id=>document.getElementById(id);const text=(id,value)=>{byId(id).textContent=value??"";};const hide=(id,value)=>{byId(id).hidden=Boolean(value);};
 const STORAGE_KEY="ssbd:mom-progress:v1";
 const RANKS=[
- {min:0,name:"Not On Mom's Radar"},
- {min:100,name:"On Mom's Radar"},
- {min:250,name:"Mom Is Suspicious"},
- {min:500,name:"Mom Is Paying Attention"},
- {min:1000,name:"Actually Stumped Mom"},
- {min:2000,name:"Mom Wants a Rematch"},
- {min:5000,name:"Family Legend"}
+ {min:0,name:"Look at You"},
+ {min:100,name:"Okay, Sweetie"},
+ {min:250,name:"You’re Getting Good at This"},
+ {min:500,name:"Alright, Now You’re Showing Off"},
+ {min:1000,name:"I’m Very Proud. Also Annoyed."},
+ {min:2000,name:"This Is Getting Personal, Honey"},
+ {min:5000,name:"Fine. You’re the Favourite"}
 ];
 function cleanNumber(v){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):0;}
 function loadProgress(){
