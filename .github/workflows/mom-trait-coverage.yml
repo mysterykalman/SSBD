@@ -1,0 +1,59 @@
+name: Mom trait coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/mom-mode-stump-mom
+    paths:
+      - scripts/analyze-mom-trait-coverage.mjs
+      - .github/workflows/mom-trait-coverage.yml
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Download 50k donor datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .dev-data/mom-sources/allenai
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/things.csv https://raw.githubusercontent.com/evanthebouncy/20Q-selfplay/main/things.csv
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/brysbaert.txt https://raw.githubusercontent.com/ArtsEngine/concreteness/master/Concreteness_ratings_Brysbaert_et_al_BRM.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/cel_2-45.txt https://raw.githubusercontent.com/BrianHutchison/Common-English-Lexicon/master/cel_2-45.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/wordnik.txt https://raw.githubusercontent.com/wordnik/wordlist/main/wordlist-20210729.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/allenai.tar.gz https://storage.googleapis.com/ai2-mosaic-public/projects/twentyquestions/v1.0/data/v1.0.twentyquestions.tar.gz
+          tar -xzf .dev-data/mom-sources/allenai.tar.gz -C .dev-data/mom-sources/allenai
+      - name: Rebuild playable 50k
+        env:
+          MOM_ENRICH_LIMIT: "0"
+        run: |
+          node scripts/build-mom-50k-inventory.mjs
+          node scripts/build-mom-playable-50k.mjs
+      - name: Download public trait sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .dev-data/trait-sources
+          git clone --depth 1 https://github.com/danoneata/seeing-what-tastes-good.git .dev-data/trait-sources/seeing-what-tastes-good
+          git clone --depth 1 https://github.com/cardiffnlp/trait-concept-datasets.git .dev-data/trait-sources/trait-concept-datasets
+          curl -L --fail --retry 3 --retry-delay 5 -o .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz
+          ls -lh .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz
+      - name: Measure trait coverage
+        run: node scripts/analyze-mom-trait-coverage.mjs
+      - name: Print coverage result
+        run: cat .dev-data/mom-trait-coverage/summary.json
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mom-trait-coverage
+          path: .dev-data/mom-trait-coverage/
+          retention-days: 14
