@@ -4,42 +4,46 @@ import {readFile,stat} from "node:fs/promises";
 import {Script} from "node:vm";
 const root=new URL("../src/client/mom-mode/",import.meta.url);
 const read=name=>readFile(new URL(name,root),"utf8");
-
 test("Mom Mode scripts parse and keep the engine isolated",async()=>{
- for(const name of ["knowledge.generated.js","knowledge.js","engine.js","copy.js","adapter.js","app.js"]){
+ for(const name of ["knowledge.js","engine.js","copy.js","adapter.js","app.js"]){
   const source=await read(name);
   assert.doesNotThrow(()=>new Script(source,{filename:name}));
  }
  const adapter=await read("adapter.js");
- for(const name of ["connected:true","supportedAnswers","startGame","getNextQuestion","submitAnswer","getProgress","getGuess","confirmGuess","resetGame","knowledgeMeta"])assert.ok(adapter.includes(name),"missing "+name);
+ for(const name of ["connected:true","supportedAnswers","startGame","getNextQuestion","submitAnswer","makeGuess","keepAsking","getProgress","getGuess","confirmGuess","resetGame"])assert.ok(adapter.includes(name),"missing "+name);
  assert.doesNotMatch(adapter,/engine not connected/i);
 });
-
-test("Stump Mom is a live five-answer challenge with a persistent scoreboard",async()=>{
+test("Mom Mode is a live five-answer guessing game with a hunch choice",async()=>{
  const html=await read("index.html");
- assert.match(html,/Can you stump Mom\?/i);
- assert.match(html,/score-you/);
- assert.match(html,/score-pam/);
- assert.match(html,/20 turns/i);
- assert.match(html,/knowledge\.generated\.js/);
+ assert.doesNotMatch(html,/DESIGN PREVIEW|Answers here do not affect Pam/);
  assert.match(html,/aria-live="polite"/);
  for(const answer of ["yes","probably","unknown","probably_not","no"])assert.ok(html.includes('data-answer="'+answer+'"'));
- const app=await read("app.js");
- assert.match(app,/localStorage/);
- assert.match(app,/winner==="player"/);
- const image=await stat(new URL("pam.webp",root));
+ for(const id of ["pam-score","pam-streak","pam-best","hunch-actions","guess-now-btn","keep-asking-btn","rules-title","rules-btn"])assert.ok(html.includes(`id="${id}"`),id);
+ assert.match(html,/20 questions\. One guess\./);
+ assert.match(html,/Every question is worth a point\./);
+ assert.match(html,/Push your luck\./);
+ assert.match(html,/How to play/);
+ assert.match(html,/pam-v2\.webp/);
+ assert.doesNotMatch(html,/YOUR MOM SCORE|A little about Pam|Your Pam Score keeps growing/);
+ const image=await stat(new URL("pam-v2.webp",root));
  assert.ok(image.size>1000);
 });
-
-test("Pam has competitive win, miss, and stumped character states",async()=>{
+test("Mom has a point of view, conversational hunches, callbacks, and one-guess rules",async()=>{
  const copy=await read("copy.js");
- for(const term of ["bio:","intro:","early:","middle:","close:","surprise:","guess:","correct:","wrongGuess:","stumped:","stumpedAsides:","Janice"])assert.ok(copy.includes(term),term);
+ for(const term of ["bio:","intro:","early:","middle:","close:","surprise:","hunch:","hunchAside:","guess:","correct:","stumped:","uncertain:","milestones:","callbacks:","rare:","I’ll know","This is very you","one guess"])assert.ok(copy.includes(term),term);
+ assert.doesNotMatch(copy,/Save room for dinner|Okay\. Recalculating|Think of a common/);
 });
-
-test("generated knowledge ships a meaningful offline expansion",async()=>{
- const source=await read("knowledge.generated.js");
- assert.match(source,/Taylor Swift/);
- assert.match(source,/Mickey Mouse/);
- assert.match(source,/Eiffel Tower/);
- assert.match(source,/seedObjects":200/);
+test("Mom progression stays inside Mom Mode and persists locally",async()=>{
+ const app=await read("app.js");
+ assert.match(app,/ssbd:mom-progress:v1/);
+ assert.match(app,/localStorage\.setItem/);
+ assert.match(app,/Look at You/);
+ assert.match(app,/Okay, Sweetie/);
+ assert.match(app,/You’re Getting Good at This/);
+ assert.match(app,/Alright, Now You’re Showing Off/);
+ assert.match(app,/I’m Very Proud\. Also Annoyed\./);
+ assert.match(app,/This Is Getting Personal, Honey/);
+ assert.match(app,/Fine\. You’re the Favourite/);
+ assert.match(app,/bestStreak/);
+ assert.match(app,/Next rank:/);
 });
