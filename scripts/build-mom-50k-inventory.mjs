@@ -2,11 +2,11 @@ import {mkdir,readFile,writeFile} from "node:fs/promises";
 import vm from "node:vm";
 
 const TARGET=50000;
-const ENRICH_LIMIT=5000;
+const ENRICH_LIMIT=Number(process.env.MOM_ENRICH_LIMIT??5000);
 const OUT_DIR=new URL("../.dev-data/mom-50k/",import.meta.url);
 const VITAL_SOURCE="https://raw.githubusercontent.com/GeogSage/Wiki_Vital/main/Vitallist_AllLevels_15June2025_Full.csv";
 const wikidataApi="https://www.wikidata.org/w/api.php";
-const userAgent="SSBD-MomMode/4.0 (50k knowledge inventory for mysterykalman/SSBD)";
+const userAgent="SSBD-MomMode/4.1 (50k knowledge inventory for mysterykalman/SSBD)";
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const norm=s=>String(s||"").trim().toLocaleLowerCase("en").replace(/\s+/g," ");
 const csvCell=v=>{const s=String(v??"");return /[",\n\r]/.test(s)?`"${s.replaceAll('"','""')}"`:s;};
@@ -152,7 +152,7 @@ const unique=new Set(inventory.map(r=>norm(r.title)));
 if(unique.size!==TARGET)throw new Error(`Expected ${TARGET} unique titles, got ${unique.size}`);
 
 const enrichRows=inventory.slice(0,ENRICH_LIMIT);
-const enrichment=await enrichBatch(enrichRows);
+const enrichment=ENRICH_LIMIT>0?await enrichBatch(enrichRows):new Map();
 const rows=inventory.map((r,index)=>{
  const e=enrichment.get(r.qid);
  const broad=broadCategory(r.vitalCategory,e?.description);
@@ -166,7 +166,7 @@ const rows=inventory.map((r,index)=>{
 const header=["Rank","Canonical answer","Source","Vital level","Vital category","Wikipedia URL","Wikidata QID","Description","Aliases","Broad category","Seed traits","Enrichment status","Enrichment batch"];
 const csvRows=[header,...rows.map(r=>[r.rank,r.canonical,r.source,r.vital_level,r.vital_category,r.wikipedia_url,r.qid,r.description,r.aliases,r.broad_category,r.seed_traits,r.enrichment_status,r.enrichment_batch])];
 await writeFile(new URL("inventory.csv",OUT_DIR),toCsv(csvRows));
-await writeFile(new URL("enriched-batch-01.csv",OUT_DIR),toCsv([header,...csvRows.slice(1,ENRICH_LIMIT+1)]));
+if(ENRICH_LIMIT>0)await writeFile(new URL("enriched-batch-01.csv",OUT_DIR),toCsv([header,...csvRows.slice(1,ENRICH_LIMIT+1)]));
 const categoryCounts={};const sourceCounts={};const levelCounts={};
 for(const r of rows){categoryCounts[r.vital_category]=(categoryCounts[r.vital_category]||0)+1;sourceCounts[r.source]=(sourceCounts[r.source]||0)+1;levelCounts[r.vital_level||"Pam top-up"]=(levelCounts[r.vital_level||"Pam top-up"]||0)+1;}
 const summary={generatedAt:new Date().toISOString(),target:TARGET,uniqueConcepts:unique.size,vitalSourceUnique:vitalUnique,paddedFromPam:TARGET-Math.min(vitalUnique,TARGET),enrichmentTarget:ENRICH_LIMIT,enrichedBatch01:rows.filter(r=>r.enrichment_status==="Batch 01 enriched").length,partialBatch01:rows.filter(r=>r.enrichment_status==="Batch 01 partial").length,sourceCounts,levelCounts,categoryCounts,sourceUrl:VITAL_SOURCE};
