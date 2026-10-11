@@ -57,7 +57,7 @@ export function applyAssociationContextToPick(pick, {pair = null, history = [], 
   if (eligible.length < 2) return pick;
 
   const ordinal = Math.max(0, decision.pool.indexOf(pick.word));
-  const weight = decision.character === "milo" ? 0.10 : 0.06;
+  const weight = decision.profile === "easier" ? 0.10 : 0.06;
   const ranked = eligible.map(candidate => {
     const conceptId = graph.resolve(candidate.word);
     const concept = conceptId ? graph.concepts.get(conceptId) : null;
