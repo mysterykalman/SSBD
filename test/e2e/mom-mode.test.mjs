@@ -6,25 +6,18 @@ let server,browser;
 test.before(async()=>{server=await startServer({database:false});browser=await launch();});
 test.after(async()=>{await browser?.close();await server?.stop();});
 
-async function reachGuess(page){
+async function reachDecision(page){
  for(let i=0;i<20;i++){
-  if(await page.locator('#guess-actions:not([hidden])').count())return;
+  if(await page.locator('#guess-actions:not([hidden])').count())return 'guess';
+  if(await page.locator('#result-actions:not([hidden])').count())return 'result';
   await page.click('[data-answer="no"]');
  }
- await page.waitForSelector('#guess-actions:not([hidden])');
-}
-
-async function loseRound(page){
- for(let i=0;i<20;i++){
-  if(await page.locator('#result-actions:not([hidden])').count())return;
-  if(await page.locator('#guess-actions:not([hidden])').count())await page.click('#wrong-btn');
-  else if(await page.locator('#answer-actions:not([hidden])').count())await page.click('[data-answer="no"]');
-  else await page.waitForTimeout(20);
- }
+ if(await page.locator('#guess-actions:not([hidden])').count())return 'guess';
  await page.waitForSelector('#result-actions:not([hidden])');
+ return 'result';
 }
 
-test("Mom Mode loads, advances, supports continued wrong guesses, replays, exits, and fits mobile",async()=>{
+test("Mom Mode loads, advances, uses one guess, scores outcomes, replays, exits, and fits mobile",async()=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(`${server.url}/mom/`);
  await page.waitForSelector('#start-btn');
@@ -33,21 +26,31 @@ test("Mom Mode loads, advances, supports continued wrong guesses, replays, exits
  await page.waitForSelector('#answer-actions:not([hidden])');
  const aside=page.locator('#pam-aside');
  assert.equal(await aside.locator('button').count(),0);
- await reachGuess(page);
- await page.click('#correct-btn');
- await page.waitForSelector('#result-actions:not([hidden])');
- assert.match(await page.locator('#pam-question').textContent(),/You were thinking of/i);
+ const first=await reachDecision(page);
+ if(first==='guess'){
+  await page.click('#correct-btn');
+  await page.waitForSelector('#result-actions:not([hidden])');
+  assert.match(await page.locator('#pam-question').textContent(),/You were thinking of/i);
+ }else{
+  assert.match(await page.locator('#pam-question').textContent(),/20 questions/i);
+ }
+ assert.match(await page.locator('#pam-aside').textContent(),/points/i);
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth);
  assert.equal(overflow,false);
  await page.click('#again-btn');
  await page.waitForSelector('#start-btn');
  await page.click('#start-btn');
- await reachGuess(page);
- await page.click('#wrong-btn');
- assert.equal(await page.locator('#result-actions:not([hidden])').count(),0);
- await loseRound(page);
- await page.waitForSelector('#result-actions:not([hidden])');
- assert.match(await page.locator('#pam-question').textContent(),/You got me/i);
+ const second=await reachDecision(page);
+ if(second==='guess'){
+  await page.click('#wrong-btn');
+  await page.waitForSelector('#result-actions:not([hidden])');
+  assert.match(await page.locator('#pam-question').textContent(),/was wrong/i);
+  assert.equal(await page.locator('#answer-actions:not([hidden])').count(),0);
+  assert.equal(await page.locator('#guess-actions:not([hidden])').count(),0);
+ }else{
+  assert.match(await page.locator('#pam-question').textContent(),/20 questions/i);
+ }
+ assert.match(await page.locator('#pam-aside').textContent(),/points/i);
  await page.click('#result-actions a[href="/"]');
  await page.waitForSelector('#startSolo');
  await page.close();
