@@ -22,6 +22,7 @@ on:
       - feature/mom-mode-stump-mom
     paths:
       - .github/workflows/mom-knowledge-refresh.yml
+      - src/client/mom-mode/knowledge.general.js
       - scripts/refresh-mom-wikidata-v2.mjs
       - scripts/refresh-mom-general-wikidata.mjs
       - package.json
