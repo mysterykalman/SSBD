@@ -7,6 +7,7 @@ on:
       - feature/mom-mode-stump-mom
     paths:
       - scripts/analyze-mom-trait-coverage.mjs
+      - scripts/extract-wordnet-traits.py
       - .github/workflows/mom-trait-coverage.yml
 
 permissions:
@@ -21,6 +22,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Download 50k donor datasets
         shell: bash
         run: |
@@ -47,7 +51,12 @@ jobs:
           git clone --depth 1 https://github.com/cardiffnlp/trait-concept-datasets.git .dev-data/trait-sources/trait-concept-datasets
           curl -L --fail --retry 3 --retry-delay 5 -o .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz
           ls -lh .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz
-      - name: Measure trait coverage
+      - name: Build Open English WordNet evidence
+        shell: bash
+        run: |
+          python -m pip install --quiet wn
+          python scripts/extract-wordnet-traits.py
+      - name: Measure trait coverage with Wikidata
         run: node scripts/analyze-mom-trait-coverage.mjs
       - name: Print coverage result
         run: cat .dev-data/mom-trait-coverage/summary.json
