@@ -4,15 +4,51 @@ import vm from "node:vm";
 const TARGET=50000;
 const ENRICH_LIMIT=5000;
 const OUT_DIR=new URL("../.dev-data/mom-50k/",import.meta.url);
-const ROOT_CATEGORY="Category:Wikipedia level-5 vital articles";
 const wikiApi="https://en.wikipedia.org/w/api.php";
 const wikidataApi="https://www.wikidata.org/w/api.php";
-const userAgent="SSBD-MomMode/3.2 (50k inventory builder for mysterykalman/SSBD)";
+const userAgent="SSBD-MomMode/3.3 (50k inventory builder for mysterykalman/SSBD)";
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const norm=s=>String(s||"").trim().toLocaleLowerCase("en").replace(/\s+/g," ");
 const csvCell=v=>{const s=String(v??"");return /[",\n\r]/.test(s)?`"${s.replaceAll('"','""')}"`:s;};
 const toCsv=rows=>rows.map(row=>row.map(csvCell).join(",")).join("\n")+"\n";
 const wikiUrl=title=>`https://en.wikipedia.org/wiki/${encodeURIComponent(title.replaceAll(" ","_"))}`;
+
+const LEVEL5=[
+ ["People / Writers and journalists",2000,"People/Writers_and_journalists"],
+ ["People / Artists, musicians and composers",2200,"People/Artists,_musicians,_and_composers"],
+ ["People / Entertainers, directors, producers and screenwriters",2200,"People/Entertainers,_directors,_producers,_and_screenwriters"],
+ ["People / Philosophers, historians, political and social scientists",1400,"People/Philosophers,_historians,_political_and_social_scientists"],
+ ["People / Religious figures",500,"People/Religious_figures"],
+ ["People / Politicians and leaders",2400,"People/Politicians_and_leaders"],
+ ["People / Military personnel, revolutionaries and activists",900,"People/Military_personnel,_revolutionaries,_and_activists"],
+ ["People / Scientists, inventors and mathematicians",1300,"People/Scientists,_inventors,_and_mathematicians"],
+ ["People / Sports figures",1100,"People/Sports_figures"],
+ ["People / Miscellaneous",1100,"People/Miscellaneous"],
+ ["History",3300,"History"],
+ ["Geography / Physical",1900,"Geography/Physical"],
+ ["Geography / Countries and subdivisions",1300,"Geography/Countries"],
+ ["Geography / Cities",2000,"Geography/Cities"],
+ ["Arts",3700,"Arts"],
+ ["Philosophy and religion",1400,"Philosophy_and_religion"],
+ ["Everyday life",1300,"Everyday_life"],
+ ["Sports, games and recreation",1200,"Everyday_life/Sports,_games_and_recreation"],
+ ["Society / Social studies",500,"Society_and_social_sciences/Social_studies"],
+ ["Society / Politics and economics",1900,"Society_and_social_sciences/Politics_and_economics"],
+ ["Society / Culture",1600,"Society_and_social_sciences/Culture"],
+ ["Biology / Animals",2400,"Biology_and_health_sciences/Animals"],
+ ["Biology / Biology, biochemistry, anatomy and physiology",1100,"Biology_and_health_sciences/Biology"],
+ ["Biology / Health, medicine and disease",1100,"Biology_and_health_sciences/Health"],
+ ["Biology / Plants, fungi and other organisms",1000,"Biology_and_health_sciences/Plants"],
+ ["Physical sciences / Basics and measurement",300,"Physical_sciences/Basics_and_measurement"],
+ ["Physical sciences / Astronomy",900,"Physical_sciences/Astronomy"],
+ ["Physical sciences / Chemistry",1200,"Physical_sciences/Chemistry"],
+ ["Physical sciences / Earth science",1200,"Physical_sciences/Earth_science"],
+ ["Physical sciences / Physics",1200,"Physical_sciences/Physics"],
+ ["Technology",3200,"Technology"],
+ ["Mathematics",1200,"Mathematics"]
+];
+
+if(LEVEL5.reduce((sum,[,quota])=>sum+quota,0)!==TARGET)throw new Error("Level 5 quotas must total 50,000");
 
 async function getJson(url,label,{attempts=8}={}){
  let last;
@@ -32,38 +68,28 @@ async function getJson(url,label,{attempts=8}={}){
  throw last||new Error(`${label}: exhausted retries`);
 }
 
-async function categoryMembers(category){
- const members=[];
- let cont="";
- do{
-  const p=new URLSearchParams({action:"query",format:"json",formatversion:"2",list:"categorymembers",cmtitle:category,cmnamespace:"0|14",cmlimit:"500",cmprop:"ids|title|sortkeyprefix"});
-  if(cont)p.set("cmcontinue",cont);
-  const json=await getJson(`${wikiApi}?${p}`,`category ${category}`);
-  members.push(...(json.query?.categorymembers||[]));
-  cont=json.continue?.cmcontinue||"";
-  if(cont)await sleep(400);
- }while(cont);
- return members;
-}
-
 async function fetchVitalTitles(){
- const queue=[ROOT_CATEGORY];
- const seenCategories=new Set();
- const pages=new Map();
- while(queue.length){
-  const category=queue.shift();
-  if(seenCategories.has(category))continue;
-  seenCategories.add(category);
-  const members=await categoryMembers(category);
-  for(const member of members){
-   if(member.ns===14){if(!seenCategories.has(member.title))queue.push(member.title);continue;}
-   if(member.ns===0&&!pages.has(member.pageid))pages.set(member.pageid,member);
+ const rows=[];
+ const seen=new Set();
+ for(let i=0;i<LEVEL5.length;i++){
+  const [section,quota,path]=LEVEL5[i];
+  const page=`Wikipedia:Vital_articles/Level/5/${path}`;
+  const p=new URLSearchParams({action:"parse",format:"json",formatversion:"2",page,prop:"links",redirects:"1"});
+  const json=await getJson(`${wikiApi}?${p}`,`vital page ${section}`);
+  const links=(json.parse?.links||[]).filter(link=>link.ns===0&&link.title);
+  let accepted=0;
+  for(const link of links){
+   const key=norm(link.title);
+   if(seen.has(key))continue;
+   seen.add(key);
+   rows.push({title:link.title,source:"wikipedia-vital-5",section,sectionQuota:quota,page});
+   accepted++;
+   if(accepted>=quota)break;
   }
-  console.log(`Vital crawl: ${pages.size} articles across ${seenCategories.size} categories; ${queue.length} categories queued`);
-  if(pages.size>=TARGET)break;
-  await sleep(400);
+  console.log(`${i+1}/${LEVEL5.length} ${section}: ${accepted}/${quota}; total unique ${rows.length}`);
+  await sleep(300);
  }
- return [...pages.values()];
+ return rows;
 }
 
 function loadObjects(path,globalName){
@@ -84,7 +110,7 @@ async function padToTarget(rows){
   const title=String(obj.name||"").trim();
   if(!title||seen.has(norm(title)))continue;
   seen.add(norm(title));
-  rows.push({pageid:"",ns:0,title,sortkeyprefix:"",source:"pam-existing"});
+  rows.push({title,source:"pam-existing",section:"Pam existing knowledge",sectionQuota:"",page:""});
   if(rows.length>=TARGET)break;
  }
  return rows.slice(0,TARGET);
@@ -101,8 +127,8 @@ async function enrichTitles(titles){
    if(!title)continue;
    result.set(norm(title),{qid:entity.id||"",description:entity.descriptions?.en?.value||"",aliases:(entity.aliases?.en||[]).map(a=>a.value).filter(Boolean)});
   }
-  console.log(`Enriched ${Math.min(i+50,titles.length)}/${titles.length}`);
-  await sleep(250);
+  if((i/50+1)%10===0||i===0)console.log(`Enriched ${Math.min(i+50,titles.length)}/${titles.length}`);
+  await sleep(180);
  }
  return result;
 }
@@ -124,22 +150,24 @@ function broadCategory(description,title){
 
 await mkdir(OUT_DIR,{recursive:true});
 const vital=await fetchVitalTitles();
-const inventory=await padToTarget(vital.map(x=>({...x,source:"wikipedia-vital-5"})));
-if(inventory.length!==TARGET)throw new Error(`Expected ${TARGET} rows, got ${inventory.length}`);
+const inventory=await padToTarget(vital);
+if(inventory.length!==TARGET)throw new Error(`Expected ${TARGET} rows, got ${inventory.length}. Vital source produced ${vital.length}.`);
 const unique=new Set(inventory.map(r=>norm(r.title)));
 if(unique.size!==TARGET)throw new Error(`Expected ${TARGET} unique titles, got ${unique.size}`);
 
 const enrichMap=await enrichTitles(inventory.slice(0,ENRICH_LIMIT).map(r=>r.title));
 const rows=inventory.map((r,index)=>{
  const e=enrichMap.get(norm(r.title));
- return {rank:index+1,canonical:r.title,source:r.source,wikipedia_url:r.source==="wikipedia-vital-5"?wikiUrl(r.title):"",qid:e?.qid||"",description:e?.description||"",aliases:e?.aliases?.join(" | ")||"",broad_category:e?broadCategory(e.description,r.title):"",enrichment_status:e?"Batch 01 enriched":"Candidate only",enrichment_batch:e?1:""};
+ return {rank:index+1,canonical:r.title,source:r.source,section:r.section,wikipedia_url:r.source==="wikipedia-vital-5"?wikiUrl(r.title):"",qid:e?.qid||"",description:e?.description||"",aliases:e?.aliases?.join(" | ")||"",broad_category:e?broadCategory(e.description,r.title):"",enrichment_status:e?"Batch 01 enriched":"Candidate only",enrichment_batch:e?1:""};
 });
-const header=["Rank","Canonical answer","Source","Wikipedia URL","Wikidata QID","Description","Aliases","Broad category","Enrichment status","Enrichment batch"];
-const csvRows=[header,...rows.map(r=>[r.rank,r.canonical,r.source,r.wikipedia_url,r.qid,r.description,r.aliases,r.broad_category,r.enrichment_status,r.enrichment_batch])];
+const header=["Rank","Canonical answer","Source","Vital section","Wikipedia URL","Wikidata QID","Description","Aliases","Broad category","Enrichment status","Enrichment batch"];
+const csvRows=[header,...rows.map(r=>[r.rank,r.canonical,r.source,r.section,r.wikipedia_url,r.qid,r.description,r.aliases,r.broad_category,r.enrichment_status,r.enrichment_batch])];
 await writeFile(new URL("inventory.csv",OUT_DIR),toCsv(csvRows));
 await writeFile(new URL("enriched-batch-01.csv",OUT_DIR),toCsv([header,...csvRows.slice(1,ENRICH_LIMIT+1)]));
 const categoryCounts={};
+const sectionCounts={};
+for(const r of rows){sectionCounts[r.section]=(sectionCounts[r.section]||0)+1;}
 for(const r of rows.slice(0,ENRICH_LIMIT))categoryCounts[r.broad_category]=(categoryCounts[r.broad_category]||0)+1;
-const summary={generatedAt:new Date().toISOString(),target:TARGET,uniqueConcepts:unique.size,wikipediaVital5:vital.length,paddedFromPam:TARGET-Math.min(vital.length,TARGET),enrichedBatch01:rows.filter(r=>r.enrichment_status==="Batch 01 enriched").length,enrichmentTarget:ENRICH_LIMIT,categoryCounts};
+const summary={generatedAt:new Date().toISOString(),target:TARGET,uniqueConcepts:unique.size,wikipediaVital5:vital.length,paddedFromPam:TARGET-Math.min(vital.length,TARGET),enrichedBatch01:rows.filter(r=>r.enrichment_status==="Batch 01 enriched").length,enrichmentTarget:ENRICH_LIMIT,sectionCounts,categoryCounts};
 await writeFile(new URL("summary.json",OUT_DIR),JSON.stringify(summary,null,2)+"\n");
 console.log(JSON.stringify(summary,null,2));
