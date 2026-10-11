@@ -19,17 +19,38 @@
   <details class="about"><summary>A little about Pam</summary><p id="pam-bio"></p></details>
  </div>
 </aside>
+<div class="game-stack">
+<section class="score-panel" aria-label="Your Stump Mom score">
+ <div class="score-main"><span class="score-label">YOUR PAM SCORE</span><strong id="pam-score">0</strong><span id="pam-rank" class="rank-badge">Pam Is Unconcerned</span></div>
+ <div class="score-side">
+  <div class="mini-stat"><span>Streak</span><strong id="pam-streak">0</strong></div>
+  <div class="mini-stat"><span>Best round</span><strong id="pam-best">0</strong></div>
+ </div>
+ <div class="rank-progress-wrap"><div class="rank-progress-copy"><span id="rank-progress-label">100 points to the next rank</span><span id="best-streak-label">Best streak: 0</span></div><div class="rank-progress"><div id="rank-progress-fill"></div></div></div>
+</section>
 <section class="game-card" aria-label="Stump Mom game">
  <div class="game-top"><span id="stage-label" class="eyebrow">PAM'S KITCHEN TABLE</span><span id="question-counter" class="counter" hidden></span></div>
- <div class="progress-track" role="progressbar" aria-label="Turns used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><div id="progress-fill"></div></div>
+ <div class="progress-track" role="progressbar" aria-label="Questions used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><div id="progress-fill"></div></div>
  <div class="speech" aria-live="polite" aria-atomic="true"><p id="pam-lead" class="lead"></p><h2 id="pam-question" class="question"></h2><p id="pam-aside" class="aside"></p></div>
+ <div id="round-score" class="round-score" hidden><span>THIS ROUND</span><strong id="round-score-value">+0 points</strong><small id="round-score-total"></small></div>
  <div id="intro-actions" class="actions"><button class="btn primary" id="start-btn" type="button">I’m thinking of something</button></div>
  <div id="answer-actions" class="answers five" role="group" aria-label="Answer Pam's question" hidden>
   <button type="button" data-answer="yes" class="btn yes">Yes</button><button type="button" data-answer="probably" class="btn probably">Probably</button><button type="button" data-answer="unknown" class="btn unknown">Not sure</button><button type="button" data-answer="probably_not" class="btn probably-not">Probably not</button><button type="button" data-answer="no" class="btn no">No</button>
  </div>
+ <div id="hunch-actions" class="actions hunch-actions" hidden><button class="btn primary" id="guess-now-btn" type="button">Make Pam guess</button><button class="btn ghost" id="keep-asking-btn" type="button">Keep asking · costs 2 pts</button></div>
  <div id="guess-actions" class="actions" hidden><button class="btn primary" id="correct-btn" type="button">You got it</button><button class="btn ghost" id="wrong-btn" type="button">Nope</button></div>
  <div id="result-actions" class="actions" hidden><button class="btn primary" id="again-btn" type="button">Try to stump Pam again</button><a class="btn ghost" href="/">Back to games</a></div>
 </section>
+<section class="rules-card" aria-labelledby="rules-title">
+ <p class="eyebrow">HOW IT WORKS</p><h2 id="rules-title">Stump Pam. Build your score.</h2>
+ <div class="rule-grid">
+  <div><strong>20 questions. One guess.</strong><p>If Pam guesses wrong, or reaches 20 without guessing, you beat her.</p></div>
+  <div><strong>Every question is worth a point.</strong><p>A wrong guess or a full stump adds a 10-point bonus.</p></div>
+  <div><strong>Push your luck.</strong><p>When Pam has a strong hunch, make her guess or let her ask another question for 2 points.</p></div>
+  <div><strong>Your Pam Score keeps growing.</strong><p>Points, streaks and ranks stay inside Stump Mom. More rewards can come later.</p></div>
+ </div>
+</section>
+</div>
 </div>
 </main>
 <script src="./knowledge.js" defer></script><script src="./engine.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script>
