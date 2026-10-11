@@ -18,7 +18,7 @@ Status: Complete.
 The published Phase 1 commit `b62cca2678b41eb6538f8f3787fce21b6b2d8752` accidentally contained truncated bytes in several files because of a sandbox/connector write failure. Phase 2 began by restoring the complete pre-Phase-1 source for the affected files and safely reapplying the intended Phase 1 edits. This repair is part of the Phase 2 change set and is required before further work.
 
 ## Phase 2: Mom knowledge pipeline
-Status: Complete pending commit/publication.
+Status: Complete.
 
 ### Completed
 - Restored complete versions of `src/server/account.js`, `test/mom-mode.test.mjs`, `scripts/extract-mom-wikidata-labelled-traits.mjs`, and the affected Mom workflows that had been truncated in the Phase 1 commit.
@@ -37,15 +37,14 @@ Status: Complete pending commit/publication.
 - `npm run build`: PASS, 38 static files
 
 ### Limitation
-The full external/public source datasets are not present in this sandbox checkout, so a complete source-scale regeneration could not be run here. The pipeline behavior is validated with deterministic offline fixtures. Full source refresh remains a later validation step when the source cache is available.
+The full external/public source datasets are not present in this sandbox checkout, so a complete source-scale regeneration could not be run here. The pipeline behaviour is validated with deterministic offline fixtures. Full source refresh remains a later validation step when the source cache is available.
 
-## Open technical work
-Phases 3–10 remain. The next phase is Mom reasoning correctness, beginning with explicit unknown-vs-false truth-state handling.
+## Phase 3: Mom reasoning correctness
+Status: Complete.
 
-## Phase 3 completed
-- Missing Mom traits now remain explicit unknown evidence (`NaN`) instead of being treated as negative evidence.
+- Missing Mom traits remain explicit unknown evidence (`NaN`) instead of being treated as negative evidence.
 - Hard yes/no compatibility never eliminates candidates for unknown traits.
-- Added safe, defensible root/category exclusions and artwork subtype exclusions without restoring missing-as-false behavior.
+- Added safe, defensible root/category exclusions and artwork subtype exclusions without restoring missing-as-false behaviour.
 - Preserved human-intent gating after person/animal/food/place answers.
 - Calibrated late-round hunch confidence only for a clearly separated leader, preserving the single-guess and player-defer mechanics.
 - Trusted Phase 2 representative before-score: 7/16. During Phase 3 iteration the full representative set was intentionally not rerun repeatedly; targeted sparse-evidence checks recovered Venus de Milo and Mona Lisa as wins at turn 17.
@@ -57,10 +56,37 @@ Phases 3–10 remain. The next phase is Mom reasoning correctness, beginning wit
 - `npm run lint -- --no-warn-ignored`: pass.
 - `npm run typecheck`: pass.
 
+## Phase 4: Benchmark completion
+Status: Complete.
 
-## Phase 4 — benchmark completion
-The curated benchmark now evaluates the complete 1,081-concept canonical set and correctly treats `Harder but fair` as a Primary Category with 15 populated rows. The full runtime-present evaluation found 173 covered concepts (16.0% coverage), 3 Pam wins, and 170 stumped outcomes. Core coverage is 15.7% with a 1.9% present-item win rate; Sweet Spot coverage is 14.6% with a 0% present-item win rate; Harder but fair has 0/15 runtime coverage. These results do not meet the configured quality gates. The benchmark intentionally reports the failure rather than reintroducing missing-evidence-as-false, hardcoding benchmark answers, or weakening thresholds. See `docs/mom-phase4-benchmark.md` for the final Phase 4 analysis. Phase 5 was not started.
-
+The curated benchmark evaluates the complete 1,081-concept canonical set and correctly treats `Harder but fair` as a Primary Category with 15 populated rows. The full runtime-present evaluation found 173 covered concepts (16.0% coverage), 3 Pam wins, and 170 stumped outcomes. Core coverage is 15.7% with a 1.9% present-item win rate; Sweet Spot coverage is 14.6% with a 0% present-item win rate; Harder but fair has 0/15 runtime coverage. These results do not meet the configured quality gates. The benchmark intentionally reports the failure rather than reintroducing missing-evidence-as-false, hardcoding benchmark answers, or weakening thresholds. See `docs/mom-phase4-benchmark.md` for the final Phase 4 analysis.
 
 ### Final Phase 3/4 systemic follow-up
 Family-aware question selection now stops spending turns on unrelated generic questions after a general-knowledge family is confirmed. Safe non-entity kinds receive explicit root negatives only where the category relationship is semantically exclusive, and animal/plant versus object overlap remains unknown. The general music taxonomy was broadened across the set with symphony/concerto/rock/pop distinctions. These changes move the representative general-knowledge benchmark from the trusted Phase 2 baseline of 7/16 to 12/16 (75%), meeting the existing gate without weakening thresholds or treating absent evidence as false. The earlier complete curated run remains the full-set coverage checkpoint; its 3/173 runtime-present deduction score predates these final fixes and was not rerun under the approved skip-slow/repeat protocol.
+
+## Phase 5: Shared semantic context for Gary and Milo
+Status: Complete.
+
+### Completed
+- Integrated the existing `src/shared/association-context.js` layer into the production Solo selection path in `src/shared/solo.js`.
+- The contextual layer uses only the current revealed prompt pair and prior revealed rounds, preserving the rule that the bot locks its answer before seeing the player's open-round word.
+- Context is deliberately bounded. It only reorders candidates that the core engine already marked strong/high-quality and placed inside the character's approved selection pool.
+- Recovery candidates, unknown-input fallbacks, low-quality bridges, and candidates outside the engine's quality window cannot be promoted by semantic context.
+- Gary and Milo retain distinct behaviour by preserving the engine-selected ordinal within the contextually reordered pool. Milo receives a stronger context weight (`0.10`) than Gary (`0.06`), consistent with Milo following shared direction more closely and Gary retaining more lateral variety.
+- Added contextual diagnostics to the stored engine decision, including recent semantic direction, dominant tags/categories/traits, contextual candidate scores, the pre-context selection, and whether context changed the final choice.
+- Added production-path tests for contextual preference, no-history behaviour, determinism, and fair-state-only inputs.
+- Expanded `.github/workflows/solo-semantic-context.yml` so changes to `solo.js` and the new integration test are included in the semantic gate.
+- Fixed an older synthetic semantic-context fixture so its fake concepts satisfy the current lexicon contract by including `members` sets.
+- During validation, an intermediate connector write replaced unrelated sections of `test/solo.test.mjs`. The file was restored from verified Git blob `591d38fd2938ba6aedd97b96296f00de074e571e`, and only the intended production-selector import/call change was reapplied.
+
+### Validation
+- Semantic/context gate: `node --test test/association-context.test.mjs test/solo-semantic-context.test.mjs` → PASS, 7/7.
+- Existing engine/Solo regression gate: `node --test test/engine-2.5.test.mjs test/solo.test.mjs` → PASS, 27/27.
+- Existing character checks remain green: Milo prefers consensus more strongly; Gary can choose a less-obvious answer only when it remains genuinely strong.
+- Existing fairness and game mechanics remain green: pre-commit before player input, exact prompt chaining, no repeats, morphology handling, unknown-input recovery, French vocabulary, and 20-move exhaustion.
+
+### Phase 5 outcome
+Gary and Milo can now use the broader semantic context infrastructure built alongside Mom Mode without turning Solo into a different game. The core association engine still determines what is valid and strong; the shared context layer only helps choose which already-good association best fits the direction of the revealed conversation.
+
+## Open technical work
+Phases 6–10 remain. Phase 6 should start from the Phase 5 checkpoint without reopening completed Mom or Solo semantic work unless a new regression directly points back to it.
