@@ -8,8 +8,9 @@ OBJECTS.forEach((o,i)=>{for(const id of o.yes||[]) if(idx[id]!=null) truth[i*F+i
 function entropy(b){let h=0;for(const p of b)if(p>1e-12)h-=p*Math.log2(p);return h;}
 function py(t,noise){return t*(1-noise)+(1-t)*noise;}
 function evalQ(b,f,noise){let y=0;for(let i=0;i<N;i++)y+=b[i]*py(truth[i*F+f],noise);let n=1-y,hy=0,hn=0;if(y>1e-12)for(let i=0;i<N;i++){const p=b[i]*py(truth[i*F+f],noise)/y;if(p>1e-12)hy-=p*Math.log2(p);}if(n>1e-12)for(let i=0;i<N;i++){const p=b[i]*(1-py(truth[i*F+f],noise))/n;if(p>1e-12)hn-=p*Math.log2(p);}return entropy(b)-(y*hy+n*hn);}
-function createGame(opts={}){return{belief:new Float64Array(N).fill(1/N),asked:new Set(),answers:new Map(),turn:0,budget:opts.budget||20,noise:opts.noise??0.06,guessThreshold:opts.guessThreshold??0.90,pending:null,status:'playing',history:[],surprise:false,lastWrongGuess:null};}
+function createGame(opts={}){return{belief:new Float64Array(N).fill(1/N),asked:new Set(),answers:new Map(),turn:0,budget:opts.budget||20,noise:opts.noise??0.06,guessThreshold:opts.guessThreshold??0.92,minGuessQuestions:opts.minGuessQuestions??5,pending:null,status:'playing',history:[],surprise:false,guessUsed:false};}
 function top(game){let j=0;for(let i=1;i<N;i++)if(game.belief[i]>game.belief[j])j=i;return{index:j,p:game.belief[j],object:OBJECTS[j]};}
+function topTwo(game){let a=-1,b=-1;for(let i=0;i<N;i++){if(a<0||game.belief[i]>game.belief[a]){b=a;a=i;}else if(b<0||game.belief[i]>game.belief[b])b=i;}return{first:a,second:b,firstP:a<0?0:game.belief[a],secondP:b<0?0:game.belief[b]};}
 const strongYes=a=>a==='yes'||a==='probably';
 const OBJECTISH=new Set(['manmade','household','kitchen','bedroom','bathroom','wearable','electronic','battery','screen','wheels','vehicle','handheld','soft','fragile','metal','wood','paper','plastic','round','handle','opens','tool','toy','cleaning','furniture','clothing','container','cutting','writing','reading','computer','phone','road','rail','air','sea','building','appliance']);
 const PERSON_SKIP=new Set([...OBJECTISH,'animal','plant','food','drink','pet','farm','wild','edible','sweet','salty','hot','cold','liquid','fruit','vegetable','baked','dairy','meat','dessert','frozen','caffeinated','bird','insect','mammal']);
@@ -26,14 +27,47 @@ function questionAllowed(game,f){
  if(strongYes(a.get('alive'))&&id==='manmade')return false;
  return true;
 }
-function choose(game){const leader=top(game);if(leader.p>=game.guessThreshold||game.turn>=game.budget-1)return{kind:'guess',index:leader.index,label:leader.object.name,text:guessText(leader.object),confidence:leader.p};let best=null,bg=-1;for(let f=0;f<F;f++){if(game.asked.has(f)||!questionAllowed(game,f))continue;const g=evalQ(game.belief,f,game.noise);if(g>bg){bg=g;best=f;}}if(best==null)return{kind:'guess',index:leader.index,label:leader.object.name,text:guessText(leader.object),confidence:leader.p};return{kind:'question',index:best,id:FEATURES[best].id,text:FEATURES[best].q,gain:bg,confidence:leader.p};}
+function hardMatch(t,a){if(a==='yes')return t>0;if(a==='no')return t<1;return true;}
+function viableCandidates(game){
+ const out=[];
+ for(let i=0;i<N;i++){
+  let ok=true;
+  for(const [id,a] of game.answers){
+   if(a!=='yes'&&a!=='no')continue;
+   const f=idx[id];if(f==null)continue;
+   if(!hardMatch(truth[i*F+f],a)){ok=false;break;}
+  }
+  if(ok)out.push(i);
+ }
+ return out;
+}
+function guessReason(game){
+ if(game.guessUsed||game.turn<game.minGuessQuestions)return null;
+ const viable=viableCandidates(game);
+ if(viable.length===1)return{reason:'logical',index:viable[0]};
+ const leaders=topTwo(game);
+ const separated=leaders.secondP<=0.0001||leaders.firstP/leaders.secondP>=3;
+ if(leaders.firstP>=game.guessThreshold&&separated)return{reason:'confidence',index:leaders.first};
+ return null;
+}
+function makeGuess(game,decision){const i=decision?.index??top(game).index,o=OBJECTS[i];return{kind:'guess',index:i,label:o.name,text:guessText(o),confidence:game.belief[i],reason:decision?.reason||'forced'};}
+function scoreFor(questionCount,correct,stumped=false){const base=Math.min(Math.max(Number(questionCount)||0,0),20);return stumped?base+10:base+(correct?0:10);}
+function stumpedState(game){game.status='stumped';return{kind:'stumped',turns:game.turn,score:scoreFor(game.turn,false,true)};}
+function choose(game){
+ if(game.status!=='playing')throw new Error('game finished');
+ const decision=guessReason(game);if(decision)return makeGuess(game,decision);
+ if(game.turn>=game.budget)return stumpedState(game);
+ let best=null,bg=-1;
+ for(let f=0;f<F;f++){if(game.asked.has(f)||!questionAllowed(game,f))continue;const g=evalQ(game.belief,f,game.noise);if(g>bg){bg=g;best=f;}}
+ if(best==null){const leader=top(game);if(game.turn>=game.minGuessQuestions)return makeGuess(game,{reason:'no_questions',index:leader.index});return stumpedState(game);}
+ return{kind:'question',index:best,id:FEATURES[best].id,text:FEATURES[best].q,gain:bg,confidence:top(game).p};
+}
 function guessText(o){const n=o.name.toLowerCase();if(o.article==='')return`Is it ${n}?`;if(o.article)return`Is it ${o.article} ${n}?`;return`Is it ${'aeiou'.includes(n[0])?'an':'a'} ${n}?`;}
 const MIX={yes:[1,0],probably:[0.75,0.25],unknown:null,probably_not:[0.25,0.75],no:[0,1]};
-function answer(game,q,a){if(game.status!=='playing')throw new Error('game finished'); if(q.kind==='guess')throw new Error('confirm guesses separately');const mix=MIX[a];game.asked.add(q.index);game.answers.set(q.id,a);game.turn++;game.surprise=false;game.lastWrongGuess=null;if(mix){const before=top(game).p;let sum=0;for(let i=0;i<N;i++){const y=py(truth[i*F+q.index],game.noise);const l=mix[0]*y+mix[1]*(1-y);game.belief[i]*=l;sum+=game.belief[i];}if(sum>1e-15)for(let i=0;i<N;i++)game.belief[i]/=sum;const after=top(game).p;game.surprise=after<before*0.55;}game.history.push({kind:'question',id:q.id,question:q.text,answer:a});if(game.turn>=game.budget)game.status='ready';return choose(game);}
-function renormalize(b){let sum=0;for(const p of b)sum+=p;if(sum<=1e-15)return;for(let i=0;i<b.length;i++)b[i]/=sum;}
-function confirm(game,q,correct){if(q.kind!=='guess')throw new Error('not a guess');if(game.status!=='playing'&&game.status!=='ready')throw new Error('game finished');game.turn++;game.history.push({kind:'guess',question:q.text,guess:q.label,answer:correct?'yes':'no'});if(correct){game.status='won';return{correct:true,guess:q.label,turns:game.turn,done:true};}game.belief[q.index]=0;renormalize(game.belief);game.lastWrongGuess=q.label;if(game.turn>=game.budget){game.status='lost';return{correct:false,guess:q.label,turns:game.turn,done:true};}game.status='playing';return{correct:false,guess:q.label,turns:game.turn,done:false,next:choose(game)};}
+function answer(game,q,a){if(game.status!=='playing')throw new Error('game finished');if(q.kind!=='question')throw new Error('answer requires a question');const mix=MIX[a];game.asked.add(q.index);game.answers.set(q.id,a);game.turn++;game.surprise=false;if(mix){const before=top(game).p;let sum=0;for(let i=0;i<N;i++){const y=py(truth[i*F+q.index],game.noise);const l=mix[0]*y+mix[1]*(1-y);game.belief[i]*=l;sum+=game.belief[i];}if(sum>1e-15)for(let i=0;i<N;i++)game.belief[i]/=sum;const after=top(game).p;game.surprise=after<before*0.55;}game.history.push({kind:'question',id:q.id,question:q.text,answer:a});return choose(game);}
+function confirm(game,q,correct){if(q.kind!=='guess')throw new Error('not a guess');if(game.status!=='playing')throw new Error('game finished');if(game.guessUsed)throw new Error('guess already used');game.guessUsed=true;game.history.push({kind:'guess',question:q.text,guess:q.label,answer:correct?'yes':'no'});game.status=correct?'won':'lost';return{correct:Boolean(correct),guess:q.label,turns:game.turn,done:true,score:scoreFor(game.turn,Boolean(correct)),reason:q.reason||null};}
 function oracle(secret,q){if(q.kind==='guess')return q.index===secret?'yes':'no';const t=truth[secret*F+q.index];return t===1?'yes':t===0?'no':'unknown';}
-function selfPlay(secret,opts={}){const g=createGame(opts);let q=choose(g);while(g.status==='playing'&&g.turn<g.budget){if(q.kind==='guess'){const ok=q.index===secret;const r=confirm(g,q,ok);if(ok)return{won:true,turns:g.turn,guess:q.label};q=r.next||choose(g);continue;}q=answer(g,q,oracle(secret,q));}return{won:g.status==='won',turns:g.turn,guess:top(g).object.name};}
-global.MomBayes={FEATURES,OBJECTS,N,F,truth,createGame,choose,answer,confirm,top,selfPlay,oracle,entropy,questionAllowed};
+function selfPlay(secret,opts={}){const g=createGame(opts);let q=choose(g);while(g.status==='playing'){if(q.kind==='guess'){const ok=q.index===secret;const r=confirm(g,q,ok);return{won:ok,turns:g.turn,guess:q.label,score:r.score,stumped:false};}if(q.kind==='stumped')break;q=answer(g,q,oracle(secret,q));}return{won:false,turns:g.turn,guess:null,score:scoreFor(g.turn,false,true),stumped:true};}
+global.MomBayes={FEATURES,OBJECTS,N,F,truth,createGame,choose,answer,confirm,top,selfPlay,oracle,entropy,questionAllowed,viableCandidates,guessReason,scoreFor};
 if(typeof module!=='undefined')module.exports=global.MomBayes;
 })(typeof window!=='undefined'?window:globalThis);
