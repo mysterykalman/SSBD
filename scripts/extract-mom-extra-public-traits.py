@@ -10,6 +10,16 @@ INVENTORY = os.path.join(ROOT, '.dev-data', 'mom-playable-50k', 'playable_50k.cs
 SOURCE_ROOT = os.path.join(ROOT, '.dev-data', 'trait-sources')
 OUT = os.path.join(SOURCE_ROOT, 'extra-public-evidence.json')
 
+MATERIALS = {
+    'stone', 'wood', 'wooden', 'rattan', 'fabric', 'crochet', 'wool', 'leather',
+    'velvet', 'metal', 'steel', 'iron', 'aluminum', 'aluminium', 'paper', 'cardboard',
+    'plastic', 'glass', 'ceramic', 'cloth', 'textile'
+}
+LOCATION_PREDICATES = {
+    'in', 'inside', 'on', 'on top of', 'at', 'near', 'under', 'underneath', 'beside',
+    'next to', 'attached to', 'in front of', 'behind'
+}
+
 
 def norm(value):
     value = str(value or '').strip().lower().replace('_', ' ')
@@ -26,6 +36,15 @@ def variants(value):
         out.add(norm(part))
     out.add(norm(re.sub(r'\([^)]*\)', '', raw)))
     return {x for x in out if x}
+
+
+def typed_attribute(attr):
+    a = norm(attr)
+    if not a:
+        return ''
+    if a in MATERIALS or any(m in a.split() for m in MATERIALS):
+        return f'material:{a}'
+    return f'attribute:{a}'
 
 
 with open(INVENTORY, newline='', encoding='utf-8-sig') as f:
@@ -78,12 +97,11 @@ for filename in paco_files:
             continue
         names = variants(cats[cid])
         for aid, count in attr_counts.items():
-            # High-support only: this data describes pictured instances, not universal truths.
             if count < 5 or count / total < 0.25:
                 continue
-            attr = attrs[aid]
+            trait = typed_attribute(attrs[aid])
             for name in names:
-                add(name, 'PACO', f'attribute:{attr}')
+                add(name, 'PACO', trait)
 
 
 # Visual Genome object attributes. Keep only attributes repeatedly associated with
@@ -111,12 +129,13 @@ if os.path.exists(vg_attr):
             total = totals[key]
             for attr, count in attr_counts.items():
                 if count >= 4 and (count / max(1, total) >= 0.18 or count >= 20):
-                    add(key, 'Visual Genome', f'attribute:{attr}')
+                    add(key, 'Visual Genome', typed_attribute(attr))
     except Exception as exc:
         print(f'Visual Genome attributes skipped: {exc}')
 
 
-# Visual Genome relationships. Only retain frequent relation/object pairs.
+# Visual Genome relationships. Only retain frequent relation/object pairs. Spatial
+# relations are typed as location evidence so the controlled mapper can use them.
 vg_rel = os.path.join(SOURCE_ROOT, 'visual-genome', 'relationships.json')
 if os.path.exists(vg_rel):
     rel_counts = defaultdict(Counter)
@@ -137,11 +156,12 @@ if os.path.exists(vg_rel):
                     for o in onames[:2]:
                         oval = norm(o)
                         if predicate and oval:
-                            rel_counts[skey][f'{predicate}:{oval}'] += 1
+                            prefix = 'atlocation' if predicate in LOCATION_PREDICATES else 'relation'
+                            rel_counts[skey][f'{prefix}:{predicate}:{oval}'] += 1
         for key, pairs in rel_counts.items():
             for pair, count in pairs.items():
                 if count >= 5:
-                    add(key, 'Visual Genome', f'relation:{pair}')
+                    add(key, 'Visual Genome', pair)
     except Exception as exc:
         print(f'Visual Genome relationships skipped: {exc}')
 
