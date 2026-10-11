@@ -24,15 +24,17 @@ jobs:
           file /tmp/vital.csv || true
           python3 - <<'PY'
           from pathlib import Path
+          import csv, io, collections
           data=Path('/tmp/vital.csv').read_bytes()
-          print('first bytes', data[:20])
-          for enc in ('utf-8-sig','utf-16','utf-16le','cp1252'):
-              try:
-                  text=data.decode(enc)
-                  print('ENCODING',enc)
-                  print(text[:3000])
-                  print('LINE COUNT',len(text.splitlines()))
-                  break
-              except Exception as e:
-                  print('decode failed',enc,type(e).__name__)
+          print('first bytes', data[:40])
+          text=data.decode('cp1252')
+          reader=csv.DictReader(io.StringIO(text))
+          rows=list(reader)
+          print('HEADERS',reader.fieldnames)
+          print('ROW COUNT',len(rows))
+          print('UNIQUE ARTICLES',len({r.get('Article','').strip().casefold() for r in rows if r.get('Article','').strip()}))
+          print('LEVEL COUNTS',collections.Counter(r.get('Vital_Level','') for r in rows))
+          print('TOP CATEGORIES',collections.Counter(r.get('Vital_Category','') for r in rows).most_common(25))
+          for r in rows[:8]:
+              print('SAMPLE',r.get('Article'),r.get('Vital_Level'),r.get('Vital_Category'))
           PY
