@@ -1,0 +1,61 @@
+name: Build playable Mom 50k
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/mom-mode-stump-mom
+    paths:
+      - scripts/build-mom-playable-50k.mjs
+      - .github/workflows/mom-playable-50k.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Download public donor datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .dev-data/mom-sources/allenai
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/things.csv \
+            https://raw.githubusercontent.com/evanthebouncy/20Q-selfplay/main/things.csv
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/brysbaert.txt \
+            https://raw.githubusercontent.com/ArtsEngine/concreteness/master/Concreteness_ratings_Brysbaert_et_al_BRM.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/cel_2-45.txt \
+            https://raw.githubusercontent.com/BrianHutchison/Common-English-Lexicon/master/cel_2-45.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/wordnik.txt \
+            https://raw.githubusercontent.com/wordnik/wordlist/main/wordlist-20210729.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/allenai.tar.gz \
+            https://storage.googleapis.com/ai2-mosaic-public/projects/twentyquestions/v1.0/data/v1.0.twentyquestions.tar.gz
+          tar -xzf .dev-data/mom-sources/allenai.tar.gz -C .dev-data/mom-sources/allenai
+          echo "AllenAI extracted files:"
+          find .dev-data/mom-sources/allenai -type f | sort | head -80
+      - name: Build Wikipedia Vital donor inventory
+        run: node scripts/build-mom-50k-inventory.mjs
+      - name: Build playable 50k candidate inventory
+        run: node scripts/build-mom-playable-50k.mjs
+      - name: Validate exact quantity
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const s = JSON.parse(fs.readFileSync('.dev-data/mom-playable-50k/summary.json','utf8'));
+          if (s.uniqueConcepts !== 50000) throw new Error(`Expected 50000, got ${s.uniqueConcepts}`);
+          console.log(s);
+          NODE
+      - name: Upload playable 50k
+        uses: actions/upload-artifact@v4
+        with:
+          name: mom-playable-50k
+          path: .dev-data/mom-playable-50k/
+          retention-days: 14
