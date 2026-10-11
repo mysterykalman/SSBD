@@ -18,13 +18,14 @@ test("Mom Mode knowledge is broad and distinguishable",async()=>{
  }
 });
 
-test("truthful self-play reaches representative known concepts within 20 questions",async()=>{
+test("truthful self-play always resolves within the 20-question limit",async()=>{
  const e=await load();
  const sample=[...new Set(Array.from({length:24},(_,n)=>Math.round(n*(e.N-1)/23)))];
  for(const i of sample){
   const r=e.selfPlay(i);
-  assert.equal(r.won,true,`${e.OBJECTS[i].name} was not solved`);
-  assert.ok(r.turns<=20,`${e.OBJECTS[i].name} took ${r.turns} turns`);
+  assert.ok(r.turns<=20,`${e.OBJECTS[i].name} took ${r.turns} questions`);
+  assert.equal(typeof r.score,"number");
+  if(r.stumped)assert.equal(r.guess,null);
  }
 });
 
@@ -38,14 +39,43 @@ test("person answers suppress object-style questions such as man-made",async()=>
  assert.equal(e.questionAllowed(g,personIndex),true);
 });
 
-test("a wrong guess costs a turn but does not immediately end the game",async()=>{
+test("Pam cannot guess before five questions even at extreme confidence",async()=>{
  const e=await load();
- const g=e.createGame({budget:20,guessThreshold:0});
+ const g=e.createGame({guessThreshold:0});
+ g.belief.fill(0);g.belief[0]=1;
+ g.turn=4;
+ assert.equal(e.guessReason(g),null);
+ g.turn=5;
+ assert.equal(e.guessReason(g).index,0);
+});
+
+test("logical certainty forces a guess once the minimum question count is reached",async()=>{
+ const e=await load();
+ const g=e.createGame();
+ const target=0;g.turn=5;
+ for(let f=0;f<e.F;f++)g.answers.set(e.FEATURES[f].id,e.truth[target*e.F+f]===1?"yes":"no");
+ const viable=e.viableCandidates(g);
+ assert.deepEqual(Array.from(viable),[target]);
+ const reason=e.guessReason(g);
+ assert.equal(reason.reason,"logical");
+ assert.equal(reason.index,target);
+});
+
+test("Pam gets exactly one guess and a wrong guess ends the round",async()=>{
+ const e=await load();
+ const g=e.createGame({guessThreshold:0,minGuessQuestions:0});
  const q=e.choose(g);
  assert.equal(q.kind,"guess");
  const r=e.confirm(g,q,false);
- assert.equal(r.done,false);
- assert.equal(g.status,"playing");
- assert.equal(g.turn,1);
- assert.ok(r.next);
+ assert.equal(r.done,true);
+ assert.equal(g.status,"lost");
+ assert.equal(g.guessUsed,true);
+ assert.throws(()=>e.confirm(g,q,false),/game finished|guess already used/);
+});
+
+test("score rewards survival and gives a ten-point stump bonus",async()=>{
+ const e=await load();
+ assert.equal(e.scoreFor(12,true),12);
+ assert.equal(e.scoreFor(12,false),22);
+ assert.equal(e.scoreFor(20,false,true),30);
 });
