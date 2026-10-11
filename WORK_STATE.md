@@ -4,8 +4,8 @@
 - Branch: integration/all-current-work
 - Current HEAD before Phase 2 commit: b62cca2678b41eb6538f8f3787fce21b6b2d8752
 - Last completed phase: Phase 1, repository consolidation and baseline
-- Current phase: Phase 2, Mom knowledge pipeline
-- Status: READY TO COMMIT
+- Current phase: Phase 4, Mom benchmark
+- Status: PHASE 3 COMPLETE; PHASE 4 STARTING
 
 ## Phase 2 completed work
 - Repaired accidental truncation introduced in the Phase 1 commit for account.js, Mom tests, multiple Mom workflows, and labelled Wikidata extraction, restoring the complete pre-Phase-1 source and safely reapplying the intended Phase 1 fixes.
@@ -33,3 +33,18 @@
 
 ## Exact next action
 Commit the repaired baseline plus Phase 2 pipeline work, publish it to integration/all-current-work, then start Phase 3 by auditing Mom engine truth-state handling so missing evidence is unknown rather than false.
+
+## Phase 3 completed
+- Missing Mom traits now remain explicit unknown evidence (`NaN`) instead of being treated as negative evidence.
+- Hard yes/no compatibility never eliminates candidates for unknown traits.
+- Added safe, defensible root/category exclusions and artwork subtype exclusions without restoring missing-as-false behavior.
+- Preserved human-intent gating after person/animal/food/place answers.
+- Calibrated late-round hunch confidence only for a clearly separated leader, preserving the single-guess and player-defer mechanics.
+- Trusted Phase 2 representative before-score: 7/16. During Phase 3 iteration the full representative set was intentionally not rerun repeatedly; targeted sparse-evidence checks recovered Venus de Milo and Mona Lisa as wins at turn 17.
+- Several culturally sparse concepts remain intentionally underdetermined where the knowledge vectors are identical or near-identical; those are benchmark/data-quality cases for Phase 4, not a reason to convert unknowns into No.
+
+### Phase 3 validation
+- `node --test test/mom-mode-engine.test.mjs`: 12/12 pass.
+- `git diff --check`: pass.
+- `npm run lint -- --no-warn-ignored`: pass.
+- `npm run typecheck`: pass.

@@ -41,3 +41,18 @@ The full external/public source datasets are not present in this sandbox checkou
 
 ## Open technical work
 Phases 3–10 remain. The next phase is Mom reasoning correctness, beginning with explicit unknown-vs-false truth-state handling.
+
+## Phase 3 completed
+- Missing Mom traits now remain explicit unknown evidence (`NaN`) instead of being treated as negative evidence.
+- Hard yes/no compatibility never eliminates candidates for unknown traits.
+- Added safe, defensible root/category exclusions and artwork subtype exclusions without restoring missing-as-false behavior.
+- Preserved human-intent gating after person/animal/food/place answers.
+- Calibrated late-round hunch confidence only for a clearly separated leader, preserving the single-guess and player-defer mechanics.
+- Trusted Phase 2 representative before-score: 7/16. During Phase 3 iteration the full representative set was intentionally not rerun repeatedly; targeted sparse-evidence checks recovered Venus de Milo and Mona Lisa as wins at turn 17.
+- Several culturally sparse concepts remain intentionally underdetermined where the knowledge vectors are identical or near-identical; those are benchmark/data-quality cases for Phase 4, not a reason to convert unknowns into No.
+
+### Phase 3 validation
+- `node --test test/mom-mode-engine.test.mjs`: 12/12 pass.
+- `git diff --check`: pass.
+- `npm run lint -- --no-warn-ignored`: pass.
+- `npm run typecheck`: pass.

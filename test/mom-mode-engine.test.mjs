@@ -52,8 +52,9 @@ test("Pam cannot guess before five questions even at extreme confidence",async()
 test("logical certainty forces a guess once the minimum question count is reached",async()=>{
  const e=await load();
  const g=e.createGame();
- const target=0;g.turn=5;
- for(let f=0;f<e.F;f++)g.answers.set(e.FEATURES[f].id,e.truth[target*e.F+f]===1?"yes":"no");
+ const target=0,feature=0;
+ for(let i=0;i<e.N;i++)e.truth[i*e.F+feature]=i===target?1:0;
+ g.answers.set(e.FEATURES[feature].id,"yes");g.turn=5;
  const viable=e.viableCandidates(g);
  assert.deepEqual(Array.from(viable),[target]);
  const reason=e.guessReason(g);
@@ -63,8 +64,10 @@ test("logical certainty forces a guess once the minimum question count is reache
 
 test("a strong hunch lets the player force a guess or buy another question",async()=>{
  const e=await load();
+ const pair=(()=>{for(let f=0;f<e.F;f++)for(let a=0;a<e.N;a++)for(let b=a+1;b<e.N;b++){const x=e.truth[a*e.F+f],y=e.truth[b*e.F+f];if((x===0&&y===1)||(x===1&&y===0))return{a,b};}return null;})();
+ assert.ok(pair,"fixture needs a known feature that separates two candidates");
  const g=e.createGame({guessThreshold:0.9,minGuessQuestions:5,continuePrice:2});
- g.belief.fill(0);g.belief[0]=0.96;g.belief[1]=0.04;g.turn=5;
+ g.belief.fill(0);g.belief[pair.a]=0.96;g.belief[pair.b]=0.04;g.turn=5;
  const h=e.choose(g);
  assert.equal(h.kind,"hunch");
  assert.equal(h.continuePrice,2);
@@ -72,10 +75,10 @@ test("a strong hunch lets the player force a guess or buy another question",asyn
  assert.equal(g.continueCost,2);
  assert.equal(continued.kind,"question");
  const g2=e.createGame({guessThreshold:0.9,minGuessQuestions:5});
- g2.belief.fill(0);g2.belief[0]=0.96;g2.belief[1]=0.04;g2.turn=5;
+ g2.belief.fill(0);g2.belief[pair.a]=0.96;g2.belief[pair.b]=0.04;g2.turn=5;
  const h2=e.choose(g2);const guess=e.commitGuess(g2,h2);
  assert.equal(guess.kind,"guess");
- assert.equal(guess.index,0);
+ assert.equal(guess.index,pair.a);
 });
 
 test("Pam gets exactly one guess and a wrong guess ends the round",async()=>{
@@ -98,4 +101,71 @@ test("continuing costs round points and 20 questions without a guess is a stump"
  const result=e.choose(g);
  assert.equal(result.kind,"stumped");
  assert.equal(result.score,26);
+});
+
+
+test("missing Mom traits are unknown rather than explicit no",async()=>{
+ const e=await load();
+ let pair=null;
+ for(let i=0;i<e.N&&!pair;i++){
+  const o=e.OBJECTS[i];
+  const known=new Set([...(o.yes||[]),...(o.maybe||[]),...(o.no||[])]);
+  const f=e.FEATURES.findIndex(feature=>!known.has(feature.id));
+  if(f>=0)pair={i,f};
+ }
+ assert.ok(pair,"expected at least one sparse concept/feature pair");
+ const value=e.truth[pair.i*e.F+pair.f];
+ assert.equal(Number.isNaN(value),true,"missing evidence must use unknown sentinel");
+ assert.equal(e.oracle(pair.i,{kind:"question",index:pair.f}),"unknown");
+});
+
+test("unknown evidence does not eliminate a candidate on hard yes/no answers",async()=>{
+ const e=await load();
+ let pair=null;
+ for(let i=0;i<e.N&&!pair;i++){
+  const o=e.OBJECTS[i];
+  const known=new Set([...(o.yes||[]),...(o.maybe||[]),...(o.no||[])]);
+  const f=e.FEATURES.findIndex(feature=>!known.has(feature.id));
+  if(f>=0)pair={i,f,id:e.FEATURES[f].id};
+ }
+ assert.ok(pair);
+ for(const answer of ["yes","no"]){
+  const g=e.createGame();
+  g.answers.set(pair.id,answer);
+  assert.ok(e.viableCandidates(g).includes(pair.i),`unknown candidate was eliminated by ${answer}`);
+ }
+});
+
+
+test("unknown traits are an explicit third outcome with no information gain",async()=>{
+ const e=await load();
+ let pair=null;
+ for(let f=0;f<e.F&&!pair;f++){
+  for(let a=0;a<e.N&&!pair;a++){
+   for(let b=a+1;b<e.N;b++){
+    const x=e.truth[a*e.F+f],y=e.truth[b*e.F+f];
+    if(!Number.isFinite(x)&&!Number.isFinite(y)){pair={f,a,b};break;}
+   }
+  }
+ }
+ assert.ok(pair,"fixture needs two candidates with unknown evidence for a shared trait");
+ const belief=new Float64Array(e.N);belief[pair.a]=0.5;belief[pair.b]=0.5;
+ assert.equal(e.questionGain(belief,pair.f,0.06),0);
+ const game=e.createGame();const question={kind:"question",index:pair.f,id:e.FEATURES[pair.f].id,text:e.FEATURES[pair.f].q};const before=Array.from(game.belief);const next=e.answer(game,question,"unknown");
+ assert.deepEqual(Array.from(game.belief),before);
+ assert.ok(next.kind==="question"||next.kind==="hunch"||next.kind==="guess"||next.kind==="stumped");
+});
+
+test("late-round confidence can surface a separated sparse-evidence hunch",async()=>{
+ const e=await load();
+ const g=e.createGame({guessThreshold:0.92,minGuessQuestions:5});
+ g.belief.fill(0);
+ g.belief[0]=0.24;
+ g.belief[1]=0.13;
+ const rest=(1-0.37)/(e.N-2);
+ for(let i=2;i<e.N;i++)g.belief[i]=rest;
+ g.turn=16;
+ const action=e.choose(g);
+ assert.equal(action.kind,"hunch");
+ assert.equal(action.index,0);
 });
