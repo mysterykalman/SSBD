@@ -20,6 +20,13 @@ function prepareDialog(kind) {
   d.addEventListener("close", () => { delete d.dataset.dialogKind; }, {once:true});
   return d;
 }
+function blockSoundInjection(d) {
+  const sentinel=document.createElement("span");
+  sentinel.className="audio-settings-panel";
+  sentinel.hidden=true;
+  sentinel.setAttribute("aria-hidden","true");
+  d.append(sentinel);
+}
 function showDialog(title, body, {kind="account"}={}) {
   const d = prepareDialog(kind);
   if (!d) return;
@@ -28,6 +35,7 @@ function showDialog(title, body, {kind="account"}={}) {
   const close = document.createElement("button"); close.type = "button"; close.className = "dialog-x"; close.setAttribute("aria-label", "Close"); close.textContent = "×"; close.addEventListener("click", closeDialog);
   wrap.append(close, h, body);
   d.append(wrap);
+  if(kind!=="settings") blockSoundInjection(d);
   if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
 }
 function field(labelText, {type="text", maxlength, value="", placeholder="", inputmode, autocomplete} = {}) {
