@@ -42,11 +42,11 @@ test("person answers suppress object-style questions such as man-made",async()=>
 test("Pam cannot guess before five questions even at extreme confidence",async()=>{
  const e=await load();
  const g=e.createGame({guessThreshold:0});
- g.belief.fill(0);g.belief[0]=1;
+ g.belief.fill(0);g.belief[0]=0.99;g.belief[1]=0.01;
  g.turn=4;
  assert.equal(e.guessReason(g),null);
  g.turn=5;
- assert.equal(e.guessReason(g).index,0);
+ assert.equal(e.guessReason(g)?.reason,"confidence");
 });
 
 test("logical certainty forces a guess once the minimum question count is reached",async()=>{
@@ -61,11 +61,27 @@ test("logical certainty forces a guess once the minimum question count is reache
  assert.equal(reason.index,target);
 });
 
+test("a strong hunch lets the player force a guess or buy another question",async()=>{
+ const e=await load();
+ const g=e.createGame({guessThreshold:0.9,minGuessQuestions:5,continuePrice:2});
+ g.belief.fill(0);g.belief[0]=0.96;g.belief[1]=0.04;g.turn=5;
+ const h=e.choose(g);
+ assert.equal(h.kind,"hunch");
+ assert.equal(h.continuePrice,2);
+ const continued=e.deferGuess(g,h);
+ assert.equal(g.continueCost,2);
+ assert.equal(continued.kind,"question");
+ const g2=e.createGame({guessThreshold:0.9,minGuessQuestions:5});
+ g2.belief.fill(0);g2.belief[0]=0.96;g2.belief[1]=0.04;g2.turn=5;
+ const h2=e.choose(g2);const guess=e.commitGuess(g2,h2);
+ assert.equal(guess.kind,"guess");
+ assert.equal(guess.index,0);
+});
+
 test("Pam gets exactly one guess and a wrong guess ends the round",async()=>{
  const e=await load();
- const g=e.createGame({guessThreshold:0,minGuessQuestions:0});
- const q=e.choose(g);
- assert.equal(q.kind,"guess");
+ const g=e.createGame();g.turn=8;
+ const q={kind:"guess",index:0,label:e.OBJECTS[0].name,text:"Guess?",reason:"confidence"};
  const r=e.confirm(g,q,false);
  assert.equal(r.done,true);
  assert.equal(g.status,"lost");
@@ -73,9 +89,13 @@ test("Pam gets exactly one guess and a wrong guess ends the round",async()=>{
  assert.throws(()=>e.confirm(g,q,false),/game finished|guess already used/);
 });
 
-test("score rewards survival and gives a ten-point stump bonus",async()=>{
+test("continuing costs round points and 20 questions without a guess is a stump",async()=>{
  const e=await load();
- assert.equal(e.scoreFor(12,true),12);
- assert.equal(e.scoreFor(12,false),22);
- assert.equal(e.scoreFor(20,false,true),30);
+ assert.equal(e.scoreFor(12,false,false,0),22);
+ assert.equal(e.scoreFor(12,false,false,4),18);
+ assert.equal(e.scoreFor(12,true,false,4),8);
+ const g=e.createGame();g.turn=20;g.continueCost=4;
+ const result=e.choose(g);
+ assert.equal(result.kind,"stumped");
+ assert.equal(result.score,26);
 });
