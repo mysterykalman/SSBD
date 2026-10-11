@@ -1,6 +1,17 @@
 (function(){
 "use strict";
+function injectStyles(){
+ if(document.getElementById('momTileFixes'))return;
+ const style=document.createElement('style');style.id='momTileFixes';
+ style.textContent=`
+ .mom-card-copy p{font-size:1rem!important;line-height:1.45}
+ .mom-card-copy p:not(.muted){color:var(--ink);font-weight:800}
+ .mom-card-copy p.muted{font-size:1rem!important;font-weight:700}
+ `;
+ document.head.append(style);
+}
 function update(){
+ injectStyles();
  const card=document.querySelector('.mom-card');if(!card)return;
  card.querySelector('.mom-preview')?.remove();
  const link=card.querySelector('a.btn');
