@@ -15,13 +15,16 @@ on:
         description: "Places and landmarks to request from Wikidata"
         required: false
         default: "700"
-  # Changing this workflow on the feature branch also bootstraps a real snapshot once.
-  # The generated-data commit does not touch this file, so it cannot recurse.
+  # Changes to the knowledge builders bootstrap a fresh local snapshot.
+  # Generated-data commits do not touch these paths, so the workflow cannot recurse.
   push:
     branches:
       - feature/mom-mode-stump-mom
     paths:
       - .github/workflows/mom-knowledge-refresh.yml
+      - scripts/refresh-mom-wikidata-v2.mjs
+      - scripts/refresh-mom-general-wikidata.mjs
+      - package.json
   schedule:
     - cron: "17 5 * * 0"
 
@@ -39,14 +42,17 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - name: Build local Wikimedia knowledge snapshot
+      - name: Refresh notable people, fiction, and places
         env:
           PEOPLE: ${{ inputs.people || '4000' }}
           FICTIONAL: ${{ inputs.fictional || '500' }}
           PLACES: ${{ inputs.places || '700' }}
-        run: npm run mom:knowledge -- --people="$PEOPLE" --fictional="$FICTIONAL" --places="$PLACES"
+        run: node scripts/refresh-mom-wikidata-v2.mjs --people="$PEOPLE" --fictional="$FICTIONAL" --places="$PLACES"
+      - name: Refresh general-knowledge categories
+        run: node scripts/refresh-mom-general-wikidata.mjs
       - name: Validate Mom Mode
         run: |
+          node --test test/mom-general-knowledge.test.mjs
           npm test
           npm run build
       - name: Commit refreshed snapshot
