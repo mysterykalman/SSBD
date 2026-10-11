@@ -14,6 +14,27 @@ async function load(){
  return ctx.MomBayes;
 }
 
+function traceSecret(e,name){
+ const secret=e.OBJECTS.findIndex(o=>o.name===name);
+ assert.notEqual(secret,-1,`missing ${name}`);
+ const game=e.createGame();
+ const questionIds=[];
+ const guesses=[];
+ let q=e.choose(game);
+ while(game.status==="playing"&&game.turn<game.budget){
+  if(q.kind==="result")return {result:q,questionIds,guesses};
+  if(q.kind==="guess"){
+   guesses.push(q.label);
+   if(q.index===secret)return {result:e.acceptGuess(game,q),questionIds,guesses};
+   q=e.rejectGuess(game,q);
+   continue;
+  }
+  questionIds.push(q.id);
+  q=e.answer(game,q,e.oracle(secret,q));
+ }
+ return {result:{kind:"result",winner:"player",turns:game.turn,guess:e.top(game)?.object?.name||null},questionIds,guesses};
+}
+
 const benchmarks=[
  "Venus de Milo","Mona Lisa","Statue of Liberty","Colosseum","Hamlet",
  "1984","Star Wars","Toy Story","Photosynthesis","Gravity","Apollo 11 moon landing",
@@ -28,13 +49,15 @@ test("Mom has broad category-based general knowledge",async()=>{
   assert.ok(e.FEATURES.some(f=>f.id===trait),`missing general-knowledge trait: ${trait}`);
 });
 
-test("Venus de Milo is a fair Mom win under truthful answers",async()=>{
+test("Venus de Milo is a fair Mom win with a culturally sensible path",async()=>{
  const e=await load();
- const secret=e.OBJECTS.findIndex(o=>o.name==="Venus de Milo");
- assert.notEqual(secret,-1);
- const result=e.selfPlay(secret);
- assert.equal(result.winner,"pam",`Pam failed Venus de Milo; final candidate was ${result.guess||"none"}`);
- assert.ok(result.turns<=20);
+ const trace=traceSecret(e,"Venus de Milo");
+ assert.equal(trace.result.winner,"pam",`Pam failed Venus de Milo; final candidate was ${trace.result.guess||"none"}`);
+ assert.ok(trace.result.turns<=20);
+ assert.ok(trace.questionIds.includes("gk_artwork"),`Pam never established artwork; path: ${trace.questionIds.join(", ")}`);
+ const sculptureSignals=["gk_sculpture","gk_marble","gk_ancient","gk_greek","gk_museum","gk_louvre"];
+ const used=sculptureSignals.filter(id=>trace.questionIds.includes(id));
+ assert.ok(used.length>=2,`Pam did not narrow Venus de Milo through useful sculpture/history traits; path: ${trace.questionIds.join(", ")}`);
 });
 
 test("Pam solves most representative general-knowledge benchmarks within 20 turns",async()=>{
