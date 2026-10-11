@@ -29,6 +29,7 @@ test("Mom Mode loads, scores outcomes, persists progression, replays, exits, and
  assert.equal(await page.locator('.portrait').evaluate(img=>img.naturalWidth>0),true);
  assert.equal(await page.locator('#pam-score').textContent(),'0');
  assert.ok(await page.locator('#rules-title').count());
+ assert.match(await page.locator('.score-label').textContent(),/MOM SCORE/i);
  await page.click('#start-btn');
  await page.waitForSelector('#answer-actions:not([hidden])');
  const aside=page.locator('#pam-aside');
@@ -39,7 +40,7 @@ test("Mom Mode loads, scores outcomes, persists progression, replays, exits, and
   await page.waitForSelector('#result-actions:not([hidden])');
   assert.match(await page.locator('#pam-question').textContent(),/You were thinking of/i);
  }else{
-  assert.match(await page.locator('#pam-question').textContent(),/20 questions/i);
+  assert.match(await page.locator('#pam-question').textContent(),/I don't know/i);
  }
  assert.match(await page.locator('#pam-aside').textContent(),/points/i);
  assert.equal(await page.locator('#round-score:not([hidden])').count(),1);
@@ -61,7 +62,7 @@ test("Mom Mode loads, scores outcomes, persists progression, replays, exits, and
   assert.equal(await page.locator('#answer-actions:not([hidden])').count(),0);
   assert.equal(await page.locator('#guess-actions:not([hidden])').count(),0);
  }else{
-  assert.match(await page.locator('#pam-question').textContent(),/20 questions/i);
+  assert.match(await page.locator('#pam-question').textContent(),/I don't know/i);
  }
  assert.match(await page.locator('#pam-aside').textContent(),/points/i);
  assert.ok(Number(await page.locator('#pam-streak').textContent())>=1);
