@@ -48,3 +48,13 @@ Commit the repaired baseline plus Phase 2 pipeline work, publish it to integrati
 - `git diff --check`: pass.
 - `npm run lint -- --no-warn-ignored`: pass.
 - `npm run typecheck`: pass.
+
+## Phase 4 final benchmark checkpoint
+- Stable pre-benchmark HEAD: af85776593dcf84d8e654b4d9fb2a9514ae48a33
+- Trusted Phase 2 representative before-score: 7/16.
+- Curated fixture: 1,081 normalized canonical items from 1,082 source rows.
+- Runtime coverage before self-play: 173/1,081 (16.0%); 908 items are absent from the checked-in runtime knowledge in this sandbox. The optional controlled-profile artifact is not present.
+- Corrected `Harder but fair` classification: 15 rows under Primary Category; it is not a tier.
+- Final full-run command: `MOM_BENCHMARK_RUN=1 node --test test/mom-benchmark-suite.test.mjs`.
+- Expected output: `.dev-data/mom-benchmark/report.json` and `report.csv`, with all 1,081 rows represented and self-play performed only for runtime-present rows.
+- Next action after completion: summarize coverage/win/path/failure metrics, address only systemic issues revealed by the run, rerun only if materially required, validate, commit Phase 4, then stop before Phase 5.
