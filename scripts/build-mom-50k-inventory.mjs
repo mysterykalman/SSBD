@@ -4,10 +4,10 @@ import vm from "node:vm";
 const TARGET=50000;
 const ENRICH_LIMIT=5000;
 const OUT_DIR=new URL("../.dev-data/mom-50k/",import.meta.url);
-const CATEGORY="Category:Wikipedia level-5 vital articles";
+const ROOT_CATEGORY="Category:Wikipedia level-5 vital articles";
 const wikiApi="https://en.wikipedia.org/w/api.php";
 const wikidataApi="https://www.wikidata.org/w/api.php";
-const userAgent="SSBD-MomMode/3.0 (50k inventory builder for mysterykalman/SSBD)";
+const userAgent="SSBD-MomMode/3.1 (50k inventory builder for mysterykalman/SSBD)";
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const norm=s=>String(s||"").trim().toLocaleLowerCase("en").replace(/\s+/g," ");
 const csvCell=v=>{const s=String(v??"");return /[",\n\r]/.test(s)?`"${s.replaceAll('"','""')}"`:s;};
@@ -26,19 +26,38 @@ async function getJson(url,label,{attempts=5}={}){
  throw last;
 }
 
-async function fetchVitalTitles(){
- const rows=[];
+async function categoryMembers(category){
+ const members=[];
  let cont="";
  do{
-  const p=new URLSearchParams({action:"query",format:"json",formatversion:"2",list:"categorymembers",cmtitle:CATEGORY,cmnamespace:"0",cmlimit:"500",cmprop:"ids|title|sortkeyprefix"});
+  const p=new URLSearchParams({action:"query",format:"json",formatversion:"2",list:"categorymembers",cmtitle:category,cmnamespace:"0|14",cmlimit:"500",cmprop:"ids|title|sortkeyprefix"});
   if(cont)p.set("cmcontinue",cont);
-  const json=await getJson(`${wikiApi}?${p}`,"vital articles");
-  rows.push(...(json.query?.categorymembers||[]));
+  const json=await getJson(`${wikiApi}?${p}`,`category ${category}`);
+  members.push(...(json.query?.categorymembers||[]));
   cont=json.continue?.cmcontinue||"";
-  console.log(`Vital articles fetched: ${rows.length}`);
-  if(cont)await sleep(75);
+  if(cont)await sleep(40);
  }while(cont);
- return rows;
+ return members;
+}
+
+async function fetchVitalTitles(){
+ const queue=[ROOT_CATEGORY];
+ const seenCategories=new Set();
+ const pages=new Map();
+ while(queue.length){
+  const category=queue.shift();
+  if(seenCategories.has(category))continue;
+  seenCategories.add(category);
+  const members=await categoryMembers(category);
+  for(const member of members){
+   if(member.ns===14){if(!seenCategories.has(member.title))queue.push(member.title);continue;}
+   if(member.ns===0&&!pages.has(member.pageid))pages.set(member.pageid,member);
+  }
+  console.log(`Vital crawl: ${pages.size} articles across ${seenCategories.size} categories; ${queue.length} categories queued`);
+  if(pages.size>=TARGET)break;
+  await sleep(40);
+ }
+ return [...pages.values()];
 }
 
 function loadObjects(path,globalName){
@@ -69,19 +88,15 @@ async function enrichTitles(titles){
  const result=new Map();
  for(let i=0;i<titles.length;i+=50){
   const batch=titles.slice(i,i+50);
-  const p=new URLSearchParams({action:"wbgetentities",format:"json",formatversion:"2",sites:"enwiki",titles:batch.join("|"),props:"labels|aliases|descriptions",languages:"en",languagefallback:"1"});
+  const p=new URLSearchParams({action:"wbgetentities",format:"json",formatversion:"2",sites:"enwiki",titles:batch.join("|"),props:"sitelinks|labels|aliases|descriptions",languages:"en",languagefallback:"1",sitefilter:"enwiki"});
   const json=await getJson(`${wikidataApi}?${p}`,`wikidata enrichment ${i/50+1}`);
   for(const entity of Object.values(json.entities||{})){
-   const title=entity.sitelinks?.enwiki?.title || entity.labels?.en?.value || "";
+   const title=entity.sitelinks?.enwiki?.title||entity.labels?.en?.value||"";
    if(!title)continue;
-   result.set(norm(title),{
-    qid:entity.id||"",
-    description:entity.descriptions?.en?.value||"",
-    aliases:(entity.aliases?.en||[]).map(a=>a.value).filter(Boolean)
-   });
+   result.set(norm(title),{qid:entity.id||"",description:entity.descriptions?.en?.value||"",aliases:(entity.aliases?.en||[]).map(a=>a.value).filter(Boolean)});
   }
   console.log(`Enriched ${Math.min(i+50,titles.length)}/${titles.length}`);
-  await sleep(80);
+  await sleep(60);
  }
  return result;
 }
@@ -111,18 +126,7 @@ if(unique.size!==TARGET)throw new Error(`Expected ${TARGET} unique titles, got $
 const enrichMap=await enrichTitles(inventory.slice(0,ENRICH_LIMIT).map(r=>r.title));
 const rows=inventory.map((r,index)=>{
  const e=enrichMap.get(norm(r.title));
- return {
-  rank:index+1,
-  canonical:r.title,
-  source:r.source,
-  wikipedia_url:r.source==="wikipedia-vital-5"?wikiUrl(r.title):"",
-  qid:e?.qid||"",
-  description:e?.description||"",
-  aliases:e?.aliases?.join(" | ")||"",
-  broad_category:e?broadCategory(e.description,r.title):"",
-  enrichment_status:e?"Batch 01 enriched":"Candidate only",
-  enrichment_batch:e?1:""
- };
+ return {rank:index+1,canonical:r.title,source:r.source,wikipedia_url:r.source==="wikipedia-vital-5"?wikiUrl(r.title):"",qid:e?.qid||"",description:e?.description||"",aliases:e?.aliases?.join(" | ")||"",broad_category:e?broadCategory(e.description,r.title):"",enrichment_status:e?"Batch 01 enriched":"Candidate only",enrichment_batch:e?1:""};
 });
 const header=["Rank","Canonical answer","Source","Wikipedia URL","Wikidata QID","Description","Aliases","Broad category","Enrichment status","Enrichment batch"];
 const csvRows=[header,...rows.map(r=>[r.rank,r.canonical,r.source,r.wikipedia_url,r.qid,r.description,r.aliases,r.broad_category,r.enrichment_status,r.enrichment_batch])];
