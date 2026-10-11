@@ -10,6 +10,7 @@ const MCRAE_THINGS = path.join(ROOT, '.dev-data', 'trait-sources', 'seeing-what-
 const MCRAE_TAXONOMY = path.join(ROOT, '.dev-data', 'trait-sources', 'seeing-what-tastes-good', 'data', 'mcrae-x-things-taxonomy.json');
 const CARDIFF_DIR = path.join(ROOT, '.dev-data', 'trait-sources', 'trait-concept-datasets');
 const CONCEPTNET = path.join(ROOT, '.dev-data', 'trait-sources', 'conceptnet-assertions-5.7.0.csv.gz');
+const WORDNET = path.join(ROOT, '.dev-data', 'trait-sources', 'wordnet-evidence.json');
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -55,6 +56,7 @@ const invRows = parseCsv(fs.readFileSync(INVENTORY, 'utf8').replace(/^\uFEFF/, '
 const invHeader = invRows.shift();
 const nameCol = invHeader.indexOf('Canonical answer');
 const difficultyCol = invHeader.indexOf('Difficulty');
+const qidCol = invHeader.indexOf('Wikidata QID');
 if (nameCol < 0) throw new Error('Inventory is missing Canonical answer');
 
 const concepts = invRows.filter(r => r[nameCol]).map((r, i) => ({
@@ -62,15 +64,21 @@ const concepts = invRows.filter(r => r[nameCol]).map((r, i) => ({
   name: r[nameCol].trim(),
   key: normalize(r[nameCol]),
   difficulty: difficultyCol >= 0 ? r[difficultyCol] : '',
+  qid: qidCol >= 0 ? String(r[qidCol] || '').trim() : '',
   traits: new Map(),
   sources: new Set(),
 }));
 const byKey = new Map(concepts.map(c => [c.key, c]));
+const byQid = new Map(concepts.filter(c => /^Q\d+$/.test(c.qid)).map(c => [c.qid, c]));
 
 function addEvidence(rawConcept, source, rawTrait, type = '') {
   const key = normalize(rawConcept).replace(/\b([a-z]+)\d+$/, '$1');
   const c = byKey.get(key);
   if (!c) return false;
+  return addEvidenceToConcept(c, source, rawTrait, type);
+}
+
+function addEvidenceToConcept(c, source, rawTrait, type = '') {
   const trait = String(rawTrait ?? '').trim();
   if (!trait) return false;
   const evidenceKey = `${source}|${type}|${trait}`;
@@ -79,7 +87,6 @@ function addEvidence(rawConcept, source, rawTrait, type = '') {
   return true;
 }
 
-// McRae × THINGS positive concept-attribute pairs.
 if (fs.existsSync(MCRAE_THINGS)) {
   const pairs = JSON.parse(fs.readFileSync(MCRAE_THINGS, 'utf8'));
   const taxonomy = fs.existsSync(MCRAE_TAXONOMY) ? JSON.parse(fs.readFileSync(MCRAE_TAXONOMY, 'utf8')) : {};
@@ -89,7 +96,6 @@ if (fs.existsSync(MCRAE_THINGS)) {
   }
 }
 
-// Cardiff McRae + CSLB-derived trait datasets.
 function walk(dir) {
   if (!fs.existsSync(dir)) return [];
   const out = [];
@@ -112,16 +118,19 @@ for (const file of walk(CARDIFF_DIR).filter(f => f.endsWith('.csv'))) {
   for (const row of rows) addEvidence(row[conceptI], source, row[featureI], typeI >= 0 ? row[typeI] : '');
 }
 
-// ConceptNet: stream only English edges with relations useful for 20Q traits.
+if (fs.existsSync(WORDNET)) {
+  const rows = JSON.parse(fs.readFileSync(WORDNET, 'utf8'));
+  for (const row of rows) {
+    for (const trait of row.traits || []) addEvidence(row.concept, 'Open English WordNet', trait, trait.split(':')[0]);
+  }
+}
+
 const USEFUL_RELATIONS = new Set([
   '/r/IsA','/r/InstanceOf','/r/HasProperty','/r/UsedFor','/r/CapableOf','/r/HasA','/r/PartOf','/r/AtLocation','/r/MadeOf','/r/CreatedBy','/r/DefinedAs','/r/ReceivesAction'
 ]);
 function conceptFromUri(uri) {
   const m = String(uri ?? '').match(/^\/c\/en\/([^/]+)/);
   return m ? decodeURIComponent(m[1].replaceAll('_', ' ')) : '';
-}
-function labelFromUri(uri) {
-  return conceptFromUri(uri);
 }
 if (fs.existsSync(CONCEPTNET)) {
   const input = fs.createReadStream(CONCEPTNET).pipe(zlib.createGunzip());
@@ -135,13 +144,74 @@ if (fs.existsSync(CONCEPTNET)) {
     if (!USEFUL_RELATIONS.has(rel)) continue;
     const start = conceptFromUri(cols[2]);
     const end = conceptFromUri(cols[3]);
-    if (!start || !end) continue;
-    if (!byKey.has(normalize(start))) continue;
-    const trait = `${rel.slice(3)}:${labelFromUri(cols[3])}`;
-    if (addEvidence(start, 'ConceptNet', trait, rel.slice(3))) useful += 1;
-    if (lines % 5000000 === 0) console.log(`ConceptNet lines ${lines.toLocaleString()}, matched edges ${useful.toLocaleString()}`);
+    if (!start || !end || !byKey.has(normalize(start))) continue;
+    if (addEvidence(start, 'ConceptNet', `${rel.slice(3)}:${end}`, rel.slice(3))) useful += 1;
   }
   console.log(`ConceptNet complete: ${lines.toLocaleString()} lines, ${useful.toLocaleString()} matched useful edges`);
+}
+
+const WIKIDATA_PROPS = {
+  P31: 'instance of', P279: 'subclass of', P106: 'occupation', P27: 'country of citizenship',
+  P17: 'country', P495: 'country of origin', P136: 'genre', P170: 'creator', P50: 'author',
+  P57: 'director', P175: 'performer', P361: 'part of', P527: 'has part', P186: 'material',
+  P366: 'use', P276: 'location', P131: 'located in', P452: 'industry', P176: 'manufacturer',
+  P400: 'platform', P641: 'sport', P21: 'gender', P144: 'based on', P138: 'named after'
+};
+
+async function fetchJson(url, retries = 3) {
+  let last;
+  for (let i = 0; i < retries; i += 1) {
+    try {
+      const res = await fetch(url, { headers: { 'user-agent': 'SSBD-Pam-knowledge-audit/1.0' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      last = err;
+      await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+    }
+  }
+  throw last;
+}
+
+const qids = [...byQid.keys()];
+const batches = [];
+for (let i = 0; i < qids.length; i += 50) batches.push(qids.slice(i, i + 50));
+let wikidataMatched = 0;
+let nextBatch = 0;
+async function wikidataWorker() {
+  while (true) {
+    const index = nextBatch++;
+    if (index >= batches.length) return;
+    const batch = batches[index];
+    const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=claims&ids=${encodeURIComponent(batch.join('|'))}`;
+    let data;
+    try { data = await fetchJson(url); } catch (err) {
+      console.warn(`Wikidata batch ${index + 1}/${batches.length} failed: ${err.message}`);
+      continue;
+    }
+    for (const [qid, entity] of Object.entries(data.entities || {})) {
+      const c = byQid.get(qid);
+      if (!c || !entity?.claims) continue;
+      let added = false;
+      for (const [prop, label] of Object.entries(WIKIDATA_PROPS)) {
+        const claims = entity.claims[prop] || [];
+        for (const claim of claims.slice(0, 6)) {
+          const value = claim?.mainsnak?.datavalue?.value;
+          let compact = '';
+          if (value && typeof value === 'object' && value.id) compact = value.id;
+          else if (typeof value === 'string') compact = value.slice(0, 80);
+          if (!compact) continue;
+          addEvidenceToConcept(c, 'Wikidata', `${label}:${compact}`, label);
+          added = true;
+        }
+      }
+      if (added) wikidataMatched += 1;
+    }
+  }
+}
+if (batches.length) {
+  await Promise.all(Array.from({ length: Math.min(6, batches.length) }, () => wikidataWorker()));
+  console.log(`Wikidata complete: ${wikidataMatched.toLocaleString()} concepts matched from ${qids.length.toLocaleString()} QIDs`);
 }
 
 function status(c) {
@@ -151,6 +221,7 @@ function status(c) {
   return 'Needs help';
 }
 
+const sources = ['McRae x THINGS','McRae trait norms','CSLB trait norms','Open English WordNet','ConceptNet','Wikidata'];
 const summary = {
   generatedAt: new Date().toISOString(),
   totalConcepts: concepts.length,
@@ -166,9 +237,7 @@ const summary = {
     needsHelp: '0 matched usable public trait assertions',
   },
 };
-for (const source of ['McRae x THINGS','McRae trait norms','CSLB trait norms','ConceptNet']) {
-  summary.bySource[source] = concepts.filter(c => c.sources.has(source)).length;
-}
+for (const source of sources) summary.bySource[source] = concepts.filter(c => c.sources.has(source)).length;
 for (const c of concepts) {
   const d = c.difficulty || 'Unknown';
   summary.byDifficulty[d] ??= { total: 0, strong: 0, partial: 0, needsHelp: 0 };
@@ -182,7 +251,7 @@ for (const c of concepts) {
 const reportHeader = ['Rank','Canonical answer','Difficulty','Coverage status','Trait count','Sources','Example traits'];
 const reportLines = [reportHeader.join(',')];
 for (const c of concepts) {
-  const examples = [...c.traits.values()].slice(0, 12).map(e => `${e.source}: ${e.trait}`).join(' | ');
+  const examples = [...c.traits.values()].slice(0, 16).map(e => `${e.source}: ${e.trait}`).join(' | ');
   reportLines.push([c.rank,c.name,c.difficulty,status(c),c.traits.size,[...c.sources].sort().join(' | '),examples].map(csvEscape).join(','));
 }
 fs.writeFileSync(path.join(OUT_DIR, 'trait_coverage.csv'), reportLines.join('\n') + '\n');
