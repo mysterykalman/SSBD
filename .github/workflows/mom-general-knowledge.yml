@@ -1,0 +1,28 @@
+name: Mom general-knowledge benchmark
+
+on:
+  push:
+    branches:
+      - feature/mom-mode-stump-mom
+    paths:
+      - src/client/mom-mode/knowledge.general.js
+      - src/client/mom-mode/knowledge.generated.js
+      - src/client/mom-mode/knowledge.js
+      - src/client/mom-mode/engine.js
+      - test/mom-general-knowledge.test.mjs
+      - .github/workflows/mom-general-knowledge.yml
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Run Mom general-knowledge benchmark
+        run: node --test test/mom-general-knowledge.test.mjs
