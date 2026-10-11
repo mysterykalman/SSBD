@@ -56,3 +56,7 @@ Phases 3–10 remain. The next phase is Mom reasoning correctness, beginning wit
 - `git diff --check`: pass.
 - `npm run lint -- --no-warn-ignored`: pass.
 - `npm run typecheck`: pass.
+
+
+## Phase 4 — benchmark completion
+The curated benchmark now evaluates the complete 1,081-concept canonical set and correctly treats `Harder but fair` as a Primary Category with 15 populated rows. The full runtime-present evaluation found 173 covered concepts (16.0% coverage), 3 Pam wins, and 170 stumped outcomes. Core coverage is 15.7% with a 1.9% present-item win rate; Sweet Spot coverage is 14.6% with a 0% present-item win rate; Harder but fair has 0/15 runtime coverage. These results do not meet the configured quality gates. The benchmark intentionally reports the failure rather than reintroducing missing-evidence-as-false, hardcoding benchmark answers, or weakening thresholds. See `docs/mom-phase4-benchmark.md` for the final Phase 4 analysis. Phase 5 was not started.

@@ -5,7 +5,7 @@
 - Current HEAD before Phase 2 commit: b62cca2678b41eb6538f8f3787fce21b6b2d8752
 - Last completed phase: Phase 1, repository consolidation and baseline
 - Current phase: Phase 4, Mom benchmark
-- Status: PHASE 3 COMPLETE; PHASE 4 STARTING
+- Status: PHASE 4 COMPLETE; STOPPED BEFORE PHASE 5
 
 ## Phase 2 completed work
 - Repaired accidental truncation introduced in the Phase 1 commit for account.js, Mom tests, multiple Mom workflows, and labelled Wikidata extraction, restoring the complete pre-Phase-1 source and safely reapplying the intended Phase 1 fixes.
@@ -58,3 +58,17 @@ Commit the repaired baseline plus Phase 2 pipeline work, publish it to integrati
 - Final full-run command: `MOM_BENCHMARK_RUN=1 node --test test/mom-benchmark-suite.test.mjs`.
 - Expected output: `.dev-data/mom-benchmark/report.json` and `report.csv`, with all 1,081 rows represented and self-play performed only for runtime-present rows.
 - Next action after completion: summarize coverage/win/path/failure metrics, address only systemic issues revealed by the run, rerun only if materially required, validate, commit Phase 4, then stop before Phase 5.
+
+
+## Phase 4 completed result
+- Full curated set accounted for: 1,081 canonical concepts from 1,082 source rows.
+- Runtime coverage: 173/1,081 (16.0%); 908 missing from checked-in runtime knowledge.
+- Full self-play for all 173 runtime-present curated concepts: 3 wins, 170 stumped; 1.7% present-item win rate.
+- Wins: Mona Lisa, Venus de Milo, Lego.
+- Core coverage/win-present: 15.7% / 1.9%.
+- Sweet Spot coverage/win-present: 14.6% / 0.0%.
+- Harder but fair: 15 correctly classified Primary Category rows, 0 present, 0% coverage.
+- Quality gates are not met; no thresholds were weakened and missing evidence was not converted to No.
+- Root systemic finding: runtime/evidence population is the dominant blocker. The optional controlled-profile artifact was absent from this benchmark environment.
+- Detailed results: docs/mom-phase4-benchmark.md.
+- Phase 5 has not been started.
