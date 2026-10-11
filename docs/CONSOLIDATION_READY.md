@@ -1,0 +1,1 @@
+The active SSBD work has been consolidated onto `integration/all-current-work` at merge commit `71d6637f6b00f213a10593ae8facccd359578c0d`. This line contains the account/profile/settings work, current Stump Mom UX, Mom knowledge/vocabulary pipelines and benchmarks, and Solo semantic-context work. It is intended to be validated as one unit before becoming main.
