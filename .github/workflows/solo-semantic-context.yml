@@ -8,8 +8,10 @@ on:
     paths:
       - "src/shared/association-context.js"
       - "src/shared/engine.js"
+      - "src/shared/solo.js"
       - "src/shared/lexicon/**"
       - "test/association-context.test.mjs"
+      - "test/solo-semantic-context.test.mjs"
       - "test/engine-2.5.test.mjs"
       - "test/solo.test.mjs"
       - ".github/workflows/solo-semantic-context.yml"
@@ -26,6 +28,6 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Semantic context tests
-        run: node --test test/association-context.test.mjs
+        run: node --test test/association-context.test.mjs test/solo-semantic-context.test.mjs
       - name: Solo regression tests
         run: node --test test/engine-2.5.test.mjs test/solo.test.mjs
