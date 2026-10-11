@@ -38,7 +38,8 @@ OBJECTS.forEach((o,i)=>{
 });
 function entropy(b){let h=0;for(const p of b)if(p>1e-12)h-=p*Math.log2(p);return h;}
 function py(t,noise){return t===1?1-noise:t===0?noise:0.5;}
-function evalQ(b,f,noise){let y=0;for(let i=0;i<N;i++)y+=b[i]*py(truth[i*F+f],noise);let n=1-y,hy=0,hn=0;if(y>1e-12)for(let i=0;i<N;i++){const p=b[i]*py(truth[i*F+f],noise)/y;if(p>1e-12)hy-=p*Math.log2(p);}if(n>1e-12)for(let i=0;i<N;i++){const p=b[i]*(1-py(truth[i*F+f],noise))/n;if(p>1e-12)hn-=p*Math.log2(p);}return entropy(b)-(y*hy+n*hn);}
+function binaryEntropy(p){return p<=1e-12||p>=1-1e-12?0:-p*Math.log2(p)-(1-p)*Math.log2(1-p);}
+function evalQ(b,f,noise){let y=0,conditional=0;for(let i=0;i<N;i++){const p=b[i];if(p<=1e-15)continue;const q=py(truth[i*F+f],noise);y+=p*q;conditional+=p*binaryEntropy(q);}return Math.max(0,binaryEntropy(y)-conditional);}
 function createGame(opts={}){const belief=new Float64Array(N);let total=0;for(let i=0;i<N;i++){belief[i]=OBJECTS[i].weight||1;total+=belief[i];}for(let i=0;i<N;i++)belief[i]/=total||1;return{belief,asked:new Set(),answers:new Map(),turn:0,budget:opts.budget||20,noise:opts.noise??0.06,guessThreshold:opts.guessThreshold??0.92,minGuessQuestions:opts.minGuessQuestions??5,continuePrice:opts.continuePrice??2,pending:null,status:'playing',history:[],surprise:false,guessUsed:false,continueCost:0,deferGuessOnce:false};}
 function top(game){let j=0;for(let i=1;i<N;i++)if(game.belief[i]>game.belief[j])j=i;return{index:j,p:game.belief[j],object:OBJECTS[j]};}
 function topTwo(game){let a=-1,b=-1;for(let i=0;i<N;i++){if(a<0||game.belief[i]>game.belief[a]){b=a;a=i;}else if(b<0||game.belief[i]>game.belief[b])b=i;}return{first:a,second:b,firstP:a<0?0:game.belief[a],secondP:b<0?0:game.belief[b]};}
