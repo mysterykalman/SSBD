@@ -27,3 +27,25 @@ test("truthful self-play reaches representative known concepts within 20 questio
   assert.ok(r.turns<=20,`${e.OBJECTS[i].name} took ${r.turns} turns`);
  }
 });
+
+test("person answers suppress object-style questions such as man-made",async()=>{
+ const e=await load();
+ const g=e.createGame();
+ const personIndex=e.FEATURES.findIndex(f=>f.id==="person");
+ const manmadeIndex=e.FEATURES.findIndex(f=>f.id==="manmade");
+ g.answers.set("person","yes");
+ assert.equal(e.questionAllowed(g,manmadeIndex),false);
+ assert.equal(e.questionAllowed(g,personIndex),true);
+});
+
+test("a wrong guess costs a turn but does not immediately end the game",async()=>{
+ const e=await load();
+ const g=e.createGame({budget:20,guessThreshold:0});
+ const q=e.choose(g);
+ assert.equal(q.kind,"guess");
+ const r=e.confirm(g,q,false);
+ assert.equal(r.done,false);
+ assert.equal(g.status,"playing");
+ assert.equal(g.turn,1);
+ assert.ok(r.next);
+});
