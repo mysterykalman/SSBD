@@ -66,5 +66,9 @@ const rules=byId("rules-dialog");
 function openRules(){if(typeof rules.showModal==="function")rules.showModal();else rules.setAttribute("open","");}
 function closeRules(){if(typeof rules.close==="function"&&rules.open)rules.close();else rules.removeAttribute("open");}
 byId("rules-btn").addEventListener("click",openRules);byId("rules-close").addEventListener("click",closeRules);rules.addEventListener("click",e=>{if(e.target===rules)closeRules();});
-byId("start-btn").addEventListener("click",start);document.querySelectorAll("[data-answer]").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.answer)));byId("guess-now-btn").addEventListener("click",chooseGuess);byId("keep-asking-btn").addEventListener("click",keepAsking);byId("correct-btn").addEventListener("click",()=>confirm(true));byId("wrong-btn").addEventListener("click",()=>confirm(false));byId("again-btn").addEventListener("click",()=>intro());intro();
+const pamIntro=byId("pam-intro-dialog");
+function openPamIntro(){if(typeof pamIntro.showModal==="function")pamIntro.showModal();else pamIntro.setAttribute("open","");}
+function closePamIntro(){if(typeof pamIntro.close==="function"&&pamIntro.open)pamIntro.close();else pamIntro.removeAttribute("open");}
+byId("pam-intro-close").addEventListener("click",closePamIntro);byId("pam-intro-play").addEventListener("click",closePamIntro);pamIntro.addEventListener("click",e=>{if(e.target===pamIntro)closePamIntro();});
+byId("start-btn").addEventListener("click",start);document.querySelectorAll("[data-answer]").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.answer)));byId("guess-now-btn").addEventListener("click",chooseGuess);byId("keep-asking-btn").addEventListener("click",keepAsking);byId("correct-btn").addEventListener("click",()=>confirm(true));byId("wrong-btn").addEventListener("click",()=>confirm(false));byId("again-btn").addEventListener("click",()=>intro());intro();openPamIntro();
 })();
