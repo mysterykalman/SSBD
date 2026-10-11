@@ -42,6 +42,8 @@ jobs:
           echo "AllenAI extracted files:"
           find .dev-data/mom-sources/allenai -type f | sort | head -80
       - name: Build Wikipedia Vital donor inventory
+        env:
+          MOM_ENRICH_LIMIT: "0"
         run: node scripts/build-mom-50k-inventory.mjs
       - name: Build playable 50k candidate inventory
         run: node scripts/build-mom-playable-50k.mjs
