@@ -10,7 +10,10 @@ on:
       - scripts/extract-wordnet-traits.py
       - scripts/mom-controlled-traits.mjs
       - scripts/build-mom-controlled-profiles.mjs
+      - src/client/mom-mode/engine.js
       - test/mom-controlled-traits.test.mjs
+      - test/mom-benchmark-suite.test.mjs
+      - test/fixtures/mom-benchmark-data.mjs
       - .github/workflows/mom-trait-coverage.yml
 
 permissions:
@@ -65,17 +68,22 @@ jobs:
         run: node scripts/analyze-mom-trait-coverage.mjs
       - name: Build controlled Pam profiles
         run: node scripts/build-mom-controlled-profiles.mjs
-      - name: Print coverage result
+      - name: Run 1082-concept Mom benchmark
+        run: node --test test/mom-benchmark-suite.test.mjs
+      - name: Print coverage and benchmark result
         run: |
           echo 'Public coverage:'
           cat .dev-data/mom-trait-coverage/summary.json
           echo 'Controlled profiles:'
           cat .dev-data/mom-controlled-profiles/summary.json
-      - name: Upload coverage and controlled profiles
+          echo 'Benchmark summary:'
+          node -e "const r=require('./.dev-data/mom-benchmark/report.json'); console.log(JSON.stringify({runtimeKnowledgeCount:r.runtimeKnowledgeCount,runtimeControlledCount:r.runtimeControlledCount,runtimeFeatureCount:r.runtimeFeatureCount,presentCount:r.presentCount,missingCount:r.missingCount,pamWinCount:r.pamWinCount,pamWinRate:r.pamWinRate,pathFlagCount:r.pathFlagCount,byTier:r.byTier},null,2))"
+      - name: Upload coverage, controlled profiles, and benchmark
         uses: actions/upload-artifact@v4
         with:
-          name: mom-trait-coverage
+          name: mom-controlled-50k-benchmark
           path: |
             .dev-data/mom-trait-coverage/
             .dev-data/mom-controlled-profiles/
+            .dev-data/mom-benchmark/
           retention-days: 14
