@@ -30,7 +30,8 @@
   <a class="brand" id="brandLink" href="/"><span class="brand-top" id="brandTop">Same Same</span><span class="brand-bottom" id="brandBottom">but different</span></a>
   <div class="top-actions">
     <span class="offline-pill" id="offlinePill" hidden></span>
-    <div class="lang-switch" id="langGroup" role="group" aria-label="Language">
+    <!-- French stays wired in the app, but the switch is intentionally hidden during English-only public testing. -->
+    <div class="lang-switch" id="langGroup" role="group" aria-label="Language" aria-hidden="true" style="display:none">
       <button type="button" data-lang="en" aria-pressed="true"><span aria-hidden="true">EN</span><span class="sr-only">English</span></button>
       <button type="button" data-lang="fr" aria-pressed="false"><span aria-hidden="true">FR</span><span class="sr-only" lang="fr">Français</span></button>
     </div>
