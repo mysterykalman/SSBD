@@ -72,3 +72,7 @@ Commit the repaired baseline plus Phase 2 pipeline work, publish it to integrati
 - Root systemic finding: runtime/evidence population is the dominant blocker. The optional controlled-profile artifact was absent from this benchmark environment.
 - Detailed results: docs/mom-phase4-benchmark.md.
 - Phase 5 has not been started.
+
+- Final systemic follow-up: family-aware question gating, safe non-entity root negatives, and broader music taxonomy restored the representative general-knowledge gate from 7/16 at Phase 2 to 12/16 (75%), with the existing threshold unchanged.
+- Fast validation after the follow-up: focused engine/general-knowledge tests pass, lint passes, typecheck passes.
+- The 173-item runtime-present full self-play was not rerun after the final fixes under the approved skip-slow/repeat protocol; its 3/173 result is retained as a pre-final-fix checkpoint, not a final-engine score.

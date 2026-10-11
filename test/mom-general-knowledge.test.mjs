@@ -81,3 +81,26 @@ test("Pam solves most representative general-knowledge benchmarks within 20 turn
  }
  assert.ok(wins>=12,`Pam solved only ${wins}/${benchmarks.length}: ${failures.join(", ")}`);
 });
+
+
+test("confirmed general-knowledge families suppress unrelated generic questions",async()=>{
+ const e=await load();
+ const g=e.createGame();
+ g.answers.set("gk_book","yes");
+ const genericIds=["person","place","animal","plant","food","drink","household","electronic"];
+ for(const id of genericIds){const f=e.FEATURES.findIndex(feature=>feature.id===id);if(f>=0)assert.equal(e.questionAllowed(g,f),false,`${id} should be suppressed after gk_book=yes`);}
+ const novel=e.FEATURES.findIndex(feature=>feature.id==="gk_novel");
+ assert.ok(novel>=0);
+ assert.equal(e.questionAllowed(g,novel),true);
+});
+
+test("non-entity general-knowledge kinds get safe root negatives",async()=>{
+ const e=await load();
+ const music=e.OBJECTS.findIndex(o=>o.name==="Beethoven's Fifth Symphony");
+ assert.ok(music>=0);
+ for(const id of ["person","animal","plant","place","food","drink"]){
+  const f=e.FEATURES.findIndex(feature=>feature.id===id);
+  assert.ok(f>=0);
+  assert.equal(e.truth[music*e.F+f],0,`${id} should be an explicit safe negative for a music work`);
+ }
+});

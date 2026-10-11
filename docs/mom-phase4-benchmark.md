@@ -14,7 +14,7 @@ This 16-item score is retained as the development baseline. It is not presented 
 
 ## Full curated benchmark
 
-The final Phase 4 evaluation accounted for all 1,081 canonical rows and self-played every concept that is currently present in runtime knowledge.
+The full Phase 4 checkpoint evaluation accounted for all 1,081 canonical rows and self-played every concept that was present in runtime knowledge at that checkpoint.
 
 | Metric | Result |
 | --- | ---: |
@@ -51,6 +51,19 @@ The configured quality gates are therefore **not met**. This is a real product/d
 4. **Harder but fair is now measured correctly.** All 15 rows are classified by Primary Category. None are present in the current runtime knowledge, so the old vacuous/empty-category pass is eliminated.
 
 5. **Benchmark runtime is material.** A two-shard evaluation of the 173 runtime-present rows took roughly 24 minutes per shard in parallel. During development, focused concept traces and targeted tests should remain the normal loop; the complete benchmark is a phase/release gate.
+
+
+## Post-benchmark systemic fixes
+
+After the full curated checkpoint run exposed the sparse-evidence failure mode, Phase 3/4 received two general fixes rather than benchmark-specific answer rules:
+
+- confirmed general-knowledge families now suppress unrelated generic questions, preserving the 20-question budget for family-relevant evidence;
+- clearly non-entity general-knowledge kinds receive safe root negatives (person/animal/plant/place/food/drink) instead of leaving impossible category overlaps unknown; animal/plant versus physical-object overlap remains unknown;
+- the small general-knowledge music taxonomy was broadened across the whole music set (symphony, concerto, rock, pop), rather than adding a one-off answer flag.
+
+The representative general-knowledge gate improved from the trusted Phase 2 baseline of **7/16 (43.8%)** to **12/16 (75.0%)**, meeting the existing 12/16 gate without weakening it. The remaining representative failures are evidence ties/sparsity: Photosynthesis, Gravity, World War II versus World War I, and iPhone versus Nintendo Switch. Beethoven's Fifth Symphony moved from stumped to a correct turn-17 result after the systematic music taxonomy.
+
+Per the approved fast-iteration protocol, the ~24-minute-per-shard 173-item self-play was not repeated after these final systemic fixes. The complete 1,081-row coverage audit and the earlier full runtime-present checkpoint remain valid for diagnosing coverage, but the 3/173 deduction result below is therefore a **pre-final-fix checkpoint**, not a claim about the final engine.
 
 ## Phase 4 conclusion
 

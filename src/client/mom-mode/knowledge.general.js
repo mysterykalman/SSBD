@@ -7,7 +7,7 @@
 const FEATURES=[];
 const OBJECTS=[];
 const feature=(id,q,group,requires)=>FEATURES.push({id,q,label:id,group,...(requires?{requires}:{})});
-const add=(name,kind,yes=[],opts={})=>OBJECTS.push({name,kind,proper:opts.proper??true,article:opts.article,weight:opts.weight||2.2,source:"general-knowledge",yes:[...new Set(yes)],maybe:opts.maybe||[]});
+const add=(name,kind,yes=[],opts={})=>OBJECTS.push({name,kind,proper:opts.proper??true,article:opts.article,weight:opts.weight||2.2,source:"general-knowledge",yes:[...new Set(yes)],no:[...new Set(opts.no||[])],maybe:opts.maybe||[]});
 
 // Domain gates. These are deliberately broad so Pam establishes what kind of
 // thing she is dealing with before asking niche questions.
@@ -44,6 +44,11 @@ feature("gk_music_work","Is it mainly known as a piece of recorded or composed m
 feature("gk_song","Is it a song?","culture","gk_music_work");
 feature("gk_album","Is it an album?","culture","gk_music_work");
 feature("gk_classical","Is it classical music?","culture","gk_music_work");
+feature("gk_symphony","Is it a symphony?","culture","gk_classical");
+feature("gk_symphony","Is it a symphony?","culture","gk_music_work");
+feature("gk_concerto","Is it a concerto or concerto cycle?","culture","gk_music_work");
+feature("gk_rock","Is rock music central to it?","culture","gk_music_work");
+feature("gk_pop","Is pop music central to it?","culture","gk_music_work");
 feature("gk_invention","Is it especially famous as an invention?","science","manmade");
 feature("gk_transport_invention","Is transportation central to the invention?","science","gk_invention");
 feature("gk_communication_invention","Is communication central to the invention?","science","gk_invention");
@@ -188,12 +193,12 @@ const BRANDS=["Apple","Nintendo","Nike","Coca-Cola","Disney","McDonald's","Googl
 for(const n of BRANDS)add(n,"brand",["manmade","gk_brand"],{weight:2.4});
 
 const MUSIC=[
- ["Beethoven's Fifth Symphony",["manmade","music","gk_music_work","gk_classical"]],
- ["The Four Seasons",["manmade","music","gk_music_work","gk_classical"]],
- ["Bohemian Rhapsody",["manmade","music","gk_music_work","gk_song"]],
- ["Imagine",["manmade","music","gk_music_work","gk_song"]],
- ["Thriller",["manmade","music","gk_music_work","gk_album"]],
- ["Abbey Road",["manmade","music","gk_music_work","gk_album"]]
+ ["Beethoven's Fifth Symphony",["manmade","music","gk_music_work","gk_classical","gk_symphony"]],
+ ["The Four Seasons",["manmade","music","gk_music_work","gk_classical","gk_concerto"]],
+ ["Bohemian Rhapsody",["manmade","music","gk_music_work","gk_song","gk_rock"]],
+ ["Imagine",["manmade","music","gk_music_work","gk_song","gk_rock"]],
+ ["Thriller",["manmade","music","gk_music_work","gk_album","gk_pop"]],
+ ["Abbey Road",["manmade","music","gk_music_work","gk_album","gk_rock"]]
 ];
 for(const [n,t] of MUSIC)add(n,"music",t,{weight:2.5});
 
