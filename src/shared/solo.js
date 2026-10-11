@@ -42,9 +42,9 @@ const round3 = value => Math.round(value * 1000) / 1000;
  * intact; semantic context only changes the ordering inside that already-approved pool.
  *
  * @param {{word: string, quality: string, decision: any}} pick
- * @param {{pair?: string[] | null, history?: {a?: string, b?: string}[], language?: string, character?: string, lex?: any}} input
+ * @param {{pair?: string[] | null, history?: {a?: string, b?: string}[], language?: string, lex?: any}} input
  */
-export function applyAssociationContextToPick(pick, {pair = null, history = [], language = "en", character = "gary", lex = null} = {}) {
+export function applyAssociationContextToPick(pick, {pair = null, history = [], language = "en", lex = null} = {}) {
   if (!pick?.decision || pick.quality !== "strong" || !Array.isArray(pair) || !history?.length) return pick;
   const decision = pick.decision;
   if (!decision.highQuality || !Array.isArray(decision.pool) || decision.pool.length < 2 || !Array.isArray(decision.candidates)) return pick;
@@ -57,7 +57,7 @@ export function applyAssociationContextToPick(pick, {pair = null, history = [], 
   if (eligible.length < 2) return pick;
 
   const ordinal = Math.max(0, decision.pool.indexOf(pick.word));
-  const weight = character === "milo" ? 0.10 : 0.06;
+  const weight = decision.character === "milo" ? 0.10 : 0.06;
   const ranked = eligible.map(candidate => {
     const conceptId = graph.resolve(candidate.word);
     const concept = conceptId ? graph.concepts.get(conceptId) : null;
