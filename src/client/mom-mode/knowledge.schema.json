@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://same-same-but-different.local/schemas/mom-knowledge.schema.json",
+  "title": "Mom Mode canonical knowledge concept",
+  "description": "Stable interchange schema for the frozen candidate inventory, curated benchmark, enrichment pipeline, and gameplay build steps.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "canonical_name",
+    "aliases",
+    "category",
+    "subcategory",
+    "traits",
+    "difficulty",
+    "source",
+    "quality_status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Immutable internal concept identifier. Never derive downstream identity from a display name."
+    },
+    "canonical_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subcategory": {
+      "type": ["string", "null"]
+    },
+    "traits": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["core", "sweet_spot", "hard_but_fair", "long_tail"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["curated_benchmark", "wikipedia_vital", "pam_existing", "wikidata_enrichment", "manual"]
+        },
+        "qid": { "type": ["string", "null"] },
+        "wikipedia_title": { "type": ["string", "null"] },
+        "source_id": { "type": ["string", "null"] }
+      }
+    },
+    "quality_status": {
+      "type": "string",
+      "enum": ["candidate", "accepted", "needs_review", "rejected"]
+    }
+  }
+}
