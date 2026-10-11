@@ -42,9 +42,11 @@ for i, row in enumerate(rows, 1):
         continue
     traits = set()
     try:
-        synsets = oewn.synsets(name)
+        synsets = oewn.synsets(name, pos='n')
         if not synsets and ' ' in name:
-            synsets = oewn.synsets(name.replace(' ', '_'))
+            synsets = oewn.synsets(name.replace(' ', '_'), pos='n')
+        if not synsets:
+            synsets = oewn.synsets(name)
     except Exception:
         synsets = []
 
@@ -62,7 +64,7 @@ for i, row in enumerate(rows, 1):
         seen = set()
         while frontier:
             node, depth = frontier.pop(0)
-            node_id = getattr(node, 'id', lambda: repr(node))()
+            node_id = getattr(node, 'id', None) or repr(node)
             if node_id in seen or depth >= 4:
                 continue
             seen.add(node_id)
