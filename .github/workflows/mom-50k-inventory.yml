@@ -50,4 +50,8 @@ jobs:
         run: node scripts/build-mom-50k-inventory.mjs
 
       - name: Upload enriched inventory
-        uses: actions/upload¶»§q«^
+        uses: actions/upload-artifact@v4
+        with:
+          name: mom-50k-inventory
+          path: .dev-data/mom-50k/
+          retention-days: 14

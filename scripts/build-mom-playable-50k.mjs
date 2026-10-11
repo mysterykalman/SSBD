@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createCandidateAccumulator, normalize } from './mom-playable-candidates.mjs';
 
 const ROOT = process.cwd();
 const SOURCE_DIR = path.join(ROOT, '.dev-data', 'mom-sources');
@@ -38,79 +39,7 @@ function csvEscape(v) {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-function normalize(value) {
-  return String(value ?? '')
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/[’‘]/g, "'")
-    .replace(/[–—]/g, '-')
-    .replace(/^the\s+/, '')
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .replace(/\s+/g, ' ');
-}
-
-function niceName(value) {
-  return String(value ?? '').trim().replace(/\s+/g, ' ');
-}
-
-const BAD_EXACT = new Set([
-  'a','an','the','and','or','but','if','then','than','of','to','in','on','at','by','for','from','with','without','as','is','are','was','were','be','been','being','do','does','did','have','has','had','it','this','that','these','those','i','you','he','she','we','they','me','him','her','us','them','my','your','his','our','their','who','what','when','where','why','how','yes','no','maybe','probably'
-]);
-
-function acceptable(name) {
-  const n = niceName(name);
-  const key = normalize(n);
-  if (!key || BAD_EXACT.has(key)) return false;
-  if (n.length < 2 || n.length > 90) return false;
-  if (/https?:\/\//i.test(n)) return false;
-  if (/^[\d\W_]+$/.test(n)) return false;
-  if (/^(list of|outline of|index of|timeline of|glossary of|category:)/i.test(n)) return false;
-  if (/\b(disambiguation|surname|given name)\b/i.test(n)) return false;
-  return true;
-}
-
-const candidates = new Map();
-
-function addCandidate(name, source, score, fields = {}) {
-  name = niceName(name);
-  if (!acceptable(name)) return;
-  const key = normalize(name);
-  if (!key) return;
-  const current = candidates.get(key);
-  const record = {
-    name,
-    key,
-    score: Number(score) || 0,
-    sources: new Set([source]),
-    sourceCategory: fields.sourceCategory || '',
-    broadCategory: fields.broadCategory || '',
-    difficulty: fields.difficulty || '',
-    concreteness: fields.concreteness ?? '',
-    percentKnown: fields.percentKnown ?? '',
-    pos: fields.pos || '',
-    qid: fields.qid || '',
-    wikipediaUrl: fields.wikipediaUrl || '',
-    sourceRank: fields.sourceRank ?? '',
-    reason: fields.reason || ''
-  };
-  if (!current) {
-    candidates.set(key, record);
-    return;
-  }
-  current.sources.add(source);
-  current.score = Math.max(current.score, record.score);
-  if (record.score > current.score || (!current.sourceCategory && record.sourceCategory)) {
-    current.sourceCategory ||= record.sourceCategory;
-    current.broadCategory ||= record.broadCategory;
-  }
-  if (!current.qid && record.qid) current.qid = record.qid;
-  if (!current.wikipediaUrl && record.wikipediaUrl) current.wikipediaUrl = record.wikipediaUrl;
-  if (record.concreteness !== '' && (current.concreteness === '' || Number(record.concreteness) > Number(current.concreteness))) current.concreteness = record.concreteness;
-  if (record.percentKnown !== '' && (current.percentKnown === '' || Number(record.percentKnown) > Number(current.percentKnown))) current.percentKnown = record.percentKnown;
-  if (!current.pos && record.pos) current.pos = record.pos;
-}
+const { candidates, addCandidate } = createCandidateAccumulator();
 
 // Common word support sets. They improve confidence; they are not dumped directly into the answer pool.
 const cel = new Set();
@@ -308,6 +237,13 @@ selected.forEach((c, i) => {
   lines.push(row.map(csvEscape).join(','));
 });
 fs.writeFileSync(path.join(OUT_DIR, 'playable_50k.csv'), lines.join('\n') + '\n');
+const jsonl = selected.map(c => JSON.stringify({
+  rank: selected.indexOf(c) + 1, name: c.name, aliases: [...c.aliases].filter(alias => normalize(alias) !== c.key).sort((a,b) => a.localeCompare(b)),
+  key: c.key, difficulty: difficulty(c), sourceCategory: c.sourceCategory, broadCategory: c.broadCategory,
+  sourceCount: c.sources.size, sources: [...c.sources].sort(), score: c.score, concreteness: c.concreteness,
+  percentKnown: c.percentKnown, pos: c.pos, qid: c.qid, wikipediaUrl: c.wikipediaUrl, reason: c.reason
+})).join('\n') + (selected.length ? '\n' : '');
+fs.writeFileSync(path.join(OUT_DIR, 'playable_50k.jsonl'), jsonl);
 
 const sourceCounts = {};
 const difficultyCounts = {};
@@ -316,7 +252,6 @@ for (const c of selected) {
   const d = difficulty(c); difficultyCounts[d] = (difficultyCounts[d] || 0) + 1;
 }
 const summary = {
-  generatedAt: new Date().toISOString(),
   target: TARGET,
   uniqueConcepts: selected.length,
   totalUniqueCandidatesBeforeSelection: all.length,

@@ -17,4 +17,50 @@
  <div class="portrait-frame"><img class="portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="320" height="320"></div>
  <div class="pam-copy"><h2>Mom</h2><p class="pam-role">Hi, I’m Pam.</p><p id="pam-bio" class="pam-teaser"></p></div>
 </aside>
-<div class="g���q�^
+<div class="game-stack">
+<section class="score-panel" aria-label="Score and streak">
+ <div class="score-main"><span class="score-label">SCORE</span><strong id="pam-score">0</strong><span id="pam-rank" class="rank-badge">Look at You</span></div>
+ <div class="score-side"><div class="mini-stat"><span>Streak</span><strong id="pam-streak">0</strong></div><div class="mini-stat"><span>Best round</span><strong id="pam-best">0</strong></div></div>
+ <div class="rank-progress-wrap"><div class="rank-progress-copy"><span id="rank-progress-label">Next rank: Okay, Sweetie · 100 points</span><span id="best-streak-label">Best streak: 0</span></div><div class="rank-progress"><div id="rank-progress-fill"></div></div></div>
+</section>
+<section class="game-card" aria-label="Stump Mom game">
+ <div class="game-top"><span id="stage-label" class="eyebrow">ROUND SETUP</span><span id="question-counter" class="counter" hidden></span></div>
+ <p id="secret-word-lock" class="secret-word-lock" hidden></p>
+ <div class="progress-track" role="progressbar" aria-label="Questions used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><div id="progress-fill"></div></div>
+ <div class="speech" aria-live="polite" aria-atomic="true"><p id="pam-lead" class="lead"></p><h2 id="pam-question" class="question"></h2><p id="pam-aside" class="aside"></p></div>
+ <div id="result-points" class="result-points" hidden>+0 points</div>
+ <div id="intro-actions" class="actions secret-actions">
+   <label class="secret-field" for="secret-word"><span>Your answer</span><input id="secret-word" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Type it here"></label>
+   <p id="secret-error" class="secret-error" hidden>Write down your answer first.</p>
+   <button class="btn primary" id="start-btn" type="button">Lock it in and start</button>
+ </div>
+ <div id="answer-actions" class="answers five" role="group" aria-label="Answer the question" hidden>
+  <button type="button" data-answer="yes" class="btn yes">Yes</button><button type="button" data-answer="probably" class="btn probably">Probably</button><button type="button" data-answer="unknown" class="btn unknown">Not sure</button><button type="button" data-answer="probably_not" class="btn probably-not">Probably not</button><button type="button" data-answer="no" class="btn no">No</button>
+ </div>
+ <div id="hunch-actions" class="actions hunch-actions" hidden><button class="btn primary" id="guess-now-btn" type="button">Make her guess</button><button class="btn ghost" id="keep-asking-btn" type="button">Keep asking · costs 2 pts</button></div>
+ <div id="guess-actions" class="actions" hidden><button class="btn primary" id="correct-btn" type="button">You got it</button><button class="btn ghost" id="wrong-btn" type="button">Nope</button></div>
+ <div id="result-actions" class="actions" hidden><button class="btn primary" id="again-btn" type="button">Play again</button><a class="btn ghost" href="/">Back to games</a></div>
+</section>
+</div>
+</div>
+</main>
+<dialog id="pam-intro-dialog" class="character-dialog" aria-labelledby="pam-intro-title">
+ <button id="pam-intro-close" class="dialog-close character-close" type="button" aria-label="Close introduction">×</button>
+ <div class="character-ribbon">MEET YOUR OPPONENT</div>
+ <img class="character-portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="180" height="180">
+ <h2 id="pam-intro-title">Pam</h2>
+ <p class="character-role">Hi, honey. I’m Pam.<br>I get 20 questions and one guess.<br>Try not to make that face. It gives things away.</p>
+ <button id="pam-intro-play" class="btn primary character-cta" type="button">Okay, Mom. Let’s play.</button>
+</dialog>
+<dialog id="rules-dialog" class="rules-dialog" aria-labelledby="rules-title">
+ <div class="rules-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rules-title">Stump Mom</h2></div><button id="rules-close" class="dialog-close" type="button" aria-label="Close rules">×</button></div>
+ <div class="rule-list">
+  <div><strong>Write it down first.</strong><p>Lock in the thing you’re thinking of before the questions start. No changing it halfway through.</p></div>
+  <div><strong>20 questions. One guess.</strong><p>She can guess once. If all 20 questions are gone and she still won’t lock in an answer, you stumped her.</p></div>
+  <div><strong>Every question is worth a point.</strong><p>A wrong guess or a full stump adds 10.</p></div>
+  <div><strong>Push your luck.</strong><p>When she has a strong hunch, make her guess or buy another question for 2 points.</p></div>
+ </div>
+</dialog>
+<script type="module" src="/cloud-sync.js"></script>
+<script src="./knowledge.js" defer></script><script src="./knowledge.general.js" defer></script><script src="./knowledge.generated.js" defer></script><script src="./engine.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script>
+</body></html>

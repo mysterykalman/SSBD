@@ -7,6 +7,7 @@ const t=(id,q,group,parents=[])=>({id,q,group,parents});
 export const TRAITS=[
  t('living','Is it alive?','domain'),
  t('person','Is it a person?','domain'),
+ t('real_person','Is it a real person?','person',['person']),
  t('animal','Is it an animal?','domain'),
  t('plant','Is it a plant?','domain'),
  t('place','Is it a place?','domain'),
@@ -97,7 +98,6 @@ export const TRAITS=[
  t('science_fiction','Is science fiction central to it?','media',['media_work']),
  t('fantasy','Is fantasy central to it?','media',['media_work']),
 
- t('real_person','Is it a real person?','person',['person']),
  t('fictional_character','Is it a fictional character?','person',['person']),
  t('actor','Is the person mainly known as an actor?','person',['person']),
  t('musician','Is the person mainly known for music?','person',['person']),
@@ -126,7 +126,9 @@ export const TRAITS=[
 export const TRAIT_BY_ID=new Map(TRAITS.map(x=>[x.id,x]));
 
 const RULES=[
- ['person',/\b(person|human|people|individual|character)\b/],
+ ['person',/\b(person|human|people|individual|real person)\b/],
+ ['fictional_character',/\b(fictional character|fictional person|character from fiction)\b/],
+ ['real_person',/\b(real person|human being)\b/],
  ['animal',/\b(animal|fauna|creature|vertebrate|invertebrate)\b/],
  ['mammal',/\b(mammal|canine|feline|primate|rodent|cetacean|ungulate)\b/],
  ['bird',/\b(bird|avian)\b/],['fish',/\bfish\b/],['reptile',/\breptile\b/],['amphibian',/\bamphibian\b/],['insect',/\binsect\b/],
@@ -139,7 +141,7 @@ const RULES=[
  ['tool',/\btool\b/],['device',/\b(device|equipment|machine|appliance)\b/],['electronic',/\b(electronic|computer|digital device|electrical device)\b/],
  ['furniture',/\bfurniture\b/],['clothing',/\b(clothing|garment|apparel|wearable)\b/],['container',/\b(container|receptacle)\b/],['toy',/\btoy\b/],['musical_instrument',/\bmusical instrument\b/],['weapon',/\bweapon\b/],['sports_equipment',/\bsport(s)? equipment\b/],
  ['food_drink',/\b(food|beverage|drink|dish|ingredient|edible)\b/],['drink',/\b(beverage|drink)\b/],['fruit_food',/\bfruit\b/],['vegetable_food',/\bvegetable\b/],['meat',/\bmeat\b/],
- ['media_work',/\b(work|creative work|media|publication|entertainment)\b/],['film',/\b(film|movie|motion picture)\b/],['tv_series',/\b(television series|tv series|television program)\b/],
+ ['media_work',/\b(creative work|media work|publication|entertainment|artwork|literary work|musical work|film|movie|book|song|television series|video game)\b/],['film',/\b(film|movie|motion picture)\b/],['tv_series',/\b(television series|tv series|television program)\b/],
  ['book',/\b(book|written work|literary work|publication)\b/],['novel',/\bnovel\b/],['play',/\bplay|theatrical work\b/],['song',/\bsong\b/],['album',/\balbum\b/],['music_work',/\b(musical work|music|composition|recording)\b/],['video_game',/\bvideo game\b/],
  ['artwork',/\b(artwork|work of art|visual art)\b/],['painting',/\bpainting\b/],['sculpture',/\bsculpture\b/],['animated',/\banimat(ed|ion)\b/],['science_fiction',/\bscience fiction\b/],['fantasy',/\bfantasy\b/],
  ['event',/\b(event|occurrence|happening)\b/],['war',/\b(war|battle|military conflict|armed conflict)\b/],['disaster',/\b(disaster|catastrophe)\b/],
@@ -158,6 +160,8 @@ export function mapEvidence(evidence){
   const type=String(ev.type||'').toLowerCase();
   const raw=String(ev.trait||'').toLowerCase().replaceAll('_',' ');
   const text=`${type} ${raw}`;
+  if(/\bfictional character\b|\bfictional person\b|\bcharacter from fiction\b/.test(text)) out.add('fictional_character');
+  if(/\breal person\b|\bhuman being\b/.test(text)) out.add('real_person');
   for(const [id,re] of RULES) if(re.test(text)) out.add(id);
   if(/\boccupation\b/.test(type)||source==='wikidata') for(const [id,re] of OCCUPATIONS) if(re.test(text)) out.add(id);
   if(/madeof|made of|material/.test(text)){
@@ -180,6 +184,8 @@ export function mapEvidence(evidence){
    if(/\b(outdoor|outside|garden|forest|road|street)\b/.test(text))out.add('outdoors');
   }
  }
+ if(out.has('fictional_character')) { out.delete('real_person'); out.delete('person'); }
+ if(out.has('real_person')) out.add('person');
  return expandParents(out);
 }
 
@@ -191,7 +197,7 @@ export function expandParents(input){
   vehicle:['object','manmade'],car:['vehicle'],aircraft:['vehicle'],watercraft:['vehicle'],tool:['object','manmade'],device:['object','manmade'],electronic:['device'],furniture:['object','manmade'],clothing:['object','manmade'],container:['object','manmade'],toy:['object','manmade'],musical_instrument:['object','manmade'],weapon:['object','manmade'],sports_equipment:['object','manmade'],
   prepared_food:['food_drink'],drink:['food_drink'],sweet:['food_drink'],baked:['prepared_food'],fruit_food:['food_drink'],vegetable_food:['food_drink'],meat:['food_drink'],
   film:['media_work','manmade'],tv_series:['media_work','manmade'],book:['media_work','manmade'],novel:['book'],play:['book'],music_work:['media_work','manmade'],song:['music_work'],album:['music_work'],video_game:['media_work','manmade'],artwork:['media_work','manmade'],painting:['artwork'],sculpture:['artwork'],animated:['film'],science_fiction:['media_work'],fantasy:['media_work'],
-  real_person:['person'],fictional_character:['person','fiction'],actor:['person'],musician:['person'],athlete:['person'],politician:['person'],scientist:['person'],writer:['person'],artist:['person'],chef:['person'],
+  real_person:['person'],fictional_character:['fiction'],actor:['person'],musician:['person'],athlete:['person'],politician:['person'],scientist:['person'],writer:['person'],artist:['person'],chef:['person'],
   historical_event:['event'],war:['event'],disaster:['event'],space_event:['event'],company:['organization'],brand:['organization'],sports_team:['organization'],science_concept:['abstract'],emotion:['abstract'],time_concept:['abstract'],money_concept:['abstract']
  };
  let changed=true;

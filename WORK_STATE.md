@@ -1,19 +1,35 @@
 # Work State
 
 ## Current checkpoint
-
 - Branch: integration/all-current-work
-- Source baseline HEAD: d9ed5aec1c43d0c02b17bd8f152bd68869b896db
+- Current HEAD before Phase 2 commit: b62cca2678b41eb6538f8f3787fce21b6b2d8752
 - Last completed phase: Phase 1, repository consolidation and baseline
 - Current phase: Phase 2, Mom knowledge pipeline
-- Status: IN PROGRESS
+- Status: READY TO COMMIT
 
-## Phase 1 completed
+## Phase 2 completed work
+- Repaired accidental truncation introduced in the Phase 1 commit for account.js, Mom tests, multiple Mom workflows, and labelled Wikidata extraction, restoring the complete pre-Phase-1 source and safely reapplying the intended Phase 1 fixes.
+- Added a pure playable-candidate reconciler so higher-scored duplicate candidates replace metadata correctly while preserving alternate spellings/aliases.
+- Changed the Mom trait analyzer to use machine-readable JSONL inventory/evidence rather than relying on capped human-readable report examples.
+- Changed the controlled-profile compiler to consume the complete evidence sidecar, preserving evidence beyond the report sample.
+- Tightened controlled-trait taxonomy so fictional characters do not inherit broad real-person/living semantics and generic work wording does not over-map media.
+- Added fixture-driven regression tests covering candidate score replacement, alias preservation, fictional-character taxonomy, generic-work mapping, duplicate ConceptNet aggregation, and full evidence preservation.
+- Restored full workflow bodies and retained consolidated branch filters.
+- Restored complete account API and applied TypeScript-safe PostgreSQL error-code narrowing.
+- Restored complete Mom-mode tests and aligned one stale copy assertion to current approved copy without changing product copy.
 
-- Confirmed integration/all-current-work shares merge-base 33f0ff02be8a13a7f136d02decc7ec56edadb507 with main. It is 185 commits ahead and 0 behind.
-- Audited all historical feature branches. Pam UI, Mom progression, Stump Mom, Solo semantic-context, and Claude branch work is represented in the consolidated branch. The audio branch has one commit outside the integration ancestry, but its settings implementation is older and the consolidated branch has a different, more developed audio system. No audio work was ported.
-- The isolated-20q branches contain unique work for a separate standalone Twenty Questions page. They are outside the requested SSBD modes and remain preserved for later review.
-- Updated seven GitHub Actions workflows to run on integration/all-current-work and main for relevant push and pull-request events.
-- Removed docs/CONSOLIDATION_READY.md because it recorded an earlier consolidation SHA.
-- Fixed the duplicate P577 mapping, strict TypeScript narrowing in account creation, and one stale copy assertion without changing approved Mom copy.
-- Installed PostgreSQL binaries in the temporary sandbox because the API test factory uses initdb and pg_ctl. No productio¶»§q«^
+## Validation passing
+- npm run lint -- --no-warn-ignored
+- npm run typecheck
+- node --test test/mom-mode.test.mjs test/mom-knowledge-pipeline.test.mjs (7/7)
+- npm run build (38 static files)
+
+## Known blockers
+- Full public-source enrichment datasets are not present in this sandbox checkout, so Phase 2 uses deterministic offline fixtures for pipeline correctness. Full source refresh remains a later validation step when source assets are available.
+
+## Do not undo
+- Complete evidence JSONL is the machine-readable source of truth; human-readable coverage CSV is diagnostic only.
+- Missing full source datasets must not cause the pipeline code to regress back to truncated Example traits.
+
+## Exact next action
+Commit the repaired baseline plus Phase 2 pipeline work, publish it to integration/all-current-work, then start Phase 3 by auditing Mom engine truth-state handling so missing evidence is unknown rather than false.
