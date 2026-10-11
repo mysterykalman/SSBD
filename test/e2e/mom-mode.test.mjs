@@ -22,10 +22,17 @@ async function reachDecision(page){
  throw new Error('Mom Mode did not reach a guess or result');
 }
 
-test("Mom Mode loads, shows the portrait and rules, persists progression, replays, exits, and fits mobile",async()=>{
+test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persists progression, replays, exits, and fits mobile",async()=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(`${server.url}/mom/`);
  await page.waitForSelector('#start-btn');
+ const scriptPaths=await page.locator('script[src]').evaluateAll(nodes=>nodes.map(node=>new URL(node.src).pathname));
+ assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.generated\.[a-f0-9]{10}\.js$/.test(path)));
+ assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/engine\.[a-f0-9]{10}\.js$/.test(path)));
+ assert.equal(scriptPaths.some(path=>path==='/mom/knowledge.generated.js'),false);
+ const stylePaths=await page.locator('link[rel="stylesheet"]').evaluateAll(nodes=>nodes.map(node=>new URL(node.href).pathname));
+ assert.ok(stylePaths.some(path=>/^\/mom\/assets\/styles\.[a-f0-9]{10}\.css$/.test(path)));
+ assert.ok(stylePaths.some(path=>/^\/mom\/assets\/character\.[a-f0-9]{10}\.css$/.test(path)));
  assert.equal(await page.locator('.portrait').evaluate(img=>img.naturalWidth>0),true);
  assert.match(await page.locator('#rules-btn').textContent(),/How to play/i);
  await page.click('#rules-btn');
