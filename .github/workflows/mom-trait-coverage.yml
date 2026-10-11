@@ -8,6 +8,9 @@ on:
     paths:
       - scripts/analyze-mom-trait-coverage.mjs
       - scripts/extract-wordnet-traits.py
+      - scripts/mom-controlled-traits.mjs
+      - scripts/build-mom-controlled-profiles.mjs
+      - test/mom-controlled-traits.test.mjs
       - .github/workflows/mom-trait-coverage.yml
 
 permissions:
@@ -25,6 +28,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Test controlled trait vocabulary
+        run: node --test test/mom-controlled-traits.test.mjs
       - name: Download 50k donor datasets
         shell: bash
         run: |
@@ -56,13 +61,21 @@ jobs:
         run: |
           python -m pip install --quiet wn
           python scripts/extract-wordnet-traits.py
-      - name: Measure trait coverage with Wikidata
+      - name: Measure public trait coverage with Wikidata
         run: node scripts/analyze-mom-trait-coverage.mjs
+      - name: Build controlled Pam profiles
+        run: node scripts/build-mom-controlled-profiles.mjs
       - name: Print coverage result
-        run: cat .dev-data/mom-trait-coverage/summary.json
-      - name: Upload coverage report
+        run: |
+          echo 'Public coverage:'
+          cat .dev-data/mom-trait-coverage/summary.json
+          echo 'Controlled profiles:'
+          cat .dev-data/mom-controlled-profiles/summary.json
+      - name: Upload coverage and controlled profiles
         uses: actions/upload-artifact@v4
         with:
           name: mom-trait-coverage
-          path: .dev-data/mom-trait-coverage/
+          path: |
+            .dev-data/mom-trait-coverage/
+            .dev-data/mom-controlled-profiles/
           retention-days: 14
