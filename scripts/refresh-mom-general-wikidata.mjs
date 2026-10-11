@@ -107,9 +107,9 @@ const current=load(await readFile(OUT,"utf8"));
 const objectMap=new Map((current.OBJECTS||[]).map(o=>[String(o.name||"").trim().toLocaleLowerCase("en"),o]));
 const counts={};
 for(const c of CATEGORIES){
- let indexRows=[];
+ let indexRows;
  try{indexRows=await categoryIndex(c);}catch(error){console.warn(`${c.id} index skipped: ${error}`);counts[c.id]=0;continue;}
- let rows=[];
+ let rows;
  try{rows=await categoryDetails(c,indexRows);}catch(error){console.warn(`${c.id} details skipped: ${error}`);counts[c.id]=0;continue;}
  let added=0;
  for(const row of rows){
