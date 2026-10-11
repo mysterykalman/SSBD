@@ -1,40 +1,70 @@
 (function(global){
 "use strict";
 const copy={
- bio:"Pam has a way of knowing what happened before you finish explaining it. She’s cheerful, patient, a little nosy, remembers everything, and somehow turns nearly every situation into a small life lesson. Annoyingly, she’s usually right.",
- intro:{lead:"Ready? Good. And sit up straight.",question:"Think of a common person, place, animal, food, or thing. Don’t tell me.",aside:"Pick one and stick with it. No changing your mind halfway through."},
- early:["Okay.","Mhm.","Good to know.","Alright."],
- middle:["That narrows things down.","I’m starting to see it.","Okay, I have an idea.","Interesting."],
- close:["Oh, I think I know.","I have a pretty good idea.","You’re not as mysterious as you think.","I think I’ve got you."],
- surprise:["Now hang on.","That doesn’t quite match what you told me earlier.","Interesting. That changes things."],
- guess:["I think you’re thinking of...","Alright. I’ve got it.","I have a pretty good idea."],
- correct:["I knew it.","There we go.","Of course.","That’s what I thought."],
- incorrect:["Well, nobody’s perfect.","Alright. You got me.","Hm. I’ll give you that one.","Okay, that was a good one."],
- fast:["Well, that didn’t take long.","That one was practically written on your face.","See? Eyes in the back of my head."],
- long:["You picked a good one.","Okay, you’re making me work for this.","This is turning into a whole thing."],
- asides:[
-  [/\bfly|flying|airplane|air\b/i,"Text me when you land."],
-  [/fragile|break easily|delicate/i,"Then maybe use two hands."],
-  [/bedroom|your room/i,"Speaking of which, clean your room."],
-  [/\bfood\b|eat it|edible|dessert/i,"Save room for dinner."],
-  [/batter/i,"We never have the right ones."],
-  [/refrigerator|cold\?|frozen/i,"And close the door when you’re done."],
-  [/person\?|profession|job/i,"I probably know their mother."],
-  [/woman|girl|female/i,"It’s not Janice, is it?"],
-  [/water|swim|ocean|sea/i,"Janice says walking to the pool counts as exercise."],
-  [/pet|fur|hair/i,"If it sheds, you’re in charge of the vacuum."],
-  [/wear it|clothing|jacket/i,"Take a jacket."],
-  [/container|hold things/i,"Not the good Tupperware."],
-  [/kitchen/i,"There’s lemonade in the fridge."],
-  [/school/i,"Did you finish your homework first?"],
-  [/cleaning/i,"Funny you should mention that."],
-  [/music|sound/i,"Keep it down if Janice comes over."]
+ bio:"Pam remembers where you left your shoes, what you said three Tuesdays ago, and exactly when you started making up an excuse. She does not consider this nosy. She considers it paying attention.",
+ intro:{lead:"Okay, honey.",question:"Think of a common person, place, animal, food, or thing. Don’t tell me.",aside:"I get 20 turns. Pick one and stick with it. No changing your mind halfway through. I’ll know."},
+ early:["Mhm.","Okay.","Alright.","Good."],
+ middle:["That helps.","I’m getting somewhere.","Okay. I have a direction.","Interesting."],
+ close:["Oh, I have you now.","No, no. I’ve got something.","I think I know where this is going.","You look very pleased with yourself."],
+ surprise:["Oh. Well, that changes things.","Hm. I’m remembering what you said earlier.","That answer was suspiciously specific.","Okay. I’m going to pretend that helped."],
+ guess:["Alright. I have it.","Okay. Here’s what you’re thinking.","I know this one."],
+ correct:["I knew it.","There it is.","Of course.","That’s what I thought."],
+ fast:["That was practically written on your face.","See? This is why moms don’t need instructions.","You made that very easy for me."],
+ long:["You picked a good one.","Okay, you made me work for that.","That was more complicated than it needed to be."],
+ loss:["Okay. You got me.","Fine. That was a good one.","Alright. I’ll give you that."],
+ wrongGuess:["No? Okay.","Really. Fine.","Hm. I was between that and something else.","No? Interesting."],
+ uncertain:["You picked the thing.","That’s a very committed ‘not sure.’","You do know what you’re thinking of, right?"],
+ probably:["Probably. Very reassuring.","I’ll take ‘probably.’","Good. Nothing says confidence like ‘probably.’"],
+ probablyNot:["Probably not. Excellent.","That narrows it down almost enough to be useful.","I’m writing down ‘mostly no.’"],
+ callbacks:[
+  {id:"kitchen",line:"You were very clear about the kitchen question. I’m keeping that."},
+  {id:"person",line:"You said person. I remember these things."},
+  {id:"animal",line:"The animal answer is doing a lot of work here."},
+  {id:"electronic",line:"Right. Electricity. That matters."},
+  {id:"household",line:"So we’re still in the house. Good."},
+  {id:"food",line:"Food. I knew that was going to matter."}
+ ],
+ rare:[
+  "This is starting to feel like the aquarium incident.",
+  "You always choose something with complications.",
+  "This is very you.",
+  "I’m not saying you’re overthinking it. I’m noticing that you’re overthinking it."
  ]
 };
 const pick=(arr,n)=>arr[Math.abs((Number(n)||1)-1)%arr.length];
-function asideFor(q,n){if((Number(n)||1)%3===1)return"";const hit=copy.asides.find(([p])=>p.test(q));return hit?hit[1]:"";}
-function leadFor(n,max,surprise){if(surprise)return pick(copy.surprise,n);if(n>=Math.max(6,max-4))return pick(copy.close,n);if(n>=5)return pick(copy.middle,n);return pick(copy.early,n);}
+function reactionFor(state){
+ const prev=state&&state.previous;
+ if(state&&state.wrongGuess)return pick(copy.wrongGuess,state.number);
+ if(!prev)return"";
+ if(prev.answer==="unknown")return pick(copy.uncertain,state.number);
+ if(prev.answer==="probably"&&state.number%3===0)return pick(copy.probably,state.number);
+ if(prev.answer==="probably_not"&&state.number%3===1)return pick(copy.probablyNot,state.number);
+ if(state.surprise)return pick(copy.surprise,state.number);
+ if(state.number>=7&&state.number%5===0){
+  const hit=copy.callbacks.find(c=>(state.history||[]).some(h=>h.id===c.id&&["yes","probably"].includes(h.answer)));
+  if(hit)return hit.line;
+ }
+ if(state.number===11||state.number===17)return pick(copy.rare,state.number);
+ return"";
+}
+function leadFor(state){
+ const n=state.number,max=state.maxQuestions;
+ const reaction=reactionFor(state);
+ if(reaction)return reaction;
+ if(n>=Math.max(6,max-4))return pick(copy.close,n);
+ if(n>=5)return pick(copy.middle,n);
+ return pick(copy.early,n);
+}
 function guessLead(n){return pick(copy.guess,n);}
-function resultLine(result){if(result.correct&&result.fast)return pick(copy.fast,result.turns);if(result.correct)return pick(copy.correct,result.turns);if(!result.correct&&result.long)return pick(copy.long,result.turns);return pick(copy.incorrect,result.turns);}
-global.PamCopy={copy,asideFor,leadFor,guessLead,resultLine};
+function resultLine(result){
+ if(result.correct&&result.fast)return pick(copy.fast,result.turns);
+ if(result.correct&&result.long)return pick(copy.long,result.turns);
+ if(result.correct)return pick(copy.correct,result.turns);
+ return pick(copy.loss,result.turns);
+}
+function resultAside(result){
+ if(result.correct)return result.fast?"You were not subtle.":result.long?"And with very little cooperation.":"Mom knows.";
+ return result.reveal?`You were thinking of ${result.reveal}. I would have gotten that.`:"I would have gotten it with one more question.";
+}
+global.PamCopy={copy,leadFor,guessLead,resultLine,resultAside,reactionFor};
 })(window);
