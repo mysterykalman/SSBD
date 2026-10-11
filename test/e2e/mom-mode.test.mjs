@@ -22,30 +22,32 @@ async function reachDecision(page){
  throw new Error('Mom Mode did not reach a guess or result');
 }
 
-test("Mom Mode loads, scores outcomes, persists progression, replays, exits, and fits mobile",async()=>{
+test("Mom Mode loads, hides rules in help, persists progression, replays, exits, and fits mobile",async()=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(`${server.url}/mom/`);
  await page.waitForSelector('#start-btn');
  assert.equal(await page.locator('.portrait').evaluate(img=>img.naturalWidth>0),true);
  assert.equal(await page.locator('#pam-score').textContent(),'0');
- assert.ok(await page.locator('#rules-title').count());
- assert.match(await page.locator('.score-label').textContent(),/MOM SCORE/i);
+ assert.equal((await page.locator('.score-label').textContent()).trim(),'SCORE');
+ assert.equal(await page.locator('#rules-dialog[open]').count(),0);
+ await page.click('#rules-btn');
+ assert.equal(await page.locator('#rules-dialog[open]').count(),1);
+ assert.match(await page.locator('#rules-title').textContent(),/Stump Mom/i);
+ await page.click('#rules-close');
+ assert.equal(await page.locator('#rules-dialog[open]').count(),0);
  await page.click('#start-btn');
  await page.waitForSelector('#answer-actions:not([hidden])');
- const aside=page.locator('#pam-aside');
- assert.equal(await aside.locator('button').count(),0);
  const first=await reachDecision(page);
  if(first==='guess'){
   await page.click('#correct-btn');
   await page.waitForSelector('#result-actions:not([hidden])');
-  assert.match(await page.locator('#pam-question').textContent(),/You were thinking of/i);
+  assert.match(await page.locator('#pam-question').textContent(),/She got it:/i);
  }else{
   assert.match(await page.locator('#pam-question').textContent(),/I don't know/i);
  }
- assert.match(await page.locator('#pam-aside').textContent(),/points/i);
- assert.equal(await page.locator('#round-score:not([hidden])').count(),1);
+ assert.match(await page.locator('#result-points').textContent(),/^\+\d+ points$/i);
+ assert.equal(await page.locator('#result-points:not([hidden])').count(),1);
  const scoreAfterFirst=Number((await page.locator('#pam-score').textContent()).replace(/,/g,''));
- assert.ok(scoreAfterFirst>=0);
  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('ssbd:mom-progress:v1')));
  assert.equal(stored.totalPoints,scoreAfterFirst);
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth);
@@ -58,24 +60,23 @@ test("Mom Mode loads, scores outcomes, persists progression, replays, exits, and
  if(second==='guess'){
   await page.click('#wrong-btn');
   await page.waitForSelector('#result-actions:not([hidden])');
-  assert.match(await page.locator('#pam-question').textContent(),/was wrong/i);
+  assert.match(await page.locator('#pam-question').textContent(),/She guessed .*\. Wrong\./i);
   assert.equal(await page.locator('#answer-actions:not([hidden])').count(),0);
   assert.equal(await page.locator('#guess-actions:not([hidden])').count(),0);
  }else{
   assert.match(await page.locator('#pam-question').textContent(),/I don't know/i);
  }
- assert.match(await page.locator('#pam-aside').textContent(),/points/i);
+ assert.match(await page.locator('#result-points').textContent(),/^\+\d+ points$/i);
  assert.ok(Number(await page.locator('#pam-streak').textContent())>=1);
  await page.click('#result-actions a[href="/"]');
  await page.waitForSelector('#startSolo');
  await page.close();
 });
 
-test("Mom Mode exposes the push-your-luck controls when a hunch is shown",async()=>{
+test("Mom Mode exposes the push-your-luck controls with natural wording",async()=>{
  const page=await browser.newPage();
  await page.goto(`${server.url}/mom/`);
- assert.ok(await page.locator('#guess-now-btn').count());
- assert.ok(await page.locator('#keep-asking-btn').count());
+ assert.match(await page.locator('#guess-now-btn').textContent(),/Make her guess/i);
  assert.match(await page.locator('#keep-asking-btn').textContent(),/costs 2 pts/i);
  await page.close();
 });
