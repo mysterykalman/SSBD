@@ -17,7 +17,7 @@ function loadProgress(){
  try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null")||{};return{totalPoints:cleanNumber(raw.totalPoints),games:cleanNumber(raw.games),streak:cleanNumber(raw.streak),bestStreak:cleanNumber(raw.bestStreak),bestRound:cleanNumber(raw.bestRound),updatedAt:String(raw.updatedAt||"")};}
  catch{return{totalPoints:0,games:0,streak:0,bestStreak:0,bestRound:0,updatedAt:""};}
 }
-let profile=loadProgress(),stage="intro";
+let profile=loadProgress(),stage="intro",secretWord="";
 function saveProgress(){profile.updatedAt=new Date().toISOString();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));window.dispatchEvent(new CustomEvent("ssbd:progress-changed"));}catch{}}
 function rankState(points){let current=RANKS[0],next=null;for(let i=0;i<RANKS.length;i++){if(points>=RANKS[i].min)current=RANKS[i];else{next=RANKS[i];break;}}return{current,next};}
 function renderProfile(){
@@ -39,11 +39,12 @@ text("pam-bio",script.copy.bio);renderProfile();
 function actions(active){for(const id of ["intro-actions","answer-actions","hunch-actions","guess-actions","result-actions"])hide(id,id!==active);}
 function progress(number,max){const limit=Number.isFinite(max)&&max>0?max:20,n=Math.min(Math.max(Number(number)||0,0),limit);byId("progress-fill").style.width=(n/limit*100)+"%";const track=document.querySelector(".progress-track");track.setAttribute("aria-valuemax",String(limit));track.setAttribute("aria-valuenow",String(n));text("question-counter",n?`${n} / ${limit}`:"");hide("question-counter",!n);}
 function dialogue(lead,question,aside){text("pam-lead",lead);text("pam-question",question);text("pam-aside",aside);hide("pam-aside",!aside);}
-function intro(){stage="intro";adapter.reset();text("stage-label","ROUND SETUP");dialogue(script.copy.intro.lead,script.copy.intro.question,script.copy.intro.aside);progress(0,20);hide("result-points",true);actions("intro-actions");}
+function showSecret(){text("secret-word-lock",`YOUR ANSWER · ${secretWord}`);hide("secret-word-lock",!secretWord);}
+function intro(){stage="intro";secretWord="";adapter.reset();text("stage-label","ROUND SETUP");dialogue(script.copy.intro.lead,script.copy.intro.question,script.copy.intro.aside);progress(0,20);hide("result-points",true);hide("secret-word-lock",true);hide("secret-error",true);const input=byId("secret-word");if(input)input.value="";actions("intro-actions");setTimeout(()=>input?.focus(),0);}
 function stageLabel(state){if(state.kind==='hunch')return"STRONG HUNCH";if(state.kind==='guess')return"FINAL GUESS";if(state.number>=17)return"GETTING CLOSE";if(state.number>=9)return"NARROWING IT DOWN";return"THINKING";}
 function showResultPoints(summary){text("result-points",`+${summary.earned} points`);hide("result-points",false);}
 function renderState(state){
- if(!state||!["question","hunch","guess","result"].includes(state.kind))throw Error("Invalid Mom Mode adapter state");stage=state.kind;
+ if(!state||!["question","hunch","guess","result"].includes(state.kind))throw Error("Invalid Mom Mode adapter state");stage=state.kind;showSecret();
  if(stage==="question"){
   progress(state.questionsAsked??state.number-1,state.maxQuestions);text("stage-label",stageLabel(state));hide("result-points",true);dialogue(script.leadFor(state),state.text,"");actions("answer-actions");return;
  }
@@ -58,7 +59,11 @@ function renderState(state){
  const summary=recordResult(state);let aside=script.resultAside(state);if(summary.rankChanged){const milestone=script.milestoneLine(summary.newRank.min);if(milestone)aside=milestone;}
  dialogue(script.resultLine(state),question,aside);showResultPoints(summary);actions("result-actions");
 }
-function start(){renderState(adapter.start());}
+function start(){
+ const input=byId("secret-word"),value=String(input?.value||"").replace(/\s+/g," ").trim();
+ if(!value){hide("secret-error",false);input?.focus();return;}
+ secretWord=value;hide("secret-error",true);showSecret();renderState(adapter.start());
+}
 function answer(value){if(stage!=="question")return;renderState(adapter.answer(value));}
 function chooseGuess(){if(stage!=="hunch")return;renderState(adapter.makeGuess());}
 function keepAsking(){if(stage!=="hunch")return;renderState(adapter.keepAsking());}
@@ -71,5 +76,5 @@ const pamIntro=byId("pam-intro-dialog");
 function openPamIntro(){if(typeof pamIntro.showModal==="function")pamIntro.showModal();else pamIntro.setAttribute("open","");}
 function closePamIntro(){if(typeof pamIntro.close==="function"&&pamIntro.open)pamIntro.close();else pamIntro.removeAttribute("open");}
 byId("pam-intro-close").addEventListener("click",closePamIntro);byId("pam-intro-play").addEventListener("click",closePamIntro);pamIntro.addEventListener("click",e=>{if(e.target===pamIntro)closePamIntro();});
-byId("start-btn").addEventListener("click",start);document.querySelectorAll("[data-answer]").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.answer)));byId("guess-now-btn").addEventListener("click",chooseGuess);byId("keep-asking-btn").addEventListener("click",keepAsking);byId("correct-btn").addEventListener("click",()=>confirm(true));byId("wrong-btn").addEventListener("click",()=>confirm(false));byId("again-btn").addEventListener("click",()=>intro());intro();openPamIntro();
+byId("start-btn").addEventListener("click",start);byId("secret-word").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();start();}});document.querySelectorAll("[data-answer]").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.answer)));byId("guess-now-btn").addEventListener("click",chooseGuess);byId("keep-asking-btn").addEventListener("click",keepAsking);byId("correct-btn").addEventListener("click",()=>confirm(true));byId("wrong-btn").addEventListener("click",()=>confirm(false));byId("again-btn").addEventListener("click",()=>intro());intro();openPamIntro();
 })();
