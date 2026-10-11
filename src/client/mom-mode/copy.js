@@ -1,8 +1,8 @@
 (function(global){
 "use strict";
 const copy={
- bio:"Pam remembers where you left your shoes, what you said three Tuesdays ago, and exactly when you started making up an excuse. She does not consider this nosy. She considers it paying attention.",
- intro:{lead:"Okay, honey.",question:"Think of a common person, place, animal, food, or thing. Don’t tell me.",aside:"I get up to 20 questions and one guess. No changing your mind halfway through. I’ll know."},
+ bio:"She calls it paying attention. You might call it impossible to get away with anything.",
+ intro:{lead:"Okay, honey.",question:"Think of a person, place, animal, food, or thing. Don’t tell me.",aside:"I get up to 20 questions and one guess. No changing your mind halfway through. I’ll know."},
  early:["Mhm.","Okay.","Alright.","Good."],
  middle:["That helps.","I’m getting somewhere.","Okay. I have a direction.","Interesting."],
  close:["Oh, I have you now.","No, no. I’ve got something.","I think I know where this is going.","You look very pleased with yourself."],
@@ -14,14 +14,14 @@ const copy={
  fast:["That was practically written on your face.","See? This is why moms don’t need instructions.","You made that very easy for me."],
  long:["You picked a good one.","Okay, you made me work for that.","That was more complicated than it needed to be."],
  loss:["Okay. You got me.","Fine. That was a good one.","Alright. I’ll give you that."],
- stumped:["Twenty questions. Nothing.","Okay. I officially don’t know.","Fine. You found one."],
+ stumped:["Twenty questions.","Alright.","Fine."],
  uncertain:["You picked the thing.","That’s a very committed ‘not sure.’","You do know what you’re thinking of, right?"],
  probably:["Probably. Very reassuring.","I’ll take ‘probably.’","Good. Nothing says confidence like ‘probably.’"],
  probablyNot:["Probably not. Excellent.","That narrows it down almost enough to be useful.","I’m writing down ‘mostly no.’"],
  milestones:{
   100:"One hundred points. I’ve noticed.",
   250:"Two hundred and fifty. You’re enjoying this too much.",
-  500:"Five hundred. Okay. This is becoming a thing.",
+  500:"Five hundred. Okay. Now I’m paying attention.",
   1000:"A thousand points. I’m going to remember this.",
   2000:"Two thousand. You clearly came prepared.",
   5000:"Five thousand. Fine. Family legend. Happy?"
