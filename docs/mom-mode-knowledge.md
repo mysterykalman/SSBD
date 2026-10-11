@@ -4,27 +4,32 @@ Mom Mode is a challenge game: the player wins by **stumping Pam**. Pam gets at m
 
 ## Intelligence target
 
-Pam should feel like a smart, broadly informed adult or teacher, not an omniscient search engine. Common concepts should be hard to use as stumps. Clever, ambiguous, obscure, or genuinely niche concepts should remain winnable.
+Pam should feel like a very knowledgeable, broadly informed adult or teacher, not an omniscient search engine and not a specialist in every field. Common and culturally familiar concepts should be difficult to use as stumps. Truly niche concepts should remain plausible wins for the player.
 
-The intended product curve is roughly:
+The current product targets are:
 
 | Choice | Pam target |
 | --- | ---: |
-| Very common | 90–95% win rate |
-| Normal family-game concept | 75–85% |
-| Clever but fair | 55–70% |
-| Obscure | 30–50% |
-| Extremely niche / outside the snapshot | <20% |
+| Core | 90–95% win rate |
+| Sweet Spot | ~90% |
+| Hard but Fair | 80–85% |
+| Long-tail / genuinely niche | lower is acceptable |
 
 These are calibration targets, not hard-coded random failure rates. Pam does not throw games. She loses because the candidate universe, player answers, available discriminators, and 20-turn budget leave real uncertainty.
 
+The frozen input definitions, hashes, mutation rules, and canonical schema are recorded in `docs/mom-mode-knowledge-contract.md`.
+
 ## Data architecture
 
-Gameplay never queries Wikipedia or Wikidata. The browser loads a local generated table:
+Gameplay never queries Wikipedia or Wikidata. The browser loads local knowledge tables and the engine reasons against those local candidates.
 
-`src/client/mom-mode/knowledge.generated.js`
+Current runtime files are:
 
-That table is merged with the hand-authored core knowledge in `knowledge.js`. The generated row shape is intentionally small:
+- `src/client/mom-mode/knowledge.js`
+- `src/client/mom-mode/knowledge.general.js`
+- `src/client/mom-mode/knowledge.generated.js`
+
+The compact runtime row shape is currently based on:
 
 - `name`
 - `kind`
@@ -33,34 +38,40 @@ That table is merged with the hand-authored core knowledge in `knowledge.js`. Th
 - a mild `weight` used as a commonness prior
 - source metadata
 
+The new 50k normalization and enrichment pipeline must use the canonical schema in:
+
+`src/client/mom-mode/knowledge.schema.json`
+
+A later build step may compile canonical rows into the compact runtime shape used by the browser.
+
 Question definitions are a separate feature table. Category-specific questions use `requires` gates, so Pam establishes a broad branch before asking detailed follow-ups. For example, birth year, nationality, and occupation questions stay locked until the player has confirmed that the answer is a specific real person.
+
+## Frozen knowledge inputs
+
+Two inputs are now product truth:
+
+1. A **50,000-concept master candidate inventory** for breadth.
+2. A **1,082-concept curated benchmark** for product quality and calibration.
+
+Enrichment may add aliases, traits, taxonomy, difficulty, and quality state. It must not silently redefine either frozen input.
 
 ## Wikimedia refresh
 
-Run:
+A legacy/manual snapshot refresh remains available through:
 
 ```bash
 npm run mom:knowledge
 ```
 
-The refresh script queries Wikidata for notable English-Wikipedia entities and builds a static snapshot. The default targets are 5,000 people, 1,500 fictional characters, and 2,500 places/landmarks. It derives game-friendly traits such as:
-
-- living / deceased status
-- gender when Wikidata explicitly supplies it
-- broad occupation domain
-- repeated occupations
-- country association
-- birth decade / broad era
-- fictional universe and recurring entity type
-- place type, country, and continent
-
-The weekly/manual GitHub workflow `.github/workflows/mom-knowledge-refresh.yml` refreshes the snapshot, runs tests and a production build, and commits the new generated table when it changes.
+The GitHub workflow `.github/workflows/mom-knowledge-refresh.yml` is **manual-only**. It has no scheduled trigger and no push trigger. This prevents generated knowledge from being silently rewritten by CI while the 50k pipeline is being normalized and benchmarked.
 
 Wikidata structured data is CC0. The gameplay snapshot uses structured Wikidata fields rather than copying Wikipedia article prose.
 
 ## Engine scaling
 
 The engine evaluates question usefulness from sparse trait mass instead of scanning a dense concept × trait matrix for every possible question. This keeps question choice practical as the table grows into thousands of concepts.
+
+The 50k integration will preserve the same principle but should narrow hierarchically before fine-grained questioning rather than treating all 50,000 concepts as one undifferentiated flat set.
 
 Common entities receive only a mild prior advantage. This makes obvious answers easier without letting popularity overwhelm the player's actual responses.
 
