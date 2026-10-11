@@ -1,1 +1,0 @@
-Binary Mom portrait assets must be written via the Git data API, not the Contents API text wrapper.
