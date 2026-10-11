@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/mom-mode-stump-mom
+      - integration/all-current-work
+      - main
     paths:
       - test/mom-benchmark-suite.test.mjs
       - test/fixtures/mom-benchmark-data.mjs
@@ -46,11 +47,4 @@ jobs:
             pathFlagCount: s.pathFlagCount,
             byTier: s.byTier,
           };
-          console.log(JSON.stringify(compact, null, 2));
-          NODE
-      - name: Upload benchmark reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: mom-benchmark-report
-          path: .dev-data/mom-benchmark/
-          retention-days: 14
+          console.log(JSON.stringify(compact¶»§q«^

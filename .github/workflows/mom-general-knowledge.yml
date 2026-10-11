@@ -3,7 +3,8 @@ name: Mom general-knowledge benchmark
 on:
   push:
     branches:
-      - feature/mom-mode-stump-mom
+      - integration/all-current-work
+      - main
     paths:
       - src/client/mom-mode/knowledge.general.js
       - src/client/mom-mode/knowledge.generated.js

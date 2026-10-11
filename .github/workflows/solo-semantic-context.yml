@@ -3,7 +3,8 @@ name: Solo semantic context
 on:
   push:
     branches:
-      - feature/solo-semantic-context
+      - integration/all-current-work
+      - main
     paths:
       - "src/shared/association-context.js"
       - "src/shared/engine.js"

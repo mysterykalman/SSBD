@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/mom-mode-stump-mom
+      - integration/all-current-work
+      - main
     paths:
       - scripts/analyze-mom-trait-coverage.mjs
       - scripts/extract-wordnet-traits.py
@@ -41,63 +42,4 @@ jobs:
           set -euo pipefail
           mkdir -p .dev-data/mom-sources/allenai
           curl -L --fail --retry 3 -o .dev-data/mom-sources/things.csv https://raw.githubusercontent.com/evanthebouncy/20Q-selfplay/main/things.csv
-          curl -L --fail --retry 3 -o .dev-data/mom-sources/brysbaert.txt https://raw.githubusercontent.com/ArtsEngine/concreteness/master/Concreteness_ratings_Brysbaert_et_al_BRM.txt
-          curl -L --fail --retry 3 -o .dev-data/mom-sources/cel_2-45.txt https://raw.githubusercontent.com/BrianHutchison/Common-English-Lexicon/master/cel_2-45.txt
-          curl -L --fail --retry 3 -o .dev-data/mom-sources/wordnik.txt https://raw.githubusercontent.com/wordnik/wordlist/main/wordlist-20210729.txt
-          curl -L --fail --retry 3 -o .dev-data/mom-sources/allenai.tar.gz https://storage.googleapis.com/ai2-mosaic-public/projects/twentyquestions/v1.0/data/v1.0.twentyquestions.tar.gz
-          tar -xzf .dev-data/mom-sources/allenai.tar.gz -C .dev-data/mom-sources/allenai
-      - name: Rebuild playable 50k
-        env:
-          MOM_ENRICH_LIMIT: "0"
-        run: |
-          node scripts/build-mom-50k-inventory.mjs
-          node scripts/build-mom-playable-50k.mjs
-      - name: Download public trait sources
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .dev-data/trait-sources .dev-data/trait-sources/visual-genome .dev-data/trait-sources/paco
-          git clone --depth 1 https://github.com/danoneata/seeing-what-tastes-good.git .dev-data/trait-sources/seeing-what-tastes-good
-          git clone --depth 1 https://github.com/cardiffnlp/trait-concept-datasets.git .dev-data/trait-sources/trait-concept-datasets
-          curl -L --fail --retry 3 --retry-delay 5 -o .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz
-          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/vg-attributes.zip https://homes.cs.washington.edu/~ranjay/visualgenome/data/dataset/attributes.json.zip
-          unzip -q /tmp/vg-attributes.zip -d .dev-data/trait-sources/visual-genome
-          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/vg-relationships.zip https://homes.cs.washington.edu/~ranjay/visualgenome/data/dataset/relationships.json.zip
-          unzip -q /tmp/vg-relationships.zip -d .dev-data/trait-sources/visual-genome
-          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/paco-lvis.zip https://dl.fbaipublicfiles.com/paco/annotations/paco_lvis_v1.zip
-          unzip -q /tmp/paco-lvis.zip -d .dev-data/trait-sources/paco
-          ls -lh .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz /tmp/vg-attributes.zip /tmp/vg-relationships.zip /tmp/paco-lvis.zip
-      - name: Build Open English WordNet evidence
-        shell: bash
-        run: |
-          python -m pip install --quiet wn
-          python scripts/extract-wordnet-traits.py
-      - name: Build Visual Genome and PACO evidence
-        run: python scripts/extract-mom-extra-public-traits.py
-      - name: Build labelled Wikidata evidence
-        run: node scripts/extract-mom-wikidata-labelled-traits.mjs
-      - name: Measure public trait coverage with Wikidata
-        run: node scripts/analyze-mom-trait-coverage.mjs
-      - name: Build controlled Pam profiles
-        run: node scripts/build-mom-controlled-profiles.mjs
-      - name: Run 1082-concept Mom benchmark
-        run: node --test test/mom-benchmark-suite.test.mjs
-      - name: Print coverage and benchmark result
-        run: |
-          echo 'Public coverage:'
-          cat .dev-data/mom-trait-coverage/summary.json
-          echo 'Controlled profiles:'
-          cat .dev-data/mom-controlled-profiles/summary.json
-          echo 'Benchmark summary:'
-          node -e "const r=require('./.dev-data/mom-benchmark/report.json'); console.log(JSON.stringify({runtimeKnowledgeCount:r.runtimeKnowledgeCount,runtimeControlledCount:r.runtimeControlledCount,runtimeFeatureCount:r.runtimeFeatureCount,presentCount:r.presentCount,missingCount:r.missingCount,pamWinCount:r.pamWinCount,pamWinRate:r.pamWinRate,pathFlagCount:r.pathFlagCount,byTier:r.byTier},null,2))"
-      - name: Upload coverage, controlled profiles, and benchmark
-        uses: actions/upload-artifact@v4
-        with:
-          name: mom-controlled-50k-benchmark
-          path: |
-            .dev-data/mom-trait-coverage/
-            .dev-data/mom-controlled-profiles/
-            .dev-data/mom-benchmark/
-            .dev-data/trait-sources/extra-public-evidence.json
-            .dev-data/trait-sources/wikidata-labelled-evidence.json
-          retention-days: 14
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/brysbaert.txt https://raw.githubusercontent.com/ArtsEngine/concreteness/master/¶»§q«^

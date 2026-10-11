@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/mom-mode-stump-mom
+      - integration/all-current-work
+      - main
     paths:
       - .github/workflows/mom-50k-inventory.yml
       - scripts/build-mom-50k-inventory.mjs
@@ -49,8 +50,4 @@ jobs:
         run: node scripts/build-mom-50k-inventory.mjs
 
       - name: Upload enriched inventory
-        uses: actions/upload-artifact@v4
-        with:
-          name: mom-50k-inventory
-          path: .dev-data/mom-50k/
-          retention-days: 14
+        uses: actions/upload¶»§q«^

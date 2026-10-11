@@ -3,10 +3,11 @@ name: Mom Mode CI
 on:
   push:
     branches:
-      - feature/mom-mode-pam-ui
-      - feature/mom-mode-stump-mom
+      - integration/all-current-work
+      - main
   pull_request:
     branches:
+      - integration/all-current-work
       - main
 
 jobs:
