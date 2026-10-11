@@ -1,5 +1,9 @@
 name: Refresh Mom Mode knowledge
 
+# IMPORTANT: this workflow is intentionally manual-only.
+# The curated benchmark and 50k candidate inventory are frozen inputs. Knowledge
+# generation must never rewrite the snapshot because of a push or a schedule.
+# Run this workflow only when a deliberate knowledge refresh has been approved.
 on:
   workflow_dispatch:
     inputs:
@@ -15,19 +19,6 @@ on:
         description: "Places and landmarks to request from Wikidata"
         required: false
         default: "700"
-  # Changes to the knowledge builders bootstrap a fresh local snapshot.
-  # Generated-data commits do not touch these paths, so the workflow cannot recurse.
-  push:
-    branches:
-      - feature/mom-mode-stump-mom
-    paths:
-      - .github/workflows/mom-knowledge-refresh.yml
-      - src/client/mom-mode/knowledge.general.js
-      - scripts/refresh-mom-wikidata-v2.mjs
-      - scripts/refresh-mom-general-wikidata.mjs
-      - package.json
-  schedule:
-    - cron: "17 5 * * 0"
 
 permissions:
   contents: write
