@@ -1,0 +1,37 @@
+name: Build Mom 50k inventory
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/mom-mode-stump-mom
+    paths:
+      - .github/workflows/mom-50k-inventory.yml
+      - scripts/build-mom-50k-inventory.mjs
+      - src/client/mom-mode/knowledge.js
+      - src/client/mom-mode/knowledge.general.js
+      - src/client/mom-mode/knowledge.generated.js
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build 50k candidate inventory and enrichment batch 01
+        run: node scripts/build-mom-50k-inventory.mjs
+      - name: Validate exact quantity
+        run: |
+          node -e 'const fs=require("fs");const s=JSON.parse(fs.readFileSync(".dev-data/mom-50k/summary.json","utf8"));if(s.uniqueConcepts!==50000)throw new Error(`Expected 50000, got ${s.uniqueConcepts}`);console.log(s)'
+      - name: Upload Mom knowledge inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: mom-50k-inventory
+          path: .dev-data/mom-50k/
+          retention-days: 14
