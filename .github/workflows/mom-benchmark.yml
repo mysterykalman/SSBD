@@ -1,0 +1,56 @@
+name: Mom benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/mom-mode-stump-mom
+    paths:
+      - test/mom-benchmark-suite.test.mjs
+      - test/fixtures/mom-benchmark-data.mjs
+      - src/client/mom-mode/engine.js
+      - src/client/mom-mode/knowledge.js
+      - src/client/mom-mode/knowledge.general.js
+      - src/client/mom-mode/knowledge.generated.js
+      - .github/workflows/mom-benchmark.yml
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Run Mom benchmark harness
+        run: node --test test/mom-benchmark-suite.test.mjs
+      - name: Print benchmark summary
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const s = JSON.parse(fs.readFileSync('.dev-data/mom-benchmark/report.json','utf8'));
+          const compact = {
+            sourceRowCount: s.sourceRowCount,
+            uniqueCanonicalCount: s.uniqueCanonicalCount,
+            runtimeKnowledgeCount: s.runtimeKnowledgeCount,
+            presentCount: s.presentCount,
+            missingCount: s.missingCount,
+            pamWinCount: s.pamWinCount,
+            pamWinRate: s.pamWinRate,
+            pathFlagCount: s.pathFlagCount,
+            byTier: s.byTier,
+          };
+          console.log(JSON.stringify(compact, null, 2));
+          NODE
+      - name: Upload benchmark reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: mom-benchmark-report
+          path: .dev-data/mom-benchmark/
+          retention-days: 14
