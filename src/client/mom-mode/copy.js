@@ -2,7 +2,7 @@
 "use strict";
 const copy={
  bio:"I’m a mom, a cat wrangler, and a finder of things everyone swears are missing. I know things. Usually before you tell me. Pick something good, honey. I’d hate to crush your spirit before dinner.",
- intro:{lead:"Okay, honey.",question:"Think of a person, place, animal, food, or thing. Don’t tell me.",aside:"I get up to 20 questions and one guess. No changing your mind halfway through. I’ll know."},
+ intro:{lead:"Okay, honey.",question:"Think of a person, place, animal, food, or thing. Write it down below and lock it in.",aside:"Once it’s locked, that’s your answer. I get up to 20 questions and one guess."},
  early:["Mhm.","Okay.","Alright.","Good."],
  middle:["That helps.","I’m getting somewhere.","Okay. I have a direction.","Interesting."],
  close:["Oh, I have you now.","No, no. I’ve got something.","I think I know where this is going.","You look very pleased with yourself."],
