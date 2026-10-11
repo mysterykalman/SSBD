@@ -36,9 +36,13 @@ test("Mom progression stays inside Mom Mode and persists locally",async()=>{
  const app=await read("app.js");
  assert.match(app,/ssbd:mom-progress:v1/);
  assert.match(app,/localStorage\.setItem/);
- assert.match(app,/Not On Mom's Radar/);
- assert.match(app,/On Mom's Radar/);
- assert.match(app,/Actually Stumped Mom/);
+ assert.match(app,/Look at You/);
+ assert.match(app,/Okay, Sweetie/);
+ assert.match(app,/You’re Getting Good at This/);
+ assert.match(app,/Alright, Now You’re Showing Off/);
+ assert.match(app,/I’m Very Proud\. Also Annoyed\./);
+ assert.match(app,/This Is Getting Personal, Honey/);
+ assert.match(app,/Fine\. You’re the Favourite/);
  assert.match(app,/bestStreak/);
  assert.match(app,/Next rank:/);
 });
