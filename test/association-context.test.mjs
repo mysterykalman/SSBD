@@ -42,10 +42,10 @@ test("a contextually coherent candidate scores above an unrelated one", () => {
 test("future Mom traits plug into the same scoring interface", () => {
   const fake = {
     concepts: new Map([
-      ["sand", {id: "sand", tags: ["beach"], kinds: new Map(), links: new Set(["glass"]), phrases: new Set(), near: new Set(["glass"]), out: new Map(), semanticTraits: ["material", "granular"]}],
-      ["glass", {id: "glass", tags: ["home"], kinds: new Map(), links: new Set(["sand", "window"]), phrases: new Set(), near: new Set(["sand", "window"]), out: new Map(), semanticTraits: ["material", "transparent"]}],
-      ["window", {id: "window", tags: ["home"], kinds: new Map(), links: new Set(["glass"]), phrases: new Set(), near: new Set(["glass"]), out: new Map(), semanticTraits: ["transparent", "building_part"]}],
-      ["banana", {id: "banana", tags: ["food"], kinds: new Map(), links: new Set(), phrases: new Set(), near: new Set(), out: new Map(), semanticTraits: ["fruit", "yellow"]}]
+      ["sand", {id: "sand", tags: ["beach"], kinds: new Map(), members: new Set(), links: new Set(["glass"]), phrases: new Set(), near: new Set(["glass"]), out: new Map(), semanticTraits: ["material", "granular"]}],
+      ["glass", {id: "glass", tags: ["home"], kinds: new Map(), members: new Set(), links: new Set(["sand", "window"]), phrases: new Set(), near: new Set(["sand", "window"]), out: new Map(), semanticTraits: ["material", "transparent"]}],
+      ["window", {id: "window", tags: ["home"], kinds: new Map(), members: new Set(), links: new Set(["glass"]), phrases: new Set(), near: new Set(["glass"]), out: new Map(), semanticTraits: ["transparent", "building_part"]}],
+      ["banana", {id: "banana", tags: ["food"], kinds: new Map(), members: new Set(), links: new Set(), phrases: new Set(), near: new Set(), out: new Map(), semanticTraits: ["fruit", "yellow"]}]
     ])
   };
   const context = {
