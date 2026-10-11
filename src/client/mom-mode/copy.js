@@ -2,7 +2,7 @@
 "use strict";
 const copy={
  bio:"Pam remembers where you left your shoes, what you said three Tuesdays ago, and exactly when you started making up an excuse. She does not consider this nosy. She considers it paying attention.",
- intro:{lead:"Okay, honey.",question:"Think of a common person, place, animal, food, or thing. Don’t tell me.",aside:"I get 20 turns. Pick one and stick with it. No changing your mind halfway through. I’ll know."},
+ intro:{lead:"Okay, honey.",question:"Think of a common person, place, animal, food, or thing. Don’t tell me.",aside:"I get up to 20 questions and one guess. No changing your mind halfway through. I’ll know."},
  early:["Mhm.","Okay.","Alright.","Good."],
  middle:["That helps.","I’m getting somewhere.","Okay. I have a direction.","Interesting."],
  close:["Oh, I have you now.","No, no. I’ve got something.","I think I know where this is going.","You look very pleased with yourself."],
@@ -12,7 +12,7 @@ const copy={
  fast:["That was practically written on your face.","See? This is why moms don’t need instructions.","You made that very easy for me."],
  long:["You picked a good one.","Okay, you made me work for that.","That was more complicated than it needed to be."],
  loss:["Okay. You got me.","Fine. That was a good one.","Alright. I’ll give you that."],
- wrongGuess:["No? Okay.","Really. Fine.","Hm. I was between that and something else.","No? Interesting."],
+ stumped:["Twenty questions. Nothing.","Okay. I officially don’t know.","Fine. You found one."],
  uncertain:["You picked the thing.","That’s a very committed ‘not sure.’","You do know what you’re thinking of, right?"],
  probably:["Probably. Very reassuring.","I’ll take ‘probably.’","Good. Nothing says confidence like ‘probably.’"],
  probablyNot:["Probably not. Excellent.","That narrows it down almost enough to be useful.","I’m writing down ‘mostly no.’"],
@@ -34,7 +34,6 @@ const copy={
 const pick=(arr,n)=>arr[Math.abs((Number(n)||1)-1)%arr.length];
 function reactionFor(state){
  const prev=state&&state.previous;
- if(state&&state.wrongGuess)return pick(copy.wrongGuess,state.number);
  if(!prev)return"";
  if(prev.answer==="unknown")return pick(copy.uncertain,state.number);
  if(prev.answer==="probably"&&state.number%3===0)return pick(copy.probably,state.number);
@@ -57,14 +56,16 @@ function leadFor(state){
 }
 function guessLead(n){return pick(copy.guess,n);}
 function resultLine(result){
+ if(result.stumped)return pick(copy.stumped,result.turns||20);
  if(result.correct&&result.fast)return pick(copy.fast,result.turns);
  if(result.correct&&result.long)return pick(copy.long,result.turns);
  if(result.correct)return pick(copy.correct,result.turns);
  return pick(copy.loss,result.turns);
 }
 function resultAside(result){
- if(result.correct)return result.fast?"You were not subtle.":result.long?"And with very little cooperation.":"Mom knows.";
- return result.reveal?`You were thinking of ${result.reveal}. I would have gotten that.`:"I would have gotten it with one more question.";
+ if(result.stumped)return`You made it through all 20. ${result.score} points.`;
+ if(result.correct)return`${result.score} points. ${result.fast?"You were not subtle.":result.long?"And with very little cooperation.":"Mom knows."}`;
+ return`${result.score} points. A wrong guess is still a wrong guess.`;
 }
 global.PamCopy={copy,leadFor,guessLead,resultLine,resultAside,reactionFor};
 })(window);
