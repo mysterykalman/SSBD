@@ -22,19 +22,23 @@ test("Mom Mode is a live five-answer guessing game with a hunch choice",async()=
  assert.match(html,/20 questions\. One guess\./);
  assert.match(html,/Every question is worth a point\./);
  assert.match(html,/Push your luck\./);
+ assert.match(html,/YOUR MOM SCORE/);
+ assert.doesNotMatch(html,/A little about Pam|Your Pam Score keeps growing/);
  const image=await stat(new URL("pam.webp",root));
  assert.ok(image.size>1000);
 });
-test("Pam has a point of view, conversational hunches, callbacks, and one-guess rules",async()=>{
+test("Mom has a point of view, conversational hunches, callbacks, and one-guess rules",async()=>{
  const copy=await read("copy.js");
  for(const term of ["bio:","intro:","early:","middle:","close:","surprise:","hunch:","hunchAside:","guess:","correct:","stumped:","uncertain:","milestones:","callbacks:","rare:","I’ll know","This is very you","one guess"])assert.ok(copy.includes(term),term);
- assert.doesNotMatch(copy,/Save room for dinner|Okay\. Recalculating/);
+ assert.doesNotMatch(copy,/Save room for dinner|Okay\. Recalculating|Think of a common/);
 });
-test("Pam progression stays inside Mom Mode and persists locally",async()=>{
+test("Mom progression stays inside Mom Mode and persists locally",async()=>{
  const app=await read("app.js");
  assert.match(app,/ssbd:mom-progress:v1/);
  assert.match(app,/localStorage\.setItem/);
- assert.match(app,/Pam Is Unconcerned/);
+ assert.match(app,/Not On Mom's Radar/);
+ assert.match(app,/On Mom's Radar/);
  assert.match(app,/Actually Stumped Mom/);
  assert.match(app,/bestStreak/);
+ assert.match(app,/Next rank:/);
 });
