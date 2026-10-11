@@ -28,12 +28,15 @@ function loadEngine() {
   sandbox.globalThis = sandbox;
   sandbox.window = sandbox;
   vm.createContext(sandbox);
-  for (const relPath of [
+  const scripts = [
     'src/client/mom-mode/knowledge.generated.js',
     'src/client/mom-mode/knowledge.general.js',
     'src/client/mom-mode/knowledge.js',
-    'src/client/mom-mode/engine.js',
-  ]) {
+  ];
+  const controlled = '.dev-data/mom-controlled-profiles/knowledge.controlled.js';
+  if (fs.existsSync(path.join(ROOT, controlled))) scripts.push(controlled);
+  scripts.push('src/client/mom-mode/engine.js');
+  for (const relPath of scripts) {
     const source = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
     vm.runInContext(source, sandbox, { filename: relPath });
   }
@@ -149,6 +152,8 @@ const summary = {
   uniqueCanonicalCount: UNIQUE_CANONICAL_COUNT,
   normalizationCollisions: NORMALIZATION_COLLISIONS,
   runtimeKnowledgeCount: engine.N,
+  runtimeControlledCount: engine.meta?.controlledObjects ?? 0,
+  runtimeFeatureCount: engine.F,
   presentCount: report.filter((r) => r.present).length,
   missingCount: report.filter((r) => !r.present).length,
   pamWinCount: report.filter((r) => r.pamWon).length,
@@ -161,7 +166,6 @@ const summary = {
 fs.mkdirSync(path.join(ROOT, '.dev-data/mom-benchmark'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, '.dev-data/mom-benchmark/report.json'), JSON.stringify(summary, null, 2) + '\n');
 
-// Small CSV makes CI artifacts easy to inspect without opening the full JSON traces.
 const csvCell = (value) => {
   const s = String(value ?? '');
   return /[",\n\r]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
@@ -187,6 +191,10 @@ test('Mom benchmark runs every unique canonical concept and writes a complete re
   assert.ok(report.every((r) => Array.isArray(r.path)));
   assert.ok(fs.existsSync(path.join(ROOT, '.dev-data/mom-benchmark/report.json')));
   assert.ok(fs.existsSync(path.join(ROOT, '.dev-data/mom-benchmark/report.csv')));
+});
+
+test('Mom benchmark uses compiled controlled profiles when they are available', { skip: !fs.existsSync(path.join(ROOT, '.dev-data/mom-controlled-profiles/knowledge.controlled.js')) }, () => {
+  assert.ok((engine.meta?.controlledObjects ?? 0) >= 50000, `Expected 50k controlled profiles, got ${engine.meta?.controlledObjects ?? 0}`);
 });
 
 test('Mom benchmark quality gate', { skip: !ENFORCE }, () => {
