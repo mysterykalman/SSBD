@@ -6,11 +6,10 @@
 // * Navigations are network-first. Online, every page load gets the deployed
 //   index.html (it is served with no-cache), so a fresh visit always shows the
 //   newest frontend. Only when the network fails (offline) or hangs does the
-//   cached shell answer, which keeps offline Solo working.
+//   cached shell answer, which keeps offline Solo and canonical Mom Mode working.
 // * A new worker takes over as soon as it is installed (skipWaiting + claim)
-//   and deletes every older shell cache. That is safe because the app is one
-//   script and one stylesheet loaded at start-up: an already-open old page
-//   never needs another file from the old cache.
+//   and deletes every older shell cache. Content-hashed runtime assets make that
+//   safe for both the main app and Mom Mode.
 // * An open tab that is older than the worker now in control is told so by the
 //   page itself ("A new version is ready" + Reload; see registerServiceWorker in
 //   app.js). It never needs this worker to wait.
@@ -21,7 +20,8 @@ const CACHE = `shell-${VERSION}`;
 const PRECACHE = %PRECACHE%;
 // In-app pages that are all the same shell (kept in step with vercel.json's rewrites).
 const SHELL_ROUTES = /^\/(?:$|index\.html$|games(?:\/|$)|join(?:\/|$)|solo(?:\/|$)|review$)/;
-// A navigation that gets no answer in this long falls back to the cached shell.
+const MOM_ROUTES = /^\/mom(?:\/|\/index\.html$|$)/;
+// A navigation that gets no answer in this long falls back to the matching cached page.
 const NETWORK_TIMEOUT_MS = 4000;
 
 self.addEventListener("install", event => {
@@ -46,23 +46,23 @@ self.addEventListener("activate", event => {
   })());
 });
 
-async function cachedShell() {
+async function cachedPage(path) {
   const cache = await caches.open(CACHE);
-  return cache.match("/");
+  return cache.match(path);
 }
 
-/** Network first; the cached shell if the network fails, errors or hangs. */
-async function navigate(request) {
+/** Network first; the matching cached page if the network fails, errors or hangs. */
+async function navigate(request, fallbackPath) {
   const network = fetch(request);
   let timer;
   const timeout = new Promise(resolve => { timer = setTimeout(() => resolve(null), NETWORK_TIMEOUT_MS); });
   try {
     const response = await Promise.race([network, timeout]);
     if (response && response.ok) return response;
-    return (await cachedShell()) || response || network;
+    return (await cachedPage(fallbackPath)) || response || network;
   } catch {
-    // Offline: the cached shell, or (nothing cached yet) the browser's own network error.
-    return (await cachedShell()) || network;
+    // Offline: the cached page, or (nothing cached yet) the browser's own network error.
+    return (await cachedPage(fallbackPath)) || network;
   } finally {
     clearTimeout(timer);
   }
@@ -75,9 +75,10 @@ self.addEventListener("fetch", event => {
   // API calls and other origins are never touched (and so never cached).
   if (url.origin !== location.origin || url.pathname.startsWith("/api/") || url.pathname === "/api") return;
   if (request.mode === "navigate") {
-    if (SHELL_ROUTES.test(url.pathname)) event.respondWith(navigate(request));
+    if (SHELL_ROUTES.test(url.pathname)) event.respondWith(navigate(request, "/"));
+    else if (MOM_ROUTES.test(url.pathname)) event.respondWith(navigate(request, "/mom/"));
     return;
   }
-  // Hashed assets, the icon and the manifest: from this version's cache, else the network.
+  // Content-hashed assets, icons and manifests: from this version's cache, else the network.
   event.respondWith(caches.open(CACHE).then(cache => cache.match(request)).then(cached => cached || fetch(request)));
 });
