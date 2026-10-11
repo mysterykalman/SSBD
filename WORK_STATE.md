@@ -3,9 +3,9 @@
 ## Current checkpoint
 - Branch: integration/all-current-work
 - Current HEAD before Phase 2 commit: b62cca2678b41eb6538f8f3787fce21b6b2d8752
-- Last completed phase: Phase 1, repository consolidation and baseline
-- Current phase: Phase 4, Mom benchmark
-- Status: PHASE 4 COMPLETE; STOPPED BEFORE PHASE 5
+- Last completed phase: Phase 5, shared semantic context for Gary and Milo
+- Current phase: Phase 5 complete
+- Status: PHASE 5 COMPLETE; READY FOR PHASE 6
 
 ## Phase 2 completed work
 - Repaired accidental truncation introduced in the Phase 1 commit for account.js, Mom tests, multiple Mom workflows, and labelled Wikidata extraction, restoring the complete pre-Phase-1 source and safely reapplying the intended Phase 1 fixes.
@@ -30,9 +30,8 @@
 ## Do not undo
 - Complete evidence JSONL is the machine-readable source of truth; human-readable coverage CSV is diagnostic only.
 - Missing full source datasets must not cause the pipeline code to regress back to truncated Example traits.
-
-## Exact next action
-Commit the repaired baseline plus Phase 2 pipeline work, publish it to integration/all-current-work, then start Phase 3 by auditing Mom engine truth-state handling so missing evidence is unknown rather than false.
+- Gary and Milo must continue to choose only from the core engine's already-approved quality window. Semantic context is a bounded ordering signal, not permission to admit weaker candidates.
+- Solo fairness remains unchanged: the bot locks its word before seeing the player's open-round word.
 
 ## Phase 3 completed
 - Missing Mom traits now remain explicit unknown evidence (`NaN`) instead of being treated as negative evidence.
@@ -57,8 +56,6 @@ Commit the repaired baseline plus Phase 2 pipeline work, publish it to integrati
 - Corrected `Harder but fair` classification: 15 rows under Primary Category; it is not a tier.
 - Final full-run command: `MOM_BENCHMARK_RUN=1 node --test test/mom-benchmark-suite.test.mjs`.
 - Expected output: `.dev-data/mom-benchmark/report.json` and `report.csv`, with all 1,081 rows represented and self-play performed only for runtime-present rows.
-- Next action after completion: summarize coverage/win/path/failure metrics, address only systemic issues revealed by the run, rerun only if materially required, validate, commit Phase 4, then stop before Phase 5.
-
 
 ## Phase 4 completed result
 - Full curated set accounted for: 1,081 canonical concepts from 1,082 source rows.
@@ -71,8 +68,27 @@ Commit the repaired baseline plus Phase 2 pipeline work, publish it to integrati
 - Quality gates are not met; no thresholds were weakened and missing evidence was not converted to No.
 - Root systemic finding: runtime/evidence population is the dominant blocker. The optional controlled-profile artifact was absent from this benchmark environment.
 - Detailed results: docs/mom-phase4-benchmark.md.
-- Phase 5 has not been started.
-
 - Final systemic follow-up: family-aware question gating, safe non-entity root negatives, and broader music taxonomy restored the representative general-knowledge gate from 7/16 at Phase 2 to 12/16 (75%), with the existing threshold unchanged.
 - Fast validation after the follow-up: focused engine/general-knowledge tests pass, lint passes, typecheck passes.
 - The 173-item runtime-present full self-play was not rerun after the final fixes under the approved skip-slow/repeat protocol; its 3/173 result is retained as a pre-final-fix checkpoint, not a final-engine score.
+
+## Phase 5 completed
+- Connected the existing shared `association-context` layer to the production Solo path used by Gary and Milo.
+- Context is derived only from information already revealed to both players: current prompts plus prior revealed rounds.
+- Contextual scoring runs only for strong/high-quality selections with at least two already-approved candidates and at least one revealed prior round.
+- The contextual layer never widens the candidate pool, promotes recovery candidates, or overrides the core quality floor.
+- Character differentiation is preserved by retaining the core engine's selected ordinal inside the contextually reordered approved pool. Milo receives a stronger context weight (0.10) than Gary (0.06), consistent with Milo following shared direction more closely.
+- Added decision diagnostics for contextual ranking, recent semantic direction, dominant tags/categories/traits, and whether context changed the selected word.
+- Added focused semantic integration tests covering contextual preference, no-history behaviour, determinism, and fair-state-only selection.
+- Updated the Solo semantic-context workflow so production `solo.js`, integration tests, engine regressions, and Solo regressions are all covered.
+- Corrected the older synthetic semantic-context fixture to satisfy the lexicon concept contract (`members`).
+- Restored `test/solo.test.mjs` exactly from verified Git history after an intermediate connector edit replaced unrelated test content, then applied only the intended production-selector import/call change.
+
+### Phase 5 validation
+- `node --test test/association-context.test.mjs test/solo-semantic-context.test.mjs`: 7/7 pass in GitHub Actions.
+- `node --test test/engine-2.5.test.mjs test/solo.test.mjs`: 27/27 pass in GitHub Actions.
+- Existing Gary/Milo differentiation checks pass, including Milo consensus preference and Gary's ability to choose a less-obvious but still genuinely strong answer.
+- Existing fairness, chaining, no-repeat, French vocabulary, unknown-input, morphology, and 20-turn Solo behaviour regressions pass.
+
+## Exact next action
+Begin Phase 6 from the Phase 5 checkpoint. Do not reopen Phases 2–5 unless a new regression directly points back to them.
