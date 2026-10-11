@@ -14,11 +14,11 @@ const RANKS=[
 ];
 function cleanNumber(v){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):0;}
 function loadProgress(){
- try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null")||{};return{totalPoints:cleanNumber(raw.totalPoints),games:cleanNumber(raw.games),streak:cleanNumber(raw.streak),bestStreak:cleanNumber(raw.bestStreak),bestRound:cleanNumber(raw.bestRound)};}
- catch{return{totalPoints:0,games:0,streak:0,bestStreak:0,bestRound:0};}
+ try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null")||{};return{totalPoints:cleanNumber(raw.totalPoints),games:cleanNumber(raw.games),streak:cleanNumber(raw.streak),bestStreak:cleanNumber(raw.bestStreak),bestRound:cleanNumber(raw.bestRound),updatedAt:String(raw.updatedAt||"")};}
+ catch{return{totalPoints:0,games:0,streak:0,bestStreak:0,bestRound:0,updatedAt:""};}
 }
 let profile=loadProgress(),stage="intro";
-function saveProgress(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));}catch{}}
+function saveProgress(){profile.updatedAt=new Date().toISOString();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));window.dispatchEvent(new CustomEvent("ssbd:progress-changed"));}catch{}}
 function rankState(points){let current=RANKS[0],next=null;for(let i=0;i<RANKS.length;i++){if(points>=RANKS[i].min)current=RANKS[i];else{next=RANKS[i];break;}}return{current,next};}
 function renderProfile(){
  const ranks=rankState(profile.totalPoints);
@@ -34,6 +34,7 @@ function recordResult(state){
  const afterRank=rankState(profile.totalPoints).current,rankChanged=afterRank.min>beforeRank.min;
  return{earned,before,after:profile.totalPoints,rankChanged,newRank:rankChanged?afterRank:null};
 }
+window.addEventListener("ssbd:cloud-restored",()=>{profile=loadProgress();renderProfile();});
 text("pam-bio",script.copy.bio);renderProfile();
 function actions(active){for(const id of ["intro-actions","answer-actions","hunch-actions","guess-actions","result-actions"])hide(id,id!==active);}
 function progress(number,max){const limit=Number.isFinite(max)&&max>0?max:20,n=Math.min(Math.max(Number(number)||0,0),limit);byId("progress-fill").style.width=(n/limit*100)+"%";const track=document.querySelector(".progress-track");track.setAttribute("aria-valuemax",String(limit));track.setAttribute("aria-valuenow",String(n));text("question-counter",n?`${n} / ${limit}`:"");hide("question-counter",!n);}
