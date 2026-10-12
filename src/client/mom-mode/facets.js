@@ -9,6 +9,7 @@ const allObjects=sources.flatMap(source=>source.OBJECTS||[]);
 const featureIds=new Set(sources.flatMap(source=>source.FEATURES||[]).map(feature=>feature.id));
 const target=sources.find(source=>source===global.MOM_GENERAL_KNOWLEDGE)||sources[0];
 target.FEATURES=target.FEATURES||[];
+const EXCLUSIVE_TYPES=new Set(['brand','productType']);
 
 // Initial high-confidence product facets. Future knowledge builders can write the
 // same `facets` object directly and this compiler will pick them up automatically.
@@ -40,18 +41,39 @@ function questionFor(type,value,object){
  return null;
 }
 
+const featuresByType=new Map();
 for(const object of allObjects){
  if(!object?.facets||typeof object.facets!=='object')continue;
- object.yes=[...new Set(object.yes||[])];
  for(const [type,raw] of Object.entries(object.facets)){
   for(const value of values(raw)){
    const feature=questionFor(type,value,object);
    if(!feature)continue;
    if(!featureIds.has(feature.id)){target.FEATURES.push(feature);featureIds.add(feature.id);}
-   if(!object.yes.includes(feature.id))object.yes.push(feature.id);
+   const set=featuresByType.get(type)||new Set();set.add(feature.id);featuresByType.set(type,set);
   }
  }
 }
 
-global.MOM_FACETS={version:1,compiledFeatures:[...featureIds].filter(id=>id.startsWith('facet_')).length,curatedConcepts:Object.keys(curated).length};
+let explicitNegatives=0;
+for(const object of allObjects){
+ if(!object?.facets||typeof object.facets!=='object')continue;
+ const yes=new Set(object.yes||[]),no=new Set(object.no||[]);
+ for(const [type,raw] of Object.entries(object.facets)){
+  const own=new Set();
+  for(const value of values(raw)){
+   const feature=questionFor(type,value,object);
+   if(!feature)continue;
+   own.add(feature.id);yes.add(feature.id);no.delete(feature.id);
+  }
+  if(EXCLUSIVE_TYPES.has(type)){
+   for(const featureId of featuresByType.get(type)||[]){
+    if(own.has(featureId)||yes.has(featureId))continue;
+    if(!no.has(featureId)){no.add(featureId);explicitNegatives+=1;}
+   }
+  }
+ }
+ object.yes=[...yes];object.no=[...no];
+}
+
+global.MOM_FACETS={version:2,compiledFeatures:[...featureIds].filter(id=>id.startsWith('facet_')).length,curatedConcepts:Object.keys(curated).length,explicitNegatives};
 })(typeof window!=='undefined'?window:globalThis);
