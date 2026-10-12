@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {TRAITS} from './mom-controlled-traits.mjs';
 import {compileMomRuntimeKnowledge} from './mom-runtime-compiler.mjs';
+import {loadMomRuntimeSupplements} from './load-mom-runtime-supplements.mjs';
 
 const ROOT = process.cwd();
 const INVENTORY = path.join(ROOT, '.dev-data', 'mom-playable-50k', 'playable_50k.jsonl');
@@ -20,11 +21,13 @@ const inventory = readJsonl(INVENTORY);
 const profileFile = JSON.parse(fs.readFileSync(PROFILES, 'utf8'));
 const profiles = Array.isArray(profileFile.objects) ? profileFile.objects : [];
 if (!profiles.length) throw new Error('Controlled profile artifact contains no objects.');
+const supplements = loadMomRuntimeSupplements(ROOT);
 
 const runtime = compileMomRuntimeKnowledge({
   inventory,
   profiles,
   traits: Array.isArray(profileFile.traits) && profileFile.traits.length ? profileFile.traits : TRAITS,
+  supplements,
   generatedAt: 'deterministic'
 });
 
@@ -35,5 +38,6 @@ console.log(JSON.stringify({
   concepts: runtime.meta.conceptCount,
   questions: runtime.meta.questionCount,
   aliases: Object.keys(runtime.aliases).length,
+  supplements: supplements.map(s=>s.source),
   sourceHash: runtime.meta.sourceHash
 }, null, 2));
