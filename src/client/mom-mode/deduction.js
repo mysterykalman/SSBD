@@ -5,7 +5,7 @@ if(!Engine) throw new Error('Mom Mode engine failed to load before deduction lay
 
 const {FEATURES,OBJECTS,N,F,truth}=Engine;
 const featureIndex=Object.fromEntries(FEATURES.map((feature,index)=>[feature.id,index]));
-const original={choose:Engine.choose,answer:Engine.answer,deferGuess:Engine.deferGuess,selfPlay:Engine.selfPlay};
+const original={choose:Engine.choose,answer:Engine.answer,deferGuess:Engine.deferGuess,selfPlay:Engine.selfPlay,questionAllowed:Engine.questionAllowed};
 
 const ROOT_IDS=['person','animal','plant','place','food','drink','object'];
 const ROOT_BY_KIND={
@@ -113,8 +113,17 @@ function sequenceFactor(game,f){
  return 1;
 }
 
+function questionAllowed(game,f){
+ const feature=FEATURES[f];
+ if(feature?.id?.startsWith('facet_')&&feature.requires==='gk_product'){
+  const branchAnswer=game.answers.get(feature.requires);
+  if(branchAnswer==='yes'||branchAnswer==='probably')return true;
+ }
+ return original.questionAllowed(game,f);
+}
+
 function questionScore(game,f){
- if(game.asked.has(f)||!Engine.questionAllowed(game,f))return {score:0,gain:0,semantic:0,known:0,eligible:false};
+ if(game.asked.has(f)||!questionAllowed(game,f))return {score:0,gain:0,semantic:0,known:0,eligible:false};
  const gain=Engine.questionGain(game.belief,f,game.noise);
  if(gain<=1e-12)return {score:0,gain,semantic:0,known:0,eligible:false};
  const meta=QUESTION_META[f];
@@ -164,5 +173,5 @@ function selfPlay(secret,opts={}){
  return {won:false,turns:game.turn,guess:null,score:Engine.scoreFor(game.turn,false,true,game.continueCost),stumped:true};
 }
 
-Object.assign(Engine,{choose,answer,deferGuess,selfPlay,QUESTION_META,questionMeta:metadataFor,semanticCoverage,knownCoverage,questionScore,bestNaturalQuestion});
+Object.assign(Engine,{choose,answer,deferGuess,selfPlay,questionAllowed,QUESTION_META,questionMeta:metadataFor,semanticCoverage,knownCoverage,questionScore,bestNaturalQuestion});
 })(typeof window!=='undefined'?window:globalThis);
