@@ -3,8 +3,8 @@
 // exact same URLs instead of relying on image bundling behavior.
 
 const PORTRAITS = {
-  gary: "/character-art/gary.webp",
-  milo: "/character-art/milo.webp"
+  gary: "/character-art/gary.webp?v=exact-20261012",
+  milo: "/character-art/milo.webp?v=exact-20261012"
 };
 
 /**
