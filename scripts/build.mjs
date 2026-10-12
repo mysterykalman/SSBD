@@ -23,7 +23,7 @@ const icons = Object.fromEntries(await Promise.all(ICONS.map(async name => [`/${
 const manifest = await readFile(src("client/manifest.webmanifest"), "utf8");
 const momLaunch = await readFile(src("client/mom-mode/entry-fix.js"), "utf8");
 
-const MOM_JS = ["knowledge.js", "knowledge.general.js", "knowledge.generated.js", "engine.js", "copy.js", "adapter.js", "app.js"];
+const MOM_JS = ["knowledge.js", "knowledge.general.js", "knowledge.generated.js", "engine.js", "deduction.js", "copy.js", "adapter.js", "app.js"];
 const MOM_CSS = ["styles.css", "character.css"];
 const MOM_STATIC = ["pam.webp", "pam-v2.webp"];
 const momIndex = await readFile(src("client/mom-mode/index.html"), "utf8");
