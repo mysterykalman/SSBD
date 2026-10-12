@@ -19,6 +19,12 @@ export function oracleRuntimeAnswer(api,secretIndex,question){
   return truth===1?'yes':truth===0?'no':'unknown';
 }
 
+function questionDescriptor(runtime,action){
+  if(action.source==='facet')return{family:`facet:${action.type}`,breadth:'specific'};
+  const question=runtime.questions[action.index];
+  return{family:question?.family||question?.group||'attribute',breadth:question?.breadth||'attribute'};
+}
+
 export function traceRuntimeSelfPlay(runtime,secretIndex,opts={}){
   const api=createMomRuntimeGame(runtime,{budget:20,...opts});
   const path=[];
@@ -37,7 +43,8 @@ export function traceRuntimeSelfPlay(runtime,secretIndex,opts={}){
     }
     if(next.kind==='stumped')return{result:{kind:'result',winner:'player',correct:false,turns:api.game.turn,reason:'stumped',score:next.score},path};
     const answer=oracleRuntimeAnswer(api,secretIndex,next);
-    path.push({turn:api.game.turn+1,kind:'question',id:next.id,text:next.text,source:next.source,answer,gain:next.gain,naturalScore:next.naturalScore,semanticCoverage:next.semanticCoverage,knownCoverage:next.knownCoverage});
+    const descriptor=questionDescriptor(runtime,next);
+    path.push({turn:api.game.turn+1,kind:'question',id:next.id,text:next.text,source:next.source,family:descriptor.family,breadth:descriptor.breadth,answer,gain:next.gain,naturalScore:next.naturalScore,semanticCoverage:next.semanticCoverage,knownCoverage:next.knownCoverage});
     next=api.answer(next,answer);
   }
   return{result:{kind:'result',winner:'player',correct:false,turns:api.game.turn,reason:api.game.status||'budget'},path};
@@ -90,6 +97,38 @@ function aggregate(rows,key){
   return out;
 }
 
+function median(values){
+  const sorted=values.filter(Number.isFinite).sort((a,b)=>a-b);
+  if(!sorted.length)return null;
+  const middle=Math.floor(sorted.length/2);
+  return sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
+}
+
+export function runtimeQuestionQuality(rows){
+  let totalQuestions=0,unknownHeavy=0,repeatedFamily=0,prematureSpecific=0,weakSemantic=0;
+  for(const row of rows){
+    let previousFamily=null;
+    for(const step of row.path||[]){
+      if(step.kind!=='question')continue;
+      totalQuestions++;
+      if(Number(step.knownCoverage)<0.5)unknownHeavy++;
+      if(previousFamily&&step.family===previousFamily)repeatedFamily++;
+      if(step.turn<=3&&step.breadth==='specific')prematureSpecific++;
+      if(Number(step.semanticCoverage)<0.5)weakSemantic++;
+      previousFamily=step.family||null;
+    }
+  }
+  const rate=value=>totalQuestions?value/totalQuestions:0;
+  return{
+    totalQuestions,
+    medianTurns:median(rows.filter(row=>row.present&&Number.isFinite(row.turns)).map(row=>row.turns)),
+    unknownHeavyQuestions:unknownHeavy,unknownHeavyRate:rate(unknownHeavy),
+    repeatedFamilyQuestions:repeatedFamily,repeatedFamilyRate:rate(repeatedFamily),
+    prematureSpecificQuestions:prematureSpecific,prematureSpecificRate:rate(prematureSpecific),
+    weakSemanticQuestions:weakSemantic,weakSemanticRate:rate(weakSemantic)
+  };
+}
+
 export function summarizeRuntimeBenchmark(runtime,rows){
   const presentCount=rows.filter(row=>row.present).length;
   const pamWinCount=rows.filter(row=>row.pamWon).length;
@@ -99,6 +138,6 @@ export function summarizeRuntimeBenchmark(runtime,rows){
     generatedAt:new Date().toISOString(),runtimeSourceHash:runtime.meta?.sourceHash||'',runtimeKnowledgeCount:runtime.concepts.length,runtimeFeatureCount:runtime.questions.length,
     rowCount:rows.length,presentCount,missingCount:rows.length-presentCount,coverageRate:rows.length?presentCount/rows.length:0,pamWinCount,
     pamWinRateOverall:rows.length?pamWinCount/rows.length:0,pamWinRatePresent:presentCount?pamWinCount/presentCount:0,
-    pathFlagCount:rows.filter(row=>row.pathFlags?.length).length,failureClasses,byTier:aggregate(rows,'tier'),byCategory:aggregate(rows,'category'),rows
+    pathFlagCount:rows.filter(row=>row.pathFlags?.length).length,questionQuality:runtimeQuestionQuality(rows),failureClasses,byTier:aggregate(rows,'tier'),byCategory:aggregate(rows,'category'),rows
   };
 }
