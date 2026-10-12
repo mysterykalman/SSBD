@@ -23,6 +23,7 @@ on:
       - scripts/mom-safe-negatives.mjs
       - scripts/mom-question-metadata.mjs
       - scripts/mom-runtime-benchmark.mjs
+      - scripts/mom-runtime-ab-benchmark.mjs
       - src/shared/mom-runtime-reasoning.js
       - src/shared/mom-runtime-game.js
       - src/shared/mom-runtime-lookup.js
@@ -105,6 +106,43 @@ jobs:
         run: node scripts/build-mom-controlled-profiles.mjs
       - name: Build compact runtime intelligence
         run: node scripts/build-mom-runtime-knowledge.mjs
+      - name: Run real 1,081-row gameplay benchmark
+        env:
+          MOM_RUNTIME_BENCHMARK_RUN: "1"
+        run: node --test test/mom-runtime-benchmark.test.mjs
+      - name: Build no-Wikidata runtime for controlled A/B
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .dev-data/mom-runtime-ab
+          cp .dev-data/mom-runtime/knowledge.runtime.json .dev-data/mom-runtime-ab/with-wikidata.json
+          cp -R .dev-data/mom-controlled-profiles /tmp/mom-controlled-profiles-with-wikidata
+          cp -R .dev-data/mom-runtime /tmp/mom-runtime-with-wikidata
+          cp .dev-data/mom-trait-coverage/evidence.jsonl /tmp/mom-evidence-with-wikidata.jsonl
+          node - <<'NODE'
+          const fs=require('fs');
+          const file='.dev-data/mom-trait-coverage/evidence.jsonl';
+          const rows=fs.readFileSync(file,'utf8').split(/\r?\n/).filter(Boolean);
+          let removed=0;
+          const kept=[];
+          for(const line of rows){
+            const row=JSON.parse(line);
+            if(row.source==='Wikidata'){removed++;continue;}
+            kept.push(line);
+          }
+          if(!removed)throw new Error('A/B setup expected Wikidata evidence but removed zero rows.');
+          fs.writeFileSync(file,kept.join('\n')+'\n');
+          console.log(`Removed ${removed.toLocaleString()} Wikidata evidence rows for the control runtime.`);
+          NODE
+          node scripts/build-mom-controlled-profiles.mjs
+          node scripts/build-mom-runtime-knowledge.mjs
+          cp .dev-data/mom-runtime/knowledge.runtime.json .dev-data/mom-runtime-ab/without-wikidata.json
+          rm -rf .dev-data/mom-controlled-profiles .dev-data/mom-runtime
+          mv /tmp/mom-controlled-profiles-with-wikidata .dev-data/mom-controlled-profiles
+          mv /tmp/mom-runtime-with-wikidata .dev-data/mom-runtime
+          mv /tmp/mom-evidence-with-wikidata.jsonl .dev-data/mom-trait-coverage/evidence.jsonl
+      - name: Compare Wikidata gameplay A/B
+        run: node scripts/mom-runtime-ab-benchmark.mjs
       - name: Validate compact runtime shape and size
         run: |
           node - <<'NODE'
@@ -129,13 +167,17 @@ jobs:
           cat .dev-data/mom-controlled-profiles/summary.json
           echo 'Compact runtime:'
           node -e "const r=require('./.dev-data/mom-runtime/knowledge.runtime.json'); console.log(JSON.stringify(r.meta,null,2))"
-          if [ -f .dev-data/mom-runtime-benchmark/coverage.json ]; then
-            echo 'Curated runtime coverage:'
-            node -e "const r=require('./.dev-data/mom-runtime-benchmark/coverage.json'); console.log(JSON.stringify({runtimeKnowledgeCount:r.runtimeKnowledgeCount,runtimeFeatureCount:r.runtimeFeatureCount,presentCount:r.presentCount,missingCount:r.missingCount,coverageRate:r.coverageRate},null,2))"
+          if [ -f .dev-data/mom-runtime-benchmark/report.json ]; then
+            echo 'Real gameplay benchmark:'
+            node -e "const r=require('./.dev-data/mom-runtime-benchmark/report.json'); console.log(JSON.stringify({rowCount:r.rowCount,presentCount:r.presentCount,pamWinCount:r.pamWinCount,pamWinRateOverall:r.pamWinRateOverall,pamWinRatePresent:r.pamWinRatePresent,pathFlagCount:r.pathFlagCount,questionQuality:r.questionQuality,failureClasses:r.failureClasses},null,2))"
+          fi
+          if [ -f .dev-data/mom-runtime-ab/comparison.json ]; then
+            echo 'Wikidata gameplay A/B:'
+            node -e "const r=require('./.dev-data/mom-runtime-ab/comparison.json'); console.log(JSON.stringify({rowCount:r.rowCount,withWikidata:r.withWikidata,withoutWikidata:r.withoutWikidata,delta:r.delta},null,2))"
           fi
       - name: Stage validated runtime for browser builds
         run: cp .dev-data/mom-runtime/knowledge.runtime.json src/client/mom-mode/knowledge.runtime.json
-      - name: Upload coverage, compact runtime, and controlled profiles
+      - name: Upload coverage, compact runtime, controlled profiles, and gameplay benchmarks
         uses: actions/upload-artifact@v4
         with:
           name: mom-controlled-50k-runtime
@@ -144,6 +186,7 @@ jobs:
             .dev-data/mom-controlled-profiles/
             .dev-data/mom-runtime/
             .dev-data/mom-runtime-benchmark/
+            .dev-data/mom-runtime-ab/
             .dev-data/trait-sources/extra-public-evidence.json
             .dev-data/trait-sources/wikidata-labelled-evidence.json
             .dev-data/trait-sources/wikidata-static.summary.json
