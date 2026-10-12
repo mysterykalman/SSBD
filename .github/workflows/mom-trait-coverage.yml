@@ -90,8 +90,15 @@ jobs:
           python scripts/extract-wordnet-traits.py
       - name: Build Visual Genome and PACO evidence
         run: python scripts/extract-mom-extra-public-traits.py
-      - name: Build optional static Wikidata evidence
-        run: node scripts/build-mom-static-wikidata.mjs
+      - name: Build static Wikidata evidence
+        run: |
+          node scripts/build-mom-static-wikidata.mjs
+          node - <<'NODE'
+          const summary = require('./.dev-data/trait-sources/wikidata-static.summary.json');
+          if (summary.networkRequests !== 0) throw new Error('Static Wikidata build unexpectedly used the network.');
+          if (!summary.required || summary.concepts < 1 || summary.evidenceItems < 1) throw new Error('Required static Wikidata knowledge is missing or empty.');
+          console.log(JSON.stringify(summary, null, 2));
+          NODE
       - name: Measure public trait coverage
         run: node scripts/analyze-mom-trait-coverage.mjs
       - name: Build controlled Pam profiles

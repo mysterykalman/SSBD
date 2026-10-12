@@ -1,8 +1,10 @@
-# Static Wikidata enrichment
+# Static Wikidata knowledge
 
-Wikidata is optional enrichment for Pam. The normal 50k build must never depend on the live Wikidata API.
+Wikidata is a checked-in, static knowledge source for Pam. Normal brain builds use the local dataset and never contact the live Wikidata API.
 
-The normal pipeline reads local CSV files from `data/mom/wikidata/shards/` and compiles them into the existing `.dev-data/trait-sources/wikidata-labelled-evidence.json` contract. If the directory is empty or missing, the build continues without Wikidata.
+The canonical source is `data/mom/wikidata/master.csv.gz`. `scripts/build-mom-static-wikidata.mjs` reads it and compiles `.dev-data/trait-sources/wikidata-labelled-evidence.json`, which is consumed by the controlled-profile and runtime pipeline.
+
+The static source is required. If it is missing, malformed, or produces no usable records, the build fails instead of silently dropping Wikidata knowledge.
 
 ## CSV format
 
@@ -18,22 +20,20 @@ Albert Einstein,Q937,occupation,physicist,occupation:physicist,1
 
 `qid` and `confidence` are optional. Identical concept/property/trait rows are deduplicated deterministically.
 
-## Working with a larger export
+## Updating the static dataset
 
-Put a spreadsheet export at `data/mom/wikidata/master.csv`, then run:
+For maintenance, place an uncompressed export at `data/mom/wikidata/master.csv` and use:
 
 ```bash
 node scripts/shard-mom-wikidata-csv.mjs
 ```
 
-By default this creates CSV shards of 500 concepts under `data/mom/wikidata/shards/`. Change the shard size with `MOM_WIKIDATA_CSV_SHARD_CONCEPTS`.
+The sharder can produce smaller human-readable CSV files under `data/mom/wikidata/shards/`. The production source should then be regenerated as `master.csv.gz` and committed.
 
-Build the offline evidence pack with:
+Build the evidence pack with:
 
 ```bash
 node scripts/build-mom-static-wikidata.mjs
 ```
 
-If `master.csv` exists the builder uses it directly; otherwise it reads the checked-in shard CSVs. It makes zero network requests.
-
-The legacy live extractor remains in `scripts/extract-mom-wikidata-labelled-traits.mjs` only as a one-off/manual refresh utility. It is not part of the normal 50k CI path.
+The builder reports `networkRequests: 0`. There is no live Wikidata fetch step in the normal or manual knowledge workflows.
