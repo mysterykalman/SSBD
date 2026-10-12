@@ -42,7 +42,8 @@ function renderFacetText(template,value){
 export function createMomRuntimeReasoner(runtime){
   if(!runtime?.questions?.length||!runtime?.concepts?.length)throw new Error('Mom runtime knowledge is empty');
   const questionIndex=Object.fromEntries(runtime.questions.map((question,index)=>[question.id,index]));
-  const evidence=Array.from({length:runtime.questions.length},()=>({yes:[],no:[],maybe:[]}));
+  const evidence=Array.from({length:runtime.questions.length},()=>({yes:/** @type {number[]} */([]),no:/** @type {number[]} */([]),maybe:/** @type {number[]} */([])}));
+  /** @type {Map<string, number[]>} */
   const categoryIndexes=new Map();
   runtime.concepts.forEach((concept,index)=>{
     const category=String(concept.category||'unknown');
@@ -169,6 +170,7 @@ export function createMomRuntimeReasoner(runtime){
   }
 
   function bestStaticQuestion(belief,context={}){
+    /** @type {any} */
     let best=null;
     for(let index=0;index<runtime.questions.length;index++){
       const ranked=questionScore(belief,index,context);
@@ -179,6 +181,7 @@ export function createMomRuntimeReasoner(runtime){
   }
 
   function bestFacetQuestion(belief,context={}){
+    /** @type {any} */
     let best=null;
     for(const [type,definition] of Object.entries(runtime.facetIndex?.types||{})){
       for(const value of Object.keys(definition.values||{})){
