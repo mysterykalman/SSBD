@@ -12,7 +12,6 @@ function readRuntime(filename){
   if(!fs.existsSync(filename))throw new Error(`Missing runtime: ${filename}`);
   return JSON.parse(fs.readFileSync(filename,'utf8'));
 }
-function rate(n,d){return d?n/d:0;}
 function average(values){
   const finite=values.filter(Number.isFinite);
   return finite.length?finite.reduce((sum,value)=>sum+value,0)/finite.length:null;
