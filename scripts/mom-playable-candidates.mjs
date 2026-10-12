@@ -4,6 +4,21 @@ export function normalize(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
 }
 function niceName(value) { return String(value ?? '').trim().replace(/\s+/g, ' '); }
+function normalizeFacets(value) {
+  const out = {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+  for (const [key, raw] of Object.entries(value)) {
+    const values = (Array.isArray(raw) ? raw : [raw]).map(niceName).filter(Boolean);
+    if (values.length) out[key] = [...new Set(values)];
+  }
+  return out;
+}
+function mergeFacets(target, incoming) {
+  for (const [key, values] of Object.entries(incoming || {})) {
+    const current = Array.isArray(target[key]) ? target[key] : [];
+    target[key] = [...new Set([...current, ...values])];
+  }
+}
 const BAD_EXACT = new Set(['a','an','the','and','or','but','if','then','than','of','to','in','on','at','by','for','from','with','without','as','is','are','was','were','be','been','being','do','does','did','have','has','had','it','this','that','these','those','i','you','he','she','we','they','me','him','her','us','them','my','your','his','our','their','who','what','when','where','why','how','yes','no','maybe','unknown']);
 function acceptable(name) {
   const n = niceName(name), key = normalize(n);
@@ -24,9 +39,10 @@ export function createCandidateAccumulator() {
       const record = { name, key, aliases: new Set(), score: Number(score) || 0, sources: new Set([source]),
         sourceCategory: fields.sourceCategory || '', broadCategory: fields.broadCategory || '', difficulty: fields.difficulty || '',
         concreteness: fields.concreteness ?? '', percentKnown: fields.percentKnown ?? '', pos: fields.pos || '', qid: fields.qid || '',
-        wikipediaUrl: fields.wikipediaUrl || '', sourceRank: fields.sourceRank ?? '', reason: fields.reason || '' };
+        wikipediaUrl: fields.wikipediaUrl || '', sourceRank: fields.sourceRank ?? '', reason: fields.reason || '', facets: normalizeFacets(fields.facets) };
       if (!current) { candidates.set(key, record); return; }
       current.sources.add(source); current.aliases.add(record.name);
+      mergeFacets(current.facets, record.facets);
       const isBetter = record.score > current.score;
       if (isBetter) { current.aliases.add(current.name); current.name = record.name; current.score = record.score; }
       if (isBetter) {
