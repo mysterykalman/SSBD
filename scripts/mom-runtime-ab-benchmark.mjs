@@ -6,6 +6,7 @@ import {evaluateRuntimeBenchmark,summarizeRuntimeBenchmark} from './mom-runtime-
 const ROOT=process.cwd();
 const WITH_PATH=path.resolve(ROOT,process.env.MOM_RUNTIME_WITH_WIKIDATA||'.dev-data/mom-runtime-ab/with-wikidata.json');
 const WITHOUT_PATH=path.resolve(ROOT,process.env.MOM_RUNTIME_WITHOUT_WIKIDATA||'.dev-data/mom-runtime-ab/without-wikidata.json');
+const BENCHMARK_REPORT_PATH=path.resolve(ROOT,process.env.MOM_RUNTIME_WITH_REPORT||'.dev-data/mom-runtime-benchmark/report.json');
 const OUT_DIR=path.resolve(ROOT,process.env.MOM_RUNTIME_AB_OUT_DIR||'.dev-data/mom-runtime-ab');
 
 function readRuntime(filename){
@@ -22,11 +23,33 @@ function compact(row){
     failureReason:row.failureReason,pathFlags:row.pathFlags,matchedName:row.matchedName
   };
 }
+function reusableBenchmarkRows(runtime,benchmarkRows){
+  if(!fs.existsSync(BENCHMARK_REPORT_PATH))return null;
+  let report;
+  try{
+    report=JSON.parse(fs.readFileSync(BENCHMARK_REPORT_PATH,'utf8'));
+  }catch(error){
+    console.warn(`Ignoring unreadable with-Wikidata benchmark report: ${error.message}`);
+    return null;
+  }
+  if(report.runtimeSourceHash!==(runtime.meta?.sourceHash||''))return null;
+  if(report.rowCount!==benchmarkRows.length||!Array.isArray(report.rows)||report.rows.length!==benchmarkRows.length)return null;
+  for(let i=0;i<benchmarkRows.length;i++){
+    const expected=benchmarkRows[i];
+    const actual=report.rows[i];
+    if(actual?.item!==expected.item||actual?.tier!==expected.tier||actual?.category!==expected.category)return null;
+  }
+  return report.rows;
+}
 
 const withRuntime=readRuntime(WITH_PATH);
 const withoutRuntime=readRuntime(WITHOUT_PATH);
 const rows=loadBenchmarkRows();
-const withRows=evaluateRuntimeBenchmark(withRuntime,rows,{selfPlay:true});
+const cachedWithRows=reusableBenchmarkRows(withRuntime,rows);
+const withRows=cachedWithRows||evaluateRuntimeBenchmark(withRuntime,rows,{selfPlay:true});
+console.log(cachedWithRows
+  ?`Reusing ${withRows.length.toLocaleString()} validated with-Wikidata gameplay rows from ${path.relative(ROOT,BENCHMARK_REPORT_PATH)}.`
+  :'No matching prior with-Wikidata gameplay report found; evaluating that side now.');
 const withoutRows=evaluateRuntimeBenchmark(withoutRuntime,rows,{selfPlay:true});
 const withSummary=summarizeRuntimeBenchmark(withRuntime,withRows);
 const withoutSummary=summarizeRuntimeBenchmark(withoutRuntime,withoutRows);
