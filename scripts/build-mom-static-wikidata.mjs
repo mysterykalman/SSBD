@@ -65,10 +65,11 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.rmSync(PARTS_DIR, { recursive: true, force: true });
 fs.mkdirSync(PARTS_DIR, { recursive: true });
 
-let inputFiles = [];
-if (fs.existsSync(MASTER_GZIP)) inputFiles = [MASTER_GZIP];
-else if (fs.existsSync(MASTER_CSV)) inputFiles = [MASTER_CSV];
-else inputFiles = csvFiles(SHARD_DIR);
+const inputFiles = fs.existsSync(MASTER_GZIP)
+  ? [MASTER_GZIP]
+  : fs.existsSync(MASTER_CSV)
+    ? [MASTER_CSV]
+    : csvFiles(SHARD_DIR);
 
 if (!inputFiles.length) {
   throw new Error(`Required static Wikidata source is missing. Expected ${path.relative(ROOT, MASTER_GZIP)}, ${path.relative(ROOT, MASTER_CSV)}, or CSV shards under ${path.relative(ROOT, SHARD_DIR)}.`);
