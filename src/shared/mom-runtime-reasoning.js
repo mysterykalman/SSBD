@@ -9,6 +9,28 @@ function contains(sorted,value){
   // Runtime arrays are compiled sorted, but includes keeps this robust for fixtures.
   return sorted?.includes(value)??false;
 }
+function stageFactor(turn,breadth){
+  if(turn<=2)return breadth==='broad'?1.25:breadth==='category'?1.03:breadth==='specific'?0.58:0.82;
+  if(turn<=7)return breadth==='broad'?1.02:breadth==='category'?1.18:breadth==='specific'?0.78:1;
+  if(turn<=13)return breadth==='broad'?0.88:breadth==='category'?1.03:breadth==='specific'?1.02:1.1;
+  return breadth==='broad'?0.78:breadth==='category'?0.94:breadth==='specific'?1.2:1.03;
+}
+function repetitionFactor(runtime,questionIndexValue,recentQuestionIndexes=[]){
+  const family=runtime.questions[questionIndexValue]?.family;
+  const recent=recentQuestionIndexes.slice(-2);
+  if(!recent.length||!family)return 1;
+  const lastFamily=runtime.questions[recent[recent.length-1]]?.family;
+  if(lastFamily===family)return 0.72;
+  if(recent.some(index=>runtime.questions[index]?.family===family))return 0.88;
+  return 1;
+}
+function sequenceFactor(runtime,questionIndexValue,confirmedYes){
+  const question=runtime.questions[questionIndexValue];
+  const established=[...confirmedYes].some(index=>runtime.questions[index]?.family==='ontology');
+  if(!established&&question.family==='ontology')return 1.12;
+  if(established&&question.family==='ontology'&&question.breadth==='broad')return 0.9;
+  return 1;
+}
 
 export function createMomRuntimeReasoner(runtime){
   if(!runtime?.questions?.length||!runtime?.concepts?.length)throw new Error('Mom runtime knowledge is empty');
@@ -67,7 +89,38 @@ export function createMomRuntimeReasoner(runtime){
     return Math.max(0,binaryEntropy(yesProbability)-conditionalEntropy);
   }
 
-  return{runtime,questionIndex,truthAt,appliesToConcept,semanticCoverage,knownCoverage,questionGain};
+  function questionScore(belief,questionIndexValue,context={}){
+    const question=runtime.questions[questionIndexValue];
+    if(!question)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'missing_question'};
+    const asked=context.asked||new Set();
+    const confirmedYes=context.confirmedYes||new Set();
+    if(asked.has(questionIndexValue))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'already_asked'};
+    if(question.requires!=null&&!confirmedYes.has(question.requires))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'requires_branch'};
+    const gain=questionGain(belief,questionIndexValue,context.noise??0.06);
+    if(gain<=1e-12)return{eligible:false,score:0,gain,semantic:0,known:0,reason:'no_information'};
+    const semantic=semanticCoverage(belief,questionIndexValue);
+    const known=knownCoverage(belief,questionIndexValue);
+    if(semantic<(question.minCoverage||0))return{eligible:false,score:0,gain,semantic,known,reason:'low_semantic_coverage'};
+    const semanticFactor=0.45+0.55*semantic;
+    const knownFactor=0.3+0.7*known;
+    const stage=stageFactor(context.turn||0,question.breadth);
+    const repetition=repetitionFactor(runtime,questionIndexValue,context.recentQuestionIndexes||[]);
+    const sequence=sequenceFactor(runtime,questionIndexValue,confirmedYes);
+    const score=gain*semanticFactor*knownFactor*(question.reliability??0.94)*stage*repetition*sequence;
+    return{eligible:true,score,gain,semantic,known,stage,repetition,sequence,reason:'eligible'};
+  }
+
+  function bestQuestion(belief,context={}){
+    let best=null;
+    for(let index=0;index<runtime.questions.length;index++){
+      const ranked=questionScore(belief,index,context);
+      if(!ranked.eligible)continue;
+      if(!best||ranked.score>best.score+1e-12||(Math.abs(ranked.score-best.score)<=1e-12&&ranked.gain>best.gain))best={index,question:runtime.questions[index],...ranked};
+    }
+    return best;
+  }
+
+  return{runtime,questionIndex,truthAt,appliesToConcept,semanticCoverage,knownCoverage,questionGain,questionScore,bestQuestion};
 }
 
 export function initialRuntimeBelief(runtime){
