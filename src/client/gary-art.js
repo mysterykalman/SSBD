@@ -1,12 +1,14 @@
 // The Solo characters' portraits. Kept apart from gary.js/characters.js so those stay loadable in
-// Node tests; the build bundles the images into the app as data URLs, so they work offline.
-import garyPortrait from "./gary.webp";
-import miloPortrait from "./milo.webp";
+// Node tests. Portraits are served as explicit static assets so preview builds and browsers use the
+// exact same URLs instead of relying on image bundling behavior.
 
-const PORTRAITS = {gary: garyPortrait, milo: miloPortrait};
+const PORTRAITS = {
+  gary: "/character-art/gary.webp",
+  milo: "/character-art/milo.webp"
+};
 
 /**
- * A character's portrait (src/client/<id>.webp). Decorative: the character's name is always
+ * A character's portrait. Decorative: the character's name is always
  * written next to it, so the image is hidden from screen readers.
  * @param {string} id "gary" | "milo"
  * @param {"meh" | "sleepy"} mood
