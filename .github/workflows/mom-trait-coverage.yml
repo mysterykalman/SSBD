@@ -41,7 +41,7 @@ permissions:
 jobs:
   coverage:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -110,6 +110,12 @@ jobs:
         env:
           MOM_RUNTIME_BENCHMARK_RUN: "1"
         run: node --test test/mom-runtime-benchmark.test.mjs
+      - name: Print real gameplay benchmark
+        run: |
+          node - <<'NODE'
+          const r=require('./.dev-data/mom-runtime-benchmark/report.json');
+          console.log(JSON.stringify({rowCount:r.rowCount,presentCount:r.presentCount,pamWinCount:r.pamWinCount,pamWinRateOverall:r.pamWinRateOverall,pamWinRatePresent:r.pamWinRatePresent,pathFlagCount:r.pathFlagCount,questionQuality:r.questionQuality,failureClasses:r.failureClasses},null,2));
+          NODE
       - name: Build no-Wikidata runtime for controlled A/B
         shell: bash
         run: |
