@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {deriveSafeNegativeTraitIds} from './mom-safe-negatives.mjs';
 import {buildRuntimeFacetIndex} from './mom-runtime-facets.mjs';
 import {applyCategoryBalancedPriors} from './mom-runtime-priors.mjs';
+import {compileQuestionMetadata} from './mom-question-metadata.mjs';
 
 export function normalizeMomLookup(value) {
   return String(value ?? '')
@@ -53,18 +54,6 @@ function categoryOf(traitSet, fallback='unknown', kind='') {
 }
 function subcategoryOf(traitSet) {
   return SUBCATEGORY_ORDER.find(id => traitSet.has(id)) || null;
-}
-function breadthFor(def) {
-  if (def.group === 'domain') return 'broad';
-  if (Array.isArray(def.parents) && def.parents.length) return def.parents.length > 1 ? 'specific' : 'category';
-  if (def.requires) return 'specific';
-  if (['person','animal','plant','place','object','food','media','event','organization','abstract','culture','science','history'].includes(def.group)) return 'category';
-  return 'attribute';
-}
-function reliabilityFor(def) {
-  if (def.group === 'domain') return 0.99;
-  if ((Array.isArray(def.parents) && def.parents.length) || def.requires) return 0.96;
-  return 0.94;
 }
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -169,11 +158,11 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   const questionDefs=normalizeQuestionDefs(traits,supplements);
   const questionIndex=new Map(questionDefs.map((def,index)=>[def.id,index]));
   const questions=questionDefs.map(def=>{
+    const meta=compileQuestionMetadata(def);
     const requiresId=def.requires||def.parents?.[0]||null;
-    const applies=[...new Set([...(def.parents||[]),...(def.requires?[def.requires]:[])])];
     return{
-      id:def.id,q:def.q,group:def.group||'attribute',breadth:breadthFor(def),reliability:reliabilityFor(def),
-      requires:requiresId?(questionIndex.get(requiresId)??null):null,appliesTo:applies,excludes:[],minCoverage:def.group==='domain'?0:0.35
+      id:def.id,q:def.q,group:def.group||'attribute',family:meta.family,breadth:meta.breadth,reliability:meta.reliability,
+      requires:requiresId?(questionIndex.get(requiresId)??null):null,appliesTo:meta.appliesTo,excludes:meta.excludes,minCoverage:meta.minCoverage
     };
   });
 
@@ -230,7 +219,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   const sourceHash=hashSources(canonicalSources);
   return{
     version:1,
-    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'5'},
+    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'6'},
     questions,concepts,aliases,facetIndex
   };
 }
