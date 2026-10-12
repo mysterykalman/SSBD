@@ -10,7 +10,9 @@ on:
       - scripts/analyze-mom-trait-coverage.mjs
       - scripts/extract-wordnet-traits.py
       - scripts/extract-mom-extra-public-traits.py
-      - scripts/extract-mom-wikidata-labelled-traits.mjs
+      - scripts/build-mom-static-wikidata.mjs
+      - scripts/shard-mom-wikidata-csv.mjs
+      - data/mom/wikidata/**
       - scripts/mom-controlled-traits.mjs
       - scripts/build-mom-controlled-profiles.mjs
       - scripts/build-mom-runtime-knowledge.mjs
@@ -88,9 +90,9 @@ jobs:
           python scripts/extract-wordnet-traits.py
       - name: Build Visual Genome and PACO evidence
         run: python scripts/extract-mom-extra-public-traits.py
-      - name: Build labelled Wikidata evidence
-        run: node scripts/extract-mom-wikidata-labelled-traits.mjs
-      - name: Measure public trait coverage with Wikidata
+      - name: Build optional static Wikidata evidence
+        run: node scripts/build-mom-static-wikidata.mjs
+      - name: Measure public trait coverage
         run: node scripts/analyze-mom-trait-coverage.mjs
       - name: Build controlled Pam profiles
         run: node scripts/build-mom-controlled-profiles.mjs
@@ -114,6 +116,8 @@ jobs:
         run: |
           echo 'Public coverage:'
           cat .dev-data/mom-trait-coverage/summary.json
+          echo 'Static Wikidata enrichment:'
+          cat .dev-data/trait-sources/wikidata-static.summary.json
           echo 'Controlled profiles:'
           cat .dev-data/mom-controlled-profiles/summary.json
           echo 'Compact runtime:'
@@ -135,6 +139,8 @@ jobs:
             .dev-data/mom-runtime-benchmark/
             .dev-data/trait-sources/extra-public-evidence.json
             .dev-data/trait-sources/wikidata-labelled-evidence.json
+            .dev-data/trait-sources/wikidata-static.summary.json
+            .dev-data/trait-sources/wikidata-static.parts/
             src/client/mom-mode/knowledge.runtime.json
           retention-days: 14
       - name: Commit validated runtime intelligence on integration branch
