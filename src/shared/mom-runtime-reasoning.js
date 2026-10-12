@@ -24,12 +24,23 @@ function repetitionFactor(runtime,questionIndexValue,recentQuestionIndexes=[]){
   if(recent.some(index=>runtime.questions[index]?.family===family))return 0.88;
   return 1;
 }
+function facetRepetitionFactor(type,recentFacetTypes=[]){
+  const recent=recentFacetTypes.slice(-2);
+  if(!recent.length)return 1;
+  if(recent[recent.length-1]===type)return 0.72;
+  if(recent.includes(type))return 0.88;
+  return 1;
+}
 function sequenceFactor(runtime,questionIndexValue,confirmedYes){
   const question=runtime.questions[questionIndexValue];
   const established=[...confirmedYes].some(index=>runtime.questions[index]?.family==='ontology');
   if(!established&&question.family==='ontology')return 1.12;
   if(established&&question.family==='ontology'&&question.breadth==='broad')return 0.9;
   return 1;
+}
+function renderFacetText(template,value){
+  const article=/^[aeiou]/i.test(value)?'an':'a';
+  return String(template||'Is it {value}?').replaceAll('{value}',String(value)).replaceAll('{article}',article);
 }
 
 export function createMomRuntimeReasoner(runtime){
@@ -110,17 +121,75 @@ export function createMomRuntimeReasoner(runtime){
     return{eligible:true,score,gain,semantic,known,stage,repetition,sequence,reason:'eligible'};
   }
 
-  function bestQuestion(belief,context={}){
+  function facetQuestionScore(belief,type,value,context={}){
+    const definition=runtime.facetIndex?.types?.[type];
+    const yesIndexes=definition?.values?.[value];
+    if(!definition||!yesIndexes?.length)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'missing_facet'};
+    const key=`facet:${type}:${value}`;
+    if((context.askedFacetKeys||new Set()).has(key))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'already_asked'};
+    let total=0,yesMass=0,knownMass=0,semanticMass=0;
+    const yesSet=new Set(yesIndexes);
+    const knownSet=definition.exclusiveKnown?new Set(definition.known||[]):null;
+    for(let i=0;i<runtime.concepts.length;i++){
+      const p=Number(belief[i]||0);if(p<=1e-15)continue;
+      total+=p;
+      if(yesSet.has(i))yesMass+=p;
+      if(definition.exclusiveKnown&&knownSet.has(i))knownMass+=p;
+      if(!definition.exclusiveKnown&&yesSet.has(i))knownMass+=p;
+      if(!definition.requiresCategory||runtime.concepts[i].category===definition.requiresCategory)semanticMass+=p;
+    }
+    if(total<=0||yesMass<=1e-12)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'no_information'};
+    const semantic=semanticMass/total;
+    const known=knownMass/total;
+    if(definition.requiresCategory&&semantic<0.35)return{eligible:false,score:0,gain:0,semantic,known,reason:'low_semantic_coverage'};
+    const noMass=definition.exclusiveKnown?Math.max(0,knownMass-yesMass):0;
+    const unknownMass=Math.max(0,total-yesMass-noMass);
+    const normalizedYes=yesMass/total,normalizedNo=noMass/total,normalizedUnknown=unknownMass/total;
+    const noise=context.noise??0.06;
+    const predictedYes=normalizedYes*(1-noise)+normalizedNo*noise+normalizedUnknown*0.5;
+    const conditional=normalizedYes*binaryEntropy(1-noise)+normalizedNo*binaryEntropy(noise)+normalizedUnknown;
+    const gain=Math.max(0,binaryEntropy(predictedYes)-conditional);
+    if(gain<=1e-12)return{eligible:false,score:0,gain,semantic,known,reason:'no_information'};
+    const semanticFactor=0.45+0.55*semantic;
+    const knownFactor=0.3+0.7*known;
+    const stage=stageFactor(context.turn||0,'specific');
+    const repetition=facetRepetitionFactor(type,context.recentFacetTypes||[]);
+    const score=gain*semanticFactor*knownFactor*(definition.reliability??0.94)*stage*repetition;
+    return{eligible:true,score,gain,semantic,known,stage,repetition,sequence:1,reason:'eligible',key,type,value,text:renderFacetText(definition.question,value),family:`facet:${type}`};
+  }
+
+  function bestStaticQuestion(belief,context={}){
     let best=null;
     for(let index=0;index<runtime.questions.length;index++){
       const ranked=questionScore(belief,index,context);
       if(!ranked.eligible)continue;
-      if(!best||ranked.score>best.score+1e-12||(Math.abs(ranked.score-best.score)<=1e-12&&ranked.gain>best.gain))best={index,question:runtime.questions[index],...ranked};
+      if(!best||ranked.score>best.score+1e-12||(Math.abs(ranked.score-best.score)<=1e-12&&ranked.gain>best.gain))best={kind:'static',index,question:runtime.questions[index],...ranked};
     }
     return best;
   }
 
-  return{runtime,questionIndex,truthAt,appliesToConcept,semanticCoverage,knownCoverage,questionGain,questionScore,bestQuestion};
+  function bestFacetQuestion(belief,context={}){
+    let best=null;
+    for(const [type,definition] of Object.entries(runtime.facetIndex?.types||{})){
+      for(const value of Object.keys(definition.values||{})){
+        const ranked=facetQuestionScore(belief,type,value,context);
+        if(!ranked.eligible)continue;
+        if(!best||ranked.score>best.score+1e-12||(Math.abs(ranked.score-best.score)<=1e-12&&ranked.gain>best.gain))best={kind:'facet',...ranked};
+      }
+    }
+    return best;
+  }
+
+  function bestQuestion(belief,context={}){
+    const staticBest=bestStaticQuestion(belief,context);
+    const facetBest=bestFacetQuestion(belief,context);
+    if(!staticBest)return facetBest;
+    if(!facetBest)return staticBest;
+    if(facetBest.score>staticBest.score+1e-12)return facetBest;
+    return staticBest;
+  }
+
+  return{runtime,questionIndex,truthAt,appliesToConcept,semanticCoverage,knownCoverage,questionGain,questionScore,facetQuestionScore,bestStaticQuestion,bestFacetQuestion,bestQuestion};
 }
 
 export function initialRuntimeBelief(runtime){
