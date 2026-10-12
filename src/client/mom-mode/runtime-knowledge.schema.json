@@ -68,9 +68,14 @@
       }
     },
     "aliases": {
-      "description": "Normalized alias -> concept index. Used only for lookup/validation, never to seed Pam's belief state.",
+      "description": "Normalized alias -> one concept index, or multiple indexes when the alias is ambiguous. Used only for lookup/validation, never to seed Pam's belief state.",
       "type": "object",
-      "additionalProperties": {"type": "integer", "minimum": 0}
+      "additionalProperties": {
+        "oneOf": [
+          {"type": "integer", "minimum": 0},
+          {"type": "array", "items": {"type": "integer", "minimum": 0}, "minItems": 2, "uniqueItems": true}
+        ]
+      }
     }
   }
 }
