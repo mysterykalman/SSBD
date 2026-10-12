@@ -1,0 +1,56 @@
+name: One-time static Wikidata data repair
+on:
+  push:
+    branches: [integration/all-current-work]
+    paths: [.github/workflows/mom-static-wikidata-repair.yml]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover verified Wikidata evidence artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 38256867431 --repo mysterykalman/SSBD --name mom-controlled-50k-runtime --dir /tmp/wikidata-recovery
+          find /tmp/wikidata-recovery -name wikidata-labelled-evidence.json -print
+      - name: Rebuild and validate checked-in static CSV
+        run: |
+          python - <<'PY'
+          import csv, gzip, json, pathlib, io
+          files=list(pathlib.Path('/tmp/wikidata-recovery').rglob('wikidata-labelled-evidence.json'))
+          if len(files)!=1: raise RuntimeError(f'Expected one recovered evidence file, found {files}')
+          records=json.loads(files[0].read_text())
+          rows=[]
+          for record in records:
+              for evidence in record.get('evidence',[]):
+                  trait=str(evidence.get('trait','')).strip()
+                  if not trait: continue
+                  kind=str(evidence.get('type','')).strip()
+                  value=trait.split(':',1)[1] if ':' in trait else ''
+                  rows.append((record['concept'],record.get('qid',''),kind,value,trait,evidence.get('confidence',0.96)))
+          if len(rows)!=2019 or len(set(row[0] for row in rows))!=473:
+              raise RuntimeError(f'Unexpected recovered data: {len(rows)} facts, {len(set(row[0] for row in rows))} concepts')
+          output=io.StringIO(newline='')
+          writer=csv.writer(output,lineterminator='\n')
+          writer.writerow(['concept','qid','property','value','trait','confidence'])
+          writer.writerows(rows)
+          target=pathlib.Path('data/mom/wikidata/master.csv.gz')
+          with target.open('wb') as handle:
+              with gzip.GzipFile(fileobj=handle,mode='wb',filename='',mtime=0,compresslevel=9) as zipped:
+                  zipped.write(output.getvalue().encode())
+          with gzip.open(target,'rt') as check:
+              assert len(list(csv.DictReader(check)))==2019
+          print(f'Repaired {target}: {target.stat().st_size} bytes; {len(rows)} facts')
+          PY
+          node scripts/build-mom-static-wikidata.mjs
+      - name: Commit repaired source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/mom/wikidata/master.csv.gz
+          git commit -m 'Mom: repair checked-in static Wikidata dataset'
+          git push
