@@ -239,7 +239,7 @@ selected.forEach((c, i) => {
 fs.writeFileSync(path.join(OUT_DIR, 'playable_50k.csv'), lines.join('\n') + '\n');
 const jsonl = selected.map(c => JSON.stringify({
   rank: selected.indexOf(c) + 1, name: c.name, aliases: [...c.aliases].filter(alias => normalize(alias) !== c.key).sort((a,b) => a.localeCompare(b)),
-  key: c.key, difficulty: difficulty(c), sourceCategory: c.sourceCategory, broadCategory: c.broadCategory,
+  key: c.key, difficulty: difficulty(c), sourceCategory: c.sourceCategory, broadCategory: c.broadCategory, facets: c.facets || {},
   sourceCount: c.sources.size, sources: [...c.sources].sort(), score: c.score, concreteness: c.concreteness,
   percentKnown: c.percentKnown, pos: c.pos, qid: c.qid, wikipediaUrl: c.wikipediaUrl, reason: c.reason
 })).join('\n') + (selected.length ? '\n' : '');
