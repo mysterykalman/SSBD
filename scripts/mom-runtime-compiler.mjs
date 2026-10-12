@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {deriveSafeNegativeTraitIds} from './mom-safe-negatives.mjs';
+import {buildRuntimeFacetIndex} from './mom-runtime-facets.mjs';
 
 export function normalizeMomLookup(value) {
   return String(value ?? '')
@@ -216,6 +217,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
     };
   });
   const aliases=buildAliasMap(seeds,concepts);
+  const facetIndex=buildRuntimeFacetIndex(concepts);
 
   const canonicalSources={
     inventory:canonicalList(inventory,item=>normalizeMomLookup(item.key||item.name)),
@@ -226,7 +228,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   const sourceHash=hashSources(canonicalSources);
   return{
     version:1,
-    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'3'},
-    questions,concepts,aliases
+    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'4'},
+    questions,concepts,aliases,facetIndex
   };
 }
