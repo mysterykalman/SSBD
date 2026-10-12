@@ -62,7 +62,7 @@ let wikidataRows;
 try {
   wikidataRows=JSON.parse(fs.readFileSync(WIKIDATA_LABELLED,'utf8'));
 } catch (error) {
-  throw new Error(`Required static Wikidata evidence is unreadable: ${error.message}`);
+  throw new Error(`Required static Wikidata evidence is unreadable: ${error.message}`, { cause: error });
 }
 if(!Array.isArray(wikidataRows)||wikidataRows.length===0) throw new Error('Required static Wikidata evidence is empty or malformed.');
 let wikidataMatchedConcepts=0,wikidataEvidenceItems=0;
