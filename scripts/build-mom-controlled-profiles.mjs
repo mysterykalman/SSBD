@@ -67,7 +67,7 @@ for (const item of inventory) {
   if (status === 'Needs enrichment') weak.push({ name, difficulty, traitCount: yes.length, evidenceCount: conceptEvidence.length });
   objects.push({ name, aliases, key: item.key || normalize(name), qid: item.qid || '', difficulty,
     score: Number(item.score) || 0, sources: item.sources || [], broadCategory: item.broadCategory || '',
-    sourceCategory: item.sourceCategory || '', traits: yes,
+    sourceCategory: item.sourceCategory || '', facets: item.facets && typeof item.facets === 'object' ? item.facets : {}, traits: yes,
     features: featureRecords(yes), evidenceCount: conceptEvidence.length,
     evidenceSources: [...new Set(conceptEvidence.map(e => e.source).filter(Boolean))].sort(), status });
 }
