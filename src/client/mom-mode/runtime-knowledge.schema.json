@@ -25,11 +25,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "q", "group", "breadth", "reliability"],
+        "required": ["id", "q", "group", "family", "breadth", "reliability", "appliesTo", "excludes", "minCoverage"],
         "properties": {
           "id": {"type": "string", "minLength": 1},
           "q": {"type": "string", "minLength": 1},
           "group": {"type": "string", "minLength": 1},
+          "family": {"type": "string", "minLength": 1},
           "breadth": {"enum": ["broad", "category", "attribute", "specific"]},
           "reliability": {"type": "number", "minimum": 0, "maximum": 1},
           "requires": {"type": ["integer", "null"], "minimum": 0},
