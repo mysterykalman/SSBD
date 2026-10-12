@@ -12,7 +12,15 @@ export const DEFAULT_CATEGORY_MASS=Object.freeze({
   unknown:0.01
 });
 
+const DIFFICULTY_WEIGHT=Object.freeze({core:1.35,sweet_spot:1.15,hard_but_fair:0.9,long_tail:0.7});
 function positive(value,fallback=1){const n=Number(value);return Number.isFinite(n)&&n>0?n:fallback;}
+
+export function conceptPopularityWeight(concept){
+  const raw=positive(concept?.prior,1);
+  const commonness=1+Math.log1p(raw);
+  const difficulty=DIFFICULTY_WEIGHT[concept?.difficulty]||0.8;
+  return commonness*difficulty;
+}
 
 export function applyCategoryBalancedPriors(concepts,{categoryMass=DEFAULT_CATEGORY_MASS,weightFor=()=>1}={}){
   const groups=new Map();
