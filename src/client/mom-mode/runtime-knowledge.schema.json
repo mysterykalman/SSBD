@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://same-same-but-different.local/schemas/mom-runtime-knowledge.schema.json",
+  "title": "Mom Mode compact runtime knowledge",
+  "description": "Deterministic browser-facing knowledge package compiled from the 50k playable inventory, controlled profiles, curated knowledge, aliases, facets, and calibrated priors.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "meta", "questions", "concepts", "aliases"],
+  "properties": {
+    "version": {"const": 1},
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conceptCount", "questionCount", "sourceHash"],
+      "properties": {
+        "conceptCount": {"type": "integer", "minimum": 1},
+        "questionCount": {"type": "integer", "minimum": 1},
+        "sourceHash": {"type": "string", "minLength": 8},
+        "generatedAt": {"type": "string"},
+        "compilerVersion": {"type": "string"}
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "q", "group", "breadth", "reliability"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "q": {"type": "string", "minLength": 1},
+          "group": {"type": "string", "minLength": 1},
+          "breadth": {"enum": ["broad", "category", "attribute", "specific"]},
+          "reliability": {"type": "number", "minimum": 0, "maximum": 1},
+          "requires": {"type": ["integer", "null"], "minimum": 0},
+          "appliesTo": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "excludes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "minCoverage": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "category", "difficulty", "prior", "yes", "no", "maybe"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "category": {"type": "string", "minLength": 1},
+          "subcategory": {"type": ["string", "null"]},
+          "difficulty": {"enum": ["core", "sweet_spot", "hard_but_fair", "long_tail"]},
+          "prior": {"type": "number", "exclusiveMinimum": 0},
+          "yes": {"type": "array", "items": {"type": "integer", "minimum": 0}, "uniqueItems": true},
+          "no": {"type": "array", "items": {"type": "integer", "minimum": 0}, "uniqueItems": true},
+          "maybe": {"type": "array", "items": {"type": "integer", "minimum": 0}, "uniqueItems": true},
+          "facets": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {"type": "string"},
+                {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+              ]
+            }
+          }
+        }
+      }
+    },
+    "aliases": {
+      "description": "Normalized alias -> concept index. Used only for lookup/validation, never to seed Pam's belief state.",
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    }
+  }
+}
