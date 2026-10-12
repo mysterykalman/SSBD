@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {deriveSafeNegativeTraitIds} from './mom-safe-negatives.mjs';
 
 export function normalizeMomLookup(value) {
   return String(value ?? '')
@@ -91,7 +92,8 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
     const key = normalizeMomLookup(profile.key || profile.name);
     const source = inventoryByKey.get(key) || {};
     const yesIds = [...new Set(profile.traits || profile.yes || [])].filter(id => traitIndex.has(id)).sort();
-    const noIds = [...new Set(profile.no || [])].filter(id => traitIndex.has(id) && !yesIds.includes(id)).sort();
+    const derivedNo = deriveSafeNegativeTraitIds(yesIds);
+    const noIds = [...new Set([...(profile.no || []),...derivedNo])].filter(id => traitIndex.has(id) && !yesIds.includes(id)).sort();
     const maybeIds = [...new Set(profile.maybe || [])].filter(id => traitIndex.has(id) && !yesIds.includes(id) && !noIds.includes(id)).sort();
     const traitSet = new Set(yesIds);
     const name = String(profile.name || source.name || '').trim();
