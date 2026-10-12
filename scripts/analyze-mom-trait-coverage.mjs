@@ -57,20 +57,24 @@ if(fs.existsSync(CONCEPTNET)){
  }
  console.log(`ConceptNet complete: ${lines.toLocaleString()} lines, ${useful.toLocaleString()} matched useful edges`);
 }
-if(fs.existsSync(WIKIDATA_LABELLED)){
- const rows=JSON.parse(fs.readFileSync(WIKIDATA_LABELLED,'utf8'));
- let matchedConcepts=0,evidenceItems=0;
- for(const row of rows){
-  let matched=false;
-  for(const evidence of row.evidence||[]){
-   if(addEvidence(row.concept,'Wikidata',evidence.trait,evidence.type||'',{confidence:evidence.confidence})){matched=true;evidenceItems++;}
-  }
-  if(matched)matchedConcepts++;
- }
- console.log(`Wikidata evidence loaded from hardened extractor: ${matchedConcepts.toLocaleString()} concepts, ${evidenceItems.toLocaleString()} evidence items`);
-}else{
- console.warn(`Wikidata labelled evidence not found at ${WIKIDATA_LABELLED}; continuing without Wikidata coverage`);
+if(!fs.existsSync(WIKIDATA_LABELLED)) throw new Error(`Missing required static Wikidata evidence: ${WIKIDATA_LABELLED}`);
+let wikidataRows;
+try {
+  wikidataRows=JSON.parse(fs.readFileSync(WIKIDATA_LABELLED,'utf8'));
+} catch (error) {
+  throw new Error(`Required static Wikidata evidence is unreadable: ${error.message}`);
 }
+if(!Array.isArray(wikidataRows)||wikidataRows.length===0) throw new Error('Required static Wikidata evidence is empty or malformed.');
+let wikidataMatchedConcepts=0,wikidataEvidenceItems=0;
+for(const row of wikidataRows){
+ let matched=false;
+ for(const evidence of row.evidence||[]){
+  if(addEvidence(row.concept,'Wikidata',evidence.trait,evidence.type||'',{confidence:evidence.confidence})){matched=true;wikidataEvidenceItems++;}
+ }
+ if(matched)wikidataMatchedConcepts++;
+}
+if(wikidataMatchedConcepts===0||wikidataEvidenceItems===0) throw new Error('Required static Wikidata evidence did not match any playable concepts.');
+console.log(`Required static Wikidata evidence loaded: ${wikidataMatchedConcepts.toLocaleString()} concepts, ${wikidataEvidenceItems.toLocaleString()} evidence items`);
 function status(c){const n=c.traits.size;return n>=5?'Strong public trait coverage':n>=1?'Partial public trait coverage':'Needs help';}
 const sources=['McRae x THINGS','McRae trait norms','CSLB trait norms','Open English WordNet','ConceptNet','Wikidata'];
 const summary={totalConcepts:concepts.length,strongCoverage:concepts.filter(c=>status(c)==='Strong public trait coverage').length,partialCoverage:concepts.filter(c=>status(c)==='Partial public trait coverage').length,needsHelp:concepts.filter(c=>status(c)==='Needs help').length,anyPublicTraitCoverage:concepts.filter(c=>c.traits.size>0).length,bySource:{},byDifficulty:{},thresholds:{strong:'5 or more distinct usable public trait assertions',partial:'1 to 4 distinct usable public trait assertions',needsHelp:'0 matched usable public trait assertions'}};
