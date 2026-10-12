@@ -113,6 +113,9 @@ for (const item of inventory) {
   const traits = mapEvidence(evidence);
   const yes = [...traits].filter(id => traitIds.has(id)).sort();
   const facets = deriveProfileFacets({base:item.facets,evidence:conceptEvidence,traits:yes});
+  if (Object.values(facets).some(value => !Array.isArray(value))) {
+    throw new Error(`Facet compiler contract violation for ${name}: every facet value must be an array.`);
+  }
   if (Object.keys(facets).length) facetedProfiles += 1;
   const difficulty = item.difficulty || 'Unknown';
   const status = yes.length >= 5 ? 'Strong standardized profile' : yes.length >= 2 ? 'Partial standardized profile' : 'Needs enrichment';
