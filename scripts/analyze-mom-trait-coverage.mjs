@@ -11,6 +11,7 @@ const MCRAE_TAXONOMY = path.join(ROOT, '.dev-data', 'trait-sources', 'seeing-wha
 const CARDIFF_DIR = path.join(ROOT, '.dev-data', 'trait-sources', 'trait-concept-datasets');
 const CONCEPTNET = path.join(ROOT, '.dev-data', 'trait-sources', 'conceptnet-assertions-5.7.0.csv.gz');
 const WORDNET = path.join(ROOT, '.dev-data', 'trait-sources', 'wordnet-evidence.json');
+const WIKIDATA_LABELLED = path.join(ROOT, '.dev-data', 'trait-sources', 'wikidata-labelled-evidence.json');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 function normalize(value) {
@@ -27,7 +28,6 @@ if(!fs.existsSync(INVENTORY)) throw new Error(`Missing inventory: ${INVENTORY}`)
 const inventory=fs.readFileSync(INVENTORY,'utf8').split(/\r?\n/).filter(Boolean).map(line=>JSON.parse(line));
 const concepts=inventory.map((item,i)=>({rank:item.rank||i+1,name:String(item.name||'').trim(),key:normalize(item.name),aliases:Array.isArray(item.aliases)?item.aliases:[],difficulty:item.difficulty||'',qid:String(item.qid||'').trim(),traits:new Map(),sources:new Set()})).filter(c=>c.name);
 const byKey=new Map(); for(const c of concepts){byKey.set(c.key,c);for(const alias of c.aliases)byKey.set(normalize(alias),c);}
-const byQid=new Map(concepts.filter(c=>/^Q\d+$/.test(c.qid)).map(c=>[c.qid,c]));
 function addEvidenceToConcept(c,source,rawTrait,type='',metadata={}){
   const trait=String(rawTrait??'').trim();if(!trait)return false;
   const evidenceKey=`${source}|${type}|${trait}`;const current=c.traits.get(evidenceKey);
@@ -57,13 +57,20 @@ if(fs.existsSync(CONCEPTNET)){
  }
  console.log(`ConceptNet complete: ${lines.toLocaleString()} lines, ${useful.toLocaleString()} matched useful edges`);
 }
-const WIKIDATA_PROPS={P31:'instance of',P279:'subclass of',P106:'occupation',P27:'country of citizenship',P17:'country',P495:'country of origin',P136:'genre',P170:'creator',P50:'author',P57:'director',P175:'performer',P361:'part of',P527:'has part',P186:'material',P366:'use',P276:'location',P131:'located in',P452:'industry',P176:'manufacturer',P400:'platform',P641:'sport',P21:'gender',P144:'based on',P138:'named after'};
-async function fetchJson(url,retries=3){let last;for(let i=0;i<retries;i++){try{const response=await fetch(url,{headers:{'user-agent':'SSBD-Pam-knowledge-audit/1.0'}});if(!response.ok)throw new Error(`HTTP ${response.status}`);return await response.json();}catch(error){last=error;await new Promise(resolve=>setTimeout(resolve,500*(i+1)));}}throw last;}
-const qids=[...byQid.keys()],batches=[];for(let i=0;i<qids.length;i+=50)batches.push(qids.slice(i,i+50));let wikidataMatched=0,nextBatch=0;
-async function wikidataWorker(){while(true){const index=nextBatch++;if(index>=batches.length)return;const batch=batches[index],url=`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=claims&ids=${encodeURIComponent(batch.join('|'))}`;let data;try{data=await fetchJson(url);}catch(error){console.warn(`Wikidata batch ${index+1}/${batches.length} failed: ${error.message}`);continue;}
- for(const [qid,entity]of Object.entries(data.entities||{})){const c=byQid.get(qid);if(!c||!entity?.claims)continue;let added=false;for(const [prop,label]of Object.entries(WIKIDATA_PROPS))for(const claim of(entity.claims[prop]||[]).slice(0,6)){const value=claim?.mainsnak?.datavalue?.value;const compact=value&&typeof value==='object'&&value.id?value.id:typeof value==='string'?value.slice(0,80):'';if(!compact)continue;addEvidenceToConcept(c,'Wikidata',`${label}:${compact}`,label,{qid,confidence:claim.rank==='preferred'?1:0.75});added=true;}if(added)wikidataMatched++;}}
+if(fs.existsSync(WIKIDATA_LABELLED)){
+ const rows=JSON.parse(fs.readFileSync(WIKIDATA_LABELLED,'utf8'));
+ let matchedConcepts=0,evidenceItems=0;
+ for(const row of rows){
+  let matched=false;
+  for(const evidence of row.evidence||[]){
+   if(addEvidence(row.concept,'Wikidata',evidence.trait,evidence.type||'',{confidence:evidence.confidence})){matched=true;evidenceItems++;}
+  }
+  if(matched)matchedConcepts++;
+ }
+ console.log(`Wikidata evidence loaded from hardened extractor: ${matchedConcepts.toLocaleString()} concepts, ${evidenceItems.toLocaleString()} evidence items`);
+}else{
+ console.warn(`Wikidata labelled evidence not found at ${WIKIDATA_LABELLED}; continuing without Wikidata coverage`);
 }
-if(batches.length){await Promise.all(Array.from({length:Math.min(6,batches.length)},()=>wikidataWorker()));console.log(`Wikidata complete: ${wikidataMatched.toLocaleString()} concepts matched from ${qids.length.toLocaleString()} QIDs`);}
 function status(c){const n=c.traits.size;return n>=5?'Strong public trait coverage':n>=1?'Partial public trait coverage':'Needs help';}
 const sources=['McRae x THINGS','McRae trait norms','CSLB trait norms','Open English WordNet','ConceptNet','Wikidata'];
 const summary={totalConcepts:concepts.length,strongCoverage:concepts.filter(c=>status(c)==='Strong public trait coverage').length,partialCoverage:concepts.filter(c=>status(c)==='Partial public trait coverage').length,needsHelp:concepts.filter(c=>status(c)==='Needs help').length,anyPublicTraitCoverage:concepts.filter(c=>c.traits.size>0).length,bySource:{},byDifficulty:{},thresholds:{strong:'5 or more distinct usable public trait assertions',partial:'1 to 4 distinct usable public trait assertions',needsHelp:'0 matched usable public trait assertions'}};
