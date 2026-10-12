@@ -16,7 +16,9 @@ const appBundle = await build({entryPoints: [src("client/app.js")], bundle: true
 const appJs = appBundle.outputFiles[0].text;
 const audioBundle = await build({entryPoints: [src("client/audio-entry.js")], bundle: true, format: "esm", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
 const audioJs = audioBundle.outputFiles[0].text;
-const css = await readFile(src("client/styles.css"), "utf8");
+const baseCss = await readFile(src("client/styles.css"), "utf8");
+const voxelCss = await readFile(src("client/voxel-theme.css"), "utf8");
+const css = `${baseCss}\n\n${voxelCss}`;
 const cloudSync = await readFile(src("client/cloud-sync.js"), "utf8");
 const account = await readFile(src("client/account.js"), "utf8");
 const ICONS = ["favicon.ico", "favicon-32.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
@@ -45,6 +47,7 @@ if (hasMomRuntime) {
 }
 const momJsSource = Object.fromEntries(await Promise.all(MOM_JS.map(async name => [name, await readFile(src(`client/mom-mode/${name}`), "utf8")])));
 const momCssSource = Object.fromEntries(await Promise.all(MOM_CSS.map(async name => [name, await readFile(src(`client/mom-mode/${name}`), "utf8")])));
+momCssSource["styles.css"] += `\n\n${await readFile(src("client/mom-mode/voxel-theme.css"), "utf8")}`;
 const momStatic = Object.fromEntries(await Promise.all(MOM_STATIC.map(async name => [name, await readFile(src(`client/mom-mode/${name}`))])));
 
 const hash = value => createHash("sha256").update(value).digest("hex").slice(0, 10);
