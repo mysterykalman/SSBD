@@ -13,14 +13,27 @@ on:
       - scripts/extract-mom-wikidata-labelled-traits.mjs
       - scripts/mom-controlled-traits.mjs
       - scripts/build-mom-controlled-profiles.mjs
+      - scripts/build-mom-runtime-knowledge.mjs
+      - scripts/mom-runtime-compiler.mjs
+      - scripts/mom-runtime-supplements.mjs
+      - scripts/mom-runtime-facets.mjs
+      - scripts/mom-runtime-priors.mjs
+      - scripts/mom-safe-negatives.mjs
+      - scripts/mom-question-metadata.mjs
+      - scripts/mom-runtime-benchmark.mjs
+      - src/shared/mom-runtime-reasoning.js
+      - src/shared/mom-runtime-game.js
+      - src/shared/mom-runtime-lookup.js
       - src/client/mom-mode/engine.js
       - test/mom-controlled-traits.test.mjs
       - test/mom-benchmark-suite.test.mjs
+      - test/mom-runtime-*.test.mjs
+      - test/mom-question-metadata.test.mjs
       - test/fixtures/mom-benchmark-data.mjs
       - .github/workflows/mom-trait-coverage.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   coverage:
@@ -81,24 +94,60 @@ jobs:
         run: node scripts/analyze-mom-trait-coverage.mjs
       - name: Build controlled Pam profiles
         run: node scripts/build-mom-controlled-profiles.mjs
-      - name: Run 1082-concept Mom benchmark
+      - name: Build compact runtime intelligence
+        run: node scripts/build-mom-runtime-knowledge.mjs
+      - name: Validate compact runtime shape and size
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const runtime=JSON.parse(fs.readFileSync('.dev-data/mom-runtime/knowledge.runtime.json','utf8'));
+          if(runtime.meta.conceptCount<50000)throw new Error(`Expected at least 50000 runtime concepts, got ${runtime.meta.conceptCount}`);
+          if(runtime.meta.questionCount<50)throw new Error(`Runtime question set is unexpectedly small: ${runtime.meta.questionCount}`);
+          if(Object.keys(runtime.aliases||{}).length<runtime.meta.conceptCount)throw new Error('Runtime alias lookup is unexpectedly incomplete');
+          console.log(JSON.stringify(runtime.meta,null,2));
+          NODE
+      - name: Run compact runtime unit and coverage gates
+        run: node --test test/mom-runtime-*.test.mjs test/mom-question-metadata.test.mjs
+      - name: Run legacy benchmark accounting checks
         run: node --test test/mom-benchmark-suite.test.mjs
-      - name: Print coverage and benchmark result
+      - name: Print coverage and runtime result
         run: |
           echo 'Public coverage:'
           cat .dev-data/mom-trait-coverage/summary.json
           echo 'Controlled profiles:'
           cat .dev-data/mom-controlled-profiles/summary.json
-          echo 'Benchmark summary:'
-          node -e "const r=require('./.dev-data/mom-benchmark/report.json'); console.log(JSON.stringify({runtimeKnowledgeCount:r.runtimeKnowledgeCount,runtimeControlledCount:r.runtimeControlledCount,runtimeFeatureCount:r.runtimeFeatureCount,presentCount:r.presentCount,missingCount:r.missingCount,pamWinCount:r.pamWinCount,pamWinRate:r.pamWinRate,pathFlagCount:r.pathFlagCount,byTier:r.byTier},null,2))"
-      - name: Upload coverage, controlled profiles, and benchmark
+          echo 'Compact runtime:'
+          node -e "const r=require('./.dev-data/mom-runtime/knowledge.runtime.json'); console.log(JSON.stringify(r.meta,null,2))"
+          if [ -f .dev-data/mom-runtime-benchmark/coverage.json ]; then
+            echo 'Curated runtime coverage:'
+            node -e "const r=require('./.dev-data/mom-runtime-benchmark/coverage.json'); console.log(JSON.stringify({runtimeKnowledgeCount:r.runtimeKnowledgeCount,runtimeFeatureCount:r.runtimeFeatureCount,presentCount:r.presentCount,missingCount:r.missingCount,coverageRate:r.coverageRate},null,2))"
+          fi
+      - name: Stage validated runtime for browser builds
+        run: cp .dev-data/mom-runtime/knowledge.runtime.json src/client/mom-mode/knowledge.runtime.json
+      - name: Upload coverage, compact runtime, and controlled profiles
         uses: actions/upload-artifact@v4
         with:
-          name: mom-controlled-50k-benchmark
+          name: mom-controlled-50k-runtime
           path: |
             .dev-data/mom-trait-coverage/
             .dev-data/mom-controlled-profiles/
-            .dev-data/mom-benchmark/
+            .dev-data/mom-runtime/
+            .dev-data/mom-runtime-benchmark/
             .dev-data/trait-sources/extra-public-evidence.json
             .dev-data/trait-sources/wikidata-labelled-evidence.json
+            src/client/mom-mode/knowledge.runtime.json
           retention-days: 14
+      - name: Commit validated runtime intelligence on integration branch
+        if: github.ref == 'refs/heads/integration/all-current-work'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/client/mom-mode/knowledge.runtime.json
+          if git diff --cached --quiet; then
+            echo 'Runtime intelligence is unchanged.'
+          else
+            git commit -m 'Mom: refresh compiled 50k runtime intelligence'
+            git push
+          fi
