@@ -22,7 +22,7 @@ export function conceptPopularityWeight(concept){
   return commonness*difficulty;
 }
 
-export function applyCategoryBalancedPriors(concepts,{categoryMass=DEFAULT_CATEGORY_MASS,weightFor=()=>1}={}){
+export function applyCategoryBalancedPriors(concepts,{categoryMass=DEFAULT_CATEGORY_MASS,weightFor=conceptPopularityWeight}={}){
   const groups=new Map();
   for(let i=0;i<concepts.length;i++){
     const category=Object.hasOwn(categoryMass,concepts[i].category)?concepts[i].category:'unknown';
