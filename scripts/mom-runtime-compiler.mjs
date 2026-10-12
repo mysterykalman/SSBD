@@ -56,6 +56,9 @@ function stable(value) {
   if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])]));
   return value;
 }
+function canonicalList(values, keyFn) {
+  return [...values].map(stable).sort((a,b) => keyFn(a).localeCompare(keyFn(b), 'en'));
+}
 function hashSources(value) {
   return createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 }
@@ -112,7 +115,12 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
     };
   });
 
-  const sourceHash = hashSources({inventory, profiles, traits:traitList});
+  const canonicalSources = {
+    inventory: canonicalList(inventory, item => normalizeMomLookup(item.key || item.name)),
+    profiles: canonicalList(profiles, item => normalizeMomLookup(item.key || item.name)),
+    traits: traitList
+  };
+  const sourceHash = hashSources(canonicalSources);
   return {
     version: 1,
     meta: {
