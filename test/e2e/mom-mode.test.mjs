@@ -22,14 +22,27 @@ async function reachDecision(page){
  throw new Error('Mom Mode did not reach a guess or result');
 }
 
+function assertMomRuntimeAssets(scriptPaths){
+ const compact=scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.runtime\.[a-f0-9]{10}\.js$/.test(path));
+ if(compact){
+  assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/runtime-entry\.[a-f0-9]{10}\.js$/.test(path)));
+  assert.equal(scriptPaths.some(path=>/knowledge\.generated\./.test(path)),false);
+  assert.equal(scriptPaths.some(path=>/\/engine\.[a-f0-9]{10}\.js$/.test(path)),false);
+ }else{
+  assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.generated\.[a-f0-9]{10}\.js$/.test(path)));
+  assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/engine\.[a-f0-9]{10}\.js$/.test(path)));
+  assert.equal(scriptPaths.some(path=>path==='/mom/knowledge.generated.js'),false);
+ }
+ assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/debug\.[a-f0-9]{10}\.js$/.test(path)));
+ return compact;
+}
+
 test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persists progression, replays, exits, and fits mobile",async()=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(`${server.url}/mom/`);
  await page.waitForSelector('#start-btn');
  const scriptPaths=await page.locator('script[src]').evaluateAll(nodes=>nodes.map(node=>new URL(node.src).pathname));
- assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.generated\.[a-f0-9]{10}\.js$/.test(path)));
- assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/engine\.[a-f0-9]{10}\.js$/.test(path)));
- assert.equal(scriptPaths.some(path=>path==='/mom/knowledge.generated.js'),false);
+ assertMomRuntimeAssets(scriptPaths);
  const stylePaths=await page.locator('link[rel="stylesheet"]').evaluateAll(nodes=>nodes.map(node=>new URL(node.href).pathname));
  assert.ok(stylePaths.some(path=>/^\/mom\/assets\/styles\.[a-f0-9]{10}\.css$/.test(path)));
  assert.ok(stylePaths.some(path=>/^\/mom\/assets\/character\.[a-f0-9]{10}\.css$/.test(path)));
@@ -42,6 +55,7 @@ test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persis
  assert.equal(await page.locator('#rules-dialog[open]').count(),0);
  assert.equal(await page.locator('#pam-score').textContent(),'0');
  assert.match(await page.locator('.score-label').textContent(),/^SCORE$/i);
+ await page.fill('#secret-word','chair');
  await page.click('#start-btn');
  await page.waitForSelector('#answer-actions:not([hidden])');
  const aside=page.locator('#pam-aside');
@@ -64,6 +78,7 @@ test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persis
  await page.click('#again-btn');
  await page.waitForSelector('#start-btn');
  assert.equal(Number((await page.locator('#pam-score').textContent()).replace(/,/g,'')),scoreAfterFirst);
+ await page.fill('#secret-word','lamp');
  await page.click('#start-btn');
  const second=await reachDecision(page);
  if(second==='guess'){
@@ -89,6 +104,22 @@ test("Mom Mode exposes the push-your-luck controls when a hunch is shown",async(
  assert.ok(await page.locator('#keep-asking-btn').count());
  assert.match(await page.locator('#guess-now-btn').textContent(),/Make her guess/i);
  assert.match(await page.locator('#keep-asking-btn').textContent(),/costs 2 pts/i);
+ await page.close();
+});
+
+test("compact Mom runtime exposes opt-in lookup and reasoning diagnostics",async()=>{
+ const page=await browser.newPage();
+ await page.goto(`${server.url}/mom/?debug=1`);
+ await page.waitForSelector('#start-btn');
+ const scriptPaths=await page.locator('script[src]').evaluateAll(nodes=>nodes.map(node=>new URL(node.src).pathname));
+ const compact=scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.runtime\.[a-f0-9]{10}\.js$/.test(path));
+ if(compact){
+  await page.waitForSelector('#mom-debug-panel');
+  await page.fill('#secret-word','Nintendo Switch');
+  await page.waitForFunction(()=>document.querySelector('#mom-debug-knowledge-status')?.textContent.includes('known'));
+  assert.match(await page.locator('#mom-debug-knowledge-status').textContent(),/known/i);
+  assert.match(await page.locator('#mom-debug-output').textContent(),/concepts/i);
+ }
  await page.close();
 });
 
