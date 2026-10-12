@@ -5,7 +5,7 @@
   "description": "Deterministic browser-facing knowledge package compiled from the 50k playable inventory, controlled profiles, curated knowledge, aliases, facets, and calibrated priors.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "meta", "questions", "concepts", "aliases"],
+  "required": ["version", "meta", "questions", "concepts", "aliases", "facetIndex"],
   "properties": {
     "version": {"const": 1},
     "meta": {
@@ -75,6 +75,32 @@
           {"type": "integer", "minimum": 0},
           {"type": "array", "items": {"type": "integer", "minimum": 0}, "minItems": 2, "uniqueItems": true}
         ]
+      }
+    },
+    "facetIndex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "types"],
+      "properties": {
+        "version": {"const": 1},
+        "types": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["question", "exclusiveKnown", "reliability", "known", "values"],
+            "properties": {
+              "question": {"type": "string"},
+              "exclusiveKnown": {"type": "boolean"},
+              "requiresCategory": {"type": "string"},
+              "reliability": {"type": "number", "minimum": 0, "maximum": 1},
+              "known": {"type": "array", "items": {"type": "integer", "minimum": 0}, "uniqueItems": true},
+              "values": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": {"type": "integer", "minimum": 0}, "uniqueItems": true}
+              }
+            }
+          }
+        }
       }
     }
   }
