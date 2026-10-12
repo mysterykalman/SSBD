@@ -72,6 +72,13 @@ function stable(value) {
 function canonicalList(values, keyFn) {
   return [...values].map(stable).sort((a,b) => keyFn(a).localeCompare(keyFn(b), 'en'));
 }
+function canonicalSupplements(supplements) {
+  return [...supplements].map(s=>({
+    source:String(s.source||''),
+    features:canonicalList(s.features||[],f=>String(f.id||'')),
+    objects:canonicalList(s.objects||[],o=>`${normalizeMomLookup(o.name)}|${String(o.qid||'')}`)
+  })).sort((a,b)=>a.source.localeCompare(b.source,'en'));
+}
 function hashSources(value) {
   return createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 }
@@ -162,13 +169,13 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
     const source=inventoryByKey.get(key)||{};
     const matches=matchSupplementRecords(profile,source,supplementIndex);
     matches.forEach(record=>matchedSupplement.add(record));
-    seeds.push({profile,source,matches,supplementOnly:false});
+    seeds.push({profile,source,matches});
   }
   for(const record of supplementRecords){
     if(matchedSupplement.has(record))continue;
     seeds.push({
       profile:{name:record.name,key:record.key,aliases:[...record.aliases],qid:record.qid,difficulty:'Long Tail',score:record.weight||1,facets:record.facets,traits:[]},
-      source:{},matches:[record],supplementOnly:true
+      source:{},matches:[record]
     });
   }
   seeds.sort((a,b)=>String(a.profile.name).localeCompare(String(b.profile.name),'en'));
@@ -196,10 +203,11 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
     };
   });
 
-  const canonicalSupplements=canonicalList(supplements,s=>String(s.source||''));
   const canonicalSources={
     inventory:canonicalList(inventory,item=>normalizeMomLookup(item.key||item.name)),
-    profiles:canonicalList(profiles,item=>normalizeMomLookup(item.key||item.name)),traits:questionDefs,supplements:canonicalSupplements
+    profiles:canonicalList(profiles,item=>normalizeMomLookup(item.key||item.name)),
+    traits:questionDefs,
+    supplements:canonicalSupplements(supplements)
   };
   const sourceHash=hashSources(canonicalSources);
   return{
