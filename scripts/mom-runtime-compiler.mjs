@@ -25,6 +25,11 @@ const DIFFICULTY = new Map([
   ['long_tail', 'long_tail']
 ]);
 const DOMAIN_ORDER = ['person','animal','plant','place','food_drink','object','media_work','event','organization','abstract'];
+const LEGACY_DOMAIN_HINTS = [
+  ['person','person'],['animal','animal'],['plant','plant'],['place','place'],['food','food_drink'],['drink','food_drink'],
+  ['gk_product','object'],['gk_invention','object'],['gk_artwork','media_work'],['gk_book','media_work'],['gk_film','media_work'],
+  ['gk_tv','media_work'],['gk_music_work','media_work'],['gk_event','event'],['gk_brand','organization'],['gk_science','abstract']
+];
 const SUBCATEGORY_ORDER = [
   'fictional_character','mammal','bird','fish','reptile','amphibian','insect','tree','flower','country','city','natural_place','building','landmark',
   'vehicle','car','aircraft','watercraft','tool','device','electronic','furniture','clothing','container','toy','musical_instrument','sports_equipment',
@@ -35,21 +40,28 @@ const SUBCATEGORY_ORDER = [
 function difficultyOf(value) {
   return DIFFICULTY.get(String(value || '').trim().toLowerCase()) || 'long_tail';
 }
-function categoryOf(traitSet, fallback='unknown') {
-  return DOMAIN_ORDER.find(id => traitSet.has(id)) || normalizeMomLookup(fallback).replaceAll(' ', '_') || 'unknown';
+function categoryOf(traitSet, fallback='unknown', kind='') {
+  const controlled = DOMAIN_ORDER.find(id => traitSet.has(id));
+  if (controlled) return controlled;
+  for (const [legacy,category] of LEGACY_DOMAIN_HINTS) if (traitSet.has(legacy)) return category;
+  const kindKey = normalizeMomLookup(kind).replaceAll(' ','_');
+  const kindMap = {product:'object',invention:'object',artwork:'media_work',book:'media_work',film:'media_work',television:'media_work',music:'media_work',event:'event',brand:'organization',science:'abstract',person:'person',place:'place',animal:'animal',plant:'plant',food:'food_drink',drink:'food_drink'};
+  if (kindMap[kindKey]) return kindMap[kindKey];
+  return normalizeMomLookup(fallback).replaceAll(' ', '_') || 'unknown';
 }
 function subcategoryOf(traitSet) {
   return SUBCATEGORY_ORDER.find(id => traitSet.has(id)) || null;
 }
-function breadthFor(trait) {
-  if (trait.group === 'domain') return 'broad';
-  if (Array.isArray(trait.parents) && trait.parents.length) return trait.parents.length > 1 ? 'specific' : 'category';
-  if (['person','animal','plant','place','object','food','media','event','organization','abstract'].includes(trait.group)) return 'category';
+function breadthFor(def) {
+  if (def.group === 'domain') return 'broad';
+  if (Array.isArray(def.parents) && def.parents.length) return def.parents.length > 1 ? 'specific' : 'category';
+  if (def.requires) return 'specific';
+  if (['person','animal','plant','place','object','food','media','event','organization','abstract','culture','science','history'].includes(def.group)) return 'category';
   return 'attribute';
 }
-function reliabilityFor(trait) {
-  if (trait.group === 'domain') return 0.99;
-  if (Array.isArray(trait.parents) && trait.parents.length) return 0.96;
+function reliabilityFor(def) {
+  if (def.group === 'domain') return 0.99;
+  if ((Array.isArray(def.parents) && def.parents.length) || def.requires) return 0.96;
   return 0.94;
 }
 function stable(value) {
@@ -63,77 +75,136 @@ function canonicalList(values, keyFn) {
 function hashSources(value) {
   return createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 }
-function conceptId(profile, inventory) {
-  const qid = String(profile.qid || inventory?.qid || '').trim();
+function conceptId(profile, inventory, supplements=[]) {
+  const qid = String(profile.qid || inventory?.qid || supplements.find(x=>x.qid)?.qid || '').trim();
   if (qid) return `wd:${qid}`;
   const key = normalizeMomLookup(profile.key || inventory?.key || profile.name);
   return `concept:${key.replace(/\s+/g, '_')}`;
 }
-
-export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[], generatedAt='deterministic'}) {
-  const traitList = [...traits].map(trait => ({...trait, parents:[...(trait.parents || [])]})).sort((a,b) => a.id.localeCompare(b.id));
-  const traitIndex = new Map(traitList.map((trait,index) => [trait.id,index]));
-  const questions = traitList.map(trait => ({
-    id: trait.id,
-    q: trait.q,
-    group: trait.group || 'attribute',
-    breadth: breadthFor(trait),
-    reliability: reliabilityFor(trait),
-    requires: trait.parents?.length ? (traitIndex.get(trait.parents[0]) ?? null) : null,
-    appliesTo: [...(trait.parents || [])],
-    excludes: [],
-    minCoverage: trait.group === 'domain' ? 0 : 0.35
-  }));
-
-  const inventoryByKey = new Map(inventory.map(item => [normalizeMomLookup(item.key || item.name), item]));
-  const orderedProfiles = [...profiles].sort((a,b) => String(a.name).localeCompare(String(b.name), 'en'));
-  const aliases = {};
-  const concepts = orderedProfiles.map((profile, conceptIndex) => {
-    const key = normalizeMomLookup(profile.key || profile.name);
-    const source = inventoryByKey.get(key) || {};
-    const yesIds = [...new Set(profile.traits || profile.yes || [])].filter(id => traitIndex.has(id)).sort();
-    const derivedNo = deriveSafeNegativeTraitIds(yesIds);
-    const noIds = [...new Set([...(profile.no || []),...derivedNo])].filter(id => traitIndex.has(id) && !yesIds.includes(id)).sort();
-    const maybeIds = [...new Set(profile.maybe || [])].filter(id => traitIndex.has(id) && !yesIds.includes(id) && !noIds.includes(id)).sort();
-    const traitSet = new Set(yesIds);
-    const name = String(profile.name || source.name || '').trim();
-    const allAliases = [...new Set([name, ...(profile.aliases || []), ...(source.aliases || [])].map(v => String(v || '').trim()).filter(Boolean))];
-    for (const alias of allAliases) {
-      const normalized = normalizeMomLookup(alias);
-      if (normalized && aliases[normalized] == null) aliases[normalized] = conceptIndex;
+function normalizeQuestionDefs(traits, supplements) {
+  const map = new Map();
+  for (const trait of traits) {
+    if (!trait?.id || !trait?.q) continue;
+    map.set(trait.id,{id:trait.id,q:trait.q,group:trait.group||'attribute',parents:[...(trait.parents||[])],requires:null});
+  }
+  for (const supplement of supplements) for (const feature of supplement.features||[]) {
+    if (!feature?.id || !feature?.q || map.has(feature.id)) continue;
+    map.set(feature.id,{id:feature.id,q:feature.q,group:feature.group||'attribute',parents:[...(feature.parents||[])],requires:feature.requires||null});
+  }
+  return [...map.values()].sort((a,b)=>a.id.localeCompare(b.id));
+}
+function consolidateSupplementObjects(supplements) {
+  const map = new Map();
+  for (const supplement of supplements) for (const raw of supplement.objects||[]) {
+    const name=String(raw?.name||'').trim();
+    if(!name) continue;
+    const key=normalizeMomLookup(name);
+    const current=map.get(key)||{name,key,aliases:new Set(),yes:new Set(),no:new Set(),maybe:new Set(),weight:0,qid:'',kind:'',facets:{},sources:new Set()};
+    current.sources.add(supplement.source||'supplement');
+    for(const alias of raw.aliases||[]) if(alias) current.aliases.add(String(alias).trim());
+    for(const id of raw.yes||[]) if(id) current.yes.add(id);
+    for(const id of raw.no||[]) if(id) current.no.add(id);
+    for(const id of raw.maybe||[]) if(id) current.maybe.add(id);
+    current.weight=Math.max(current.weight,Number(raw.weight)||0);
+    current.qid ||= String(raw.qid||'');
+    current.kind ||= String(raw.kind||'');
+    if(raw.facets&&typeof raw.facets==='object')current.facets={...current.facets,...raw.facets};
+    map.set(key,current);
+  }
+  for(const record of map.values()){
+    for(const id of record.yes){record.no.delete(id);record.maybe.delete(id);}
+    for(const id of record.no)record.maybe.delete(id);
+  }
+  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name,'en'));
+}
+function supplementIndexes(records){
+  const byLookup=new Map(),byQid=new Map();
+  for(const record of records){
+    for(const value of [record.name,...record.aliases]){
+      const key=normalizeMomLookup(value);if(key&&!byLookup.has(key))byLookup.set(key,record);
     }
-    const score = Number(profile.score ?? source.score ?? 1);
-    return {
-      id: conceptId(profile, source),
-      name,
-      category: categoryOf(traitSet, profile.broadCategory || source.broadCategory),
-      subcategory: subcategoryOf(traitSet),
-      difficulty: difficultyOf(profile.difficulty || source.difficulty),
-      prior: Number.isFinite(score) && score > 0 ? Number(score.toFixed(6)) : 1,
-      yes: yesIds.map(id => traitIndex.get(id)),
-      no: noIds.map(id => traitIndex.get(id)),
-      maybe: maybeIds.map(id => traitIndex.get(id)),
-      facets: profile.facets && typeof profile.facets === 'object' ? stable(profile.facets) : {}
+    if(record.qid&&!byQid.has(record.qid))byQid.set(record.qid,record);
+  }
+  return{byLookup,byQid};
+}
+function matchSupplementRecords(profile,source,indexes){
+  const found=new Set();
+  const qid=String(profile.qid||source.qid||'');
+  if(qid&&indexes.byQid.has(qid))found.add(indexes.byQid.get(qid));
+  for(const value of [profile.name,...(profile.aliases||[]),source.name,...(source.aliases||[])]){
+    const key=normalizeMomLookup(value);if(key&&indexes.byLookup.has(key))found.add(indexes.byLookup.get(key));
+  }
+  return [...found];
+}
+function idsFrom(records,field){return records.flatMap(record=>[...record[field]]);}
+
+export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[], supplements=[], generatedAt='deterministic'}) {
+  const questionDefs=normalizeQuestionDefs(traits,supplements);
+  const questionIndex=new Map(questionDefs.map((def,index)=>[def.id,index]));
+  const questions=questionDefs.map(def=>{
+    const requiresId=def.requires||def.parents?.[0]||null;
+    const applies=[...new Set([...(def.parents||[]),...(def.requires?[def.requires]:[])])];
+    return{
+      id:def.id,q:def.q,group:def.group||'attribute',breadth:breadthFor(def),reliability:reliabilityFor(def),
+      requires:requiresId?(questionIndex.get(requiresId)??null):null,appliesTo:applies,excludes:[],minCoverage:def.group==='domain'?0:0.35
     };
   });
 
-  const canonicalSources = {
-    inventory: canonicalList(inventory, item => normalizeMomLookup(item.key || item.name)),
-    profiles: canonicalList(profiles, item => normalizeMomLookup(item.key || item.name)),
-    traits: traitList
+  const inventoryByKey=new Map(inventory.map(item=>[normalizeMomLookup(item.key||item.name),item]));
+  const supplementRecords=consolidateSupplementObjects(supplements);
+  const supplementIndex=supplementIndexes(supplementRecords);
+  const matchedSupplement=new Set();
+  const aliases={};
+  const seeds=[];
+
+  for(const profile of [...profiles].sort((a,b)=>String(a.name).localeCompare(String(b.name),'en'))){
+    const key=normalizeMomLookup(profile.key||profile.name);
+    const source=inventoryByKey.get(key)||{};
+    const matches=matchSupplementRecords(profile,source,supplementIndex);
+    matches.forEach(record=>matchedSupplement.add(record));
+    seeds.push({profile,source,matches,supplementOnly:false});
+  }
+  for(const record of supplementRecords){
+    if(matchedSupplement.has(record))continue;
+    seeds.push({
+      profile:{name:record.name,key:record.key,aliases:[...record.aliases],qid:record.qid,difficulty:'Long Tail',score:record.weight||1,facets:record.facets,traits:[]},
+      source:{},matches:[record],supplementOnly:true
+    });
+  }
+  seeds.sort((a,b)=>String(a.profile.name).localeCompare(String(b.profile.name),'en'));
+
+  const concepts=seeds.map(({profile,source,matches},conceptIndex)=>{
+    const yesIds=[...new Set([...(profile.traits||profile.yes||[]),...idsFrom(matches,'yes')])].filter(id=>questionIndex.has(id)).sort();
+    const derivedNo=deriveSafeNegativeTraitIds(yesIds);
+    const noIds=[...new Set([...(profile.no||[]),...idsFrom(matches,'no'),...derivedNo])].filter(id=>questionIndex.has(id)&&!yesIds.includes(id)).sort();
+    const maybeIds=[...new Set([...(profile.maybe||[]),...idsFrom(matches,'maybe')])].filter(id=>questionIndex.has(id)&&!yesIds.includes(id)&&!noIds.includes(id)).sort();
+    const traitSet=new Set(yesIds);
+    const name=String(profile.name||source.name||matches[0]?.name||'').trim();
+    const allAliases=[...new Set([
+      name,...(profile.aliases||[]),...(source.aliases||[]),...matches.flatMap(record=>[record.name,...record.aliases])
+    ].map(v=>String(v||'').trim()).filter(Boolean))];
+    for(const alias of allAliases){const normalized=normalizeMomLookup(alias);if(normalized&&aliases[normalized]==null)aliases[normalized]=conceptIndex;}
+    const supplementWeight=Math.max(0,...matches.map(record=>record.weight||0));
+    const score=Number(profile.score??source.score??supplementWeight??1);
+    const facets=stable({...matches.reduce((acc,record)=>({...acc,...record.facets}),{}),...(profile.facets&&typeof profile.facets==='object'?profile.facets:{})});
+    const kind=profile.kind||source.kind||matches.find(record=>record.kind)?.kind||'';
+    return{
+      id:conceptId(profile,source,matches),name,
+      category:categoryOf(traitSet,profile.broadCategory||source.broadCategory,kind),subcategory:subcategoryOf(traitSet),
+      difficulty:difficultyOf(profile.difficulty||source.difficulty),prior:Number.isFinite(score)&&score>0?Number(score.toFixed(6)):1,
+      yes:yesIds.map(id=>questionIndex.get(id)),no:noIds.map(id=>questionIndex.get(id)),maybe:maybeIds.map(id=>questionIndex.get(id)),facets
+    };
+  });
+
+  const canonicalSupplements=canonicalList(supplements,s=>String(s.source||''));
+  const canonicalSources={
+    inventory:canonicalList(inventory,item=>normalizeMomLookup(item.key||item.name)),
+    profiles:canonicalList(profiles,item=>normalizeMomLookup(item.key||item.name)),traits:questionDefs,supplements:canonicalSupplements
   };
-  const sourceHash = hashSources(canonicalSources);
-  return {
-    version: 1,
-    meta: {
-      conceptCount: concepts.length,
-      questionCount: questions.length,
-      sourceHash,
-      generatedAt,
-      compilerVersion: '1'
-    },
-    questions,
-    concepts,
-    aliases: Object.fromEntries(Object.entries(aliases).sort(([a],[b]) => a.localeCompare(b)))
+  const sourceHash=hashSources(canonicalSources);
+  return{
+    version:1,
+    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'2'},
+    questions,concepts,aliases:Object.fromEntries(Object.entries(aliases).sort(([a],[b])=>a.localeCompare(b)))
   };
 }
