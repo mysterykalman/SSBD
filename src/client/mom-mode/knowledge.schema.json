@@ -45,6 +45,22 @@
       "uniqueItems": true,
       "default": []
     },
+    "facets": {
+      "type": "object",
+      "description": "Structured filterable attributes used to generate natural deduction questions such as brand, country, product type, or franchise.",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true,
+            "minItems": 1
+          }
+        ]
+      },
+      "default": {}
+    },
     "difficulty": {
       "type": "string",
       "enum": ["core", "sweet_spot", "hard_but_fair", "long_tail"]
