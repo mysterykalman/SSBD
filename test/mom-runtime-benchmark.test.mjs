@@ -48,6 +48,19 @@ test('runtime benchmark coverage distinguishes missing from present concepts',()
   assert.equal(summary.coverageRate,0.5);
 });
 
+test('real compact runtime accounts for all curated benchmark rows without self-play', {skip:!fs.existsSync(REAL_RUNTIME)},()=>{
+  const runtime=JSON.parse(fs.readFileSync(REAL_RUNTIME,'utf8'));
+  const rows=loadBenchmarkRows();
+  const evaluated=evaluateRuntimeBenchmark(runtime,rows,{selfPlay:false});
+  const summary=summarizeRuntimeBenchmark(runtime,evaluated);
+  const dir=path.join(ROOT,'.dev-data','mom-runtime-benchmark');fs.mkdirSync(dir,{recursive:true});
+  fs.writeFileSync(path.join(dir,'coverage.json'),JSON.stringify(summary,null,2)+'\n');
+  assert.equal(rows.length,UNIQUE_CANONICAL_COUNT);
+  assert.equal(summary.rowCount,1081);
+  assert.equal(summary.presentCount+summary.missingCount,1081);
+  assert.ok(runtime.meta?.conceptCount>=50000,`expected at least 50000 runtime concepts, got ${runtime.meta?.conceptCount}`);
+});
+
 test('full 1,081-row compact runtime benchmark', {skip:!RUN_FULL||!fs.existsSync(REAL_RUNTIME)},()=>{
   const runtime=JSON.parse(fs.readFileSync(REAL_RUNTIME,'utf8'));
   const rows=loadBenchmarkRows();
