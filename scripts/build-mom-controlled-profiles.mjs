@@ -8,8 +8,7 @@ const ROOT = process.cwd();
 const INVENTORY = path.join(ROOT, '.dev-data', 'mom-playable-50k', 'playable_50k.jsonl');
 const COVERAGE_EVIDENCE = path.join(ROOT, '.dev-data', 'mom-trait-coverage', 'evidence.jsonl');
 const EXTRA_FILES = [
-  path.join(ROOT, '.dev-data', 'trait-sources', 'extra-public-evidence.json'),
-  path.join(ROOT, '.dev-data', 'trait-sources', 'wikidata-labelled-evidence.json')
+  path.join(ROOT, '.dev-data', 'trait-sources', 'extra-public-evidence.json')
 ];
 const OUT = path.join(ROOT, '.dev-data', 'mom-controlled-profiles');
 const PROFILES_OUT = path.join(OUT, 'mom-controlled-profiles.json');
