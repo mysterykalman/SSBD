@@ -47,6 +47,77 @@ def typed_attribute(attr):
     return f'attribute:{a}'
 
 
+def stream_json_array(filename, chunk_size=1024 * 1024):
+    """Yield items from a top-level JSON array without loading the full file into RAM."""
+    decoder = json.JSONDecoder()
+    with open(filename, encoding='utf-8') as f:
+        buffer = ''
+        pos = 0
+        started = False
+        eof = False
+
+        while True:
+            if pos >= len(buffer) and not eof:
+                buffer = ''
+                pos = 0
+                chunk = f.read(chunk_size)
+                if chunk:
+                    buffer = chunk
+                else:
+                    eof = True
+
+            if not started:
+                while True:
+                    while pos < len(buffer) and buffer[pos].isspace():
+                        pos += 1
+                    if pos < len(buffer):
+                        if buffer[pos] != '[':
+                            raise ValueError(f'{filename} is not a top-level JSON array')
+                        pos += 1
+                        started = True
+                        break
+                    if eof:
+                        raise ValueError(f'Unexpected EOF before JSON array in {filename}')
+                    buffer = buffer[pos:] + f.read(chunk_size)
+                    pos = 0
+                continue
+
+            while True:
+                while pos < len(buffer) and (buffer[pos].isspace() or buffer[pos] == ','):
+                    pos += 1
+                if pos < len(buffer):
+                    if buffer[pos] == ']':
+                        return
+                    break
+                if eof:
+                    return
+                buffer = buffer[pos:] + f.read(chunk_size)
+                pos = 0
+                if not buffer:
+                    eof = True
+
+            while True:
+                try:
+                    value, end = decoder.raw_decode(buffer, pos)
+                    yield value
+                    pos = end
+                    break
+                except json.JSONDecodeError:
+                    if eof:
+                        raise
+                    buffer = buffer[pos:]
+                    pos = 0
+                    chunk = f.read(chunk_size)
+                    if chunk:
+                        buffer += chunk
+                    else:
+                        eof = True
+
+            if pos > chunk_size * 2:
+                buffer = buffer[pos:]
+                pos = 0
+
+
 with open(INVENTORY, newline='', encoding='utf-8-sig') as f:
     rows = list(csv.DictReader(f))
 
@@ -104,16 +175,20 @@ for filename in paco_files:
                 add(name, 'PACO', trait)
 
 
-# Visual Genome object attributes. Keep only attributes repeatedly associated with
-# the same named object so image-specific colours/conditions do not become facts.
+# Visual Genome object attributes. Stream the huge top-level array instead of
+# materializing the entire dataset in memory. Keep only attributes repeatedly
+# associated with the same named object so image-specific colours/conditions do
+# not become facts.
 vg_attr = os.path.join(SOURCE_ROOT, 'visual-genome', 'attributes.json')
 if os.path.exists(vg_attr):
     totals = Counter()
     counts = defaultdict(Counter)
     try:
-        with open(vg_attr, encoding='utf-8') as f:
-            images = json.load(f)
-        for image in images:
+        image_count = 0
+        for image in stream_json_array(vg_attr):
+            image_count += 1
+            if image_count % 25000 == 0:
+                print(f'Visual Genome attributes: processed {image_count:,} images')
             for obj in image.get('attributes', []):
                 names = obj.get('names') or []
                 attrs = obj.get('attributes') or []
@@ -125,6 +200,7 @@ if os.path.exists(vg_attr):
                     for attr in set(norm(x) for x in attrs if x):
                         if attr:
                             counts[key][attr] += 1
+        print(f'Visual Genome attributes complete: {image_count:,} images')
         for key, attr_counts in counts.items():
             total = totals[key]
             for attr, count in attr_counts.items():
@@ -134,15 +210,18 @@ if os.path.exists(vg_attr):
         print(f'Visual Genome attributes skipped: {exc}')
 
 
-# Visual Genome relationships. Only retain frequent relation/object pairs. Spatial
-# relations are typed as location evidence so the controlled mapper can use them.
+# Visual Genome relationships. Stream this large array for the same reason.
+# Only retain frequent relation/object pairs. Spatial relations are typed as
+# location evidence so the controlled mapper can use them.
 vg_rel = os.path.join(SOURCE_ROOT, 'visual-genome', 'relationships.json')
 if os.path.exists(vg_rel):
     rel_counts = defaultdict(Counter)
     try:
-        with open(vg_rel, encoding='utf-8') as f:
-            images = json.load(f)
-        for image in images:
+        image_count = 0
+        for image in stream_json_array(vg_rel):
+            image_count += 1
+            if image_count % 25000 == 0:
+                print(f'Visual Genome relationships: processed {image_count:,} images')
             for rel in image.get('relationships', []):
                 predicate = norm(rel.get('predicate'))
                 subj = rel.get('subject') or {}
@@ -158,6 +237,7 @@ if os.path.exists(vg_rel):
                         if predicate and oval:
                             prefix = 'atlocation' if predicate in LOCATION_PREDICATES else 'relation'
                             rel_counts[skey][f'{prefix}:{predicate}:{oval}'] += 1
+        print(f'Visual Genome relationships complete: {image_count:,} images')
         for key, pairs in rel_counts.items():
             for pair, count in pairs.items():
                 if count >= 5:
