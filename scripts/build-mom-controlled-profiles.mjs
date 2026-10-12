@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { once } from 'node:events';
+import { createInterface } from 'node:readline';
 import { TRAITS, mapEvidence, featureRecords } from './mom-controlled-traits.mjs';
 
 const ROOT = process.cwd();
@@ -10,11 +12,31 @@ const EXTRA_FILES = [
   path.join(ROOT, '.dev-data', 'trait-sources', 'wikidata-labelled-evidence.json')
 ];
 const OUT = path.join(ROOT, '.dev-data', 'mom-controlled-profiles');
+const PROFILES_OUT = path.join(OUT, 'mom-controlled-profiles.json');
+const SUMMARY_OUT = path.join(OUT, 'summary.json');
+const WEAK_OUT = path.join(OUT, 'needs_enrichment.json');
+const EVIDENCE_OUT = path.join(OUT, 'all-evidence.jsonl');
 fs.mkdirSync(OUT, { recursive: true });
 
 function readJsonl(file) {
   if (!fs.existsSync(file)) return [];
   return fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
+}
+async function forEachJsonl(file, visit) {
+  if (!fs.existsSync(file)) return;
+  const input = fs.createReadStream(file, { encoding: 'utf8' });
+  const lines = createInterface({ input, crlfDelay: Infinity });
+  for await (const line of lines) {
+    if (!line.trim()) continue;
+    await visit(JSON.parse(line));
+  }
+}
+async function write(stream, text) {
+  if (!stream.write(text)) await once(stream, 'drain');
+}
+async function finish(stream) {
+  stream.end();
+  await once(stream, 'finish');
 }
 function normalize(value) {
   return String(value ?? '').normalize('NFKC').toLowerCase().replace(/[’‘]/g, "'")
@@ -22,37 +44,70 @@ function normalize(value) {
     .replace(/[^a-z0-9']+/g, ' ').trim().replace(/\s+/g, ' ');
 }
 
-
 if (!fs.existsSync(INVENTORY)) throw new Error('Run the playable inventory builder first.');
 const inventory = readJsonl(INVENTORY);
+if (!inventory.length) throw new Error('Playable inventory is empty.');
+
+// Only retain the three fields mapEvidence() needs. The full source record is streamed to the
+// sidecar below, so support/weight/provenance details are preserved without duplicating them in RAM.
+const wantedEvidenceKeys = new Set();
+for (const item of inventory) {
+  for (const value of [item.name, ...(Array.isArray(item.aliases) ? item.aliases : [])]) {
+    const key = normalize(value);
+    if (key) wantedEvidenceKeys.add(key);
+  }
+}
 const evidenceByName = new Map();
-function addEvidence(record) {
+const evidenceStream = fs.createWriteStream(EVIDENCE_OUT, { encoding: 'utf8' });
+let preservedEvidence = 0;
+async function addEvidence(record) {
   const key = normalize(record.concept || record.name);
   if (!key || !record.trait) return;
+  // The sidecar remains full-fidelity and deterministic in source-ingestion order.
+  await write(evidenceStream, `${JSON.stringify(record)}\n`);
+  preservedEvidence += 1;
+  if (!wantedEvidenceKeys.has(key)) return;
   const list = evidenceByName.get(key) || [];
-  list.push(record);
+  list.push({ source: record.source || '', type: record.type || '', trait: record.trait });
   evidenceByName.set(key, list);
 }
-for (const record of readJsonl(COVERAGE_EVIDENCE)) addEvidence(record);
+
+await forEachJsonl(COVERAGE_EVIDENCE, addEvidence);
 for (const filename of EXTRA_FILES) {
   if (!fs.existsSync(filename)) continue;
   const parsed = JSON.parse(fs.readFileSync(filename, 'utf8'));
   for (const row of Array.isArray(parsed) ? parsed : []) {
     for (const evidence of Array.isArray(row.evidence) ? row.evidence : []) {
-      addEvidence({ concept: row.concept, ...evidence });
+      await addEvidence({ concept: row.concept, ...evidence });
     }
   }
 }
+await finish(evidenceStream);
+console.log(`[mom profiles] indexed evidence for ${evidenceByName.size.toLocaleString()} lookup keys; preserved ${preservedEvidence.toLocaleString()} full evidence records`);
 
-const objects = [];
+const featureById = new Map(featureRecords().map(feature => [feature.id, feature]));
+const traitIds = new Set(TRAITS.map(trait => trait.id));
 const counts = {};
-const weak = [];
 let extraMatched = 0;
+let needsEnrichment = 0;
+let emitted = 0;
+let firstProfile = true;
+let firstWeak = true;
+
+// Sorting 50k lightweight inventory rows is cheap and lets us stream the profile array in the same
+// stable alphabetical order as the previous in-memory implementation.
+inventory.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'en'));
+const profileStream = fs.createWriteStream(PROFILES_OUT, { encoding: 'utf8' });
+const weakStream = fs.createWriteStream(WEAK_OUT, { encoding: 'utf8' });
+await write(profileStream, `{"version":2,"traits":${JSON.stringify(TRAITS)},"objects":[\n`);
+await write(weakStream, '[\n');
+
 for (const item of inventory) {
   const name = String(item.name || '').trim();
   if (!name) continue;
   const aliases = Array.isArray(item.aliases) ? item.aliases : [];
-  const conceptEvidence = [...new Set([name, ...aliases].map(normalize))].flatMap(key => evidenceByName.get(key) || []);
+  const keys = [...new Set([name, ...aliases].map(normalize).filter(Boolean))];
+  const conceptEvidence = keys.flatMap(key => evidenceByName.get(key) || []);
   if (conceptEvidence.length) extraMatched += 1;
   const evidence = [
     ...(item.broadCategory ? [{ source: 'inventory taxonomy', type: 'category', trait: item.broadCategory }] : []),
@@ -60,21 +115,47 @@ for (const item of inventory) {
     ...conceptEvidence
   ];
   const traits = mapEvidence(evidence);
-  const yes = [...traits].filter(id => TRAITS.some(t => t.id === id)).sort();
+  const yes = [...traits].filter(id => traitIds.has(id)).sort();
   const difficulty = item.difficulty || 'Unknown';
   const status = yes.length >= 5 ? 'Strong standardized profile' : yes.length >= 2 ? 'Partial standardized profile' : 'Needs enrichment';
   counts[status] = (counts[status] || 0) + 1;
-  if (status === 'Needs enrichment') weak.push({ name, difficulty, traitCount: yes.length, evidenceCount: conceptEvidence.length });
-  objects.push({ name, aliases, key: item.key || normalize(name), qid: item.qid || '', difficulty,
-    score: Number(item.score) || 0, sources: item.sources || [], broadCategory: item.broadCategory || '',
-    sourceCategory: item.sourceCategory || '', facets: item.facets && typeof item.facets === 'object' ? item.facets : {}, traits: yes,
-    features: featureRecords(yes), evidenceCount: conceptEvidence.length,
-    evidenceSources: [...new Set(conceptEvidence.map(e => e.source).filter(Boolean))].sort(), status });
+  const evidenceSources = [...new Set(conceptEvidence.map(e => e.source).filter(Boolean))].sort();
+  const profile = {
+    name,
+    aliases,
+    key: item.key || normalize(name),
+    qid: item.qid || '',
+    difficulty,
+    score: Number(item.score) || 0,
+    sources: item.sources || [],
+    broadCategory: item.broadCategory || '',
+    sourceCategory: item.sourceCategory || '',
+    facets: item.facets && typeof item.facets === 'object' ? item.facets : {},
+    traits: yes,
+    // Previously this accidentally embedded every controlled question on every one of the 50k
+    // profiles. Keep the field contract, but include only definitions for traits this concept has.
+    features: yes.map(id => featureById.get(id)).filter(Boolean),
+    evidenceCount: conceptEvidence.length,
+    evidenceSources,
+    status
+  };
+  await write(profileStream, `${firstProfile ? '' : ',\n'}${JSON.stringify(profile)}`);
+  firstProfile = false;
+  emitted += 1;
+
+  if (status === 'Needs enrichment') {
+    needsEnrichment += 1;
+    const weak = { name, difficulty, traitCount: yes.length, evidenceCount: conceptEvidence.length };
+    await write(weakStream, `${firstWeak ? '' : ',\n'}${JSON.stringify(weak)}`);
+    firstWeak = false;
+  }
+  if (emitted % 5000 === 0) console.log(`[mom profiles] compiled ${emitted.toLocaleString()} / ${inventory.length.toLocaleString()} profiles`);
 }
-objects.sort((a, b) => a.name.localeCompare(b.name));
-fs.writeFileSync(path.join(OUT, 'mom-controlled-profiles.json'), JSON.stringify({ version: 2, traits: TRAITS, objects }, null, 2) + '\n');
-fs.writeFileSync(path.join(OUT, 'summary.json'), JSON.stringify({ total: objects.length, counts, extraMatched, needsEnrichment: weak.length }, null, 2) + '\n');
-fs.writeFileSync(path.join(OUT, 'needs_enrichment.json'), JSON.stringify(weak, null, 2) + '\n');
-const allEvidence = [...evidenceByName.values()].flat().map(record => JSON.stringify(record)).sort((a, b) => a.localeCompare(b));
-fs.writeFileSync(path.join(OUT, 'all-evidence.jsonl'), allEvidence.join('\n') + (allEvidence.length ? '\n' : ''));
-console.log(JSON.stringify({ total: objects.length, counts, extraMatched, needsEnrichment: weak.length }, null, 2));
+
+await write(profileStream, '\n]}\n');
+await write(weakStream, '\n]\n');
+await Promise.all([finish(profileStream), finish(weakStream)]);
+
+const summary = { total: emitted, counts, extraMatched, needsEnrichment, preservedEvidence };
+fs.writeFileSync(SUMMARY_OUT, JSON.stringify(summary, null, 2) + '\n');
+console.log(JSON.stringify(summary, null, 2));
