@@ -50,10 +50,12 @@ test('analyzer and profile compiler preserve full evidence beyond report example
     fs.writeFileSync(path.join(assertionDir, 'fixture.csv'), ['concept,feature,attribute type', ...rows].join('\n') + '\n');
     const edge = '/a/[/r/HasProperty/,/c/en/hero/,/c/en/fictional_character/]\t/r/HasProperty\t/c/en/hero\t/c/en/fictional_character\t' + JSON.stringify({weight: 2.5});
     fs.writeFileSync(path.join(sourceDir, 'conceptnet-assertions-5.7.0.csv.gz'), gzipSync(`${edge}\n${edge}\n`));
+    const wikidata = [{ concept: 'Fiction Hero', evidence: [{ trait: 'fictional character', type: 'occupation', confidence: 1 }] }];
+    fs.writeFileSync(path.join(sourceDir, 'wikidata-labelled-evidence.json'), JSON.stringify(wikidata));
     const analyze = spawnSync(NODE, [path.join(ROOT, 'scripts/analyze-mom-trait-coverage.mjs')], { cwd: root, encoding: 'utf8' });
     assert.equal(analyze.status, 0, analyze.stderr || analyze.stdout);
     const evidence = fs.readFileSync(path.join(coverageDir, 'evidence.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
-    assert.equal(evidence.length, 21);
+    assert.equal(evidence.length, 22);
     const duplicate = evidence.find(row => row.source === 'ConceptNet');
     assert.ok(duplicate);
     assert.equal(duplicate.support, 2);
@@ -61,12 +63,12 @@ test('analyzer and profile compiler preserve full evidence beyond report example
     const compile = spawnSync(NODE, [path.join(ROOT, 'scripts/build-mom-controlled-profiles.mjs')], { cwd: root, encoding: 'utf8' });
     assert.equal(compile.status, 0, compile.stderr || compile.stdout);
     const profile = JSON.parse(fs.readFileSync(path.join(root, '.dev-data/mom-controlled-profiles/mom-controlled-profiles.json'), 'utf8'));
-    assert.equal(profile.objects[0].evidenceCount, 21);
+    assert.equal(profile.objects[0].evidenceCount, 22);
     assert.ok(profile.objects[0].traits.includes('fictional_character'));
     assert.ok(!profile.objects[0].traits.includes('real_person'));
     assert.ok(!profile.objects[0].traits.includes('living'));
     const preserved = fs.readFileSync(path.join(root, '.dev-data/mom-controlled-profiles/all-evidence.jsonl'), 'utf8').trim().split('\n');
-    assert.equal(preserved.length, 21);
+    assert.equal(preserved.length, 22);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
