@@ -21,6 +21,7 @@ const oi=(e,name)=>e.OBJECTS.findIndex(object=>object.name===name);
 test("facet compiler creates brand and product-type questions before the engine loads",async()=>{
   const {engine:e,facets}=await load();
   assert.ok(facets.compiledFeatures>=5);
+  assert.ok(facets.explicitNegatives>0);
   const brand=fi(e,"facet_brand_nintendo");
   const type=fi(e,"facet_product_type_video_game_console");
   assert.ok(brand>=0);
@@ -29,14 +30,20 @@ test("facet compiler creates brand and product-type questions before the engine 
   assert.equal(e.FEATURES[brand].requires,"gk_product");
 });
 
-test("Nintendo Switch carries Nintendo and console facets as ordinary Bayes truth",async()=>{
+test("known product facets become Bayes yes/no evidence without inventing missing negatives",async()=>{
   const {engine:e}=await load();
   const nintendo=oi(e,"Nintendo Switch");
+  const playstation=oi(e,"PlayStation 5");
+  const xbox=oi(e,"Xbox");
+  const unprofiled=e.OBJECTS.findIndex(object=>object.kind==="product"&&!object.facets?.brand);
   const brand=fi(e,"facet_brand_nintendo");
   const type=fi(e,"facet_product_type_video_game_console");
-  assert.ok(nintendo>=0&&brand>=0&&type>=0);
+  assert.ok(nintendo>=0&&playstation>=0&&xbox>=0&&brand>=0&&type>=0);
   assert.equal(e.truth[nintendo*e.F+brand],1);
+  assert.equal(e.truth[playstation*e.F+brand],0);
+  assert.equal(e.truth[xbox*e.F+brand],0);
   assert.equal(e.truth[nintendo*e.F+type],1);
+  if(unprofiled>=0)assert.equal(Number.isNaN(e.truth[unprofiled*e.F+brand]),true);
 });
 
 test("brand questions stay locked until Pam has established a product branch",async()=>{
