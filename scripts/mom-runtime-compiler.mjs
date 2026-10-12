@@ -144,6 +144,24 @@ function matchSupplementRecords(profile,source,indexes){
   return [...found];
 }
 function idsFrom(records,field){return records.flatMap(record=>[...record[field]]);}
+function conceptAliases(profile,source,matches,name){
+  return [...new Set([
+    name,...(profile.aliases||[]),...(source.aliases||[]),...matches.flatMap(record=>[record.name,...record.aliases])
+  ].map(v=>String(v||'').trim()).filter(Boolean))];
+}
+function buildAliasMap(seeds,concepts){
+  const targets=new Map();
+  for(let conceptIndex=0;conceptIndex<seeds.length;conceptIndex++){
+    const {profile,source,matches}=seeds[conceptIndex];
+    for(const alias of conceptAliases(profile,source,matches,concepts[conceptIndex].name)){
+      const key=normalizeMomLookup(alias);if(!key)continue;
+      const set=targets.get(key)||new Set();set.add(conceptIndex);targets.set(key,set);
+    }
+  }
+  return Object.fromEntries([...targets.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([key,set])=>{
+    const indexes=[...set].sort((a,b)=>a-b);return[key,indexes.length===1?indexes[0]:indexes];
+  }));
+}
 
 export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[], supplements=[], generatedAt='deterministic'}) {
   const questionDefs=normalizeQuestionDefs(traits,supplements);
@@ -161,7 +179,6 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   const supplementRecords=consolidateSupplementObjects(supplements);
   const supplementIndex=supplementIndexes(supplementRecords);
   const matchedSupplement=new Set();
-  const aliases={};
   const seeds=[];
 
   for(const profile of [...profiles].sort((a,b)=>String(a.name).localeCompare(String(b.name),'en'))){
@@ -180,17 +197,13 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   }
   seeds.sort((a,b)=>String(a.profile.name).localeCompare(String(b.profile.name),'en'));
 
-  const concepts=seeds.map(({profile,source,matches},conceptIndex)=>{
+  const concepts=seeds.map(({profile,source,matches})=>{
     const yesIds=[...new Set([...(profile.traits||profile.yes||[]),...idsFrom(matches,'yes')])].filter(id=>questionIndex.has(id)).sort();
     const derivedNo=deriveSafeNegativeTraitIds(yesIds);
     const noIds=[...new Set([...(profile.no||[]),...idsFrom(matches,'no'),...derivedNo])].filter(id=>questionIndex.has(id)&&!yesIds.includes(id)).sort();
     const maybeIds=[...new Set([...(profile.maybe||[]),...idsFrom(matches,'maybe')])].filter(id=>questionIndex.has(id)&&!yesIds.includes(id)&&!noIds.includes(id)).sort();
     const traitSet=new Set(yesIds);
     const name=String(profile.name||source.name||matches[0]?.name||'').trim();
-    const allAliases=[...new Set([
-      name,...(profile.aliases||[]),...(source.aliases||[]),...matches.flatMap(record=>[record.name,...record.aliases])
-    ].map(v=>String(v||'').trim()).filter(Boolean))];
-    for(const alias of allAliases){const normalized=normalizeMomLookup(alias);if(normalized&&aliases[normalized]==null)aliases[normalized]=conceptIndex;}
     const supplementWeight=Math.max(0,...matches.map(record=>record.weight||0));
     const score=Number(profile.score??source.score??supplementWeight??1);
     const facets=stable({...matches.reduce((acc,record)=>({...acc,...record.facets}),{}),...(profile.facets&&typeof profile.facets==='object'?profile.facets:{})});
@@ -202,6 +215,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
       yes:yesIds.map(id=>questionIndex.get(id)),no:noIds.map(id=>questionIndex.get(id)),maybe:maybeIds.map(id=>questionIndex.get(id)),facets
     };
   });
+  const aliases=buildAliasMap(seeds,concepts);
 
   const canonicalSources={
     inventory:canonicalList(inventory,item=>normalizeMomLookup(item.key||item.name)),
@@ -212,7 +226,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   const sourceHash=hashSources(canonicalSources);
   return{
     version:1,
-    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'2'},
-    questions,concepts,aliases:Object.fromEntries(Object.entries(aliases).sort(([a],[b])=>a.localeCompare(b)))
+    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'3'},
+    questions,concepts,aliases
   };
 }
