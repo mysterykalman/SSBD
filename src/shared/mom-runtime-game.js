@@ -27,8 +27,8 @@ export function createMomRuntimeGame(runtime,opts={}){
     asked:new Set(),askedFacetKeys:new Set(),answers:new Map(),confirmedYes:new Set(),
     turn:0,budget:opts.budget||20,noise:opts.noise??0.06,guessThreshold:opts.guessThreshold??0.92,
     minGuessQuestions:opts.minGuessQuestions??5,continuePrice:opts.continuePrice??2,pending:null,status:'playing',
-    history:[],surprise:false,guessUsed:false,continueCost:0,deferGuessOnce:false,
-    recentQuestionIndexes:[],recentFacetTypes:[]
+    history:/** @type {Array<Record<string, any>>} */([]),surprise:false,guessUsed:false,continueCost:0,deferGuessOnce:false,
+    recentQuestionIndexes:/** @type {number[]} */([]),recentFacetTypes:/** @type {string[]} */([])
   };
 
   function top(){
