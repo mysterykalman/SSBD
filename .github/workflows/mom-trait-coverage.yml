@@ -97,7 +97,7 @@ jobs:
           node - <<'NODE'
           const summary = require('./.dev-data/trait-sources/wikidata-static.summary.json');
           if (summary.networkRequests !== 0) throw new Error('Static Wikidata build unexpectedly used the network.');
-          if (!summary.required || summary.concepts < 1 || summary.evidenceItems < 1) throw new Error('Required static Wikidata knowledge is missing or empty.');
+          if (!summary.required || summary.concepts < 400 || summary.evidenceItems < 1500) throw new Error('Required static Wikidata knowledge is missing or unexpectedly incomplete.');
           console.log(JSON.stringify(summary, null, 2));
           NODE
       - name: Measure public trait coverage
