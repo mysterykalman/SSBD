@@ -3,7 +3,15 @@ import path from 'node:path';
 
 const ROOT=process.cwd();
 const INVENTORY=path.join(ROOT,'.dev-data','mom-playable-50k','playable_50k.csv');
-const OUT=path.join(ROOT,'.dev-data','trait-sources','wikidata-labelled-evidence.json');
+const OUT_DIR=path.join(ROOT,'.dev-data','trait-sources');
+const OUT=path.join(OUT_DIR,'wikidata-labelled-evidence.json');
+const SUMMARY=path.join(OUT_DIR,'wikidata-labelled-evidence.summary.json');
+const PARTS_DIR=path.join(OUT_DIR,'wikidata-labelled-evidence.parts');
+const API='https://www.wikidata.org/w/api.php';
+const REQUEST_BATCH_SIZE=Math.max(1,Math.min(50,Number(process.env.MOM_WIKIDATA_BATCH_SIZE||50)));
+const SHARD_SIZE=Math.max(REQUEST_BATCH_SIZE,Number(process.env.MOM_WIKIDATA_SHARD_SIZE||500));
+const REQUEST_DELAY_MS=Math.max(0,Number(process.env.MOM_WIKIDATA_DELAY_MS||125));
+const RETRIES=Math.max(1,Number(process.env.MOM_WIKIDATA_RETRIES||5));
 
 const PROPS={
  P31:'instance of',P279:'subclass of',P106:'occupation',P27:'country of citizenship',P17:'country',
@@ -17,6 +25,7 @@ const PROPS={
  P105:'taxon rank',P171:'parent taxon',P183:'endemic to',P141:'conservation status',P703:'found in taxon'
 };
 
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function parseCsv(text){
  const rows=[];let row=[],cell='',quoted=false;
  for(let i=0;i<text.length;i++){
@@ -27,66 +36,133 @@ function parseCsv(text){
  if(cell||row.length){row.push(cell.replace(/\r$/,''));rows.push(row);}return rows;
 }
 function hmap(row){return Object.fromEntries(row.map((v,i)=>[v,i]));}
-async function fetchJson(url,retries=4){
+function chunk(values,size){const out=[];for(let i=0;i<values.length;i+=size)out.push(values.slice(i,i+size));return out;}
+function formatError(error){return error instanceof Error?error.message:String(error);}
+
+async function fetchJson(url,label){
  let last;
- for(let i=0;i<retries;i++){
+ for(let attempt=1;attempt<=RETRIES;attempt++){
   try{
-   const r=await fetch(url,{headers:{'user-agent':'SSBD-Pam-knowledge-audit/1.0'}});
-   if(!r.ok)throw new Error(`HTTP ${r.status}`);
-   return await r.json();
-  }catch(e){last=e;await new Promise(res=>setTimeout(res,750*(i+1)));}
+   const response=await fetch(url,{headers:{'user-agent':'SSBD-Pam-knowledge-audit/1.1',accept:'application/json'}});
+   if(response.status===429||response.status===503){
+    const retryAfter=Number(response.headers.get('retry-after'))||Math.min(20,attempt*2);
+    throw Object.assign(new Error(`HTTP ${response.status}`),{retryAfter});
+   }
+   if(!response.ok)throw new Error(`HTTP ${response.status}`);
+   return await response.json();
+  }catch(error){
+   last=error;
+   if(attempt<RETRIES){
+    const waitMs=Number(error?.retryAfter)?Number(error.retryAfter)*1000:Math.min(10000,750*attempt);
+    console.warn(`${label} attempt ${attempt}/${RETRIES} failed: ${formatError(error)}; retrying in ${waitMs}ms`);
+    await sleep(waitMs);
+   }
+  }
  }
- throw last;
+ throw last||new Error(`${label} exhausted retries`);
 }
-async function batched(ids,props){
- const out={};
- for(let i=0;i<ids.length;i+=50){
-  const batch=ids.slice(i,i+50);
-  const url=`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&languages=en&props=${props}&ids=${encodeURIComponent(batch.join('|'))}`;
-  const data=await fetchJson(url);
-  Object.assign(out,data.entities||{});
+
+async function fetchEntities(ids,props,stage,stats){
+ const entities={};
+ const batches=chunk(ids,REQUEST_BATCH_SIZE);
+ for(let index=0;index<batches.length;index++){
+  const batch=batches[index];
+  const params=new URLSearchParams({action:'wbgetentities',format:'json',formatversion:'2',languages:'en',languagefallback:'1',props,ids:batch.join('|'),maxlag:'5'});
+  try{
+   const data=await fetchJson(`${API}?${params}`,`${stage} batch ${index+1}/${batches.length}`);
+   Object.assign(entities,data.entities||{});
+   stats[`${stage}BatchesSucceeded`]++;
+  }catch(error){
+   stats[`${stage}BatchesFailed`]++;
+   stats.failures.push({stage,batch:index+1,ids:batch.length,error:formatError(error)});
+   console.warn(`${stage} batch ${index+1}/${batches.length} skipped after retries: ${formatError(error)}`);
+  }
+  if(REQUEST_DELAY_MS)await sleep(REQUEST_DELAY_MS);
  }
- return out;
+ return entities;
 }
 
 const rows=parseCsv(fs.readFileSync(INVENTORY,'utf8').replace(/^\uFEFF/,''));
 const header=hmap(rows.shift()||[]);const ni=header['Canonical answer'],qi=header['Wikidata QID'];
 if(ni==null||qi==null)throw new Error('Inventory missing Canonical answer or Wikidata QID');
 const targets=rows.filter(r=>/^Q\d+$/.test(String(r[qi]||''))).map(r=>({name:String(r[ni]).trim(),qid:String(r[qi]).trim()}));
-const qids=[...new Set(targets.map(x=>x.qid))];
-const entities=await batched(qids,'claims');
-const referenced=new Set();
-for(const e of Object.values(entities)){
- for(const prop of Object.keys(PROPS))for(const claim of e?.claims?.[prop]||[]){
-  const v=claim?.mainsnak?.datavalue?.value;
-  if(v&&typeof v==='object'&&/^Q\d+$/.test(v.id||''))referenced.add(v.id);
- }
-}
-const labels={};
-const refs=[...referenced];
-for(let i=0;i<refs.length;i+=50){
- const batch=refs.slice(i,i+50);
- const url=`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&languages=en&props=labels&ids=${encodeURIComponent(batch.join('|'))}`;
- let data;try{data=await fetchJson(url);}catch{continue;}
- for(const [qid,e] of Object.entries(data.entities||{}))labels[qid]=e?.labels?.en?.value||qid;
-}
+const targetsByQid=new Map();
+for(const target of targets){const list=targetsByQid.get(target.qid)||[];list.push(target);targetsByQid.set(target.qid,list);}
+const qids=[...targetsByQid.keys()];
+const shards=chunk(qids,SHARD_SIZE);
+const records=[];
+const stats={
+ inventoryQids:qids.length,
+ targetRows:targets.length,
+ shardSize:SHARD_SIZE,
+ requestBatchSize:REQUEST_BATCH_SIZE,
+ shards:shards.length,
+ claimBatchesSucceeded:0,
+ claimBatchesFailed:0,
+ labelBatchesSucceeded:0,
+ labelBatchesFailed:0,
+ referencedQids:0,
+ matchedConcepts:0,
+ evidenceItems:0,
+ failures:[]
+};
 
-const records=[];let items=0;
-for(const t of targets){
- const e=entities[t.qid];if(!e?.claims)continue;
- const evidence=[];
- for(const [prop,label] of Object.entries(PROPS)){
-  for(const claim of (e.claims[prop]||[]).slice(0,8)){
-   const v=claim?.mainsnak?.datavalue?.value;let value='';
-   if(v&&typeof v==='object'&&v.id)value=labels[v.id]||v.id;
-   else if(typeof v==='string')value=v.slice(0,100);
-   else if(v&&typeof v==='object'&&v.amount)value=String(v.amount);
-   if(!value||/^Q\d+$/.test(value))continue;
-   evidence.push({source:'Wikidata labelled',type:label,trait:`${label}:${value}`});items++;
+fs.mkdirSync(OUT_DIR,{recursive:true});
+fs.rmSync(PARTS_DIR,{recursive:true,force:true});
+fs.mkdirSync(PARTS_DIR,{recursive:true});
+
+for(let shardIndex=0;shardIndex<shards.length;shardIndex++){
+ const shardQids=shards[shardIndex];
+ console.log(`Wikidata shard ${shardIndex+1}/${shards.length}: ${shardQids.length} inventory QIDs`);
+ const shardStats={claimBatchesSucceeded:0,claimBatchesFailed:0,labelBatchesSucceeded:0,labelBatchesFailed:0,failures:[]};
+ const entities=await fetchEntities(shardQids,'claims','claim',shardStats);
+ const referenced=new Set();
+ for(const entity of Object.values(entities)){
+  for(const prop of Object.keys(PROPS))for(const claim of entity?.claims?.[prop]||[]){
+   const value=claim?.mainsnak?.datavalue?.value;
+   if(value&&typeof value==='object'&&/^Q\d+$/.test(value.id||''))referenced.add(value.id);
   }
  }
- if(evidence.length)records.push({concept:t.name,evidence});
+ const refs=[...referenced];
+ const labelEntities=refs.length?await fetchEntities(refs,'labels','label',shardStats):{};
+ const labels={};
+ for(const [qid,entity] of Object.entries(labelEntities))labels[qid]=entity?.labels?.en?.value||qid;
+ const shardRecords=[];
+ for(const qid of shardQids){
+  const entity=entities[qid];
+  if(!entity?.claims)continue;
+  const evidence=[];
+  for(const [prop,label] of Object.entries(PROPS)){
+   for(const claim of (entity.claims[prop]||[]).slice(0,8)){
+    const value=claim?.mainsnak?.datavalue?.value;let rendered='';
+    if(value&&typeof value==='object'&&value.id)rendered=labels[value.id]||'';
+    else if(typeof value==='string')rendered=value.slice(0,100);
+    else if(value&&typeof value==='object'&&value.amount)rendered=String(value.amount);
+    if(!rendered||/^Q\d+$/.test(rendered))continue;
+    evidence.push({source:'Wikidata labelled',type:label,trait:`${label}:${rendered}`});
+   }
+  }
+  if(!evidence.length)continue;
+  for(const target of targetsByQid.get(qid)||[])shardRecords.push({concept:target.name,evidence});
+ }
+ const partName=`part-${String(shardIndex+1).padStart(3,'0')}.jsonl`;
+ fs.writeFileSync(path.join(PARTS_DIR,partName),shardRecords.map(record=>JSON.stringify(record)).join('\n')+(shardRecords.length?'\n':''));
+ records.push(...shardRecords);
+ stats.claimBatchesSucceeded+=shardStats.claimBatchesSucceeded;
+ stats.claimBatchesFailed+=shardStats.claimBatchesFailed;
+ stats.labelBatchesSucceeded+=shardStats.labelBatchesSucceeded;
+ stats.labelBatchesFailed+=shardStats.labelBatchesFailed;
+ stats.referencedQids+=refs.length;
+ stats.matchedConcepts+=shardRecords.length;
+ stats.evidenceItems+=shardRecords.reduce((sum,record)=>sum+record.evidence.length,0);
+ stats.failures.push(...shardStats.failures.map(failure=>({shard:shardIndex+1,...failure})));
+ console.log(`Wikidata shard ${shardIndex+1}/${shards.length} complete: ${shardRecords.length} concepts, ${shardStats.claimBatchesFailed} claim failures, ${shardStats.labelBatchesFailed} label failures`);
 }
-fs.mkdirSync(path.dirname(OUT),{recursive:true});
+
 fs.writeFileSync(OUT,JSON.stringify(records));
-console.log(JSON.stringify({inventoryQids:qids.length,referencedQids:refs.length,matchedConcepts:records.length,evidenceItems:items,output:OUT},null,2));
+fs.writeFileSync(SUMMARY,JSON.stringify({...stats,output:OUT,partsDirectory:PARTS_DIR},null,2)+'\n');
+console.log(JSON.stringify({...stats,output:OUT,partsDirectory:PARTS_DIR},null,2));
+
+if(stats.claimBatchesFailed||stats.labelBatchesFailed){
+ console.warn(`Wikidata completed with partial-source failures (${stats.claimBatchesFailed} claim batches, ${stats.labelBatchesFailed} label batches). Downstream coverage and benchmark gates will determine whether the resulting evidence is sufficient.`);
+}
