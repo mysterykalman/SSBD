@@ -2,13 +2,9 @@ function binaryEntropy(p){
   if(p<=1e-12||p>=1-1e-12)return 0;
   return-p*Math.log2(p)-(1-p)*Math.log2(1-p);
 }
-function answerYesProbability(truth,noise){
-  return truth===1?1-noise:truth===0?noise:0.5;
-}
-function contains(sorted,value){
-  // Runtime arrays are compiled sorted, but includes keeps this robust for fixtures.
-  return sorted?.includes(value)??false;
-}
+function contains(sorted,value){return sorted?.includes(value)??false;}
+function sumBelief(belief,indexes){let sum=0;for(const index of indexes||[])sum+=Number(belief[index]||0);return sum;}
+function totalBelief(belief){let total=0;for(const p of belief)total+=Number(p||0);return total;}
 function stageFactor(turn,breadth){
   if(turn<=2)return breadth==='broad'?1.25:breadth==='category'?1.03:breadth==='specific'?0.58:0.82;
   if(turn<=7)return breadth==='broad'?1.02:breadth==='category'?1.18:breadth==='specific'?0.78:1;
@@ -46,6 +42,15 @@ function renderFacetText(template,value){
 export function createMomRuntimeReasoner(runtime){
   if(!runtime?.questions?.length||!runtime?.concepts?.length)throw new Error('Mom runtime knowledge is empty');
   const questionIndex=Object.fromEntries(runtime.questions.map((question,index)=>[question.id,index]));
+  const evidence=Array.from({length:runtime.questions.length},()=>({yes:[],no:[],maybe:[]}));
+  const categoryIndexes=new Map();
+  runtime.concepts.forEach((concept,index)=>{
+    const category=String(concept.category||'unknown');
+    const categoryList=categoryIndexes.get(category)||[];categoryList.push(index);categoryIndexes.set(category,categoryList);
+    for(const q of concept.yes||[])if(evidence[q])evidence[q].yes.push(index);
+    for(const q of concept.no||[])if(evidence[q])evidence[q].no.push(index);
+    for(const q of concept.maybe||[])if(evidence[q])evidence[q].maybe.push(index);
+  });
 
   function truthAt(conceptIndex,questionIndexValue){
     const concept=runtime.concepts[conceptIndex];
@@ -72,32 +77,45 @@ export function createMomRuntimeReasoner(runtime){
   }
 
   function semanticCoverage(belief,questionIndexValue){
-    let total=0,covered=0;
-    for(let i=0;i<runtime.concepts.length;i++){
-      const p=Number(belief[i]||0);if(p<=1e-15)continue;
-      total+=p;if(appliesToConcept(questionIndexValue,i))covered+=p;
+    const question=runtime.questions[questionIndexValue];
+    if(!question)return 0;
+    const total=totalBelief(belief);if(total<=0)return 0;
+    const excluded=new Set(question.excludes||[]);
+    const applies=question.appliesTo||[];
+    if(!applies.length){
+      let blocked=0;for(const category of excluded)blocked+=sumBelief(belief,categoryIndexes.get(category));
+      return Math.max(0,total-blocked)/total;
     }
-    return total>0?covered/total:0;
+    const seen=new Set();
+    for(const requirement of applies){
+      const categoryList=categoryIndexes.get(requirement);
+      if(categoryList){for(const index of categoryList)if(!excluded.has(runtime.concepts[index].category))seen.add(index);continue;}
+      const requiredIndex=questionIndex[requirement];
+      if(requiredIndex!=null)for(const index of evidence[requiredIndex].yes)if(!excluded.has(runtime.concepts[index].category))seen.add(index);
+    }
+    let covered=0;for(const index of seen)covered+=Number(belief[index]||0);
+    return covered/total;
+  }
+
+  function evidenceMasses(belief,questionIndexValue){
+    const bucket=evidence[questionIndexValue]||{yes:[],no:[],maybe:[]};
+    const yes=sumBelief(belief,bucket.yes),no=sumBelief(belief,bucket.no),maybe=sumBelief(belief,bucket.maybe);
+    const total=totalBelief(belief),known=yes+no+maybe,unknown=Math.max(0,total-known);
+    return{yes,no,maybe,known,unknown,total};
   }
 
   function knownCoverage(belief,questionIndexValue){
-    let total=0,known=0;
-    for(let i=0;i<runtime.concepts.length;i++){
-      const p=Number(belief[i]||0);if(p<=1e-15)continue;
-      total+=p;if(Number.isFinite(truthAt(i,questionIndexValue)))known+=p;
-    }
-    return total>0?known/total:0;
+    const masses=evidenceMasses(belief,questionIndexValue);
+    return masses.total>0?masses.known/masses.total:0;
   }
 
   function questionGain(belief,questionIndexValue,noise=0.06){
-    let yesProbability=0,conditionalEntropy=0;
-    for(let i=0;i<runtime.concepts.length;i++){
-      const p=Number(belief[i]||0);if(p<=1e-15)continue;
-      const q=answerYesProbability(truthAt(i,questionIndexValue),noise);
-      yesProbability+=p*q;
-      conditionalEntropy+=p*binaryEntropy(q);
-    }
-    return Math.max(0,binaryEntropy(yesProbability)-conditionalEntropy);
+    const masses=evidenceMasses(belief,questionIndexValue);
+    if(masses.total<=0)return 0;
+    const uncertain=masses.maybe+masses.unknown;
+    const predictedYes=(masses.yes*(1-noise)+masses.no*noise+uncertain*0.5)/masses.total;
+    const conditional=(masses.yes*binaryEntropy(1-noise)+masses.no*binaryEntropy(noise)+uncertain)/masses.total;
+    return Math.max(0,binaryEntropy(predictedYes)-conditional);
   }
 
   function questionScore(belief,questionIndexValue,context={}){
@@ -127,20 +145,12 @@ export function createMomRuntimeReasoner(runtime){
     if(!definition||!yesIndexes?.length)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'missing_facet'};
     const key=`facet:${type}:${value}`;
     if((context.askedFacetKeys||new Set()).has(key))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'already_asked'};
-    let total=0,yesMass=0,knownMass=0,semanticMass=0;
-    const yesSet=new Set(yesIndexes);
-    const knownSet=definition.exclusiveKnown?new Set(definition.known||[]):null;
-    for(let i=0;i<runtime.concepts.length;i++){
-      const p=Number(belief[i]||0);if(p<=1e-15)continue;
-      total+=p;
-      if(yesSet.has(i))yesMass+=p;
-      if(definition.exclusiveKnown&&knownSet.has(i))knownMass+=p;
-      if(!definition.exclusiveKnown&&yesSet.has(i))knownMass+=p;
-      if(!definition.requiresCategory||runtime.concepts[i].category===definition.requiresCategory)semanticMass+=p;
-    }
-    if(total<=0||yesMass<=1e-12)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'no_information'};
-    const semantic=semanticMass/total;
-    const known=knownMass/total;
+    const total=totalBelief(belief);if(total<=0)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'no_information'};
+    const yesMass=sumBelief(belief,yesIndexes);
+    if(yesMass<=1e-12)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'no_information'};
+    const knownMass=definition.exclusiveKnown?sumBelief(belief,definition.known||[]):yesMass;
+    const semanticMass=definition.requiresCategory?sumBelief(belief,categoryIndexes.get(definition.requiresCategory)):total;
+    const semantic=semanticMass/total,known=knownMass/total;
     if(definition.requiresCategory&&semantic<0.35)return{eligible:false,score:0,gain:0,semantic,known,reason:'low_semantic_coverage'};
     const noMass=definition.exclusiveKnown?Math.max(0,knownMass-yesMass):0;
     const unknownMass=Math.max(0,total-yesMass-noMass);
