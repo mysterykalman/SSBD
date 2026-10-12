@@ -1,7 +1,5 @@
-# Low-poly visual prototype
+# FEZ-style UI prototype
 
-This branch is a visual-only experiment for the SSBD art direction. It swaps in the supplied Milo, Gary, and Pam character artwork and layers a warmer low-poly/blocky visual system over the existing game without changing gameplay logic.
+This branch is a visual-only experiment for SSBD. It keeps the current game logic and 50k Mom runtime, and swaps in the newer Milo, Gary, and Pam low-poly character artwork before broader layout work.
 
-Branch: `design/low-poly-character-prototype`
-
-The prototype intentionally keeps small in-game avatars compact, while character selection, introduction, and Mom Mode surfaces use larger scene-like portrait treatments so the artwork carries the UI direction.
+Branch: `design/fez-ui-v2`
