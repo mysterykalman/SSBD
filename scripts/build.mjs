@@ -3,6 +3,7 @@
 // api/index.js, which Vercel builds from source; nothing here bundles server code.
 import {build, transform} from "esbuild";
 import {createHash} from "node:crypto";
+import {existsSync} from "node:fs";
 import {mkdir, readFile, rm, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
@@ -23,10 +24,20 @@ const icons = Object.fromEntries(await Promise.all(ICONS.map(async name => [`/${
 const manifest = await readFile(src("client/manifest.webmanifest"), "utf8");
 const momLaunch = await readFile(src("client/mom-mode/entry-fix.js"), "utf8");
 
-const MOM_JS = ["knowledge.js", "knowledge.general.js", "knowledge.generated.js", "facets.js", "engine.js", "deduction.js", "copy.js", "adapter.js", "app.js"];
+const runtimeKnowledgePath = src("client/mom-mode/knowledge.runtime.json");
+const hasMomRuntime = existsSync(runtimeKnowledgePath);
+const LEGACY_MOM_JS = ["knowledge.js", "knowledge.general.js", "knowledge.generated.js", "facets.js", "engine.js", "deduction.js", "copy.js", "adapter.js", "app.js"];
+const RUNTIME_MOM_JS = ["copy.js", "app.js"];
+const MOM_JS = hasMomRuntime ? RUNTIME_MOM_JS : LEGACY_MOM_JS;
 const MOM_CSS = ["styles.css", "character.css"];
 const MOM_STATIC = ["pam.webp", "pam-v2.webp"];
-const momIndex = await readFile(src("client/mom-mode/index.html"), "utf8");
+const legacyMomScriptChain = '<script src="./knowledge.js" defer></script><script src="./knowledge.general.js" defer></script><script src="./knowledge.generated.js" defer></script><script src="./facets.js" defer></script><script src="./engine.js" defer></script><script src="./deduction.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script>';
+const runtimeMomScriptChain = '<script src="./knowledge.runtime.js" defer></script><script src="./runtime-entry.js" defer></script><script src="./copy.js" defer></script><script src="./app.js" defer></script>';
+let momIndex = await readFile(src("client/mom-mode/index.html"), "utf8");
+if (hasMomRuntime) {
+  if (!momIndex.includes(legacyMomScriptChain)) throw new Error("Mom index script chain changed; compact runtime build cannot safely replace it");
+  momIndex = momIndex.replace(legacyMomScriptChain, runtimeMomScriptChain);
+}
 const momJsSource = Object.fromEntries(await Promise.all(MOM_JS.map(async name => [name, await readFile(src(`client/mom-mode/${name}`), "utf8")])));
 const momCssSource = Object.fromEntries(await Promise.all(MOM_CSS.map(async name => [name, await readFile(src(`client/mom-mode/${name}`), "utf8")])));
 const momStatic = Object.fromEntries(await Promise.all(MOM_STATIC.map(async name => [name, await readFile(src(`client/mom-mode/${name}`))])));
@@ -39,6 +50,13 @@ const cssName = `/assets/styles.${hash(css)}.css`;
 const momJs = {};
 for (const [name, source] of Object.entries(momJsSource)) {
   momJs[name] = (await transform(source, {loader: "js", minify: true, target: ["es2020", "safari14"], legalComments: "none"})).code;
+}
+if (hasMomRuntime) {
+  const runtimeData = JSON.parse(await readFile(runtimeKnowledgePath, "utf8"));
+  if (!runtimeData?.meta?.conceptCount || runtimeData.meta.conceptCount < 50000) throw new Error(`Compact Mom runtime is incomplete: ${runtimeData?.meta?.conceptCount ?? 0} concepts`);
+  momJs["knowledge.runtime.js"] = `window.MOM_RUNTIME_KNOWLEDGE=${JSON.stringify(runtimeData)};`;
+  const runtimeBundle = await build({entryPoints: [src("client/mom-mode/runtime-entry.js")], bundle: true, format: "iife", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
+  momJs["runtime-entry.js"] = runtimeBundle.outputFiles[0].text;
 }
 const momCss = {};
 for (const [name, source] of Object.entries(momCssSource)) {
@@ -102,4 +120,4 @@ for (const [path, body] of Object.entries(files)) {
   await mkdir(dirname(out), {recursive: true});
   await writeFile(out, body);
 }
-console.log(`Built version ${version}: ${Object.keys(files).length} static files in dist/`);
+console.log(`Built version ${version}: ${Object.keys(files).length} static files in dist/ (${hasMomRuntime ? "compact Mom runtime" : "legacy Mom runtime"})`);
