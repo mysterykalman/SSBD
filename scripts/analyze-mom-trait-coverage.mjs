@@ -68,7 +68,7 @@ let wikidataRows;
 try {wikidataRows=JSON.parse(fs.readFileSync(WIKIDATA_LABELLED,'utf8'));}
 catch (error) {throw new Error(`Required static Wikidata evidence is unreadable: ${error.message}`, { cause: error });}
 if(!Array.isArray(wikidataRows)||wikidataRows.length===0) throw new Error('Required static Wikidata evidence is empty or malformed.');
-let wikidataMatchedConcepts=0,wikidataEvidenceItems=0,wikidataSenseMismatches=0;
+let wikidataEvidenceItems=0,wikidataSenseMismatches=0;
 const matchedWikidataConcepts=new Set();
 for(const row of wikidataRows){
  const rowQid=String(row.qid||'').trim();
@@ -84,7 +84,7 @@ for(const row of wikidataRows){
  }
  if(matched)matchedWikidataConcepts.add(target.key);
 }
-wikidataMatchedConcepts=matchedWikidataConcepts.size;
+const wikidataMatchedConcepts=matchedWikidataConcepts.size;
 if(wikidataMatchedConcepts===0||wikidataEvidenceItems===0) throw new Error('Required static Wikidata evidence did not match any playable concepts.');
 console.log(`Required static Wikidata evidence loaded: ${wikidataMatchedConcepts.toLocaleString()} concepts, ${wikidataEvidenceItems.toLocaleString()} evidence items, ${wikidataSenseMismatches.toLocaleString()} conflicting label/QID senses skipped`);
 function status(c){const n=c.traits.size;return n>=5?'Strong public trait coverage':n>=1?'Partial public trait coverage':'Needs help';}
