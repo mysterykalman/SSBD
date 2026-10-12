@@ -11,7 +11,7 @@ const runtime={
   concepts:[
     {id:'switch',name:'Nintendo Switch',category:'object',subcategory:'device',difficulty:'core',prior:0.6,yes:[0,1,2],no:[],maybe:[],facets:{brand:'Nintendo'}},
     {id:'lamp',name:'Lamp',category:'object',subcategory:null,difficulty:'core',prior:0.3,yes:[0,1],no:[2],maybe:[],facets:{}},
-    {id:'mystery',name:'Mystery Thing',category:'object',subcategory:null,difficulty:'long_tail',prior:0.1,yes:[0],no:[],maybe:[],facets:{}}
+    {id:'mystery',name:'Mystery Thing',category:'object',subcategory:null,difficulty:'long_tail',prior:0.1,yes:[0],no:[1],maybe:[],facets:{}}
   ],
   aliases:{},
   facetIndex:{version:1,types:{brand:{question:'Is it made by {value}?',exclusiveKnown:true,requiresCategory:'object',reliability:0.98,known:[0],values:{Nintendo:[0]}}}}
@@ -19,7 +19,7 @@ const runtime={
 
 test('Not sure leaves belief unchanged and does not turn missing evidence into No',()=>{
   const api=createMomRuntimeGame(runtime,{minGuessQuestions:20});
-  const q={kind:'question',source:'static',index:1,id:'electronic',text:'Is it electronic?'};
+  const q={kind:'question',source:'static',index:2,id:'handheld',text:'Can you hold it?'};
   const before=[...api.game.belief];
   api.answer(q,'unknown');
   assert.deepEqual([...api.game.belief],before);
@@ -78,7 +78,7 @@ test('logical single-candidate result bypasses hunch like the Phase 3 engine',()
   const api=createMomRuntimeGame(runtime,{minGuessQuestions:5});
   api.game.turn=5;
   api.game.history.push({kind:'question',answer:'yes',action:{kind:'question',source:'static',index:2,id:'handheld',text:'Can you hold it?'}});
-  api.game.history.push({kind:'question',answer:'yes',action:{kind:'question',source:'facet',key:'facet:brand:Nintendo',type:'brand',value:'Nintendo',id:'facet:brand:Nintendo',text:'Is it made by Nintendo?'}});
+  api.game.history.push({kind:'question',answer:'yes',action:{kind:'question',source:'static',index:1,id:'electronic',text:'Is it electronic?'}});
   const decision=api.guessReason();
   assert.equal(decision.reason,'logical');
   assert.equal(decision.index,0);
