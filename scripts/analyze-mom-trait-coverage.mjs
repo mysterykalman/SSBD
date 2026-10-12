@@ -27,7 +27,13 @@ function csvEscape(value){const s=String(value??'');return /[",\n\r]/.test(s)?`"
 if(!fs.existsSync(INVENTORY)) throw new Error(`Missing inventory: ${INVENTORY}`);
 const inventory=fs.readFileSync(INVENTORY,'utf8').split(/\r?\n/).filter(Boolean).map(line=>JSON.parse(line));
 const concepts=inventory.map((item,i)=>({rank:item.rank||i+1,name:String(item.name||'').trim(),key:normalize(item.name),aliases:Array.isArray(item.aliases)?item.aliases:[],difficulty:item.difficulty||'',qid:String(item.qid||'').trim(),traits:new Map(),sources:new Set()})).filter(c=>c.name);
-const byKey=new Map(); for(const c of concepts){byKey.set(c.key,c);for(const alias of c.aliases)byKey.set(normalize(alias),c);}
+const byKey=new Map();
+const byQid=new Map();
+for(const c of concepts){
+  byKey.set(c.key,c);
+  for(const alias of c.aliases)byKey.set(normalize(alias),c);
+  if(/^Q\d+$/.test(c.qid)&&!byQid.has(c.qid))byQid.set(c.qid,c);
+}
 function addEvidenceToConcept(c,source,rawTrait,type='',metadata={}){
   const trait=String(rawTrait??'').trim();if(!trait)return false;
   const evidenceKey=`${source}|${type}|${trait}`;const current=c.traits.get(evidenceKey);
@@ -59,25 +65,31 @@ if(fs.existsSync(CONCEPTNET)){
 }
 if(!fs.existsSync(WIKIDATA_LABELLED)) throw new Error(`Missing required static Wikidata evidence: ${WIKIDATA_LABELLED}`);
 let wikidataRows;
-try {
-  wikidataRows=JSON.parse(fs.readFileSync(WIKIDATA_LABELLED,'utf8'));
-} catch (error) {
-  throw new Error(`Required static Wikidata evidence is unreadable: ${error.message}`, { cause: error });
-}
+try {wikidataRows=JSON.parse(fs.readFileSync(WIKIDATA_LABELLED,'utf8'));}
+catch (error) {throw new Error(`Required static Wikidata evidence is unreadable: ${error.message}`, { cause: error });}
 if(!Array.isArray(wikidataRows)||wikidataRows.length===0) throw new Error('Required static Wikidata evidence is empty or malformed.');
-let wikidataMatchedConcepts=0,wikidataEvidenceItems=0;
+let wikidataMatchedConcepts=0,wikidataEvidenceItems=0,wikidataSenseMismatches=0;
+const matchedWikidataConcepts=new Set();
 for(const row of wikidataRows){
+ const rowQid=String(row.qid||'').trim();
+ const labelConcept=byKey.get(normalize(row.concept));
+ const qidConcept=rowQid?byQid.get(rowQid):null;
+ // QID is authoritative when both sides know it. Do not merge a same-label Wikidata
+ // sense into a different inventory concept just because the display names collide.
+ const target=qidConcept||(!rowQid||!labelConcept?.qid?labelConcept:null);
+ if(!target){if(labelConcept&&rowQid)wikidataSenseMismatches++;continue;}
  let matched=false;
  for(const evidence of row.evidence||[]){
-  if(addEvidence(row.concept,'Wikidata',evidence.trait,evidence.type||'',{confidence:evidence.confidence})){matched=true;wikidataEvidenceItems++;}
+  if(addEvidenceToConcept(target,'Wikidata',evidence.trait,evidence.type||'',{confidence:evidence.confidence,qid:rowQid})){matched=true;wikidataEvidenceItems++;}
  }
- if(matched)wikidataMatchedConcepts++;
+ if(matched)matchedWikidataConcepts.add(target.key);
 }
+wikidataMatchedConcepts=matchedWikidataConcepts.size;
 if(wikidataMatchedConcepts===0||wikidataEvidenceItems===0) throw new Error('Required static Wikidata evidence did not match any playable concepts.');
-console.log(`Required static Wikidata evidence loaded: ${wikidataMatchedConcepts.toLocaleString()} concepts, ${wikidataEvidenceItems.toLocaleString()} evidence items`);
+console.log(`Required static Wikidata evidence loaded: ${wikidataMatchedConcepts.toLocaleString()} concepts, ${wikidataEvidenceItems.toLocaleString()} evidence items, ${wikidataSenseMismatches.toLocaleString()} conflicting label/QID senses skipped`);
 function status(c){const n=c.traits.size;return n>=5?'Strong public trait coverage':n>=1?'Partial public trait coverage':'Needs help';}
 const sources=['McRae x THINGS','McRae trait norms','CSLB trait norms','Open English WordNet','ConceptNet','Wikidata'];
-const summary={totalConcepts:concepts.length,strongCoverage:concepts.filter(c=>status(c)==='Strong public trait coverage').length,partialCoverage:concepts.filter(c=>status(c)==='Partial public trait coverage').length,needsHelp:concepts.filter(c=>status(c)==='Needs help').length,anyPublicTraitCoverage:concepts.filter(c=>c.traits.size>0).length,bySource:{},byDifficulty:{},thresholds:{strong:'5 or more distinct usable public trait assertions',partial:'1 to 4 distinct usable public trait assertions',needsHelp:'0 matched usable public trait assertions'}};
+const summary={totalConcepts:concepts.length,strongCoverage:concepts.filter(c=>status(c)==='Strong public trait coverage').length,partialCoverage:concepts.filter(c=>status(c)==='Partial public trait coverage').length,needsHelp:concepts.filter(c=>status(c)==='Needs help').length,anyPublicTraitCoverage:concepts.filter(c=>c.traits.size>0).length,wikidataSenseMismatches,bySource:{},byDifficulty:{},thresholds:{strong:'5 or more distinct usable public trait assertions',partial:'1 to 4 distinct usable public trait assertions',needsHelp:'0 matched usable public trait assertions'}};
 for(const source of sources)summary.bySource[source]=concepts.filter(c=>c.sources.has(source)).length;
 for(const c of concepts){const difficulty=c.difficulty||'Unknown';summary.byDifficulty[difficulty]??={total:0,strong:0,partial:0,needsHelp:0};summary.byDifficulty[difficulty].total++;const s=status(c);if(s==='Strong public trait coverage')summary.byDifficulty[difficulty].strong++;else if(s==='Partial public trait coverage')summary.byDifficulty[difficulty].partial++;else summary.byDifficulty[difficulty].needsHelp++;}
 const reportHeader=['Rank','Canonical answer','Difficulty','Coverage status','Trait count','Sources','Example traits'],reportLines=[reportHeader.join(',')];

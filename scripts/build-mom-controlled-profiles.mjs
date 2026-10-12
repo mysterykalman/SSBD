@@ -3,6 +3,7 @@ import path from 'node:path';
 import { once } from 'node:events';
 import { createInterface } from 'node:readline';
 import { TRAITS, mapEvidence, featureRecords } from './mom-controlled-traits.mjs';
+import {deriveProfileFacets} from './mom-profile-facets.mjs';
 
 const ROOT = process.cwd();
 const INVENTORY = path.join(ROOT, '.dev-data', 'mom-playable-50k', 'playable_50k.jsonl');
@@ -47,8 +48,6 @@ if (!fs.existsSync(INVENTORY)) throw new Error('Run the playable inventory build
 const inventory = readJsonl(INVENTORY);
 if (!inventory.length) throw new Error('Playable inventory is empty.');
 
-// Only retain the three fields mapEvidence() needs. The full source record is streamed to the
-// sidecar below, so support/weight/provenance details are preserved without duplicating them in RAM.
 const wantedEvidenceKeys = new Set();
 for (const item of inventory) {
   for (const value of [item.name, ...(Array.isArray(item.aliases) ? item.aliases : [])]) {
@@ -62,7 +61,6 @@ let preservedEvidence = 0;
 async function addEvidence(record) {
   const key = normalize(record.concept || record.name);
   if (!key || !record.trait) return;
-  // The sidecar remains full-fidelity and deterministic in source-ingestion order.
   await write(evidenceStream, `${JSON.stringify(record)}\n`);
   preservedEvidence += 1;
   if (!wantedEvidenceKeys.has(key)) return;
@@ -92,9 +90,8 @@ let needsEnrichment = 0;
 let emitted = 0;
 let firstProfile = true;
 let firstWeak = true;
+let facetedProfiles = 0;
 
-// Sorting 50k lightweight inventory rows is cheap and lets us stream the profile array in the same
-// stable alphabetical order as the previous in-memory implementation.
 inventory.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'en'));
 const profileStream = fs.createWriteStream(PROFILES_OUT, { encoding: 'utf8' });
 const weakStream = fs.createWriteStream(WEAK_OUT, { encoding: 'utf8' });
@@ -115,6 +112,8 @@ for (const item of inventory) {
   ];
   const traits = mapEvidence(evidence);
   const yes = [...traits].filter(id => traitIds.has(id)).sort();
+  const facets = deriveProfileFacets({base:item.facets,evidence:conceptEvidence,traits:yes});
+  if (Object.keys(facets).length) facetedProfiles += 1;
   const difficulty = item.difficulty || 'Unknown';
   const status = yes.length >= 5 ? 'Strong standardized profile' : yes.length >= 2 ? 'Partial standardized profile' : 'Needs enrichment';
   counts[status] = (counts[status] || 0) + 1;
@@ -129,10 +128,8 @@ for (const item of inventory) {
     sources: item.sources || [],
     broadCategory: item.broadCategory || '',
     sourceCategory: item.sourceCategory || '',
-    facets: item.facets && typeof item.facets === 'object' ? item.facets : {},
+    facets,
     traits: yes,
-    // Previously this accidentally embedded every controlled question on every one of the 50k
-    // profiles. Keep the field contract, but include only definitions for traits this concept has.
     features: yes.map(id => featureById.get(id)).filter(Boolean),
     evidenceCount: conceptEvidence.length,
     evidenceSources,
@@ -155,6 +152,6 @@ await write(profileStream, '\n]}\n');
 await write(weakStream, '\n]\n');
 await Promise.all([finish(profileStream), finish(weakStream)]);
 
-const summary = { total: emitted, counts, extraMatched, needsEnrichment, preservedEvidence };
+const summary = { total: emitted, counts, extraMatched, needsEnrichment, preservedEvidence, facetedProfiles };
 fs.writeFileSync(SUMMARY_OUT, JSON.stringify(summary, null, 2) + '\n');
 console.log(JSON.stringify(summary, null, 2));
