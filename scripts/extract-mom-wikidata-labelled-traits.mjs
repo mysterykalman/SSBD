@@ -11,6 +11,7 @@ const API='https://www.wikidata.org/w/api.php';
 const REQUEST_BATCH_SIZE=Math.max(1,Math.min(50,Number(process.env.MOM_WIKIDATA_BATCH_SIZE||50)));
 const SHARD_SIZE=Math.max(REQUEST_BATCH_SIZE,Number(process.env.MOM_WIKIDATA_SHARD_SIZE||500));
 const REQUEST_DELAY_MS=Math.max(0,Number(process.env.MOM_WIKIDATA_DELAY_MS||125));
+const REQUEST_TIMEOUT_MS=Math.max(5000,Number(process.env.MOM_WIKIDATA_TIMEOUT_MS||20000));
 const RETRIES=Math.max(1,Number(process.env.MOM_WIKIDATA_RETRIES||5));
 
 const PROPS={
@@ -43,7 +44,7 @@ async function fetchJson(url,label){
  let last;
  for(let attempt=1;attempt<=RETRIES;attempt++){
   try{
-   const response=await fetch(url,{headers:{'user-agent':'SSBD-Pam-knowledge-audit/1.1',accept:'application/json'}});
+   const response=await fetch(url,{headers:{'user-agent':'SSBD-Pam-knowledge-audit/1.1',accept:'application/json'},signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS)});
    if(response.status===429||response.status===503){
     const retryAfter=Number(response.headers.get('retry-after'))||Math.min(20,attempt*2);
     throw Object.assign(new Error(`HTTP ${response.status}`),{retryAfter});
@@ -96,6 +97,7 @@ const stats={
  targetRows:targets.length,
  shardSize:SHARD_SIZE,
  requestBatchSize:REQUEST_BATCH_SIZE,
+ requestTimeoutMs:REQUEST_TIMEOUT_MS,
  shards:shards.length,
  claimBatchesSucceeded:0,
  claimBatchesFailed:0,
