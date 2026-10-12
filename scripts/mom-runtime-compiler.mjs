@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {deriveSafeNegativeTraitIds} from './mom-safe-negatives.mjs';
 import {buildRuntimeFacetIndex} from './mom-runtime-facets.mjs';
+import {applyCategoryBalancedPriors} from './mom-runtime-priors.mjs';
 
 export function normalizeMomLookup(value) {
   return String(value ?? '')
@@ -198,7 +199,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   }
   seeds.sort((a,b)=>String(a.profile.name).localeCompare(String(b.profile.name),'en'));
 
-  const concepts=seeds.map(({profile,source,matches})=>{
+  const rawConcepts=seeds.map(({profile,source,matches})=>{
     const yesIds=[...new Set([...(profile.traits||profile.yes||[]),...idsFrom(matches,'yes')])].filter(id=>questionIndex.has(id)).sort();
     const derivedNo=deriveSafeNegativeTraitIds(yesIds);
     const noIds=[...new Set([...(profile.no||[]),...idsFrom(matches,'no'),...derivedNo])].filter(id=>questionIndex.has(id)&&!yesIds.includes(id)).sort();
@@ -216,6 +217,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
       yes:yesIds.map(id=>questionIndex.get(id)),no:noIds.map(id=>questionIndex.get(id)),maybe:maybeIds.map(id=>questionIndex.get(id)),facets
     };
   });
+  const concepts=applyCategoryBalancedPriors(rawConcepts);
   const aliases=buildAliasMap(seeds,concepts);
   const facetIndex=buildRuntimeFacetIndex(concepts);
 
@@ -228,7 +230,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   const sourceHash=hashSources(canonicalSources);
   return{
     version:1,
-    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'4'},
+    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'5'},
     questions,concepts,aliases,facetIndex
   };
 }
