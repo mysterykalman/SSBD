@@ -47,6 +47,6 @@ export function deriveProfileFacets({base={},evidence=[],traits=[]}={}){
   }
 
   return Object.fromEntries([...out.entries()].sort(([a],[b])=>a.localeCompare(b,'en')).map(([type,list])=>[
-    type,list.length===1?list[0]:list.sort((a,b)=>a.localeCompare(b,'en'))
+    type,list.sort((a,b)=>a.localeCompare(b,'en'))
   ]));
 }

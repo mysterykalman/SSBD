@@ -6,16 +6,16 @@ test('profile facets derive useful product, brand, occupation, and medium filter
   assert.deepEqual(deriveProfileFacets({
     traits:['object','device','electronic'],
     evidence:[{source:'Wikidata',type:'brand',trait:'brand:Nintendo'}]
-  }),{brand:'Nintendo',productType:'electronic'});
+  }),{brand:['Nintendo'],productType:['electronic']});
 
-  assert.deepEqual(deriveProfileFacets({traits:['person','writer'],evidence:[]}),{occupation:'writer'});
-  assert.deepEqual(deriveProfileFacets({traits:['media_work','film'],evidence:[]}),{medium:'film'});
+  assert.deepEqual(deriveProfileFacets({traits:['person','writer'],evidence:[]}),{occupation:['writer']});
+  assert.deepEqual(deriveProfileFacets({traits:['media_work','film'],evidence:[]}),{medium:['film']});
 });
 
 test('explicit facets win over inferred manufacturer fallback and values remain deterministic',()=>{
   assert.deepEqual(deriveProfileFacets({
-    base:{brand:'Nintendo'},
+    base:{brand:['Nintendo']},
     traits:['object','device'],
     evidence:[{source:'Wikidata',type:'manufacturer',trait:'manufacturer:Foxconn'}]
-  }),{brand:'Nintendo',productType:'device'});
+  }),{brand:['Nintendo'],productType:['device']});
 });
