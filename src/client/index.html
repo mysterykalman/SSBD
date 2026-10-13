@@ -3,11 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<meta name="theme-color" content="#fff4df">
+<meta name="theme-color" content="#f6c96b">
 <meta name="app-version" content="%APP_VERSION%">
 <title>Same Same but Different</title>
 <meta name="description" content="A ridiculous word game for people who think they know each other.">
-<!-- Social/share previews (absolute URLs: share platforms fetch these from outside the app) -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Same Same but Different">
 <meta property="og:description" content="A ridiculous word game for people who think they know each other.">
@@ -23,15 +22,126 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="%STYLES_CSS%">
-<style>.btn{text-decoration:none}</style>
+<style>
+.btn{text-decoration:none}
+/* FEZ presentation v5. This layer composes the existing game DOM into a premium casual-game scene. */
+html{background:#4d3164}
+body{background:#f0c373!important}
+.scene-backdrop{background:linear-gradient(180deg,#f7dba2 0 55%,#d68a52 55% 100%)!important;perspective:1000px}
+.scene-backdrop::before{background:linear-gradient(90deg,rgba(255,247,220,.65),transparent 42%),linear-gradient(180deg,rgba(255,255,255,.35),transparent 45%,rgba(65,35,71,.14))!important}
+.scene-backdrop::after{height:34vh!important;background:linear-gradient(180deg,transparent,rgba(76,42,67,.22))!important}
+.scene-sun,.scene-cloud,.scene-hills,.scene-plant,.scene-shelf{display:none!important}
+.scene-floor{left:-6vw!important;right:-6vw!important;bottom:-18vh!important;height:54vh!important;background:repeating-linear-gradient(90deg,rgba(84,43,53,.10) 0 2px,transparent 2px 82px),linear-gradient(180deg,#dca260,#b86f48)!important;transform:perspective(900px) rotateX(62deg)!important;box-shadow:inset 0 18px 35px rgba(82,45,57,.22)!important}
+.fez-room-wall{position:absolute;inset:0 0 34vh;background:linear-gradient(90deg,rgba(255,255,255,.18),transparent 40%),linear-gradient(#f7dca6,#efc77f);border-bottom:8px solid rgba(89,53,73,.22)}
+.fez-room-window{position:absolute;left:6vw;top:10vh;width:min(24vw,320px);height:min(34vh,300px);border:14px solid #fff2d2;border-radius:28px;background:linear-gradient(180deg,#7ed9ec 0 62%,#78bd72 62%);box-shadow:0 9px 0 #5b3658,0 20px 45px rgba(49,30,60,.18),inset 0 0 0 6px #d99d61;overflow:hidden}
+.fez-room-window::before,.fez-room-window::after{content:"";position:absolute;background:#fff0ce;box-shadow:0 3px 0 rgba(61,34,63,.18)}
+.fez-room-window::before{left:50%;top:0;bottom:0;width:10px;transform:translateX(-50%)}
+.fez-room-window::after{left:0;right:0;top:50%;height:10px;transform:translateY(-50%)}
+.fez-room-shelf{position:absolute;right:5vw;top:15vh;width:min(18vw,245px);height:16px;border:4px solid #5a365b;border-radius:8px;background:#b66e46;box-shadow:0 7px 0 #75465a}
+.fez-room-shelf::before{content:"";position:absolute;right:18px;bottom:12px;width:62px;height:86px;border:4px solid #5a365b;border-radius:10px 10px 4px 4px;background:linear-gradient(90deg,#41b8b0 0 28%,#f28f55 28% 54%,#f1cf58 54% 78%,#8a6bd9 78%);box-shadow:-88px 24px 0 -22px #6caf58,-88px 24px 0 -18px #5a365b}
+.fez-room-rug{position:absolute;left:50%;bottom:3vh;width:min(76vw,980px);height:24vh;transform:translateX(-50%) perspective(800px) rotateX(62deg);border:7px solid #5b365a;border-radius:50%;background:radial-gradient(ellipse,#f7d56a 0 32%,#f07560 33% 48%,#42bbb5 49% 62%,#f5e6bd 63%);opacity:.8;box-shadow:0 26px 30px rgba(70,39,61,.2)}
+.fez-room-cube{position:absolute;right:17vw;bottom:20vh;width:76px;height:76px;border:5px solid #4d3158;border-radius:16px;background:linear-gradient(145deg,#ff7a60,#e84c52);box-shadow:inset 0 5px 0 rgba(255,255,255,.35),0 10px 0 #4d3158,0 18px 30px rgba(67,39,62,.24);transform:rotate(8deg)}
+.fez-room-cube::after{content:"?";display:grid;place-items:center;height:100%;font:1000 3.1rem/1 ui-rounded,"SF Pro Rounded",system-ui;color:#fff5dd;text-shadow:0 3px 0 #7a354c}
+.topbar{min-height:150px!important;padding-top:22px!important;z-index:20}
+.brand{padding-inline:38px!important}
+.brand-top{font-size:clamp(2.8rem,6vw,5.4rem)!important;letter-spacing:-.075em!important;-webkit-text-stroke:3px #301f4c!important;text-shadow:0 5px 0 #f39a22,0 10px 0 #d75547,7px 14px 0 #301f4c,0 22px 26px rgba(50,30,64,.22)!important}
+.brand-bottom{margin-top:18px!important;padding:8px 24px 9px!important;border-width:3px!important;transform:rotate(1.5deg);font-size:clamp(.86rem,1.8vw,1.18rem)!important;box-shadow:inset 0 3px 0 rgba(255,255,255,.62),0 6px 0 #301f4c,0 12px 18px rgba(49,30,63,.2)!important}
+main{position:relative!important;z-index:2;padding-bottom:120px!important}
+body.fez-home-v5 main{width:min(1360px,100%)!important}
+body.fez-home-v5 .hero{position:relative;max-width:860px!important;margin:0 auto 30px!important;padding:22px 42px 25px!important;border:4px solid #3b2753;border-radius:28px;background:linear-gradient(180deg,rgba(255,250,226,.94),rgba(247,230,189,.94));box-shadow:inset 0 4px 0 rgba(255,255,255,.85),0 8px 0 #3b2753,0 22px 46px rgba(54,31,65,.2);transform:rotate(-.35deg)}
+body.fez-home-v5 .hero::before{content:"Pick a mode";position:absolute;left:50%;top:-18px;transform:translateX(-50%) rotate(.7deg);padding:7px 20px;border:3px solid #3b2753;border-radius:999px;background:linear-gradient(#ffda52,#f0aa2f);box-shadow:0 4px 0 #3b2753;font:1000 .78rem/1 ui-rounded,"SF Pro Rounded",system-ui;text-transform:uppercase;letter-spacing:.12em;color:#3b2753}
+body.fez-home-v5 .hero h1{font-size:clamp(2rem,4.4vw,3.8rem)!important;color:#3b2753!important;text-shadow:none!important;letter-spacing:-.045em!important}
+body.fez-home-v5 .hero .lede{margin-top:11px!important;font-size:clamp(.98rem,1.5vw,1.1rem)!important;color:#594666!important}
+body.fez-home-v5 .hero-rules{display:none!important}
+body.fez-home-v5 .hero::after{display:none!important}
+body.fez-home-v5 .start-grid{grid-template-columns:1.08fr .92fr!important;grid-template-areas:"solo together" "solo mom"!important;gap:28px!important;align-items:stretch!important;filter:drop-shadow(0 20px 26px rgba(55,32,65,.12))}
+body.fez-home-v5 .start-grid>.start,body.fez-home-v5 .start-grid>.mom-card{border:5px solid #3b2753!important;border-radius:34px!important;box-shadow:inset 0 4px 0 rgba(255,255,255,.65),0 9px 0 #3b2753,0 26px 44px rgba(48,29,61,.24)!important;isolation:isolate;overflow:hidden!important}
+body.fez-home-v5 .start-grid>.start::after,body.fez-home-v5 .start-grid>.mom-card::after{content:""!important;display:block!important;position:absolute!important;inset:0!important;pointer-events:none!important;background:linear-gradient(135deg,rgba(255,255,255,.26),transparent 32%,rgba(57,33,69,.08))!important;z-index:12!important}
+body.fez-home-v5 .solo-card{min-height:690px!important;background:linear-gradient(180deg,#ffd95d 0 43%,#f9e5a5 43% 100%)!important}
+body.fez-home-v5 .solo-card .start-icon{height:405px!important;background:linear-gradient(180deg,#78d5e7 0 48%,#a6e4c2 48% 61%,#d8a660 61% 100%)!important}
+body.fez-home-v5 .solo-card .start-icon::after{content:"";position:absolute;left:7%;right:7%;bottom:10%;height:14px;border-radius:999px;background:rgba(57,46,61,.24);filter:blur(9px)}
+body.fez-home-v5 .solo-card .badge{filter:drop-shadow(0 18px 15px rgba(53,31,61,.28))}
+body.fez-home-v5 .solo-card>h2{margin-top:-38px!important;padding:12px 26px!important;border:4px solid #3b2753!important;border-radius:18px!important;background:#fff7df!important;box-shadow:inset 0 3px 0 white,0 6px 0 #3b2753,0 14px 22px rgba(49,30,62,.17)!important;z-index:15!important}
+body.fez-home-v5 .solo-card .start-copy{padding:34px 42px 8px!important}
+body.fez-home-v5 .solo-bios{display:grid!important;grid-template-columns:1fr auto 1fr!important;gap:14px!important;align-items:center!important}
+body.fez-home-v5 .solo-bios p{margin:0!important;padding:16px 17px!important;border:3px solid #3b2753!important;border-radius:18px!important;background:rgba(255,251,232,.82)!important;box-shadow:inset 0 2px 0 white,0 5px 0 rgba(59,39,83,.22)!important;text-align:left!important;font-size:.93rem!important}
+body.fez-home-v5 .bio-or{display:grid!important;place-items:center!important;width:38px!important;height:38px!important;border:3px solid #3b2753!important;border-radius:50%!important;background:#ff715e!important;color:#fff9e6!important;font:1000 .72rem/1 ui-rounded,"SF Pro Rounded",system-ui!important;text-transform:uppercase!important;box-shadow:0 4px 0 #3b2753!important}
+body.fez-home-v5 .family-card{min-height:335px!important;grid-template-columns:185px 1fr!important;padding:24px 26px!important;background:linear-gradient(145deg,#48d7d0,#a4ece1)!important}
+body.fez-home-v5 .family-card .start-icon.duo::before{width:132px!important;height:132px!important;border:5px solid #3b2753!important;border-radius:30px!important;background:linear-gradient(145deg,#ff8262,#e94d52)!important;box-shadow:inset 0 5px 0 rgba(255,255,255,.38),0 9px 0 #3b2753,0 20px 28px rgba(55,32,66,.22)!important}
+body.fez-home-v5 .family-card .start-icon.duo::after{bottom:10px!important;border-width:3px!important;box-shadow:0 4px 0 #3b2753!important}
+body.fez-home-v5 .family-card>h2,body.fez-home-v5 .mom-card-copy h2{font-size:clamp(1.8rem,2.5vw,2.35rem)!important;letter-spacing:-.04em!important}
+body.fez-home-v5 .mom-card{min-height:335px!important;grid-template-columns:210px 1fr!important;background:linear-gradient(145deg,#ff9fb4,#ffd2a3)!important}
+body.fez-home-v5 .mom-card-art{min-height:335px!important;border-right:5px solid #3b2753!important;filter:saturate(.98) contrast(1.02)}
+body.fez-home-v5 .mom-card-copy{padding:27px 27px 10px!important}
+body.fez-home-v5 .mom-preview{background:#fff6df!important;border:3px solid #3b2753!important;box-shadow:0 3px 0 #3b2753!important}
+body.fez-home-v5 .btn{border:4px solid #3b2753!important;border-radius:18px!important;box-shadow:inset 0 4px 0 rgba(255,255,255,.43),inset 0 -5px 0 rgba(76,31,54,.14),0 6px 0 #3b2753,0 13px 20px rgba(55,31,64,.18)!important;min-height:58px!important;text-transform:none!important}
+body.fez-home-v5 .solo-card>.btn{font-size:1.08rem!important}
+.fez-mode-flag{position:absolute;top:18px;left:18px;z-index:14;padding:7px 12px;border:3px solid #3b2753;border-radius:12px;background:#fff7df;box-shadow:0 4px 0 #3b2753;font:1000 .72rem/1 ui-rounded,"SF Pro Rounded",system-ui;letter-spacing:.1em;text-transform:uppercase;color:#3b2753;transform:rotate(-2deg)}
+.family-card .fez-mode-flag{background:#ffd95b}.mom-card .fez-mode-flag{background:#ff7668}
+.fez-card-dots{position:absolute;right:18px;top:18px;z-index:13;display:flex;gap:7px}.fez-card-dots i{width:13px;height:13px;border:3px solid #3b2753;border-radius:4px;background:#fff6db;transform:rotate(8deg)}.fez-card-dots i:nth-child(2){background:#ffcd44;transform:rotate(-8deg)}.fez-card-dots i:nth-child(3){background:#45cfc6;transform:rotate(14deg)}
+/* Character picker becomes a full game selection stage, not a generic dialog. */
+.character-picker{width:min(1040px,calc(100vw - 34px))!important;max-width:none!important;border:0!important;border-radius:36px!important;padding:0!important;background:transparent!important;overflow:visible!important;box-shadow:none!important}
+.character-picker::backdrop{background:rgba(39,24,57,.74)!important;backdrop-filter:blur(10px) saturate(.8)}
+.character-picker .pick-body{position:relative!important;margin:0!important;padding:46px 48px 38px!important;border:5px solid #3b2753!important;border-radius:36px!important;background:linear-gradient(180deg,#fff8e6 0%,#f6e5be 100%)!important;box-shadow:inset 0 5px 0 rgba(255,255,255,.88),0 11px 0 #3b2753,0 34px 80px rgba(25,15,40,.42)!important;overflow:hidden!important}
+.character-picker .pick-body::before{content:"";position:absolute;left:0;right:0;top:0;height:112px;background:linear-gradient(135deg,#ffd44c,#f29d32);border-bottom:5px solid #3b2753;z-index:0}
+.character-picker #pickTitle{position:relative!important;z-index:2!important;margin:0 auto 42px!important;width:max-content;max-width:80%;padding:11px 26px!important;border:4px solid #3b2753!important;border-radius:18px!important;background:#fff8e6!important;box-shadow:0 6px 0 #3b2753!important;font:1000 clamp(1.7rem,4vw,2.65rem)/1 ui-rounded,"SF Pro Rounded",system-ui!important;letter-spacing:-.04em!important;color:#3b2753!important;transform:rotate(-.6deg)}
+.character-picker .pick-cards{position:relative!important;z-index:2!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:28px!important}
+.character-picker .pick-card{position:relative!important;min-height:430px!important;padding:0 0 24px!important;border:5px solid #3b2753!important;border-radius:28px!important;background:linear-gradient(180deg,#7bd7e7 0 61%,#fff6dc 61% 100%)!important;box-shadow:inset 0 4px 0 rgba(255,255,255,.55),0 8px 0 #3b2753,0 22px 32px rgba(55,31,64,.2)!important;overflow:hidden!important;transition:transform .16s ease,filter .16s ease!important}
+.character-picker .pick-card:hover{transform:translateY(-5px) rotate(-.35deg);filter:saturate(1.04)}
+.character-picker .pick-card:has(.pick-radio:checked){outline:7px solid #ffcc3c;outline-offset:3px;transform:translateY(-6px)}
+.character-picker .pick-art{display:block!important;width:100%!important;height:276px!important;object-fit:cover!important;object-position:center top!important;border-bottom:5px solid #3b2753!important;background:#8cdde5!important}
+.character-picker .pick-name{display:block!important;width:max-content!important;max-width:85%!important;margin:-25px auto 14px!important;padding:8px 20px!important;position:relative!important;z-index:3!important;border:4px solid #3b2753!important;border-radius:15px!important;background:#fff9e8!important;box-shadow:0 5px 0 #3b2753!important;font:1000 1.7rem/1 ui-rounded,"SF Pro Rounded",system-ui!important;color:#3b2753!important}
+.character-picker .pick-copy{display:block!important;padding:0 24px!important;text-align:center!important;color:#594963!important;font-weight:780!important;line-height:1.38!important}
+.character-picker .pick-line{display:block!important}
+.character-picker .pick-radio{position:absolute!important;right:18px!important;top:18px!important;width:30px!important;height:30px!important;z-index:6!important;accent-color:#ff665f!important}
+.character-picker .row.end{position:relative!important;z-index:2!important;margin-top:32px!important;justify-content:center!important;gap:16px!important}
+.character-picker .row.end .btn{min-width:180px!important;min-height:58px!important}
+.character-picker .dialog-close{z-index:8!important;right:18px!important;top:18px!important;border:3px solid #3b2753!important;background:#fff6dd!important;box-shadow:0 4px 0 #3b2753!important}
+@media (max-width:900px){
+  .fez-room-window{left:2vw;top:12vh;width:210px;height:215px;opacity:.7}.fez-room-shelf{right:2vw;opacity:.65}.fez-room-cube{display:none}
+  body.fez-home-v5 .start-grid{grid-template-columns:1fr!important;grid-template-areas:"solo" "together" "mom"!important;max-width:720px!important;margin-inline:auto!important}
+  body.fez-home-v5 .solo-card{min-height:640px!important}
+  body.fez-home-v5 .family-card,body.fez-home-v5 .mom-card{min-height:320px!important}
+  .character-picker .pick-body{padding:42px 24px 30px!important}.character-picker .pick-cards{gap:18px!important}.character-picker .pick-card{min-height:390px!important}.character-picker .pick-art{height:240px!important}
+}
+@media (max-width:620px){
+  .topbar{min-height:118px!important;padding:14px 14px 4px!important}.top-actions{right:12px!important;top:14px!important}.brand-top{font-size:2.45rem!important;-webkit-text-stroke:2px #301f4c!important;text-shadow:0 3px 0 #f39a22,0 6px 0 #d75547,4px 9px 0 #301f4c!important}.brand-bottom{margin-top:12px!important;font-size:.72rem!important;padding:6px 14px 7px!important}
+  main{padding:0 14px 80px!important}body.fez-home-v5 .hero{padding:24px 20px 20px!important;border-radius:22px!important}body.fez-home-v5 .hero h1{font-size:1.85rem!important}
+  body.fez-home-v5 .start-grid{gap:20px!important}.start-grid>.start,.start-grid>.mom-card{border-radius:26px!important}
+  body.fez-home-v5 .solo-card .start-icon{height:320px!important}.solo-card .start-icon.pair .badge{height:300px!important}.solo-card .start-copy{padding-inline:20px!important}.solo-card>.btn{margin-inline:20px!important}
+  body.fez-home-v5 .solo-bios{grid-template-columns:1fr!important;gap:9px!important}.bio-or{margin-inline:auto!important}
+  body.fez-home-v5 .family-card{grid-template-columns:116px 1fr!important;padding:18px!important}.family-card .start-icon.duo::before{width:96px!important;height:96px!important;font-size:3.8rem!important}.family-card .start-icon.duo::after{font-size:.65rem!important}
+  body.fez-home-v5 .mom-card{grid-template-columns:128px 1fr!important}.mom-card-copy{padding:20px 17px 8px!important}.mom-card>.btn,.mom-card>a.btn{margin:0 16px 20px!important}.mom-card-art{object-position:45% 16%!important}
+  .character-picker{width:calc(100vw - 18px)!important}.character-picker .pick-body{padding:38px 14px 22px!important;border-radius:25px!important}.character-picker #pickTitle{margin-bottom:30px!important;font-size:1.45rem!important}.character-picker .pick-cards{grid-template-columns:1fr 1fr!important;gap:10px!important}.character-picker .pick-card{min-height:330px!important;border-radius:20px!important}.character-picker .pick-art{height:190px!important}.character-picker .pick-name{font-size:1.25rem!important;padding:7px 12px!important}.character-picker .pick-copy{padding:0 10px!important;font-size:.78rem!important}.character-picker .row.end{margin-top:24px!important;gap:10px!important}.character-picker .row.end .btn{min-width:0!important;flex:1!important}
+}
+</style>
 </head>
 <body>
 <a class="skip" href="#app">Skip to game</a>
+<div class="scene-backdrop" aria-hidden="true">
+  <div class="fez-room-wall"></div>
+  <div class="fez-room-window"></div>
+  <div class="fez-room-shelf"></div>
+  <div class="fez-room-rug"></div>
+  <div class="fez-room-cube"></div>
+  <div class="scene-sun"></div>
+  <div class="scene-cloud cloud-a"></div>
+  <div class="scene-cloud cloud-b"></div>
+  <div class="scene-hills"></div>
+  <div class="scene-floor"></div>
+  <div class="scene-plant plant-a"></div>
+  <div class="scene-plant plant-b"></div>
+  <div class="scene-shelf"></div>
+</div>
 <header class="topbar">
-  <a class="brand" id="brandLink" href="/"><span class="brand-top" id="brandTop">Same Same</span><span class="brand-bottom" id="brandBottom">but different</span></a>
+  <a class="brand" id="brandLink" href="/">
+    <span class="brand-cube brand-cube-a" aria-hidden="true"></span>
+    <span class="brand-top" id="brandTop">Same Same</span>
+    <span class="brand-bottom" id="brandBottom">but different</span>
+    <span class="brand-cube brand-cube-b" aria-hidden="true"></span>
+  </a>
   <div class="top-actions">
     <span class="offline-pill" id="offlinePill" hidden></span>
-    <!-- French stays wired in the app, but the switch is intentionally hidden during English-only public testing. -->
     <div class="lang-switch" id="langGroup" role="group" aria-label="Language" aria-hidden="true" style="display:none">
       <button type="button" data-lang="en" aria-pressed="true"><span aria-hidden="true">EN</span><span class="sr-only">English</span></button>
       <button type="button" data-lang="fr" aria-pressed="false"><span class="sr-only" lang="fr">Français</span></button>
@@ -49,5 +159,40 @@
 <script type="module" src="/cloud-sync.js"></script>
 <script type="module" src="/account.js"></script>
 <script src="/mom-launch.js" defer></script>
+<script>
+(() => {
+  const app = document.getElementById('app');
+  const labels = new WeakSet();
+  const enhance = () => {
+    const grid = app?.querySelector('.start-grid');
+    document.body.classList.toggle('fez-home-v5', Boolean(grid));
+    if (grid) {
+      for (const card of grid.children) {
+        if (labels.has(card)) continue;
+        labels.add(card);
+        const title = card.querySelector('h2')?.textContent?.replace(/\s+/g,' ').trim() || 'Play';
+        const flag = document.createElement('span');
+        flag.className = 'fez-mode-flag';
+        flag.setAttribute('aria-hidden','true');
+        flag.textContent = title.replace(/beta/ig,'').trim();
+        const dots = document.createElement('span');
+        dots.className = 'fez-card-dots';
+        dots.setAttribute('aria-hidden','true');
+        dots.innerHTML = '<i></i><i></i><i></i>';
+        card.prepend(dots);
+        card.prepend(flag);
+      }
+    }
+    const picker = document.getElementById('characterPicker');
+    document.body.classList.toggle('fez-picker-open', Boolean(picker?.open));
+  };
+  const observer = new MutationObserver(() => requestAnimationFrame(enhance));
+  if (app) observer.observe(app,{childList:true,subtree:true});
+  observer.observe(document.body,{childList:true,subtree:false});
+  document.addEventListener('change',enhance,true);
+  document.addEventListener('click',() => requestAnimationFrame(enhance),true);
+  enhance();
+})();
+</script>
 </body>
 </html>
