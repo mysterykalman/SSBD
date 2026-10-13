@@ -23,6 +23,16 @@ export function characterArt(id = "gary", mood = "meh", cls = "") {
   img.alt = "";
   img.decoding = "async";
   img.draggable = false;
+  // A portrait that cannot be decoded shows the character's initial on their felt colour, never a
+  // broken-image icon (the frame and the name next to it keep the character recognisable).
+  img.addEventListener("error", () => {
+    if (wrap.classList.contains("art-missing")) return;
+    wrap.classList.add("art-missing");
+    const fallback = document.createElement("span");
+    fallback.className = "art-fallback";
+    fallback.textContent = who[0].toUpperCase();
+    wrap.append(fallback);
+  }, {once: true});
   wrap.append(img);
   return wrap;
 }

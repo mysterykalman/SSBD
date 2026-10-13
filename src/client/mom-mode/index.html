@@ -1,68 +1,54 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f7ead8"><title>Stump Mom | Same Same but Different</title>
+<meta name="theme-color" content="#f3e6d2"><title>Stump Mom | Same Same but Different</title>
 <meta name="description" content="Stump Mom in 20 questions before she figures out what you're thinking.">
-<link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./character.css"><link rel="stylesheet" href="./polish.css">
-<style>
-:root{--fx-paper:#fffaf1;--fx-cream:#f2e4cf;--fx-ink:#382e2b;--fx-line:#b99b80;--fx-coral:#ee6752;--fx-sun:#f2b84b;--fx-teal:#78b8a8;--fx-blue:#89aeca;--fx-plum:#77658f;--fx-soft:#ead8c4}
-html,body{background:#f2e4cf!important}body{background-image:radial-gradient(circle at 16% 8%,rgba(255,255,255,.4),transparent 26%),repeating-radial-gradient(circle at 0 0,rgba(79,55,39,.025) 0 1px,transparent 1px 5px)!important;color:var(--fx-ink)!important}body:before{height:0!important;border:0!important}
-.topbar,.wrap{width:min(980px,calc(100% - 32px))!important}.topbar{padding:18px 0 8px!important}.brand{width:168px!important;min-height:72px!important}.brand-logo{display:block!important;width:168px!important;height:auto!important;max-height:none!important;filter:none!important}
-.wrap{padding:8px 0 48px!important}.mode-heading{margin:12px 0 20px!important}.mode-heading h1{font-size:clamp(2.55rem,6vw,4.2rem)!important;letter-spacing:-.055em!important;color:var(--fx-ink)!important}.mode-subtitle{color:#74655d!important}
-.layout{grid-template-columns:180px minmax(0,1fr)!important;gap:18px!important}.pam-card,.score-panel,.game-card{border:1.5px solid var(--fx-line)!important;border-radius:26px!important;background:var(--fx-paper)!important;box-shadow:0 5px 0 rgba(142,104,75,.22),0 18px 30px rgba(74,51,37,.07)!important}.pam-card{padding:16px!important;position:sticky!important;top:16px!important}.portrait-frame{width:148px!important;height:148px!important;border:1.5px solid var(--fx-line)!important;border-radius:28px!important;background:#ead8c4!important;box-shadow:0 4px 0 rgba(142,104,75,.18)!important}.portrait{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center 18%!important;image-rendering:auto!important}.pam-copy h2{font-size:1.5rem!important;margin-top:4px!important}.pam-role{font-size:.9rem!important}.pam-teaser{font-size:.78rem!important;line-height:1.4!important}
-.score-panel{padding:14px 16px!important;background:#fff4d5!important}.mini-stat,.rank-badge{border:1.5px solid var(--fx-line)!important;background:#fffaf1!important}.rank-progress{border:1px solid var(--fx-line)!important;background:#eadcc9!important}.rank-progress>div{background:var(--fx-coral)!important}
-.game-card{position:relative!important;min-height:430px!important;padding:26px!important;overflow:visible!important}.game-card:before{content:""!important;position:absolute!important;left:20px!important;right:20px!important;top:-1px!important;height:6px!important;border-radius:0 0 8px 8px!important;background:var(--fx-sun)!important;border:0!important}.progress-track{height:9px!important;border:1px solid var(--fx-line)!important;background:#eadcc9!important}.progress-track>div{background:var(--fx-teal)!important}.lead{color:#ad4b3e!important}.question{font-size:clamp(1.75rem,3.4vw,2.5rem)!important;line-height:1.12!important;letter-spacing:-.04em!important}.aside{color:#74655d!important}
-.secret-field input{min-height:58px!important;border:1.5px solid var(--fx-line)!important;border-radius:18px!important;background:#fffefb!important;box-shadow:inset 0 2px 3px rgba(80,54,38,.05)!important}.btn{min-height:48px!important;border:1.5px solid #b4886d!important;border-radius:15px!important;box-shadow:0 4px 0 rgba(142,104,75,.28)!important;font-weight:900!important}.btn.primary,.yes{background:var(--fx-coral)!important;color:#fffaf3!important}.btn.ghost{background:#fffaf1!important;color:var(--fx-ink)!important}.probably{background:#f5dea0!important}.unknown{background:#d8e9e4!important}.probably-not{background:#e7def2!important}.no{background:#efd2bd!important}.answers.five{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important}.answers.five .unknown{grid-column:auto!important}.answers .btn{min-width:0!important;padding:10px 8px!important}.character-dialog,.rules-dialog{border:1.5px solid var(--fx-line)!important;border-radius:28px!important;background:#fffaf1!important;box-shadow:0 22px 50px rgba(57,40,30,.22)!important}.character-portrait{width:170px!important;height:170px!important;border:1.5px solid var(--fx-line)!important;border-radius:30px!important;object-fit:cover!important;object-position:center 18%!important;image-rendering:auto!important}
-@media(max-width:780px){.layout{grid-template-columns:1fr!important}.pam-card{position:static!important;display:grid!important;grid-template-columns:112px 1fr!important;gap:14px!important}.portrait-frame{width:112px!important;height:112px!important;margin:0!important}.answers.five{grid-template-columns:repeat(2,minmax(0,1fr))!important}.answers.five .unknown{grid-column:1/-1!important}}
-@media(max-width:520px){.topbar,.wrap{width:min(100% - 24px,980px)!important}.brand,.brand-logo{width:142px!important}.top-actions{gap:6px!important}.btn.tiny{font-size:.74rem!important;padding:6px 9px!important}.mode-heading h1{font-size:2.5rem!important}.pam-card{grid-template-columns:88px 1fr!important;padding:12px!important}.portrait-frame{width:88px!important;height:88px!important;border-radius:22px!important}.score-panel{padding:12px!important}.game-card{padding:20px!important;min-height:400px!important}.question{font-size:1.72rem!important}}
-</style>
+<link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="./design.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./character.css">
 </head><body>
 <a class="skip" href="#mom-app">Skip to Stump Mom</a>
 <header class="topbar">
- <a class="brand" href="/" aria-label="Same Same but Different"><img class="brand-logo" src="/logo.webp" alt="" aria-hidden="true"></a>
- <div class="top-actions"><a class="btn tiny ghost" href="/">← Games</a><button class="btn tiny ghost" id="rules-btn" type="button" aria-haspopup="dialog" aria-controls="rules-dialog">? How to play</button></div>
+ <a class="brand" href="/" aria-label="Same Same but Different"><img class="brand-logo" src="/logo.webp" alt="" aria-hidden="true" width="250" height="194"></a>
+ <div class="top-actions"><a class="btn small ghost" href="/"><span aria-hidden="true">←</span> Games</a><button class="btn small ghost" id="rules-btn" type="button" aria-haspopup="dialog" aria-controls="rules-dialog"><span aria-hidden="true">?</span> How to play</button></div>
 </header>
 <main id="mom-app" class="wrap">
 <div class="mode-heading"><p class="eyebrow">MOM MODE</p><h1>Stump Mom<span class="title-dot">.</span></h1><p class="mode-subtitle">Think of something. She gets 20 questions and one guess.</p></div>
-<div class="layout">
-<aside class="pam-card" aria-label="About Mom">
- <div class="portrait-frame"><img class="portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="320" height="320"></div>
- <div class="pam-copy"><h2>Mom</h2><p class="pam-role">Hi, I’m Pam.</p><p id="pam-bio" class="pam-teaser"></p></div>
-</aside>
-<div class="game-stack">
+<section class="card game-card" data-character="pam" aria-label="Stump Mom game">
+ <aside class="pam-card" aria-label="About Mom">
+  <div class="portrait-frame"><img class="portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="159" height="220"></div>
+  <div class="pam-copy"><h2>Mom</h2><p class="pam-role">Hi, I’m Pam.</p><p id="pam-bio" class="pam-teaser"></p></div>
+ </aside>
+ <div class="pam-play">
+  <div class="game-top"><span id="stage-label" class="eyebrow">ROUND SETUP</span><span id="question-counter" class="counter" hidden></span></div>
+  <div class="progress-track" role="progressbar" aria-label="Questions used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><div id="progress-fill" class="q-dots" aria-hidden="true"></div></div>
+  <p id="secret-word-lock" class="secret-word-lock" hidden></p>
+  <div class="speech" aria-live="polite" aria-atomic="true"><p id="pam-lead" class="lead"></p><h2 id="pam-question" class="question"></h2><p id="pam-aside" class="aside"></p></div>
+  <div id="result-points" class="result-points" hidden>+0 points</div>
+  <div id="intro-actions" class="actions secret-actions">
+    <label class="secret-field" for="secret-word"><span>Your answer</span><input id="secret-word" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Type it here"></label>
+    <p id="secret-error" class="secret-error" hidden>Write down your answer first.</p>
+    <button class="btn primary big" id="start-btn" type="button">Lock it in and start</button>
+  </div>
+  <div id="answer-actions" class="answers five" role="group" aria-label="Answer the question" hidden>
+   <button type="button" data-answer="yes" class="btn answer yes">Yes</button><button type="button" data-answer="probably" class="btn answer probably">Probably</button><button type="button" data-answer="unknown" class="btn answer unknown">Not sure</button><button type="button" data-answer="probably_not" class="btn answer probably-not">Probably not</button><button type="button" data-answer="no" class="btn answer no">No</button>
+  </div>
+  <div id="hunch-actions" class="actions hunch-actions" hidden><button class="btn primary big" id="guess-now-btn" type="button">Make her guess</button><button class="btn ghost big" id="keep-asking-btn" type="button">Keep asking · costs 2 pts</button></div>
+  <div id="guess-actions" class="actions" hidden><button class="btn sage big" id="correct-btn" type="button">You got it</button><button class="btn primary big" id="wrong-btn" type="button">Nope</button></div>
+  <div id="result-actions" class="actions" hidden><button class="btn primary big" id="again-btn" type="button">Play again</button><a class="btn ghost big" href="/">Back to games</a></div>
+ </div>
+</section>
 <section class="score-panel" aria-label="Score and streak">
  <div class="score-main"><span class="score-label">SCORE</span><strong id="pam-score">0</strong><span id="pam-rank" class="rank-badge">Look at You</span></div>
  <div class="score-side"><div class="mini-stat"><span>Streak</span><strong id="pam-streak">0</strong></div><div class="mini-stat"><span>Best round</span><strong id="pam-best">0</strong></div></div>
  <div class="rank-progress-wrap"><div class="rank-progress-copy"><span id="rank-progress-label">Next rank: Okay, Sweetie · 100 points</span><span id="best-streak-label">Best streak: 0</span></div><div class="rank-progress"><div id="rank-progress-fill"></div></div></div>
 </section>
-<section class="game-card" aria-label="Stump Mom game">
- <div class="game-top"><span id="stage-label" class="eyebrow">ROUND SETUP</span><span id="question-counter" class="counter" hidden></span></div>
- <p id="secret-word-lock" class="secret-word-lock" hidden></p>
- <div class="progress-track" role="progressbar" aria-label="Questions used" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><div id="progress-fill"></div></div>
- <div class="speech" aria-live="polite" aria-atomic="true"><p id="pam-lead" class="lead"></p><h2 id="pam-question" class="question"></h2><p id="pam-aside" class="aside"></p></div>
- <div id="result-points" class="result-points" hidden>+0 points</div>
- <div id="intro-actions" class="actions secret-actions">
-   <label class="secret-field" for="secret-word"><span>Your answer</span><input id="secret-word" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="Type it here"></label>
-   <p id="secret-error" class="secret-error" hidden>Write down your answer first.</p>
-   <button class="btn primary" id="start-btn" type="button">Lock it in and start</button>
- </div>
- <div id="answer-actions" class="answers five" role="group" aria-label="Answer the question" hidden>
-  <button type="button" data-answer="yes" class="btn yes">Yes</button><button type="button" data-answer="probably" class="btn probably">Probably</button><button type="button" data-answer="unknown" class="btn unknown">Not sure</button><button type="button" data-answer="probably_not" class="btn probably-not">Probably not</button><button type="button" data-answer="no" class="btn no">No</button>
- </div>
- <div id="hunch-actions" class="actions hunch-actions" hidden><button class="btn primary" id="guess-now-btn" type="button">Make her guess</button><button class="btn ghost" id="keep-asking-btn" type="button">Keep asking · costs 2 pts</button></div>
- <div id="guess-actions" class="actions" hidden><button class="btn primary" id="correct-btn" type="button">You got it</button><button class="btn ghost" id="wrong-btn" type="button">Nope</button></div>
- <div id="result-actions" class="actions" hidden><button class="btn primary" id="again-btn" type="button">Play again</button><a class="btn ghost" href="/">Back to games</a></div>
-</section>
-</div>
-</div>
 </main>
-<dialog id="pam-intro-dialog" class="character-dialog" aria-labelledby="pam-intro-title">
+<dialog id="pam-intro-dialog" class="character-dialog" data-character="pam" aria-labelledby="pam-intro-title">
  <button id="pam-intro-close" class="dialog-close character-close" type="button" aria-label="Close introduction">×</button>
  <div class="character-ribbon">MEET YOUR OPPONENT</div>
- <img class="character-portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="180" height="180">
+ <div class="character-portrait-frame"><img class="character-portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="159" height="220"></div>
  <h2 id="pam-intro-title">Pam</h2>
  <p class="character-role">Hi, honey. I’m Pam.<br>I get 20 questions and one guess.<br>Try not to make that face. It gives things away.</p>
- <button id="pam-intro-play" class="btn primary character-cta" type="button">Okay, Mom. Let’s play.</button>
+ <button id="pam-intro-play" class="btn primary big character-cta" type="button">Okay, Mom. Let’s play.</button>
 </dialog>
 <dialog id="rules-dialog" class="rules-dialog" aria-labelledby="rules-title">
  <div class="rules-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rules-title">Stump Mom</h2></div><button id="rules-close" class="dialog-close" type="button" aria-label="Close rules">×</button></div>

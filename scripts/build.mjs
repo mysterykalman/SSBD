@@ -16,7 +16,8 @@ const appBundle = await build({entryPoints: [src("client/app.js")], bundle: true
 const appJs = appBundle.outputFiles[0].text;
 const audioBundle = await build({entryPoints: [src("client/audio-entry.js")], bundle: true, format: "esm", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
 const audioJs = audioBundle.outputFiles[0].text;
-const css = [await readFile(src("client/styles.css"), "utf8"), await readFile(src("client/polish.css"), "utf8")].join("\n");
+// One design system for every page: shared tokens/components (design.css) first, then the app layer.
+const css = [await readFile(src("client/design.css"), "utf8"), await readFile(src("client/styles.css"), "utf8")].join("\n");
 const logo = await readFile(src("client/logo.webp"));
 const cloudSync = await readFile(src("client/cloud-sync.js"), "utf8");
 const account = await readFile(src("client/account.js"), "utf8");
@@ -30,7 +31,7 @@ const hasMomRuntime = existsSync(runtimeKnowledgePath);
 const LEGACY_MOM_JS = ["knowledge.js", "knowledge.general.js", "knowledge.generated.js", "facets.js", "engine.js", "deduction.js", "copy.js", "adapter.js", "app.js", "debug.js"];
 const RUNTIME_MOM_JS = ["copy.js", "app.js", "debug.js"];
 const MOM_JS = hasMomRuntime ? RUNTIME_MOM_JS : LEGACY_MOM_JS;
-const MOM_CSS = ["styles.css", "character.css", "polish.css"];
+const MOM_CSS = ["styles.css", "character.css"];
 const MOM_STATIC = ["pam.webp", "pam-v2.webp"];
 const legacyMomScriptChain = '<script src="./knowledge.js" defer></script><script src="./knowledge.general.js" defer></script><script src="./knowledge.generated.js" defer></script><script src="./facets.js" defer></script><script src="./engine.js" defer></script><script src="./deduction.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
 const runtimeMomScriptChain = '<script src="./knowledge.runtime.js" defer></script><script src="./runtime-entry.js" defer></script><script src="./copy.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
@@ -40,7 +41,11 @@ if (hasMomRuntime) {
   momIndex = momIndex.replace(legacyMomScriptChain, runtimeMomScriptChain);
 }
 const momJsSource = Object.fromEntries(await Promise.all(MOM_JS.map(async name => [name, await readFile(src(`client/mom-mode/${name}`), "utf8")])));
-const momCssSource = Object.fromEntries(await Promise.all(MOM_CSS.map(async name => [name, await readFile(src(`client/mom-mode/${name}`), "utf8")])));
+const momCssSource = {
+  // The shared design system (src/client/design.css), so Pam's page belongs to the same game world.
+  "design.css": await readFile(src("client/design.css"), "utf8"),
+  ...Object.fromEntries(await Promise.all(MOM_CSS.map(async name => [name, await readFile(src(`client/mom-mode/${name}`), "utf8")])))
+};
 const momStatic = Object.fromEntries(await Promise.all(MOM_STATIC.map(async name => [name, await readFile(src(`client/mom-mode/${name}`))])));
 
 const hash = value => createHash("sha256").update(value).digest("hex").slice(0, 10);
