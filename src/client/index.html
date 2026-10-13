@@ -7,7 +7,6 @@
 <meta name="app-version" content="%APP_VERSION%">
 <title>Same Same but Different</title>
 <meta name="description" content="A ridiculous word game for people who think they know each other.">
-<!-- Social/share previews (absolute URLs: share platforms fetch these from outside the app) -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Same Same but Different">
 <meta property="og:description" content="A ridiculous word game for people who think they know each other.">
@@ -23,7 +22,63 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="%STYLES_CSS%">
-<style>.btn{text-decoration:none}</style>
+<style>
+.btn{text-decoration:none}
+/* Aesthetic v2.1: component-first, fuzzy/tactile shell. Keeps approved art at retina-safe display sizes. */
+:root{--fx-paper:#fffaf1;--fx-cream:#f2e4cf;--fx-ink:#382e2b;--fx-line:#b99b80;--fx-coral:#ee6752;--fx-sun:#f2b84b;--fx-teal:#78b8a8;--fx-blue:#89aeca;--fx-plum:#77658f;--fx-soft:#ead8c4}
+html,body{background:#f2e4cf!important}
+body{background-image:radial-gradient(circle at 18% 12%,rgba(255,255,255,.45),transparent 27%),radial-gradient(circle at 82% 18%,rgba(255,255,255,.28),transparent 24%),repeating-radial-gradient(circle at 0 0,rgba(79,55,39,.025) 0 1px,transparent 1px 5px)!important}
+body:before{height:0!important;border:0!important}
+.topbar,main{width:min(980px,calc(100% - 32px))!important}
+.topbar{padding:18px 0 4px!important;min-height:94px}
+.brand{width:168px!important;min-height:72px!important;display:flex!important;align-items:center!important}
+.brand-logo{display:block!important;width:168px!important;height:auto!important;max-height:none!important;object-fit:contain!important;filter:none!important}
+.avatar,.bell{width:46px!important;height:46px!important;border:2px solid var(--fx-line)!important;background:#f7df9f!important;color:var(--fx-ink)!important;box-shadow:0 4px 0 rgba(125,88,62,.22)!important}
+main{padding:0 0 48px!important}
+.hero{max-width:760px!important;padding:34px 0 26px!important;text-align:left!important}
+.hero:before{content:"WORD ASSOCIATION, BUT MAKE IT A GAME"!important;display:inline-flex!important;padding:6px 11px!important;border:1.5px solid var(--fx-line)!important;border-radius:999px!important;background:#f9e5ae!important;color:#ad4b3e!important;font-size:.68rem!important;font-weight:900!important;letter-spacing:.1em!important}
+.hero h1{max-width:650px!important;margin:15px 0 10px!important;font-size:clamp(2.45rem,6vw,4.35rem)!important;line-height:.95!important;letter-spacing:-.055em!important;color:var(--fx-ink)!important;text-shadow:none!important}
+.lede{max-width:590px!important;color:#74655d!important;font-size:1rem!important;line-height:1.45!important}
+.hero-rules{max-width:710px!important;margin:10px 0 0!important;color:#74655d!important;font-size:.84rem!important;line-height:1.45!important}
+.start-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:18px!important;align-items:stretch!important}
+.card{border:1.5px solid var(--fx-line)!important;border-radius:26px!important;background:var(--fx-paper)!important;box-shadow:0 5px 0 rgba(142,104,75,.22),0 18px 30px rgba(74,51,37,.07)!important}
+.start{min-height:0!important;padding:20px!important;gap:11px!important;overflow:visible!important}
+.start h2,.mom-card h2{font-size:1.55rem!important;letter-spacing:-.04em!important;color:var(--fx-ink)!important}
+.start-copy{gap:8px!important}
+.start-copy p{font-size:.92rem!important;line-height:1.38!important}
+.solo-card,.family-card{position:relative!important;padding-top:24px!important}
+.solo-card:before,.family-card:before,.mom-card:before{content:""!important;position:absolute!important;left:18px!important;right:18px!important;top:-1px!important;height:6px!important;border-radius:0 0 8px 8px!important;background:var(--fx-coral)!important}
+.family-card:before{background:var(--fx-teal)!important}.mom-card:before{background:var(--fx-sun)!important}
+.start-icon.pair{width:100%!important;height:164px!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;gap:12px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;transform:none!important}
+.start-icon.pair>.badge{position:relative!important;inset:auto!important;display:block!important;flex:0 0 154px!important;width:154px!important;height:154px!important;max-width:154px!important;padding:0!important;margin:0!important;border:1.5px solid var(--fx-line)!important;border-radius:28px!important;background:#ead8c4!important;box-shadow:0 4px 0 rgba(142,104,75,.18)!important;overflow:hidden!important;transform:none!important}
+.start-icon.pair .gary-art-wrap{position:static!important;inset:auto!important;display:block!important;width:100%!important;height:100%!important;margin:0!important;transform:none!important;overflow:hidden!important}
+.start-icon.pair .gary-art{position:static!important;display:block!important;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;object-position:center 18%!important;transform:none!important;image-rendering:auto!important}
+.start-icon.pair>.pair-gary:after,.start-icon.pair>.pair-milo:after{position:absolute;left:9px;bottom:8px;padding:3px 8px;border-radius:999px;background:rgba(255,250,241,.9);color:var(--fx-ink);font-size:.66rem;font-weight:900;letter-spacing:.04em;box-shadow:0 1px 4px rgba(61,43,32,.1)}
+.start-icon.pair>.pair-gary:after{content:"GARY"}.start-icon.pair>.pair-milo:after{content:"MILO"}
+.bio-milo,.bio-gary{font-weight:800!important;color:var(--fx-ink)!important}.bio-or{font-size:.7rem!important;color:#8c796d!important}.bio-or:before,.bio-or:after{border-color:#d6bfa9!important}
+.family-card .start-icon.duo{width:max-content!important;margin:0!important;padding:8px 12px 8px 8px!important;border:1.5px solid var(--fx-line)!important;background:#d9e8e2!important;box-shadow:0 3px 0 rgba(142,104,75,.16)!important;transform:none!important}
+.family-card .start-icon.duo .badge{width:44px!important;height:44px!important;border:1.5px solid var(--fx-line)!important;box-shadow:none!important}
+.btn{min-height:48px!important;border:1.5px solid #b4886d!important;border-radius:15px!important;box-shadow:0 4px 0 rgba(142,104,75,.28)!important;font-weight:900!important}
+.btn.big{min-height:52px!important}.btn.ghost{background:#fffaf1!important;color:var(--fx-ink)!important}.btn.teal,.btn.success{background:var(--fx-teal)!important;color:#2d403b!important}
+.start .btn{margin-top:10px!important;align-self:flex-start!important}
+.mom-card{position:relative!important;display:grid!important;grid-template-columns:168px minmax(0,1fr) auto!important;gap:22px!important;align-items:center!important;min-height:0!important;margin-top:18px!important;padding:20px!important;background:#fff7e8!important;overflow:visible!important}
+.mom-card-art{width:168px!important;height:168px!important;max-width:168px!important;border:1.5px solid var(--fx-line)!important;border-radius:28px!important;object-fit:cover!important;object-position:center 18%!important;background:#ead8c4!important;box-shadow:0 4px 0 rgba(142,104,75,.18)!important;image-rendering:auto!important}
+.mom-card-copy p{font-size:.9rem!important;line-height:1.38!important}.mom-preview{font-size:.66rem!important;letter-spacing:.11em!important;color:#ad4b3e!important}
+.games{min-height:0!important;margin-top:20px!important;padding:20px!important;background:#f7eee2!important}.games h2{margin-bottom:12px!important}.game-list{min-height:0!important}.empty{min-height:0!important;padding:18px 0!important}
+.game-item{border:1.5px solid #d7c1ad!important;border-radius:18px!important;background:#fffaf1!important}
+/* Active game surfaces */
+.game-nav{margin:12px 0!important}.board{border-radius:30px!important;padding:30px!important;background:#fffaf1!important}.board:before{left:20px!important;right:20px!important;top:-1px!important;height:6px!important;border-radius:0 0 8px 8px!important;background:var(--fx-coral)!important}
+.mode-chip{border:1.5px solid var(--fx-line)!important;background:#fffaf1!important;box-shadow:0 3px 0 rgba(142,104,75,.18)!important}.stones{border:0!important;background:#eadcc9!important}.stone{border:1.5px solid var(--fx-line)!important}
+.board-title{font-size:clamp(2rem,5vw,3rem)!important;letter-spacing:-.055em!important}.instruction{color:#75665e!important}
+.tile,.chip,.rv-word{border:1.5px solid var(--fx-line)!important;border-radius:20px!important;box-shadow:0 4px 0 rgba(142,104,75,.18)!important;background:#fffdf8!important}.tile:after,.chip:after,.rv-word:after{display:none!important}
+.word-input,.text-input{min-height:62px!important;border:1.5px solid var(--fx-line)!important;border-radius:18px!important;background:#fffefb!important;box-shadow:inset 0 2px 3px rgba(80,54,38,.05)!important}
+.gary-reaction-art{width:68px!important;height:68px!important;border:1.5px solid var(--fx-line)!important;border-radius:20px!important;overflow:hidden!important;background:#ead8c4!important}.gary-reaction-art .gary-art{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center 18%!important}
+.gary-bubble{border:1.5px solid var(--fx-line)!important;border-radius:20px 20px 20px 7px!important;background:#fffdf8!important;box-shadow:0 3px 0 rgba(142,104,75,.16)!important}
+.reveal-modal,.gary-intro,.dialog{border:1.5px solid var(--fx-line)!important;border-radius:28px!important;background:#fffaf1!important;box-shadow:0 22px 50px rgba(57,40,30,.22)!important}
+.intro-art,.wc-avatar,.end-art{max-width:180px!important;max-height:180px!important;overflow:hidden!important;border-radius:30px!important}.intro-art .gary-art,.wc-avatar .gary-art,.end-art .gary-art{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center 18%!important}
+@media(max-width:780px){.start-grid{grid-template-columns:1fr!important}.mom-card{grid-template-columns:132px 1fr!important}.mom-card-art{width:132px!important;height:132px!important}.mom-card .btn{grid-column:1/-1!important;justify-self:stretch!important}.start-icon.pair>.badge{flex-basis:145px!important;width:145px!important;height:145px!important}}
+@media(max-width:520px){.topbar,main{width:min(100% - 24px,980px)!important}.brand,.brand-logo{width:142px!important}.hero{padding-top:22px!important}.hero h1{font-size:2.35rem!important}.start{padding:16px!important}.start-icon.pair{height:128px!important;gap:8px!important}.start-icon.pair>.badge{flex:0 0 calc(50% - 4px)!important;width:calc(50% - 4px)!important;height:128px!important;max-width:none!important;border-radius:22px!important}.mom-card{grid-template-columns:96px 1fr!important;gap:14px!important;padding:16px!important}.mom-card-art{width:96px!important;height:110px!important;border-radius:22px!important}.mom-card .btn{grid-column:1/-1!important}.board{padding:20px!important}}
+</style>
 </head>
 <body>
 <a class="skip" href="#app">Skip to game</a>
@@ -31,7 +86,6 @@
   <a class="brand" id="brandLink" href="/" aria-label="Same Same but Different"><img class="brand-logo" src="/logo.webp" alt="" aria-hidden="true"><span class="brand-text-fallback"><span id="brandTop">Same Same</span><span id="brandBottom">but different</span></span></a>
   <div class="top-actions">
     <span class="offline-pill" id="offlinePill" hidden></span>
-    <!-- French stays wired in the app, but the switch is intentionally hidden during English-only public testing. -->
     <div class="lang-switch" id="langGroup" role="group" aria-label="Language" aria-hidden="true" style="display:none">
       <button type="button" data-lang="en" aria-pressed="true"><span aria-hidden="true">EN</span><span class="sr-only">English</span></button>
       <button type="button" data-lang="fr" aria-pressed="false"><span class="sr-only" lang="fr">Français</span></button>
