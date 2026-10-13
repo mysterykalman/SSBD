@@ -368,7 +368,8 @@ h3 { font-size: var(--fs-lg); line-height: 1.2; font-weight: 900; }
 /* Gary's portrait has a dark olive felt patch baked in behind his shoulders, so his frame is that
    same olive: the patch reads as his backdrop instead of a cut-out edge. */
 [data-character="gary"] { --char: var(--gary); --char-deep: var(--sage-deep); --char-tint: var(--gary-tint); --char-bg: #424d34; --char-glow: rgba(214, 226, 190, .38); }
-[data-character="milo"] { --char: var(--milo); --char-deep: var(--tomato-deep); --char-tint: var(--milo-tint); }
+/* Milo's portrait sits on warm tan felt, so his frame is that same tan. */
+[data-character="milo"] { --char: var(--milo); --char-deep: var(--tomato-deep); --char-tint: var(--milo-tint); --char-bg: #a3805c; --char-glow: rgba(255, 236, 205, .25); }
 [data-character="pam"] { --char: var(--pam); --char-deep: var(--marigold-deep); --char-tint: var(--pam-tint); }
 
 /* A framed character portrait: felt backdrop in the character's colour, stitched ring. */
