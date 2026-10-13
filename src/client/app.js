@@ -688,7 +688,7 @@ function renderGame() {
   mount(
     h("div", {class: "game-nav", "data-mode": solo ? "solo" : "together"},
       h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, backLabel()),
-      h("span", {class: "mode-chip"},
+      h("span", {class: "mode-chip", "data-mode": solo ? "solo" : "together", "data-character": solo ? characterId(view.character) : null},
         view.waitingForPlayer && !solo ? null : otherBadge(view, "small"),
         h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")})),
         solo ? betaBadge() : null),

@@ -1,202 +1,23 @@
 {
- "about": "Which components wear which felt piece. scripts/build.mjs turns this into CSS (later entries win at equal specificity). Images: src/client/felt/<asset>.webp, made by scripts/build-felt-assets.py. Each component sets --felt-h: the height its piece is drawn at.",
+ "about": "Which components wear which felt piece (component sheet: felt is for the things you touch; panels stay plain cream). scripts/build.mjs turns this into CSS; later entries win at equal specificity. Images: src/client/felt/<asset>.webp from scripts/build-felt-assets.py. Each component sets --felt-h, the height its piece is drawn at.",
  "skins": [
-  {
-   "asset": "panel-card",
-   "selectors": [
-    ".card",
-    ".dialog",
-    ".character-picker",
-    ".gary-intro",
-    ".reveal-modal",
-    ".rules-dialog",
-    ".character-dialog",
-    ".share",
-    ".close-ask",
-    ".game-item",
-    ".notif-row",
-    ".pick-card",
-    ".score-panel",
-    ".rule-list > div",
-    ".suggestion",
-    ".wc-rating",
-    ".lang-note",
-    ".notice",
-    ".board .win-card"
-   ],
-   "repeat": "round"
-  },
-  {
-   "asset": "tile-cream",
-   "selectors": [
-    ".tile",
-    ".rv-word",
-    ".share .share-code",
-    ".win-card .wc-bubble",
-    ".gi-says",
-    ".gary-bye",
-    ".character-role",
-    ".code",
-    ".empty-art i",
-    ".rv-next"
-   ]
-  },
-  {
-   "asset": "tile-yellow",
-   "selectors": [
-    ".prompt > .tile",
-    ".rv-word.you",
-    ".duo-word",
-    ".pick-card:has(.pick-radio:checked)",
-    ".win-card .wc-bubble:first-child"
-   ]
-  },
-  {
-   "asset": "tile-teal",
-   "selectors": [
-    ".prompt .join .tile",
-    ".rv-word.other",
-    ".duo-word.two"
-   ]
-  },
-  {
-   "asset": "bubble-left",
-   "fill": false,
-   "center": "#f8f0e2",
-   "selectors": [
-    ".bubble",
-    ".gary-bubble",
-    ".speech"
-   ],
-   "repeat": "round"
-  },
-  {
-   "asset": "chip-cream",
-   "selectors": [
-    ".chip",
-    ".mode-chip",
-    ".move-count",
-    ".counter",
-    ".rank-badge",
-    ".mini-stat",
-    ".offline-pill",
-    ".sticker",
-    ".game-top .eyebrow",
-    ".start-label",
-    ".secret-word-lock",
-    ".beta-badge",
-    ".match-badge",
-    ".standee::after",
-    ".toast"
-   ]
-  },
-  {
-   "asset": "chip-yellow",
-   "selectors": [
-    ".chip.you",
-    ".moves-warning",
-    ".result-points",
-    ".game-card[data-stage=hunch] .game-top .eyebrow",
-    ".game-card[data-stage=guess] .game-top .eyebrow"
-   ]
-  },
-  {
-   "asset": "chip-teal",
-   "selectors": [
-    ".chip.other",
-    ".mode-chip:has([data-character=milo])",
-    ".beta-badge"
-   ]
-  },
-  {
-   "asset": "chip-green",
-   "selectors": [
-    ".trail-row.match .chip",
-    ".toast.success",
-    ".answer.probably",
-    ".game-card[data-outcome=won] .game-top .eyebrow",
-    ".rv-kicker"
-   ]
-  },
-  {
-   "asset": "chip-red",
-   "selectors": [
-    ".toast.error",
-    ".answer.probably-not",
-    ".notif-new",
-    ".game-nav[data-mode=together] .mode-chip",
-    ".game-card[data-outcome=lost] .game-top .eyebrow",
-    ".game-card[data-outcome=late] .game-top .eyebrow"
-   ]
-  },
-  {
-   "asset": "chip-purple",
-   "selectors": [
-    ".btn.sun",
-    ".mode-chip[data-mode=pam]"
-   ]
-  },
-  {
-   "asset": "field-default",
-   "selectors": [
-    ".word-input",
-    ".text-input",
-    ".secret-field input",
-    ".account-grid input",
-    ".settings-name-row input"
-   ]
-  },
-  {
-   "asset": "btn-primary",
-   "selectors": [
-    ".btn",
-    ".toast-action"
-   ]
-  },
-  {
-   "asset": "btn-secondary",
-   "selectors": [
-    ".btn.ghost",
-    ".answer.unknown",
-    ".lang-switch"
-   ]
-  },
-  {
-   "asset": "btn-destructive",
-   "selectors": [
-    ".btn.teal",
-    ".btn.together",
-    ".answer.no",
-    "#quitConfirm"
-   ]
-  },
-  {
-   "asset": "btn-positive",
-   "selectors": [
-    ".btn.sage",
-    ".btn.success",
-    ".answer.yes"
-   ]
-  },
-  {
-   "asset": "btn-primary-pressed",
-   "selectors": [
-    ".btn:not(.ghost):not(.teal):not(.sage):not(.sun):not(.answer):active:not(:disabled)"
-   ]
-  },
-  {
-   "asset": "btn-secondary-pressed",
-   "selectors": [
-    ".btn.ghost:active:not(:disabled)",
-    ".answer.unknown:active"
-   ]
-  },
-  {
-   "asset": "btn-disabled",
-   "selectors": [
-    ".btn:disabled",
-    ".btn[aria-disabled=true]"
-   ]
-  }
+  {"asset": "tile-cream", "selectors": [".tile", ".rv-word", ".share-code", ".duo-word.two"]},
+  {"asset": "tile-yellow", "selectors": [".prompt > .tile", ".rv-word.you", ".duo-word"]},
+  {"asset": "tile-teal", "selectors": [".prompt .join .tile", ".rv-word.other"]},
+  {"asset": "bubble-left", "fill": false, "center": "#f8f0e2", "repeat": "round", "selectors": [".bubble", ".gary-bubble", ".speech"]},
+  {"asset": "chip-cream", "selectors": [".chip", ".pill", ".toast", ".mode-chip", ".move-count", ".counter", ".rank-badge", ".mini-stat", ".offline-pill", ".secret-word-lock", ".beta-badge", ".match-badge", ".start-label", ".standee::after", ".rv-next", ".code", ".game-top .eyebrow"]},
+  {"asset": "chip-yellow", "selectors": [".chip.you", ".moves-warning", ".result-points", ".pill.yellow", ".game-card[data-stage=hunch] .game-top .eyebrow", ".game-card[data-stage=guess] .game-top .eyebrow"]},
+  {"asset": "chip-teal", "selectors": [".chip.other", ".pill.teal", ".beta-badge", ".mode-chip[data-character=milo]"]},
+  {"asset": "chip-green", "selectors": [".trail-row.match .chip", ".toast.success", ".pill.green", ".answer.probably", ".match-badge", ".game-card[data-outcome=won] .game-top .eyebrow"]},
+  {"asset": "chip-red", "selectors": [".toast.error", ".pill.red", ".notif-new", ".answer.probably-not", ".mode-chip[data-mode=together]", ".game-card[data-outcome=lost] .game-top .eyebrow", ".game-card[data-outcome=late] .game-top .eyebrow"]},
+  {"asset": "chip-purple", "selectors": [".pill.purple", ".btn.sun", ".mode-chip[data-mode=pam]"]},
+  {"asset": "field-default", "selectors": [".word-input", ".text-input", ".secret-field input", ".account-grid input", ".settings-name-row input"]},
+  {"asset": "btn-primary", "selectors": [".btn", ".toast-action"]},
+  {"asset": "btn-secondary", "selectors": [".btn.ghost", ".answer.unknown", ".lang-switch"]},
+  {"asset": "btn-destructive", "selectors": [".btn.teal", ".btn.together", ".btn.danger", ".answer.no", "#quitConfirm"]},
+  {"asset": "btn-positive", "selectors": [".btn.sage", ".btn.success", ".answer.yes", ".end-actions #newGameBtn", ".wc-actions #newGameBtn", "#again-btn"]},
+  {"asset": "btn-primary-pressed", "selectors": [".btn:not(.ghost):not(.teal):not(.sage):not(.sun):not(.danger):not(.answer):active:not(:disabled)"]},
+  {"asset": "btn-secondary-pressed", "selectors": [".btn.ghost:active:not(:disabled)", ".answer.unknown:active"]},
+  {"asset": "btn-disabled", "selectors": [".btn:disabled", ".btn[aria-disabled=true]"]}
  ]
 }

@@ -43,7 +43,7 @@ test("the homepage tile: 'Solo Play', Gary and Milo side by side at the same siz
     assert.equal(Math.round(pair[0].box.height), Math.round(pair[1].box.height));
     assert.ok(pair[0].box.right <= pair[1].box.left + 0.5, "side by side, no overlap");
     assert.ok(Math.abs(pair[0].box.top - pair[1].box.top) < 6, "level with each other");
-    assert.ok(pair[0].box.width >= 40 && pair[0].box.width <= 60, "compact enough for the tile header");
+    assert.ok(pair[0].box.width >= 96 && pair[0].box.width <= 140, "shown as standing portraits, at a size their art supports");
     await page.click("#startSolo");
     await page.waitForSelector("#characterPicker[open]");
     assert.match(await page.locator("#characterPicker").innerText(), /Who do you want to play with\?/);

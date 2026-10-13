@@ -1,103 +1,49 @@
-/* Same Same but Different: the shared design system.
-   One visual world for Home, Solo, Together and Pam: warm felt, stitched edges, chunky pressable
-   pieces and the approved fuzzy characters. This file holds the tokens and the shared components;
-   styles.css (main app) and mom-mode/styles.css (Pam) only compose them.
-   Loaded first by both pages (see scripts/build.mjs). */
+/* Same Same but Different: the shared design system (Home, Solo, Together and Pam).
+   Follows the component sheet (reference/ui-component-guide.webp): soft cream panels, and the
+   hand-made felt pieces (src/client/felt, mapped in felt/skins.json) for everything you touch:
+   buttons, chips, word tiles, fields and speech bubbles. Text always stays live on top. */
 
 :root {
-  /* felt + paper */
-  --felt: #f3e6d2;
-  --felt-deep: #e9d7bd;
-  --paper: #fffaf1;
-  --paper-warm: #fdf3e2;
-  --ink: #3a2a27;
-  --ink-soft: #6b5850;
-  --line: #dcc6ab;
-  --edge: #c7a688;
-  --edge-deep: #a9836a;
-  --stitch: rgba(122, 86, 60, .32);
+  --page: #f6ebdb;
+  --panel: #fdf7ee;
+  --panel-edge: rgba(150, 110, 70, .14);
+  --ink: #3b2a24;
+  --ink-soft: #776258;
+  --line: #e6d4bd;
 
-  /* accents (taken from the logo's felt letters) */
-  --tomato: #e0583e;
-  --tomato-deep: #b7432d;
-  --tomato-tint: #fbe2d8;
-  --marigold: #f2b43e;
-  --marigold-deep: #b97c12;
-  --marigold-tint: #fcefcd;
-  --sage: #5c9f8f;
-  --sage-deep: #2f6f62;
-  --sage-tint: #dcede6;
-  --plum: #7c5f9e;
-  --plum-deep: #59407a;
-  --plum-tint: #ece3f3;
-  --sky-tint: #e1ecf4;
+  --orange: #f2a127;
+  --orange-deep: #b86d0c;
+  --yellow: #f4c444;
+  --teal: #5fb1a4;
+  --teal-deep: #2f7f73;
+  --coral: #e5604f;
+  --coral-deep: #b23c2e;
+  --green: #74ad7c;
+  --green-deep: #3f7a49;
+  --purple: #a189d8;
+  --purple-deep: #6c51a8;
+  --blue: #6fa0d8;
+  --cream: #f3e4cc;
 
-  /* roles */
-  --primary: #c64a32;          /* filled buttons: 4.6:1 with cream text */
-  --primary-edge: #8f3322;
-  --on-primary: #fffaf1;
-  --focus: #6a4bb0;
-  --error-ink: #8f2416;
-  --error-bg: #fde3dc;
-  --success-bg: #e2f1ea;
-
-  /* character + mode accents */
-  --gary: var(--sage);
-  --gary-tint: var(--sage-tint);
-  --milo: var(--tomato);
-  --milo-tint: var(--tomato-tint);
-  --pam: var(--marigold);
-  --pam-tint: var(--marigold-tint);
-  --together: var(--plum);
-  --together-tint: var(--plum-tint);
-
-  /* shape */
-  --r-xs: 10px;
-  --r-sm: 14px;
-  --r-md: 20px;
-  --r-lg: 28px;
-  --r-xl: 36px;
-  --r-pill: 999px;
-
-  /* spacing */
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 20px;
-  --s-6: 24px;
-  --s-7: 32px;
-  --s-8: 44px;
-
-  /* depth: a pressed-felt edge plus a soft room shadow */
-  --lift-1: 0 3px 0 rgba(120, 82, 55, .22);
-  --lift-2: 0 5px 0 rgba(120, 82, 55, .22), 0 14px 26px -14px rgba(70, 45, 30, .35);
-  --lift-3: 0 8px 0 rgba(120, 82, 55, .2), 0 26px 50px -22px rgba(60, 38, 26, .45);
-
-  /* type */
-  --font: "Nunito", ui-rounded, "SF Pro Rounded", "Varela Round", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
-  --fs-xs: .74rem;
-  --fs-sm: .86rem;
-  --fs-md: 1rem;
-  --fs-lg: 1.2rem;
-  --fs-xl: clamp(1.5rem, 3.4vw, 1.9rem);
-  --fs-2xl: clamp(2rem, 5.4vw, 3rem);
-  --fs-3xl: clamp(2.4rem, 6.6vw, 4rem);
-
-  /* motion */
+  --focus: #3f86d6;
+  --shadow-panel: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 12px 30px -16px rgba(110, 72, 36, .35), 0 2px 6px -2px rgba(110, 72, 36, .12);
+  --r-panel: 28px;
+  --font: "Nunito", ui-rounded, "SF Pro Rounded", "Varela Round", "Arial Rounded MT Bold", system-ui, sans-serif;
   --ease-pop: cubic-bezier(.2, 1.5, .4, 1);
-  --ease-out: cubic-bezier(.2, .7, .3, 1);
-  --t-fast: .12s;
-  --t-med: .24s;
-
-  /* textures (inline SVG noise: no network, works offline) */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .24 0 0 0 0 .16 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-  --grain-soft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .28 0 0 0 0 .2 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-
-  --page-w: 1120px;
+  --page-w: 1100px;
   --gutter: 20px;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .24 0 0 0 0 .16 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* character colours */
+  --gary: var(--green);
+  --milo: var(--teal);
+  --pam: var(--purple);
+  --together: var(--coral);
   color-scheme: light;
 }
+[data-character="gary"] { --char: var(--green); --char-bg: #424d34; --char-glow: rgba(214, 226, 190, .35); }
+[data-character="milo"] { --char: var(--teal); --char-bg: #a3805c; --char-glow: rgba(255, 236, 205, .25); }
+[data-character="pam"] { --char: var(--purple); --char-bg: #efe6fb; --char-glow: rgba(255, 255, 255, .7); }
 
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -106,375 +52,199 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
-  background-color: var(--felt);
-  background-image:
-    var(--grain),
-    radial-gradient(1100px 520px at 12% -8%, rgba(255, 255, 255, .55), transparent 62%),
-    radial-gradient(900px 600px at 105% 8%, rgba(242, 180, 62, .16), transparent 60%),
-    radial-gradient(900px 700px at -10% 100%, rgba(92, 159, 143, .12), transparent 60%);
-  background-attachment: scroll;
+  background: var(--grain), radial-gradient(1200px 600px at 20% -10%, #fffaf2, transparent 60%), var(--page);
   font-family: var(--font);
   font-size: 17px;
+  font-weight: 700;
   line-height: 1.5;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-  font-kerning: normal;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }
 img { max-width: 100%; }
 h1, h2, h3, p { margin: 0; overflow-wrap: break-word; }
-h1 { line-height: 1.05; letter-spacing: -.03em; font-weight: 900; }
-h2 { font-size: var(--fs-xl); line-height: 1.12; letter-spacing: -.025em; font-weight: 900; }
-h3 { font-size: var(--fs-lg); line-height: 1.2; font-weight: 900; }
+h1 { font-weight: 900; line-height: 1.05; letter-spacing: -.02em; }
+h2 { font-weight: 900; font-size: 1.35rem; line-height: 1.15; letter-spacing: -.01em; }
+h3 { font-weight: 900; font-size: 1.05rem; }
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.skip { position: absolute; left: 12px; top: -80px; z-index: 60; padding: 10px 16px; border-radius: var(--r-sm); background: var(--ink); color: var(--paper); font-weight: 900; text-decoration: none; }
+.skip { position: absolute; left: 12px; top: -80px; z-index: 60; padding: 10px 16px; border-radius: 12px; background: var(--ink); color: #fff; font-weight: 900; text-decoration: none; }
 .skip:focus { top: 12px; }
 .muted { color: var(--ink-soft); }
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: var(--r-xs); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 12px; }
 
-/* ---------- page shell ---------- */
-.topbar {
-  width: min(var(--page-w), calc(100% - 2 * var(--gutter)));
-  margin: 0 auto;
-  padding: max(14px, env(safe-area-inset-top)) 0 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.brand { display: inline-flex; align-items: center; flex: none; text-decoration: none; border-radius: var(--r-sm); }
-/* The logo is 250×194: shown at ≤140px wide so it stays crisp on 2× screens. */
-.brand-logo { display: block; width: 140px; height: auto; filter: drop-shadow(0 3px 0 rgba(120, 82, 55, .18)); }
+/* ---------- shell ---------- */
+.topbar, main, .wrap { width: min(var(--page-w), calc(100% - 2 * var(--gutter))); margin-inline: auto; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: max(16px, env(safe-area-inset-top)) 0 8px; }
+.brand { display: inline-flex; flex: none; border-radius: 14px; text-decoration: none; }
+.brand-logo { display: block; width: 132px; height: auto; }
 .brand-text-fallback { display: none; }
 .top-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
 
-/* ---------- surfaces ---------- */
-/* A felt patch: paper face, tan edge, pressed shadow, and a stitched seam just inside the edge. */
-/* Surfaces, buttons, tiles, chips, fields and bubbles wear the hand-made felt pieces in
-   src/client/felt (see felt/skins.json). --felt-h is the height each piece is drawn at: its rounded
-   ends and stitching scale with it, and the middle repeats whole stitches to fit any length. */
-.card, .felt { position: relative; --felt-h: 300px; border-radius: var(--r-lg); }
-
-/* ---------- buttons: chunky, pressable game pieces ---------- */
-.btn {
-  --btn-bg: var(--primary);
-  --btn-ink: var(--on-primary);
-  --btn-edge: var(--primary-edge);
+/* Soft cream panel (the sheet's section cards). */
+.card, .panel {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  --felt-h: 54px;
-  min-height: var(--felt-h);
-  min-width: 44px;
-  padding: 8px 30px 13px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow-panel);
+}
+.section-title { display: grid; gap: 2px; margin-bottom: 14px; }
+.section-title p { color: var(--ink-soft); font-size: .9rem; }
+
+/* ---------- felt pieces: sizes (the images come from felt/skins.json) ---------- */
+/* --felt-h is the height a piece is drawn at; its rounded ends and stitches scale with it. */
+.btn {
+  --felt-h: 56px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: var(--felt-h); min-width: 48px;
+  padding: 8px 32px 14px;
   border-radius: 999px;
   color: var(--ink);
-  font-weight: 900;
-  font-size: 1rem;
-  line-height: 1.15;
-  letter-spacing: .005em;
-  text-align: center;
-  text-decoration: none;
-  overflow-wrap: anywhere;
+  font-size: 1.05rem; font-weight: 900; line-height: 1.15; text-align: center; text-decoration: none;
   cursor: pointer;
-  transition: transform var(--t-fast) ease, box-shadow var(--t-fast) ease, background-color var(--t-fast) ease, filter var(--t-fast) ease;
+  transition: transform .12s ease, filter .12s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.btn:hover { transform: translateY(-1px); filter: brightness(1.05) saturate(1.05); }
+.btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
 .btn:active { transform: translateY(2px); }
-.btn:disabled, .btn[aria-disabled="true"] { cursor: not-allowed; color: #8a7a6e; transform: none; filter: none; }
-.btn.big { --felt-h: 60px; padding: 9px 34px 15px; font-size: 1.12rem; }
-.btn.small { --felt-h: 48px; padding: 7px 22px 11px; font-size: .94rem; }
-.btn.tiny { --felt-h: 46px; padding: 6px 18px 10px; font-size: .88rem; }
-/* "Go" buttons carry a stitched chevron, like the component sheet's "Lock it in ›". */
-#lockBtn::after, #startCharacter::after, #revealContinue::after, #start-btn::after, #garyIntroGo::after, #startSolo::after, #newGameBtn::after, #pam-intro-play::after, #again-btn::after {
-  content: ""; width: .62em; height: .62em; margin-left: 2px; border-top: .2em solid currentColor; border-right: .2em solid currentColor; border-radius: 2px; transform: rotate(45deg) translate(-1px, 1px);
+.btn:disabled, .btn[aria-disabled="true"] { cursor: not-allowed; color: #9a8a7e; transform: none; filter: none; }
+.btn.big { --felt-h: 62px; padding: 9px 38px 16px; font-size: 1.15rem; }
+.btn.small { --felt-h: 48px; padding: 6px 24px 11px; font-size: .95rem; }
+.btn.tiny { --felt-h: 46px; padding: 6px 20px 10px; font-size: .9rem; }
+/* Sheet: primary actions carry a chevron. */
+.btn.go::after, #lockBtn::after, #startCharacter::after, #revealContinue::after, #start-btn::after, #garyIntroGo::after, #startSolo::after, #pam-intro-play::after {
+  content: ""; width: .55em; height: .55em; border-top: .19em solid currentColor; border-right: .19em solid currentColor; border-radius: 2px; transform: rotate(45deg); margin-left: -2px;
 }
 
-.link {
-  min-height: 44px;
-  padding: 6px 2px;
-  border: 0;
-  background: none;
-  color: var(--plum-deep);
-  font-weight: 800;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 4px;
-  cursor: pointer;
-  justify-self: start;
-}
-.link:hover { color: var(--ink); }
-.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.row.center { justify-content: center; }
-.row.end { justify-content: flex-end; }
-
-/* Small round icon buttons in the header (settings, bell). */
-.avatar, .bell, .icon-btn {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  flex: none;
-  padding: 0;
-  --felt-h: 48px;
-  padding-bottom: 4px;
-  border-radius: 50%;
-  color: var(--ink);
-  font-weight: 900;
-  font-size: 1.05rem;
-  line-height: 1;
-  transition: transform var(--t-fast) ease;
-}
-.avatar:hover, .bell:hover, .icon-btn:hover { transform: translateY(-1px); }
-.avatar:active, .bell:active, .icon-btn:active { transform: translateY(2px); }
-.bell-icon { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.bell-count {
-  position: absolute; top: -5px; right: -6px; min-width: 22px; height: 22px; padding: 0 5px;
-  display: grid; place-items: center; border: 2px solid var(--paper); border-radius: var(--r-pill);
-  background: var(--primary); color: var(--on-primary); font-size: .72rem; font-weight: 900;
-}
-
-/* ---------- stickers, labels, tokens ---------- */
-.eyebrow, .kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  color: var(--tomato-deep);
-  font-size: var(--fs-xs);
-  font-weight: 900;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-}
-.sticker {
-  display: inline-flex;
-  align-items: center;
-  --felt-h: 34px;
-  padding: 5px 16px 8px;
-  color: var(--ink);
-  font-size: var(--fs-xs);
-  font-weight: 900;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  transform: rotate(-2deg);
-}
-/* A felt counter/token (progress steps, move numbers). */
-.token {
-  display: inline-grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  flex: none;
-  border: 2px solid var(--edge);
-  border-radius: 50%;
-  background: var(--paper);
-  color: var(--ink-soft);
-  font-size: .8rem;
-  font-weight: 900;
-  line-height: 1;
-}
-
-/* ---------- word tiles: the game pieces ---------- */
-.tile {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  max-width: 100%;
-  --felt-h: 92px;
+.chip, .pill {
+  --felt-h: 46px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: var(--felt-h);
-  padding: 14px 40px 22px;
+  padding: 6px 20px 10px;
+  color: var(--ink); font-weight: 900; line-height: 1.1;
+}
+.pill.sm { --felt-h: 36px; padding: 4px 15px 8px; font-size: .8rem; }
+
+.tile {
+  --felt-h: 96px;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--felt-h); max-width: 100%;
+  padding: 14px 44px 24px;
   color: var(--ink);
-  font-size: clamp(1.45rem, 4.6vw, 2.2rem);
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: .01em;
-  text-transform: uppercase;
-  text-align: center;
-  overflow-wrap: anywhere;
-  -webkit-hyphens: auto;
-  hyphens: auto;
-}
-.op {
-  display: inline-grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--paper);
-  font-size: 1.3rem;
-  font-weight: 900;
-  line-height: 1;
+  font-size: clamp(1.5rem, 4.4vw, 2.3rem); font-weight: 900; line-height: 1.05; letter-spacing: .01em;
+  text-transform: uppercase; text-align: center; overflow-wrap: anywhere; hyphens: auto;
 }
 
-/* ---------- characters ---------- */
-/* The art wrapper (src/client/gary-art.js): always cropped inside a frame at a size its source
-   supports. A portrait that fails to load shows the character's initial on felt instead of a
-   broken image. */
-.gary-art-wrap { position: relative; display: block; overflow: hidden; }
-.gary-art { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; user-select: none; -webkit-user-drag: none; }
-.gary-art-wrap.art-missing .gary-art { display: none; }
-.art-fallback {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .55), transparent 60%), var(--char-tint, var(--felt-deep));
-  color: var(--char, var(--ink));
-  font-weight: 900;
-  font-size: clamp(1rem, 40cqi, 4rem);
-  line-height: 1;
+.text-input, .word-input {
+  --felt-h: 64px;
+  width: 100%; min-height: var(--felt-h);
+  padding: 8px 30px 14px;
+  border-radius: 999px;
+  color: var(--ink); font-weight: 800; font-size: 1.1rem;
 }
-.gary-art-wrap { container-type: inline-size; }
-/* Gary's portrait has a dark olive felt patch baked in behind his shoulders, so his frame is that
-   same olive: the patch reads as his backdrop instead of a cut-out edge. */
-[data-character="gary"] { --char: var(--gary); --char-deep: var(--sage-deep); --char-tint: var(--gary-tint); --char-bg: #424d34; --char-glow: rgba(214, 226, 190, .38); }
-/* Milo's portrait sits on warm tan felt, so his frame is that same tan. */
-[data-character="milo"] { --char: var(--milo); --char-deep: var(--tomato-deep); --char-tint: var(--milo-tint); --char-bg: #a3805c; --char-glow: rgba(255, 236, 205, .25); }
-[data-character="pam"] { --char: var(--pam); --char-deep: var(--marigold-deep); --char-tint: var(--pam-tint); }
+.text-input::placeholder, .word-input::placeholder { color: #a8917f; font-weight: 700; }
+.text-input:focus, .word-input:focus { outline: none; filter: drop-shadow(0 0 2px var(--focus)) drop-shadow(0 0 6px rgba(63, 134, 214, .5)); }
+.text-input[aria-invalid="true"], .word-input[aria-invalid="true"] { filter: drop-shadow(0 0 2px #d8443a) drop-shadow(0 0 6px rgba(216, 68, 58, .45)); }
 
-/* A framed character portrait: felt backdrop in the character's colour, stitched ring. */
-.portrait-frame, .char-frame {
-  position: relative;
-  display: block;
-  flex: none;
-  overflow: hidden;
-  border: 2px solid var(--edge-deep);
-  border-radius: var(--r-lg);
-  background: radial-gradient(circle at 50% 26%, var(--char-glow, rgba(255, 255, 255, .7)), transparent 56%), var(--char-bg, var(--char-tint, var(--felt-deep)));
-  box-shadow: var(--lift-1);
-}
-.portrait-frame::after, .char-frame::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  border: 1.5px dashed rgba(122, 86, 60, .3);
-  border-radius: calc(var(--r-lg) - 4px);
-  pointer-events: none;
-}
-
-/* Speech bubble: one component with the speaker's portrait; the tail points at the portrait. */
-/* The felt speech bubble: its tail sits at the bottom left, next to the speaker's portrait. */
+/* Felt speech bubble: the tail sits bottom-left, beside the speaker's portrait. */
 .bubble, .gary-bubble {
   --felt-h: 118px;
-  position: relative;
-  margin: 0;
-  min-height: 64px;
-  padding: 16px 26px 26px 30px;
-  color: var(--ink);
-  font-weight: 800;
-  line-height: 1.38;
-  overflow-wrap: anywhere;
+  position: relative; margin: 0; min-height: 66px;
+  padding: 16px 28px 28px 32px;
+  color: var(--ink); font-weight: 800; line-height: 1.38; overflow-wrap: anywhere;
 }
 
-/* ---------- fields ---------- */
-.text-input, .word-input {
-  width: 100%;
-  --felt-h: 62px;
-  min-height: var(--felt-h);
-  padding: 8px 26px 14px;
-  border-radius: 999px;
-  color: var(--ink);
-  font-weight: 800;
-  transition: filter var(--t-fast) ease;
+/* Round icon buttons (felt circles drawn in CSS: a pill cannot become a circle). */
+.icon-btn, .avatar, .bell, .dialog-x, .dialog-close {
+  position: relative; display: inline-grid; place-items: center; flex: none;
+  width: 48px; height: 48px; padding: 0 0 2px;
+  border: 2px solid #e2cba9; border-radius: 50%;
+  background: var(--grain), radial-gradient(circle at 40% 30%, #fffaf1, #f3e3ca 70%, #ead5b6);
+  box-shadow: 0 3px 0 #d4b691, 0 8px 12px -6px rgba(70, 45, 30, .4);
+  color: var(--ink); font-weight: 900; font-size: 1.05rem; line-height: 1;
+  transition: transform .12s ease;
 }
-.text-input::placeholder, .word-input::placeholder { color: #a08b7e; font-weight: 700; }
-/* Focus and error glow around the felt shape itself (the sheet's blue / red stitched states). */
-.text-input:focus, .word-input:focus { outline: none; filter: drop-shadow(0 0 2px #3f86d6) drop-shadow(0 0 5px rgba(63, 134, 214, .55)); }
-.text-input[aria-invalid="true"], .word-input[aria-invalid="true"] { filter: drop-shadow(0 0 2px #d8443a) drop-shadow(0 0 5px rgba(216, 68, 58, .5)); }
+.icon-btn::before, .avatar::before, .bell::before, .dialog-x::before, .dialog-close::before {
+  content: ""; position: absolute; inset: 4px; border: 1.5px dashed #c79f70; border-radius: 50%; pointer-events: none;
+}
+.icon-btn:hover, .avatar:hover, .bell:hover, .dialog-x:hover, .dialog-close:hover { transform: translateY(-1px); }
+.icon-btn:active, .avatar:active, .bell:active, .dialog-x:active, .dialog-close:active { transform: translateY(2px); box-shadow: 0 1px 0 #d4b691; }
+.bell-icon { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bell-count { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; display: grid; place-items: center; border-radius: 999px; background: var(--coral); color: #fff; font-size: .72rem; font-weight: 900; }
+.dialog-x, .dialog-close { position: absolute; top: 14px; right: 14px; z-index: 2; width: 44px; height: 44px; font-size: 1.4rem; }
+
+/* ---------- icons (felt-appliqué stand-ins drawn as shapes; swap for the felt icon set later) ---------- */
+.ico { display: inline-block; flex: none; width: 1.25em; height: 1.25em; background: currentColor; -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat; }
+.ico-together { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='8' cy='8' r='3.6'/%3E%3Ccircle cx='16.5' cy='8.6' r='3.1'/%3E%3Cpath d='M1.5 20c0-4 3-6.6 6.5-6.6s6.5 2.6 6.5 6.6z'/%3E%3Cpath d='M15.6 20c0-2.5-.7-4.4-1.9-5.7 3.9-.9 8.3 1.1 8.8 5.7z'/%3E%3C/svg%3E"); }
+.ico-star { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.8l3 6.6 7.1.8-5.3 4.9 1.5 7.1L12 17.6l-6.3 3.6 1.5-7.1L1.9 9.2 9 8.4z'/%3E%3C/svg%3E"); }
+.ico-glasses { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4'%3E%3Ccircle cx='6.5' cy='13' r='4'/%3E%3Ccircle cx='17.5' cy='13' r='4'/%3E%3Cpath d='M10.5 12.5q1.5-1.3 3 0'/%3E%3C/svg%3E"); }
+.ico-cap { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 15.5C3 9.5 7 5.5 12 5.5s8 3.6 8.5 8.8l3 1.2c.4.2.3.8-.1.8H3.6c-.3 0-.6-.3-.6-.6z'/%3E%3C/svg%3E"); }
+.ico-check { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.ico-x { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E"); }
+.ico-tilde { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.2' stroke-linecap='round'%3E%3Cpath d='M4 13.5c2.5-4 5.5-4 8 0s5.5 4 8 0'/%3E%3C/svg%3E"); }
+.ico-q { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8.5 8.5a3.5 3.5 0 1 1 5 3.2c-1 .5-1.5 1.2-1.5 2.3v.5'/%3E%3Ccircle cx='12' cy='19' r='.6' fill='black'/%3E%3C/svg%3E"); }
+
+/* Sparkle bursts, the sheet's little orange "shine" marks. */
+.sparkle { position: relative; }
+.sparkle::before, .sparkle::after {
+  content: ""; position: absolute; top: 50%; width: 26px; height: 30px; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 30' fill='none' stroke='%23f2a127' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M20 4l-4 6M23 15h-7M20 26l-4-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  transform: translateY(-50%);
+}
+.sparkle::before { left: -30px; transform: translateY(-50%) scaleX(-1); }
+.sparkle::after { right: -30px; }
 
 /* ---------- dialogs ---------- */
 dialog { color: var(--ink); }
-dialog::backdrop { background: rgba(48, 30, 24, .55); backdrop-filter: blur(3px); }
+dialog::backdrop { background: rgba(59, 42, 36, .45); backdrop-filter: blur(3px); }
 .dialog, .modal {
-  width: min(500px, calc(100% - 28px));
-  max-height: calc(100% - 28px);
-  padding: 0;
-  overflow: auto;
-  --felt-h: 360px;
-  border-radius: var(--r-xl);
-  background: none;
+  width: min(520px, calc(100% - 28px)); max-height: calc(100% - 28px); padding: 0; overflow: auto;
+  border: 1px solid var(--panel-edge); border-radius: 32px;
+  background: var(--panel); box-shadow: 0 30px 60px -24px rgba(60, 38, 22, .55);
 }
-.dialog[open], .modal[open] { animation: dialogIn .22s var(--ease-pop) both; }
-.dialog-x, .dialog-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  --felt-h: 44px;
-  padding: 0 0 4px;
-  border-radius: 50%;
-  color: var(--ink);
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-}
-.dialog-x:hover, .dialog-close:hover { filter: brightness(1.04); }
+.dialog[open], .modal[open] { animation: dialogIn .24s var(--ease-pop) both; }
+.dialog-body { position: relative; display: grid; gap: 14px; padding: 32px 30px 30px; }
+.dialog-body > h2 { padding-right: 48px; font-size: 1.5rem; }
+.dialog-body > p { color: var(--ink-soft); }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 900; padding-left: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.row.center { justify-content: center; }
+.row.end { justify-content: flex-end; }
+.link { min-height: 44px; padding: 6px 2px; border: 0; background: none; color: var(--purple-deep); font-weight: 900; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: pointer; justify-self: start; }
 
 /* ---------- toasts ---------- */
 .toasts { position: fixed; z-index: 70; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: grid; gap: 8px; width: min(520px, calc(100% - 28px)); pointer-events: none; }
-.toast {
-  --felt-h: 64px;
-  display: flex; align-items: center; gap: 10px; min-height: var(--felt-h); padding: 6px 14px 12px 26px;
-  border-radius: 999px; font-weight: 800; line-height: 1.35; pointer-events: auto;
-  animation: rise .25s var(--ease-out) both;
-}
-.toast.error { color: var(--ink); }
+.toast { --felt-h: 66px; display: flex; align-items: center; gap: 10px; min-height: var(--felt-h); padding: 6px 14px 12px 28px; color: var(--ink); font-weight: 800; line-height: 1.3; pointer-events: auto; animation: rise .25s ease-out both; }
 .toast.leaving { opacity: 0; transition: opacity .2s; }
 .toast-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.toast-action { --felt-h: 46px; min-height: 46px; padding: 6px 18px 10px; color: var(--ink); font-weight: 900; cursor: pointer; }
-.toast-close { width: 44px; height: 44px; flex: none; border: 0; border-radius: var(--r-sm); background: transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; }
-.toast-close:hover { background: rgba(58, 42, 39, .07); }
+.toast-action { --felt-h: 46px; min-height: 46px; padding: 5px 18px 10px; font-weight: 900; color: var(--ink); cursor: pointer; }
+.toast-close { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; background: transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; }
 
-/* ---------- loading ---------- */
-.spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid var(--line); border-top-color: var(--tomato); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -5px; }
+/* ---------- loading (the sheet's three dots) ---------- */
+.spinner { display: inline-flex; gap: 6px; width: auto; height: auto; }
+.spinner, .spinner::before, .spinner::after { content: ""; }
+.spinner { width: 12px; height: 12px; border-radius: 50%; background: var(--orange); box-shadow: -18px 0 0 var(--coral), 18px 0 0 var(--teal); margin: 0 18px; animation: blink 1s ease-in-out infinite; }
 
-@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes pop { from { transform: scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes dialogIn { from { transform: translateY(14px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 @keyframes wobble { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-2.5deg); } 65% { transform: rotate(2deg); } }
 
 @media (max-width: 560px) {
   :root { --gutter: 14px; }
   body { font-size: 16px; }
-  .brand-logo { width: 116px; }
-  .avatar, .bell, .icon-btn { width: 44px; height: 44px; }
+  .brand-logo { width: 112px; }
+  .icon-btn, .avatar, .bell { width: 46px; height: 46px; }
 }
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
-  .btn:hover, .avatar:hover, .bell:hover { transform: none; }
+  .btn:hover { transform: none; }
 }
 @media (forced-colors: active) {
-  .btn, .tile, .card, .felt, .bubble, .gary-bubble, .dialog { border-color: CanvasText; }
-  .card::after, .felt::after, .tile::after { display: none; }
+  .card, .panel, .dialog { border-color: CanvasText; }
 }
-
-/* Round icon buttons (settings, bell, close): a felt button drawn in CSS, since a stretched pill
-   cannot become a circle. Same cream felt, edge and stitched ring as the felt pieces. */
-.avatar, .bell, .icon-btn, .dialog-x, .dialog-close {
-  border: 2px solid #dcc3a2;
-  background: radial-gradient(circle at 40% 32%, #fffaf0, #f3e3cb 70%, #e9d4b6);
-  background-image: var(--grain-soft), radial-gradient(circle at 40% 32%, #fffaf0, #f3e3cb 70%, #e9d4b6);
-  box-shadow: 0 3px 0 #cfb08c, 0 8px 12px -6px rgba(70, 45, 30, .45);
-}
-.avatar::before, .bell::before, .icon-btn::before, .dialog-x::before, .dialog-close::before {
-  content: ""; position: absolute; inset: 4px; border: 1.5px dashed #c49a6c; border-radius: 50%; pointer-events: none;
-}
-.avatar:active, .bell:active, .icon-btn:active, .dialog-x:active, .dialog-close:active { box-shadow: 0 1px 0 #cfb08c; }

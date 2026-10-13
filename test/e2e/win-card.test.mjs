@@ -54,11 +54,11 @@ test("Gary's and Milo's win cards: their own avatar and win line, the progress r
     assert.ok(pair, `${who}: ${said} / ${postWin}`);
     // Progress rail unchanged: matched on move 2, two stones reached.
     assert.match(await page.locator(".progress").innerText(), /Matched on move 2!/);
-    // Button hierarchy: primary coral, secondary cream, history quiet.
+    // Button hierarchy: primary and secondary wear different felt pieces, history is quiet text.
     assert.equal((await page.locator("#newGameBtn").innerText()).trim(), `Play again with ${name}`);
     const look = await page.evaluate(() => {
       const css = id => getComputedStyle(document.getElementById(id));
-      return {primary: css("newGameBtn").backgroundColor, secondary: css("homeBtn").backgroundColor, tertiary: css("historyBtn").borderTopWidth, tertiaryBg: css("historyBtn").backgroundColor};
+      return {primary: css("newGameBtn").borderImageSource, secondary: css("homeBtn").borderImageSource, tertiary: css("historyBtn").borderTopWidth, tertiaryBg: css("historyBtn").backgroundColor};
     });
     assert.notEqual(look.primary, look.secondary);
     assert.equal(look.tertiary, "0px", "View history is text-style");

@@ -1,45 +1,15 @@
-/* "Meet your opponent": Pam's introduction, using the shared dialog + character frame language. */
-.character-dialog {
-  width: min(440px, calc(100vw - 28px));
-  max-height: calc(100% - 28px);
-  overflow: auto;
-  padding: 30px 26px 26px;
-  border: 2px solid var(--edge-deep);
-  border-radius: var(--r-xl);
-  background-color: var(--paper);
-  background-image: radial-gradient(100% 55% at 50% 0%, var(--marigold-tint), transparent 70%), var(--grain-soft);
-  box-shadow: var(--lift-3);
-  text-align: center;
-}
+/* "Meet your opponent": Pam's introduction. */
+.character-dialog { width: min(440px, calc(100vw - 28px)); max-height: calc(100% - 28px); overflow: auto; padding: 32px 28px 28px; border: 1px solid var(--panel-edge); border-radius: 34px; background: var(--panel); box-shadow: 0 30px 60px -24px rgba(60, 38, 22, .55); text-align: center; }
 .character-dialog[open] { animation: dialogIn .24s var(--ease-pop) both; }
-.character-ribbon {
-  display: inline-block; margin: 0 auto 16px; padding: 5px 16px;
-  border: 2px solid var(--marigold-deep); border-radius: var(--r-pill); background: var(--marigold);
-  color: var(--ink); box-shadow: 0 3px 0 var(--marigold-deep);
-  font-size: .74rem; font-weight: 900; letter-spacing: .14em; transform: rotate(-2deg);
-}
+.character-ribbon { margin: 0 auto 16px; color: var(--purple-deep); font-size: .76rem; font-weight: 900; letter-spacing: .18em; }
 /* Pam's portrait is 159×220: full-length, at no more than its own size. */
-.character-portrait-frame {
-  position: relative; width: 150px; height: 196px; margin: 0 auto 12px; overflow: hidden;
-  border: 2px solid var(--edge-deep); border-radius: 78px 78px 20px 20px;
-  background: radial-gradient(circle at 50% 28%, #fff, #fff1cf 70%);
-  box-shadow: var(--lift-2);
-}
+.character-portrait-frame { position: relative; width: 150px; height: 196px; margin: 0 auto 14px; overflow: hidden; border-radius: 78px 78px 22px 22px; background: radial-gradient(circle at 50% 28%, #fff, #efe6fb 70%); box-shadow: 0 0 0 4px #fffaf1, 0 0 0 6px #e7d2b4, 0 14px 20px -12px rgba(60, 38, 26, .5); }
 .character-portrait { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 10px 6px 0; object-fit: contain; object-position: 50% 100%; }
 .character-dialog h2 { margin: 4px 0 10px; font-size: 2rem; }
-.character-role {
-  position: relative; margin: 0 auto; max-width: 340px; padding: 14px 18px;
-  border: 2px solid var(--edge); border-radius: var(--r-md); background: #fff; box-shadow: var(--lift-1);
-  font-size: 1.02rem; font-weight: 800; line-height: 1.45;
-}
-.character-role::before {
-  content: ""; position: absolute; left: 50%; top: -9px; width: 14px; height: 14px; margin-left: -7px;
-  background: #fff; border-left: 2px solid var(--edge); border-top: 2px solid var(--edge); border-radius: 4px 0 0 0; transform: rotate(45deg);
-}
+.character-role { margin: 0 auto; max-width: 340px; padding: 14px 18px; border: 2px dashed var(--line); border-radius: 22px; font-size: 1.02rem; font-weight: 800; line-height: 1.45; }
 .character-cta { width: 100%; margin-top: 22px; }
 @media (max-width: 540px) {
-  .character-dialog { padding: 26px 16px 20px; }
+  .character-dialog { padding: 28px 18px 22px; }
   .character-portrait-frame { width: 120px; height: 158px; }
   .character-dialog h2 { font-size: 1.7rem; }
-  .character-role { font-size: .95rem; }
 }
