@@ -22,6 +22,8 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      MOM_BENCHMARK_RUN: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,7 +37,11 @@ jobs:
         run: |
           node - <<'NODE'
           const fs = require('fs');
-          const s = JSON.parse(fs.readFileSync('.dev-data/mom-benchmark/report.json','utf8'));
+          const reportPath = '.dev-data/mom-benchmark/report.json';
+          if (!fs.existsSync(reportPath)) {
+            throw new Error(`Benchmark report was not generated at ${reportPath}`);
+          }
+          const s = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
           const compact = {
             sourceRowCount: s.sourceRowCount,
             uniqueCanonicalCount: s.uniqueCanonicalCount,
@@ -43,15 +49,18 @@ jobs:
             presentCount: s.presentCount,
             missingCount: s.missingCount,
             pamWinCount: s.pamWinCount,
-            pamWinRate: s.pamWinRate,
+            pamWinRateOverall: s.pamWinRateOverall,
+            pamWinRatePresent: s.pamWinRatePresent,
             pathFlagCount: s.pathFlagCount,
             byTier: s.byTier,
           };
           console.log(JSON.stringify(compact, null, 2));
           NODE
       - name: Upload benchmark reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mom-benchmark-report
           path: .dev-data/mom-benchmark/
+          if-no-files-found: error
           retention-days: 14
