@@ -16,7 +16,8 @@ const appBundle = await build({entryPoints: [src("client/app.js")], bundle: true
 const appJs = appBundle.outputFiles[0].text;
 const audioBundle = await build({entryPoints: [src("client/audio-entry.js")], bundle: true, format: "esm", minify: true, write: false, target: ["es2020", "safari14"], legalComments: "none"});
 const audioJs = audioBundle.outputFiles[0].text;
-const css = await readFile(src("client/styles.css"), "utf8");
+const css = [await readFile(src("client/styles.css"), "utf8"), await readFile(src("client/polish.css"), "utf8")].join("\n");
+const logo = await readFile(src("client/logo.webp"));
 const cloudSync = await readFile(src("client/cloud-sync.js"), "utf8");
 const account = await readFile(src("client/account.js"), "utf8");
 const ICONS = ["favicon.ico", "favicon-32.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
@@ -29,7 +30,7 @@ const hasMomRuntime = existsSync(runtimeKnowledgePath);
 const LEGACY_MOM_JS = ["knowledge.js", "knowledge.general.js", "knowledge.generated.js", "facets.js", "engine.js", "deduction.js", "copy.js", "adapter.js", "app.js", "debug.js"];
 const RUNTIME_MOM_JS = ["copy.js", "app.js", "debug.js"];
 const MOM_JS = hasMomRuntime ? RUNTIME_MOM_JS : LEGACY_MOM_JS;
-const MOM_CSS = ["styles.css", "character.css"];
+const MOM_CSS = ["styles.css", "character.css", "polish.css"];
 const MOM_STATIC = ["pam.webp", "pam-v2.webp"];
 const legacyMomScriptChain = '<script src="./knowledge.js" defer></script><script src="./knowledge.general.js" defer></script><script src="./knowledge.generated.js" defer></script><script src="./facets.js" defer></script><script src="./engine.js" defer></script><script src="./deduction.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
 const runtimeMomScriptChain = '<script src="./knowledge.runtime.js" defer></script><script src="./runtime-entry.js" defer></script><script src="./copy.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
@@ -85,12 +86,12 @@ momHash.update(momPage);
 for (const body of Object.values(momJs)) momHash.update(body);
 for (const body of Object.values(momCss)) momHash.update(body);
 for (const body of Object.values(momStatic)) momHash.update(body);
-const version = hash(appJs + audioJs + css + html + momLaunch + cloudSync + account + iconHash.digest("hex") + momHash.digest("hex") + manifest + swTemplate);
+const version = hash(appJs + audioJs + css + html + momLaunch + cloudSync + account + logo + iconHash.digest("hex") + momHash.digest("hex") + manifest + swTemplate);
 const page = html.replace("%APP_VERSION%", version);
 const momPrecache = ["/mom/", ...momAssetUrls, "/mom/pam.webp", "/mom/pam-v2.webp"];
 const swSource = swTemplate
   .replace("%VERSION%", version)
-  .replace("%PRECACHE%", JSON.stringify(["/", appName, audioName, cssName, "/mom-launch.js", "/cloud-sync.js", "/account.js", "/favicon.ico", "/favicon-32.png", "/manifest.webmanifest", ...momPrecache]));
+  .replace("%PRECACHE%", JSON.stringify(["/", appName, audioName, cssName, "/logo.webp", "/mom-launch.js", "/cloud-sync.js", "/account.js", "/favicon.ico", "/favicon-32.png", "/manifest.webmanifest", ...momPrecache]));
 if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEHOLDER%");
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
@@ -99,6 +100,7 @@ const files = {
   [appName]: appJs,
   [audioName]: audioJs,
   [cssName]: css,
+  "/logo.webp": logo,
   "/mom-launch.js": momLaunch,
   "/cloud-sync.js": cloudSync,
   "/account.js": account,
