@@ -21,9 +21,9 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     env:
-      MOM_BENCHMARK_RUN: "1"
+      MOM_BENCHMARK_ENFORCE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
