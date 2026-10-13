@@ -7,12 +7,14 @@ on:
       - integration/all-current-work
       - main
     paths:
-      - test/mom-benchmark-suite.test.mjs
+      - test/mom-runtime-benchmark.test.mjs
       - test/fixtures/mom-benchmark-data.mjs
-      - src/client/mom-mode/engine.js
-      - src/client/mom-mode/knowledge.js
-      - src/client/mom-mode/knowledge.general.js
-      - src/client/mom-mode/knowledge.generated.js
+      - scripts/mom-runtime-benchmark.mjs
+      - src/shared/mom-runtime-game.js
+      - src/shared/mom-runtime-reasoning.js
+      - src/shared/mom-runtime-lookup.js
+      - src/client/mom-mode/knowledge.runtime.json
+      - data/mom/wikidata/master.csv.gz
       - .github/workflows/mom-benchmark.yml
 
 permissions:
@@ -23,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      MOM_BENCHMARK_ENFORCE: "1"
+      MOM_RUNTIME_BENCHMARK_RUN: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,20 +33,28 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - name: Run Mom benchmark harness
-        run: node --test test/mom-benchmark-suite.test.mjs
-      - name: Print benchmark summary
+      - name: Stage checked-in compact runtime
+        run: |
+          mkdir -p .dev-data/mom-runtime
+          cp src/client/mom-mode/knowledge.runtime.json .dev-data/mom-runtime/knowledge.runtime.json
+      - name: Run deterministic 1,081-row runtime benchmark
+        run: node --test test/mom-runtime-benchmark.test.mjs
+      - name: Enforce accepted runtime regression floor
         run: |
           node - <<'NODE'
           const fs = require('fs');
-          const reportPath = '.dev-data/mom-benchmark/report.json';
-          if (!fs.existsSync(reportPath)) {
-            throw new Error(`Benchmark report was not generated at ${reportPath}`);
-          }
+          const reportPath = '.dev-data/mom-runtime-benchmark/report.json';
+          if (!fs.existsSync(reportPath)) throw new Error(`Benchmark report was not generated at ${reportPath}`);
           const s = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-          const compact = {
-            sourceRowCount: s.sourceRowCount,
-            uniqueCanonicalCount: s.uniqueCanonicalCount,
+          const failures = [];
+          if (s.rowCount !== 1081) failures.push(`expected 1081 curated rows, got ${s.rowCount}`);
+          if ((s.presentCount + s.missingCount) !== 1081) failures.push('coverage accounting does not total 1081 rows');
+          if (s.runtimeKnowledgeCount < 50000) failures.push(`runtime concept count regressed below 50,000: ${s.runtimeKnowledgeCount}`);
+          if (s.presentCount < 739) failures.push(`curated runtime coverage regressed below accepted baseline 739: ${s.presentCount}`);
+          if (s.pamWinCount < 13) failures.push(`curated Pam wins regressed below accepted baseline 13: ${s.pamWinCount}`);
+          if (failures.length) throw new Error(failures.join('\n'));
+          console.log(JSON.stringify({
+            rowCount: s.rowCount,
             runtimeKnowledgeCount: s.runtimeKnowledgeCount,
             presentCount: s.presentCount,
             missingCount: s.missingCount,
@@ -52,15 +62,14 @@ jobs:
             pamWinRateOverall: s.pamWinRateOverall,
             pamWinRatePresent: s.pamWinRatePresent,
             pathFlagCount: s.pathFlagCount,
-            byTier: s.byTier,
-          };
-          console.log(JSON.stringify(compact, null, 2));
+            questionQuality: s.questionQuality,
+          }, null, 2));
           NODE
       - name: Upload benchmark reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mom-benchmark-report
-          path: .dev-data/mom-benchmark/
+          name: mom-runtime-benchmark-report
+          path: .dev-data/mom-runtime-benchmark/
           if-no-files-found: error
           retention-days: 14
