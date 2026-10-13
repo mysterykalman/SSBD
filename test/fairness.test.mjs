@@ -6,16 +6,16 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {ENGINE_CONFIG, STRONGEST_CONFIG, selectBotWord} from "../src/shared/engine.js";
 import {currentMove} from "../src/shared/rules.js";
-import {moveSeed, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
+import {moveSeed, selectContextualBotWord, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
 import {PLAYERS, distribution, playGame} from "../scripts/convergence.mjs";
 
 const revealedWords = game => game.moves.filter(m => m.words).flatMap(m => [m.words.a, m.words.b]);
 
 test("the bot's decision input is only the shared pair, earlier revealed rounds, language, character and seed", () => {
-  // Source audit: the single engine call in the Solo lifecycle, and what it is given.
+  // Source audit: the single production selector call in the Solo lifecycle, and what it is given.
   const solo = readFileSync(new URL("../src/shared/solo.js", import.meta.url), "utf8");
-  const calls = solo.match(/selectBotWord\(\{[^}]*\}\)/g);
-  assert.deepEqual(calls, ["selectBotWord({pair: move.prompts, blocked, history, language: game.language, character: game.character || \"gary\", seed: moveSeed(game, move.number)})"]);
+  const calls = solo.match(/selectContextualBotWord\(\{[^}]*\}\)/g);
+  assert.deepEqual(calls, ["selectContextualBotWord({pair: move.prompts, blocked, history, language: game.language, character: game.character || \"gary\", seed: moveSeed(game, move.number)})"]);
   assert.match(solo, /const blocked = game\.moves\.flatMap\(m => \(m\.words \? \[m\.words\.a, m\.words\.b\] : \[\]\)\);/, "blocked = revealed words only");
   assert.match(solo, /const history = game\.moves\.flatMap\(m => \(m\.words \? \[\{a: m\.words\.a, b: m\.words\.b\}\] : \[\]\)\);/, "history = revealed rounds only");
   // And the committed decision records exactly that input.
@@ -29,7 +29,7 @@ test("the bot's decision input is only the shared pair, earlier revealed rounds,
     assert.deepEqual(d.pair, move.prompts, "the latest revealed pair");
     assert.equal(d.seed, moveSeed(game, move.number));
     const history = game.moves.filter(m => m.words).map(m => ({a: m.words.a, b: m.words.b}));
-    assert.deepEqual(selectBotWord({pair: move.prompts, blocked: revealedWords(game), history, language: "en", seed: d.seed}).word, move.hidden.b, "re-deriving from the shared state gives the committed word");
+    assert.deepEqual(selectContextualBotWord({pair: move.prompts, blocked: revealedWords(game), history, language: "en", character: d.character || "gary", seed: d.seed}).word, move.hidden.b, "re-deriving from the shared fair state gives the committed word");
   }
 });
 
@@ -128,4 +128,3 @@ test("convergence is natural, not forced: no weaker word is chosen to make the g
   }
   assert.ok(checked > 0);
 });
-

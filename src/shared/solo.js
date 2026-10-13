@@ -3,7 +3,9 @@
 // move opens (before the player types anything), so it cannot react to the
 // player's word, and a refresh never changes its choice.
 
+import {buildAssociationContext, associationContextScore} from "./association-context.js";
 import {selectBotWord} from "./engine.js";
+import {getLexicon} from "./lexicon/index.js";
 import {checkWord, createGame, currentMove, hashString, isFinished, revealMove, usedKeys} from "./rules.js";
 import {wordKey} from "./words.js";
 
@@ -30,6 +32,66 @@ export function setGaryDiagnostics(on) {
 export const moveSeed = (game, number) => hashString(`${game.seed}:${game.id}:${number}`);
 
 const clock = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+const round3 = value => Math.round(value * 1000) / 1000;
+
+/**
+ * Phase 5: use the shared semantic-context layer as a bounded ordering signal among candidates that
+ * the core engine has already declared strong and eligible. It never promotes a recovery candidate,
+ * never widens the engine's quality window, and never changes how many positions Gary or Milo may
+ * vary through. The engine's deterministic ordinal choice is preserved, so character behaviour stays
+ * intact; semantic context only changes the ordering inside that already-approved pool.
+ *
+ * @param {{word: string, quality: string, decision: any}} pick
+ * @param {{pair?: string[] | null, history?: {a?: string, b?: string}[], language?: string, lex?: any}} input
+ */
+export function applyAssociationContextToPick(pick, {pair = null, history = [], language = "en", lex = null} = {}) {
+  if (!pick?.decision || pick.quality !== "strong" || !Array.isArray(pair) || !history?.length) return pick;
+  const decision = pick.decision;
+  if (!decision.highQuality || !Array.isArray(decision.pool) || decision.pool.length < 2 || !Array.isArray(decision.candidates)) return pick;
+
+  const lang = language === "fr" ? "fr" : "en";
+  const graph = lex || getLexicon(lang);
+  const context = buildAssociationContext({pair, history, language: lang, lex: graph, lookback: 4});
+  const byWord = new Map(decision.candidates.map(candidate => [candidate.word, candidate]));
+  const eligible = decision.pool.map(word => byWord.get(word)).filter(Boolean);
+  if (eligible.length < 2) return pick;
+
+  const ordinal = Math.max(0, decision.pool.indexOf(pick.word));
+  const weight = decision.profile === "easier" ? 0.10 : 0.06;
+  const ranked = eligible.map(candidate => {
+    const conceptId = graph.resolve(candidate.word);
+    const concept = conceptId ? graph.concepts.get(conceptId) : null;
+    const semantic = concept ? associationContextScore(graph, concept, context) : 0;
+    return {...candidate, semanticContext: semantic, contextualScore: round3((candidate.profileScore ?? candidate.final ?? 0) + weight * semantic)};
+  }).sort((a, b) => b.contextualScore - a.contextualScore || (b.profileScore ?? 0) - (a.profileScore ?? 0) || a.word.localeCompare(b.word));
+
+  const selected = ranked[Math.min(ordinal, ranked.length - 1)];
+  if (!selected) return pick;
+  decision.context = {
+    applied: true,
+    weight,
+    ordinal,
+    previous: pick.word,
+    selected: selected.word,
+    recentWords: context.recentWords,
+    dominantTags: context.dominantTags.slice(0, 3),
+    dominantCategories: context.dominantCategories.slice(0, 3),
+    dominantTraits: context.dominantTraits.slice(0, 4),
+    ranking: ranked.map(candidate => ({word: candidate.word, semantic: candidate.semanticContext, profileScore: candidate.profileScore ?? candidate.final ?? 0, contextualScore: candidate.contextualScore}))
+  };
+  if (decision.selection) decision.selection = {...decision.selection, semanticContextChanged: selected.word !== pick.word, preContextPick: pick.word, pick: selected.word};
+  decision.selected = selected.word;
+  return {...pick, word: selected.word, decision};
+}
+
+/**
+ * Core engine selection plus Phase 5 semantic-context ordering. Exported so regression tests and
+ * diagnostics can exercise the exact production path without touching game state.
+ */
+export function selectContextualBotWord(input) {
+  const pick = selectBotWord(input);
+  return applyAssociationContextToPick(pick, input);
+}
 
 /**
  * Lock the bot's word for the open move, before the player answers it. The engine's only input is
@@ -46,7 +108,7 @@ function lockBotWord(game) {
   const blocked = game.moves.flatMap(m => (m.words ? [m.words.a, m.words.b] : []));
   const history = game.moves.flatMap(m => (m.words ? [{a: m.words.a, b: m.words.b}] : []));
   const started = clock();
-  const pick = selectBotWord({pair: move.prompts, blocked, history, language: game.language, character: game.character || "gary", seed: moveSeed(game, move.number)});
+  const pick = selectContextualBotWord({pair: move.prompts, blocked, history, language: game.language, character: game.character || "gary", seed: moveSeed(game, move.number)});
   const ms = Math.round((clock() - started) * 10) / 10;
   const {hidden: _previous, ...rest} = move;
   /** @type {Move} */

@@ -23,6 +23,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="%STYLES_CSS%">
+<style>.btn{text-decoration:none}</style>
 </head>
 <body>
 <a class="skip" href="#app">Skip to game</a>
@@ -30,9 +31,10 @@
   <a class="brand" id="brandLink" href="/"><span class="brand-top" id="brandTop">Same Same</span><span class="brand-bottom" id="brandBottom">but different</span></a>
   <div class="top-actions">
     <span class="offline-pill" id="offlinePill" hidden></span>
-    <div class="lang-switch" id="langGroup" role="group" aria-label="Language">
+    <!-- French stays wired in the app, but the switch is intentionally hidden during English-only public testing. -->
+    <div class="lang-switch" id="langGroup" role="group" aria-label="Language" aria-hidden="true" style="display:none">
       <button type="button" data-lang="en" aria-pressed="true"><span aria-hidden="true">EN</span><span class="sr-only">English</span></button>
-      <button type="button" data-lang="fr" aria-pressed="false"><span aria-hidden="true">FR</span><span class="sr-only" lang="fr">Français</span></button>
+      <button type="button" data-lang="fr" aria-pressed="false"><span class="sr-only" lang="fr">Français</span></button>
     </div>
     <button type="button" class="bell" id="notifBtn" aria-label="Notifications" hidden><svg class="bell-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a6 6 0 0 0-6 6v3.2L4.3 15.6A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.4L18 12.2V9a6 6 0 0 0-6-6Z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg><span class="bell-count" id="notifCount" hidden></span></button>
     <button type="button" class="avatar" id="profileBtn" aria-label="Settings">⚙</button>
@@ -44,5 +46,8 @@
 <noscript><p class="boot">This game needs JavaScript turned on.</p></noscript>
 <script type="module" src="%APP_JS%"></script>
 <script type="module" src="%AUDIO_JS%"></script>
+<script type="module" src="/cloud-sync.js"></script>
+<script type="module" src="/account.js"></script>
+<script src="/mom-launch.js" defer></script>
 </body>
 </html>

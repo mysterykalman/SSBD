@@ -1,0 +1,215 @@
+name: Mom trait coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - integration/all-current-work
+      - main
+    paths:
+      - scripts/analyze-mom-trait-coverage.mjs
+      - scripts/extract-wordnet-traits.py
+      - scripts/extract-mom-extra-public-traits.py
+      - scripts/build-mom-static-wikidata.mjs
+      - scripts/shard-mom-wikidata-csv.mjs
+      - data/mom/wikidata/**
+      - scripts/mom-controlled-traits.mjs
+      - scripts/build-mom-controlled-profiles.mjs
+      - scripts/build-mom-runtime-knowledge.mjs
+      - scripts/mom-runtime-compiler.mjs
+      - scripts/mom-runtime-supplements.mjs
+      - scripts/mom-runtime-facets.mjs
+      - scripts/mom-runtime-priors.mjs
+      - scripts/mom-safe-negatives.mjs
+      - scripts/mom-question-metadata.mjs
+      - scripts/mom-runtime-benchmark.mjs
+      - scripts/mom-runtime-ab-benchmark.mjs
+      - src/shared/mom-runtime-reasoning.js
+      - src/shared/mom-runtime-game.js
+      - src/shared/mom-runtime-lookup.js
+      - src/client/mom-mode/engine.js
+      - test/mom-controlled-traits.test.mjs
+      - test/mom-benchmark-suite.test.mjs
+      - test/mom-runtime-*.test.mjs
+      - test/mom-question-metadata.test.mjs
+      - test/fixtures/mom-benchmark-data.mjs
+      - .github/workflows/mom-trait-coverage.yml
+
+permissions:
+  contents: write
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test controlled trait vocabulary
+        run: node --test test/mom-controlled-traits.test.mjs
+      - name: Download 50k donor datasets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .dev-data/mom-sources/allenai
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/things.csv https://raw.githubusercontent.com/evanthebouncy/20Q-selfplay/main/things.csv
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/brysbaert.txt https://raw.githubusercontent.com/ArtsEngine/concreteness/master/Concreteness_ratings_Brysbaert_et_al_BRM.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/cel_2-45.txt https://raw.githubusercontent.com/BrianHutchison/Common-English-Lexicon/master/cel_2-45.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/wordnik.txt https://raw.githubusercontent.com/wordnik/wordlist/main/wordlist-20210729.txt
+          curl -L --fail --retry 3 -o .dev-data/mom-sources/allenai.tar.gz https://storage.googleapis.com/ai2-mosaic-public/projects/twentyquestions/v1.0/data/v1.0.twentyquestions.tar.gz
+          tar -xzf .dev-data/mom-sources/allenai.tar.gz -C .dev-data/mom-sources/allenai
+      - name: Rebuild playable 50k
+        env:
+          MOM_ENRICH_LIMIT: "0"
+        run: |
+          node scripts/build-mom-50k-inventory.mjs
+          node scripts/build-mom-playable-50k.mjs
+      - name: Download public trait sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .dev-data/trait-sources .dev-data/trait-sources/visual-genome .dev-data/trait-sources/paco
+          git clone --depth 1 https://github.com/danoneata/seeing-what-tastes-good.git .dev-data/trait-sources/seeing-what-tastes-good
+          git clone --depth 1 https://github.com/cardiffnlp/trait-concept-datasets.git .dev-data/trait-sources/trait-concept-datasets
+          curl -L --fail --retry 3 --retry-delay 5 -o .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz
+          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/vg-attributes.zip https://homes.cs.washington.edu/~ranjay/visualgenome/data/dataset/attributes.json.zip
+          unzip -q /tmp/vg-attributes.zip -d .dev-data/trait-sources/visual-genome
+          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/vg-relationships.zip https://homes.cs.washington.edu/~ranjay/visualgenome/data/dataset/relationships.json.zip
+          unzip -q /tmp/vg-relationships.zip -d .dev-data/trait-sources/visual-genome
+          curl -L --fail --retry 3 --retry-delay 5 -o /tmp/paco-lvis.zip https://dl.fbaipublicfiles.com/paco/annotations/paco_lvis_v1.zip
+          unzip -q /tmp/paco-lvis.zip -d .dev-data/trait-sources/paco
+          ls -lh .dev-data/trait-sources/conceptnet-assertions-5.7.0.csv.gz /tmp/vg-attributes.zip /tmp/vg-relationships.zip /tmp/paco-lvis.zip
+      - name: Build Open English WordNet evidence
+        shell: bash
+        run: |
+          python -m pip install --quiet wn
+          python scripts/extract-wordnet-traits.py
+      - name: Build Visual Genome and PACO evidence
+        run: python scripts/extract-mom-extra-public-traits.py
+      - name: Build static Wikidata evidence
+        run: |
+          node scripts/build-mom-static-wikidata.mjs
+          node - <<'NODE'
+          const summary = require('./.dev-data/trait-sources/wikidata-static.summary.json');
+          if (summary.networkRequests !== 0) throw new Error('Static Wikidata build unexpectedly used the network.');
+          if (!summary.required || summary.concepts < 400 || summary.evidenceItems < 1500) throw new Error('Required static Wikidata knowledge is missing or unexpectedly incomplete.');
+          console.log(JSON.stringify(summary, null, 2));
+          NODE
+      - name: Measure public trait coverage
+        run: node scripts/analyze-mom-trait-coverage.mjs
+      - name: Build controlled Pam profiles
+        run: node scripts/build-mom-controlled-profiles.mjs
+      - name: Build compact runtime intelligence
+        run: node scripts/build-mom-runtime-knowledge.mjs
+      - name: Run real 1,081-row gameplay benchmark
+        env:
+          MOM_RUNTIME_BENCHMARK_RUN: "1"
+        run: node --test test/mom-runtime-benchmark.test.mjs
+      - name: Print real gameplay benchmark
+        run: |
+          node - <<'NODE'
+          const r=require('./.dev-data/mom-runtime-benchmark/report.json');
+          console.log(JSON.stringify({rowCount:r.rowCount,presentCount:r.presentCount,pamWinCount:r.pamWinCount,pamWinRateOverall:r.pamWinRateOverall,pamWinRatePresent:r.pamWinRatePresent,pathFlagCount:r.pathFlagCount,questionQuality:r.questionQuality,failureClasses:r.failureClasses},null,2));
+          NODE
+      - name: Build no-Wikidata runtime for controlled A/B
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .dev-data/mom-runtime-ab
+          cp .dev-data/mom-runtime/knowledge.runtime.json .dev-data/mom-runtime-ab/with-wikidata.json
+          cp -R .dev-data/mom-controlled-profiles /tmp/mom-controlled-profiles-with-wikidata
+          cp -R .dev-data/mom-runtime /tmp/mom-runtime-with-wikidata
+          cp .dev-data/mom-trait-coverage/evidence.jsonl /tmp/mom-evidence-with-wikidata.jsonl
+          node - <<'NODE'
+          const fs=require('fs');
+          const file='.dev-data/mom-trait-coverage/evidence.jsonl';
+          const rows=fs.readFileSync(file,'utf8').split(/\r?\n/).filter(Boolean);
+          let removed=0;
+          const kept=[];
+          for(const line of rows){
+            const row=JSON.parse(line);
+            if(row.source==='Wikidata'){removed++;continue;}
+            kept.push(line);
+          }
+          if(!removed)throw new Error('A/B setup expected Wikidata evidence but removed zero rows.');
+          fs.writeFileSync(file,kept.join('\n')+'\n');
+          console.log(`Removed ${removed.toLocaleString()} Wikidata evidence rows for the control runtime.`);
+          NODE
+          node scripts/build-mom-controlled-profiles.mjs
+          node scripts/build-mom-runtime-knowledge.mjs
+          cp .dev-data/mom-runtime/knowledge.runtime.json .dev-data/mom-runtime-ab/without-wikidata.json
+          rm -rf .dev-data/mom-controlled-profiles .dev-data/mom-runtime
+          mv /tmp/mom-controlled-profiles-with-wikidata .dev-data/mom-controlled-profiles
+          mv /tmp/mom-runtime-with-wikidata .dev-data/mom-runtime
+          mv /tmp/mom-evidence-with-wikidata.jsonl .dev-data/mom-trait-coverage/evidence.jsonl
+      - name: Compare Wikidata gameplay A/B
+        run: node scripts/mom-runtime-ab-benchmark.mjs
+      - name: Validate compact runtime shape and size
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const runtime=JSON.parse(fs.readFileSync('.dev-data/mom-runtime/knowledge.runtime.json','utf8'));
+          if(runtime.meta.conceptCount<50000)throw new Error(`Expected at least 50000 runtime concepts, got ${runtime.meta.conceptCount}`);
+          if(runtime.meta.questionCount<50)throw new Error(`Runtime question set is unexpectedly small: ${runtime.meta.questionCount}`);
+          if(Object.keys(runtime.aliases||{}).length<runtime.meta.conceptCount)throw new Error('Runtime alias lookup is unexpectedly incomplete');
+          console.log(JSON.stringify(runtime.meta,null,2));
+          NODE
+      - name: Run compact runtime unit and coverage gates
+        run: node --test test/mom-runtime-*.test.mjs test/mom-question-metadata.test.mjs
+      - name: Run legacy benchmark accounting checks
+        run: node --test test/mom-benchmark-suite.test.mjs
+      - name: Print coverage and runtime result
+        run: |
+          echo 'Public coverage:'
+          cat .dev-data/mom-trait-coverage/summary.json
+          echo 'Static Wikidata enrichment:'
+          cat .dev-data/trait-sources/wikidata-static.summary.json
+          echo 'Controlled profiles:'
+          cat .dev-data/mom-controlled-profiles/summary.json
+          echo 'Compact runtime:'
+          node -e "const r=require('./.dev-data/mom-runtime/knowledge.runtime.json'); console.log(JSON.stringify(r.meta,null,2))"
+          if [ -f .dev-data/mom-runtime-benchmark/report.json ]; then
+            echo 'Real gameplay benchmark:'
+            node -e "const r=require('./.dev-data/mom-runtime-benchmark/report.json'); console.log(JSON.stringify({rowCount:r.rowCount,presentCount:r.presentCount,pamWinCount:r.pamWinCount,pamWinRateOverall:r.pamWinRateOverall,pamWinRatePresent:r.pamWinRatePresent,pathFlagCount:r.pathFlagCount,questionQuality:r.questionQuality,failureClasses:r.failureClasses},null,2))"
+          fi
+          if [ -f .dev-data/mom-runtime-ab/comparison.json ]; then
+            echo 'Wikidata gameplay A/B:'
+            node -e "const r=require('./.dev-data/mom-runtime-ab/comparison.json'); console.log(JSON.stringify({rowCount:r.rowCount,withWikidata:r.withWikidata,withoutWikidata:r.withoutWikidata,delta:r.delta},null,2))"
+          fi
+      - name: Stage validated runtime for browser builds
+        run: cp .dev-data/mom-runtime/knowledge.runtime.json src/client/mom-mode/knowledge.runtime.json
+      - name: Upload coverage, compact runtime, controlled profiles, and gameplay benchmarks
+        uses: actions/upload-artifact@v4
+        with:
+          name: mom-controlled-50k-runtime
+          path: |
+            .dev-data/mom-trait-coverage/
+            .dev-data/mom-controlled-profiles/
+            .dev-data/mom-runtime/
+            .dev-data/mom-runtime-benchmark/
+            .dev-data/mom-runtime-ab/
+            .dev-data/trait-sources/extra-public-evidence.json
+            .dev-data/trait-sources/wikidata-labelled-evidence.json
+            .dev-data/trait-sources/wikidata-static.summary.json
+            .dev-data/trait-sources/wikidata-static.parts/
+            src/client/mom-mode/knowledge.runtime.json
+          retention-days: 14
+      - name: Commit validated runtime intelligence on integration branch
+        if: github.ref == 'refs/heads/integration/all-current-work'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/client/mom-mode/knowledge.runtime.json
+          if git diff --cached --quiet; then
+            echo 'Runtime intelligence is unchanged.'
+          else
+            git commit -m 'Mom: refresh compiled 50k runtime intelligence'
+            git push
+          fi

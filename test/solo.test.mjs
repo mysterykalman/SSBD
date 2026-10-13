@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {ENGINE_CONFIG, selectBotWord} from "../src/shared/engine.js";
 import {getLexicon} from "../src/shared/lexicon/index.js";
 import {currentMove, seededRandom, usedKeys} from "../src/shared/rules.js";
-import {moveSeed, publicMove, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
+import {moveSeed, publicMove, selectContextualBotWord, startSoloGame, submitSoloWord} from "../src/shared/solo.js";
 import {wordKey} from "../src/shared/words.js";
 
 const PLAYER_WORDS = ["sun", "sky", "night", "dream", "bed", "pillow", "blanket", "cozy", "winter", "snow", "cold", "ice", "skating", "fun", "party", "cake", "candle", "birthday", "gift", "surprise", "happy"];
@@ -158,11 +158,11 @@ test("each bot word comes from the exact current prompts, one word per move", ()
         assert.equal(typeof hidden, "string");
         assert.ok(hidden.split(" ").length <= 3, hidden);
         if (move.prompts) {
-          // Recomputing from exactly the engine's inputs (this move's prompts, the revealed words and
-          // rounds, the language, the character and the move's seed) gives the same word.
+          // Recomputing from exactly the production selector's inputs (this move's prompts, the revealed
+          // words and rounds, the language, the character and the move's seed) gives the same word.
           const blocked = game.moves.flatMap(m => (m.words ? [m.words.a, m.words.b] : []));
           const history = game.moves.flatMap(m => (m.words ? [{a: m.words.a, b: m.words.b}] : []));
-          const again = selectBotWord({pair: move.prompts, blocked, history, language, character: "gary", seed: moveSeed(game, move.number)});
+          const again = selectContextualBotWord({pair: move.prompts, blocked, history, language, character: "gary", seed: moveSeed(game, move.number)});
           assert.equal(again.word, hidden, `move ${move.number}`);
           assert.deepEqual(again.decision, move.hidden.decision, "the stored decision is the one that chose the word");
         }

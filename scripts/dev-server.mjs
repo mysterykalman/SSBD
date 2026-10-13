@@ -49,7 +49,7 @@ function pattern(source) {
 const rewrites = config.rewrites.map(r => ({re: pattern(r.source), destination: r.destination}));
 const headerRules = config.headers.map(r => ({re: pattern(r.source), headers: r.headers}));
 
-const TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json", ".json": "application/json"};
+const TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json", ".json": "application/json"};
 
 async function staticFile(path) {
   const file = normalize(join(staticDir, decodeURIComponent(path)));

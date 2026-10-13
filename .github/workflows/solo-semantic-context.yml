@@ -1,0 +1,33 @@
+name: Solo semantic context
+
+on:
+  push:
+    branches:
+      - integration/all-current-work
+      - main
+    paths:
+      - "src/shared/association-context.js"
+      - "src/shared/engine.js"
+      - "src/shared/solo.js"
+      - "src/shared/lexicon/**"
+      - "test/association-context.test.mjs"
+      - "test/solo-semantic-context.test.mjs"
+      - "test/engine-2.5.test.mjs"
+      - "test/solo.test.mjs"
+      - ".github/workflows/solo-semantic-context.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Semantic context tests
+        run: node --test test/association-context.test.mjs test/solo-semantic-context.test.mjs
+      - name: Solo regression tests
+        run: node --test test/engine-2.5.test.mjs test/solo.test.mjs
