@@ -1,0 +1,27 @@
+name: Pam reasoning review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/shared/mom-runtime-*.js'
+      - 'src/client/mom-mode/**'
+      - 'src/client/mom-review-hook.js'
+      - 'src/client/audio-entry.js'
+      - 'test/mom-runtime-*.test.mjs'
+      - '.github/workflows/pam-reasoning-review.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test test/mom-runtime-reasoning.test.mjs test/mom-runtime-game.test.mjs
+      - run: npm run lint -- --no-warn-ignored
+      - run: npm run typecheck
+      - run: npm run build
