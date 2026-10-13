@@ -281,7 +281,7 @@ main:focus { outline: none; }
 /* Progress: one felt token per move so far (open-ended: no total is ever shown). */
 .progress { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .progress-labels { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; }
-.move-count { padding: 3px 12px; border: 2px solid var(--edge-deep); border-radius: var(--r-pill); background: var(--paper); font-weight: 900; font-size: .88rem; letter-spacing: .04em; text-transform: uppercase; box-shadow: var(--lift-1); }
+.move-count { padding: 3px 12px; border: 2px solid var(--edge-deep); border-radius: var(--r-pill); background: var(--paper); font-weight: 900; font-size: .9rem; box-shadow: var(--lift-1); }
 .progress-sub { color: var(--ink-soft); font-size: .9rem; font-weight: 800; }
 .stones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; max-width: 100%; }
 .stone {
