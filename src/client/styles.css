@@ -61,9 +61,10 @@ main:focus { outline: none; }
 }
 
 /* A mode is a game box: a felt "stage" where its characters stand, then its copy and actions. */
-.mode-card { --mode: var(--tomato); --mode-tint: var(--tomato-tint); --mode-deep: var(--tomato-deep); display: flex; flex-direction: column; min-width: 0; padding: 0; }
-.mode-card[data-mode="pam"] { --mode: var(--marigold); --mode-tint: var(--marigold-tint); --mode-deep: var(--marigold-deep); }
-.mode-card[data-mode="together"] { --mode: var(--plum); --mode-tint: var(--plum-tint); --mode-deep: var(--plum-deep); }
+/* Mode colours follow the component sheet: Solo golden, Pam lavender, Together coral. */
+.mode-card { --mode: var(--marigold); --mode-tint: var(--marigold-tint); --mode-deep: var(--marigold-deep); display: flex; flex-direction: column; min-width: 0; padding: 0; }
+.mode-card[data-mode="pam"] { --mode: var(--plum); --mode-tint: var(--plum-tint); --mode-deep: var(--plum-deep); }
+.mode-card[data-mode="together"] { --mode: var(--tomato); --mode-tint: var(--tomato-tint); --mode-deep: var(--tomato-deep); }
 .mode-stage {
   position: relative;
   display: flex;
@@ -71,7 +72,7 @@ main:focus { outline: none; }
   justify-content: center;
   gap: 18px;
   height: 212px;
-  margin: 14px 14px 0;
+  margin: 26px 26px 0;
   padding: 0 14px;
   overflow: hidden;
   border-radius: var(--r-md);
@@ -90,7 +91,7 @@ main:focus { outline: none; }
   background: color-mix(in srgb, var(--mode) 32%, transparent);
   border-top: 2px dashed rgba(255, 255, 255, .5);
 }
-.mode-body { display: flex; flex-direction: column; gap: 10px; flex: 1; padding: 18px 24px 24px; }
+.mode-body { display: flex; flex-direction: column; gap: 10px; flex: 1; padding: 18px 42px 40px; }
 .mode-body h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .start-copy { display: grid; gap: 8px; }
 .start-copy p { color: var(--ink); font-size: .98rem; font-weight: 700; line-height: 1.42; }
@@ -204,7 +205,7 @@ main:focus { outline: none; }
 .badge.standee { width: 142px; height: 168px; border-radius: 74px 74px 18px 18px; overflow: visible; display: block; }
 
 /* ---------- your games ---------- */
-.games { margin-top: 22px; padding: 22px 26px 18px; }
+.games { margin-top: 22px; padding: 30px 42px 34px; }
 .games h2 { font-size: 1.3rem; margin-bottom: 10px; }
 .game-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; max-height: 440px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 8px; }
 .game-list .empty {
@@ -256,7 +257,7 @@ main:focus { outline: none; }
 .quit-link:hover { color: var(--ink); background: rgba(58, 42, 39, .05); }
 
 /* The board: the game table. */
-.board { --accent: var(--tomato); --accent-tint: var(--tomato-tint); padding: 30px clamp(18px, 4vw, 44px) 34px; overflow: hidden; }
+.board { --accent: var(--tomato); --accent-tint: var(--tomato-tint); padding: 36px clamp(24px, 4.5vw, 52px) 44px; }
 .board[data-mode="together"] { --accent: var(--plum); --accent-tint: var(--plum-tint); }
 .board[data-character="gary"] { --accent: var(--sage); --accent-tint: var(--sage-tint); }
 .board::before {
@@ -318,9 +319,9 @@ main:focus { outline: none; }
   text-align: left;
 }
 .word-form > .speaker, .word-form > .form-help, .word-form > .suggestion { grid-column: 1 / -1; }
-.word-input { min-height: 60px; padding: 12px 18px; font-size: 1.3rem; text-transform: none; }
+.word-input { --felt-h: 64px; min-height: 64px; padding: 8px 32px 14px; font-size: 1.25rem; text-transform: none; }
 .word-input[aria-invalid="true"] { animation: nudge .3s ease-in-out; }
-#lockBtn { min-height: 60px; padding-inline: 26px; font-size: 1.1rem; }
+#lockBtn { --felt-h: 64px; min-height: 64px; padding-inline: 34px; font-size: 1.12rem; }
 
 /* The Solo character talking: portrait + bubble, one component. */
 .speaker { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
@@ -388,24 +389,22 @@ main:focus { outline: none; }
 .close-note.notice { border-style: dashed; background: var(--plum-tint); }
 
 /* ---------- the trail (history) ---------- */
-.trail { margin-top: 22px; padding: 22px clamp(16px, 3.4vw, 30px) 24px; }
+.trail { margin-top: 22px; padding: 30px clamp(22px, 4vw, 40px) 34px; }
 .trail-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 14px; margin-bottom: 12px; }
 .trail-head h2 { font-size: 1.25rem; }
 .trail-head h2:focus { outline: none; }
 .trail-meta { display: flex; flex-wrap: wrap; gap: 6px; color: var(--ink-soft); font-size: .88rem; font-weight: 700; overflow-wrap: anywhere; max-width: 100%; }
 .trail-meta strong { color: var(--ink); }
 .history-label { margin: 16px 0 8px; color: var(--ink-soft); font-size: .74rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
-.trail-now {
-  padding: 14px 16px; border: 2px solid var(--edge-deep); border-radius: var(--r-md);
-  background: var(--paper-warm); box-shadow: var(--lift-1);
-}
+.trail-now { padding: 14px 16px; border: 2px dashed var(--edge); border-radius: var(--r-md); background: rgba(255, 255, 255, .35); }
 .now-label { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: .74rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--tomato-deep); }
 .now-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tomato); animation: blink 1.6s ease-in-out infinite; }
 .now-hint { margin: 0 0 8px; }
 .now-hint-main { color: var(--ink-soft); font-size: .9rem; font-weight: 700; }
 .trail-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.trail-row { padding: 6px 10px; border: 2px solid var(--line); border-radius: var(--r-md); background: #fffdf9; }
-.trail-row.match { border-color: var(--sage-deep); background: var(--sage-tint); }
+.trail-row { padding: 8px 6px 10px; border-bottom: 2px dashed var(--line); }
+.trail-row:last-child { border-bottom: 0; }
+.trail-row.match { background: rgba(220, 237, 230, .55); border-radius: var(--r-md); }
 .trail-row, .trail-row-inner { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 4px 12px; }
 .trail-row > .move-badge, .trail-row-inner > .move-badge { margin-top: 3px; }
 .trail-row > .trail-next { grid-column: 2; }
@@ -447,7 +446,7 @@ main:focus { outline: none; }
    ===================================================================== */
 .reveal-modal {
   --accent: var(--tomato); --accent-tint: var(--tomato-tint);
-  width: min(600px, calc(100% - 24px));
+  width: min(680px, calc(100% - 24px));
   max-height: calc(100% - 24px);
   overflow: auto;
   padding: 0;
@@ -464,7 +463,7 @@ main:focus { outline: none; }
 .reveal-modal.match { --accent: var(--marigold); --accent-tint: var(--marigold-tint); }
 .reveal-modal::backdrop { background: radial-gradient(circle at 50% 40%, rgba(60, 38, 26, .45), rgba(36, 22, 16, .78)); backdrop-filter: blur(3px); }
 .reveal-modal[open] { animation: dialogIn .26s var(--ease-pop) both; }
-.rv-body { position: relative; display: grid; justify-items: center; gap: 14px; padding: 26px 20px 26px; text-align: center; }
+.rv-body { position: relative; display: grid; justify-items: center; gap: 14px; padding: 34px 34px 38px; text-align: center; }
 .rv-kicker {
   padding: 5px 18px; border: 2px solid var(--ink); border-radius: var(--r-pill);
   background: var(--ink); color: var(--paper); box-shadow: 0 3px 0 rgba(120, 82, 55, .35);
@@ -493,7 +492,6 @@ main:focus { outline: none; }
   box-shadow: 0 5px 0 var(--edge-deep), 0 18px 24px -16px rgba(60, 38, 26, .5);
   font-weight: 900; text-transform: uppercase;
 }
-.rv-word::after { content: ""; position: absolute; inset: 5px; border: 1.5px dashed rgba(122, 86, 60, .28); border-radius: calc(var(--r-md) - 5px); pointer-events: none; }
 .rv-word.you { transform: rotate(-2deg); }
 .rv-word.other { transform: rotate(2deg); }
 .rv-word.rv-step.show.you { transform: rotate(-2deg); }
@@ -502,7 +500,7 @@ main:focus { outline: none; }
 .rv-word.other small { color: var(--char-deep, var(--plum-deep)); }
 .rv-word small { display: inline-flex; align-items: center; gap: 6px; font-size: .68rem; letter-spacing: .12em; color: var(--ink-soft); font-weight: 900; }
 .rv-word.gary .tiny { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--edge); background: var(--char-bg, var(--char-tint)); }
-.rv-word .chip-word { font-size: clamp(1.5rem, 6vw, 2.3rem); line-height: 1.05; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
+.rv-word .chip-word { font-size: clamp(1.25rem, 4.6vw, 1.75rem); line-height: 1.05; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
 .reveal-modal.match .rv-word { border-color: var(--sage-deep); box-shadow: 0 5px 0 var(--sage-deep), 0 18px 24px -16px rgba(60, 38, 26, .5); }
 .rv-outcome { font-weight: 800; font-size: 1.1rem; line-height: 1.35; text-wrap: balance; }
 .rv-outcome .rv-headline {
@@ -558,10 +556,6 @@ main:focus { outline: none; }
   border: 2px solid var(--edge); border-radius: var(--r-md); background: #fff; box-shadow: var(--lift-1);
   font-weight: 800; font-size: 1.05rem; line-height: 1.38;
 }
-.gary-bye::before {
-  content: ""; position: absolute; left: 50%; top: -9px; width: 14px; height: 14px; margin-left: -7px;
-  background: #fff; border-left: 2px solid var(--edge); border-top: 2px solid var(--edge); transform: rotate(45deg); border-radius: 4px 0 0 0;
-}
 .gary-bye .bye-line:empty { display: none; }
 .gary-bye .later { color: var(--ink-soft); }
 
@@ -598,7 +592,7 @@ main:focus { outline: none; }
 
 /* Solo win: a designed finale card with the character on top. */
 /* The win card is the finale itself: the board steps back to a plain table so it never nests. */
-.board.finished:has(.win-card) { background: none; border-color: transparent; box-shadow: none; overflow: visible; padding-inline: 0; }
+.board.finished:has(.win-card) { --skin-img: none; overflow: visible; padding-inline: 0; }
 .board.finished:has(.win-card)::after, .board.finished:has(.win-card)::before { display: none; }
 .board .win-card {
   position: relative;
@@ -612,7 +606,6 @@ main:focus { outline: none; }
   box-shadow: var(--lift-2);
   text-align: center;
 }
-.win-card::after { content: ""; position: absolute; inset: 7px; border: 2px dashed var(--stitch); border-radius: calc(var(--r-xl) - 7px); pointer-events: none; }
 .win-card[data-character="gary"] { background-image: radial-gradient(90% 55% at 50% 0%, var(--sage-tint), transparent 70%), var(--grain-soft); }
 .win-card .wc-avatar {
   position: absolute; z-index: 2; top: -58px; left: 50%; width: 124px; height: 124px; margin-left: -62px;
@@ -625,9 +618,7 @@ main:focus { outline: none; }
 .win-card .wc-move { margin: 0 0 16px; color: var(--ink-soft); font-weight: 800; font-size: 1.02rem; }
 .wc-says { display: grid; justify-items: center; gap: 8px; margin: 0 auto 18px; max-width: 520px; }
 .win-card .wc-bubble { font-size: 1.08rem; text-align: center; padding: 12px 20px; }
-.win-card .wc-bubble:first-child::before { left: 50%; top: -9px; margin-left: -7px; border-left: 2px solid var(--edge); border-top: 2px solid var(--edge); border-bottom: 0; border-radius: 4px 0 0 0; }
 .win-card .wc-bubble.wc-after { font-size: .98rem; background: var(--paper-warm); box-shadow: none; }
-.win-card .wc-bubble.wc-after::before { display: none; }
 .wc-rating { position: relative; z-index: 1; margin: 0 auto 18px; padding: 12px 14px 10px; max-width: 440px; border: 2px dashed var(--line); border-radius: var(--r-md); background: rgba(255, 255, 255, .55); }
 .win-card .wc-rate-title { font-weight: 900; }
 .win-card .wc-rate-sub { margin: 2px 0 6px; color: var(--ink-soft); font-size: .94rem; }
@@ -674,7 +665,7 @@ main:focus { outline: none; }
   box-shadow: var(--lift-3);
 }
 .character-picker[open], .gary-intro[open] { animation: dialogIn .24s var(--ease-pop) both; }
-.pick-body { position: relative; display: grid; gap: 18px; padding: 26px 22px 22px; }
+.pick-body { position: relative; display: grid; gap: 18px; padding: 34px 32px 34px; }
 .pick-body h2 { text-align: center; font-size: clamp(1.4rem, 5.2vw, 1.9rem); padding: 0 40px; }
 .pick-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .pick-card {
@@ -703,7 +694,7 @@ main:focus { outline: none; }
 .pick-line { font-size: .96rem; font-weight: 700; line-height: 1.32; color: var(--ink); }
 .pick-body .row.end { gap: 10px; }
 
-.gi-body { position: relative; display: grid; justify-items: center; gap: 12px; padding: 28px 22px 26px; text-align: center; }
+.gi-body { position: relative; display: grid; justify-items: center; gap: 12px; padding: 36px 32px 36px; text-align: center; }
 .gi-body .rv-kicker { background: var(--char, var(--ink)); border-color: var(--char-deep, var(--ink)); }
 .gi-body .intro-art {
   width: clamp(130px, 36vw, 170px); height: clamp(130px, 36vw, 170px);
@@ -723,7 +714,7 @@ main:focus { outline: none; }
 /* =====================================================================
    DIALOGS (generic, quit, profile/settings, account, notifications)
    ===================================================================== */
-.dialog-body { position: relative; display: grid; gap: 14px; padding: 26px 24px 22px; }
+.dialog-body { position: relative; display: grid; gap: 14px; padding: 34px 34px 36px; }
 .dialog-body > h2 { padding-right: 46px; }
 .dialog-body > p { color: var(--ink-soft); font-weight: 700; }
 .dialog-body .code { justify-self: start; }
@@ -808,7 +799,6 @@ main:focus { outline: none; }
 
 /* ---------- developer diagnostics + /review ---------- */
 .gary-debug { margin-top: 18px; padding: 16px 18px; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; border-style: dashed; overflow-x: auto; }
-.gary-debug::after { display: none; }
 .gary-debug summary { cursor: pointer; font-weight: 700; }
 .gary-debug dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 10px 0; }
 .gary-debug dt { font-weight: 700; }
@@ -820,7 +810,6 @@ main:focus { outline: none; }
 .gary-debug tr.gd-pick td { background: var(--marigold-tint); font-weight: 700; }
 .review { display: grid; gap: 16px; padding-bottom: 32px; }
 .review .card { padding: 20px 22px; }
-.review .card::after { display: none; }
 .rv-head h1 { margin: 0 0 4px; font-size: var(--fs-2xl); }
 .rv-sub, .rv-note { color: var(--ink-soft); margin: 4px 0; }
 .rv-section { overflow-x: auto; }
@@ -885,7 +874,7 @@ main:focus { outline: none; }
   .home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .solo-card { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
   .solo-card .mode-stage { margin: 14px 0 14px 14px; height: auto; min-height: 220px; }
-  .solo-card .mode-body { padding: 24px 24px 24px 22px; }
+  .solo-card .mode-body { padding: 32px 42px 36px 20px; }
 }
 @media (max-width: 680px) {
   .home-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
@@ -895,7 +884,7 @@ main:focus { outline: none; }
   .standee, .badge.standee { width: 112px; height: 134px; }
   .pam-standee { width: 96px; height: 134px; }
   .duo-token { width: 76px !important; height: 76px !important; font-size: 1.9rem !important; }
-  .mode-body { padding: 16px 20px 20px; }
+  .mode-body { padding: 14px 32px 34px; }
   .hero { padding: 16px 0 20px; }
   .games { padding: 20px 18px 16px; }
   .game-list { max-height: none; }
@@ -903,7 +892,7 @@ main:focus { outline: none; }
 @media (max-width: 560px) {
   .pill-long { display: none; }
   .pill-short { display: inline; }
-  .board { padding: 22px 16px 24px; border-radius: var(--r-lg); }
+  .board { padding: 30px 24px 34px; border-radius: var(--r-lg); }
   .board-title { margin-top: 12px; }
   .progress { justify-content: center; }
   .stones { justify-content: center; }
@@ -919,7 +908,7 @@ main:focus { outline: none; }
   .rv-count { width: 124px; height: 124px; font-size: 3.8rem; }
   .rv-words { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .rv-word { width: min(100%, 320px); padding: 10px 16px 14px; }
-  .board .win-card { margin-top: 56px; padding: 66px 14px 20px; border-radius: var(--r-lg); }
+  .board .win-card { margin-top: 56px; padding: 66px 28px 30px; border-radius: var(--r-lg); }
   .win-card .wc-avatar { top: -48px; width: 100px; height: 100px; margin-left: -50px; }
   .wc-primary { width: 100%; }
   .wc-piece.squiggle, .wc-piece.confetto:not(.alt) { display: none; }
@@ -965,4 +954,43 @@ main:focus { outline: none; }
 }
 @media (forced-colors: active) {
   .stone, .chip, .rv-word, .standee, .mode-stage { border-color: CanvasText; }
+}
+
+/* ---------- felt piece sizes (see design.css and felt/skins.json) ---------- */
+.board { --felt-h: 380px; }
+.games, .trail { --felt-h: 300px; }
+.mode-card { --felt-h: 340px; }
+.game-item, .notif-row { --felt-h: 92px; padding: 12px 20px 16px; }
+.chip { --felt-h: 52px; padding: 8px 20px 12px; }
+.chip small { font-size: .56rem; margin-bottom: -2px; }
+.mode-chip { --felt-h: 50px; padding: 4px 18px 9px 7px; }
+.move-count, .counter, .rank-badge, .mini-stat, .offline-pill, .start-label, .match-badge, .beta-badge, .history-label, .secret-word-lock { --felt-h: 36px; padding: 4px 14px 8px; }
+.beta-badge { --felt-h: 26px; padding: 2px 10px 5px; transform: rotate(-3deg); }
+.standee::after { --felt-h: 30px; padding: 2px 12px 6px; }
+.moves-warning, .result-points { --felt-h: 46px; padding: 8px 22px 13px; }
+.notice, .lang-note { --felt-h: 120px; padding: 14px 22px 20px; }
+.notice.pending::before { display: none; }
+.suggestion { --felt-h: 160px; padding: 16px 22px 22px; }
+.share { --felt-h: 300px; padding: 26px 24px 28px; }
+.share .share-code { --felt-h: 110px; padding: 14px 40px 24px; }
+.close-ask { --felt-h: 200px; padding: 20px 22px 26px; }
+.reveal-modal, .character-picker, .gary-intro { --felt-h: 420px; }
+.rv-word { --felt-h: 112px; padding: 20px 30px 26px; }
+.rv-next { --felt-h: 70px; padding: 10px 28px 16px; }
+.board .win-card { --felt-h: 420px; }
+.win-card .wc-bubble { --felt-h: 76px; padding: 12px 30px 18px; }
+.wc-rating { --felt-h: 150px; }
+.gi-says, .gary-bye { --felt-h: 110px; padding: 20px 36px 30px; }
+.pick-card { --felt-h: 260px; padding: 22px 14px 24px; }
+.duo-word { --felt-h: 80px; padding: 12px 30px 20px; }
+.code { --felt-h: 70px; padding: 8px 26px 14px; }
+.empty-art i { --felt-h: 40px; }
+.rv-kicker { --felt-h: 40px; padding: 5px 20px 10px; color: var(--ink); }
+.toast.success, .toast.error { color: var(--ink); }
+@media (max-width: 680px) {
+  .card, .board, .games, .trail, .mode-card { --felt-h: 230px; }
+  .dialog, .character-picker, .gary-intro, .reveal-modal { --felt-h: 280px; }
+  .trail { padding: 26px 24px 30px; }
+  .games { padding: 26px 26px 28px; }
+  .mode-stage { margin: 22px 22px 0; }
 }

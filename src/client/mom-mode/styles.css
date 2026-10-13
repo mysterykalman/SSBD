@@ -27,12 +27,13 @@ main:focus { outline: none; }
   align-content: start;
   justify-items: center;
   gap: 14px;
-  padding: 30px 18px 26px;
+  margin: 26px 0 26px 26px;
+  padding: 24px 16px 22px;
+  border-radius: var(--r-md);
   background:
     radial-gradient(120% 70% at 50% 0%, rgba(255, 255, 255, .55), transparent 65%),
     repeating-linear-gradient(-45deg, rgba(255, 255, 255, .16) 0 10px, transparent 10px 20px),
-    var(--marigold-tint);
-  border-right: 2px dashed rgba(185, 124, 18, .35);
+    var(--plum-tint);
   text-align: center;
 }
 /* Pam's source portrait is 159×220: shown full-length at ≤ its own size so she stays crisp. */
@@ -48,7 +49,7 @@ main:focus { outline: none; }
 .pam-role { font-weight: 900; color: var(--marigold-deep); }
 .pam-teaser { color: var(--ink-soft); font-size: .86rem; font-weight: 700; line-height: 1.42; }
 
-.pam-play { position: relative; display: grid; align-content: start; gap: 16px; padding: 28px clamp(18px, 4vw, 40px) 30px; min-width: 0; }
+.pam-play { position: relative; display: grid; align-content: start; gap: 16px; padding: 34px clamp(22px, 4vw, 46px) 40px; min-width: 0; }
 .game-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .game-top .eyebrow { padding: 4px 12px; border: 2px solid var(--marigold-deep); border-radius: var(--r-pill); background: var(--marigold-tint); color: var(--ink); }
 .counter { padding: 3px 12px; border: 2px solid var(--edge-deep); border-radius: var(--r-pill); background: var(--paper); font-size: .86rem; font-weight: 900; font-variant-numeric: tabular-nums; box-shadow: var(--lift-1); }
@@ -68,28 +69,12 @@ main:focus { outline: none; }
 }
 .secret-word-lock::before { content: ""; width: 10px; height: 12px; border: 2px solid var(--ink-soft); border-radius: 3px 3px 2px 2px; box-shadow: inset 0 4px 0 -2px var(--paper-warm); }
 
-/* Pam's speech: a big bubble whose tail points at her */
+/* Pam's speech: the felt speech bubble, its tail at the bottom left toward her */
 .speech {
+  --felt-h: 190px;
   position: relative;
-  min-height: 140px;
-  padding: 22px 26px 24px;
-  border: 2px solid var(--edge);
-  border-radius: var(--r-lg);
-  background: #fff;
-  box-shadow: var(--lift-2);
-}
-.speech::before {
-  content: "";
-  position: absolute;
-  left: -11px;
-  top: 34px;
-  width: 18px;
-  height: 18px;
-  background: #fff;
-  border-left: 2px solid var(--edge);
-  border-bottom: 2px solid var(--edge);
-  border-radius: 0 0 0 5px;
-  transform: rotate(45deg);
+  min-height: 150px;
+  padding: 24px 36px 42px 42px;
 }
 .lead { color: var(--marigold-deep); font-size: 1.05rem; font-weight: 900; }
 .question { margin-top: 6px; font-size: clamp(1.7rem, 3.6vw, 2.5rem); line-height: 1.12; letter-spacing: -.03em; text-wrap: balance; }
@@ -116,7 +101,7 @@ main:focus { outline: none; }
 /* Five answers: one tonal scale from yes (sage) through not sure (paper) to no (tomato), each with
    its own mark so it never relies on colour alone. */
 .answers.five { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.answer { min-height: 64px; padding: 10px 8px; flex-direction: column; gap: 4px; font-size: .98rem; }
+.answer { --felt-h: 62px; min-height: 62px; padding: 6px 10px 11px; gap: 6px; font-size: .94rem; white-space: nowrap; }
 .answer::before { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: .85rem; line-height: 1; font-weight: 900; }
 .answer.yes { --btn-bg: var(--sage-deep); --btn-ink: #fffaf1; --btn-edge: #1f4c43; }
 .answer.yes::before { content: "✓"; background: rgba(255, 255, 255, .22); }
@@ -130,8 +115,6 @@ main:focus { outline: none; }
 .answer.no::before { content: "✕"; background: rgba(255, 255, 255, .22); }
 
 /* stage moods */
-.game-card[data-stage="hunch"] .speech, .game-card[data-stage="guess"] .speech { border-color: var(--marigold-deep); background: linear-gradient(180deg, #fffaf0, #fff); }
-.game-card[data-stage="hunch"] .speech::before, .game-card[data-stage="guess"] .speech::before { border-color: var(--marigold-deep); background: #fffaf0; }
 .game-card[data-stage="hunch"] .game-top .eyebrow, .game-card[data-stage="guess"] .game-top .eyebrow { background: var(--marigold); }
 .game-card[data-outcome="late"] .game-top .eyebrow { border-color: var(--tomato-deep); background: var(--tomato-tint); }
 .game-card[data-outcome="won"] .game-top .eyebrow { border-color: var(--sage-deep); background: var(--sage-tint); color: var(--sage-deep); }
@@ -145,11 +128,9 @@ main:focus { outline: none; }
   grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
   gap: 12px 22px;
+  --felt-h: 150px;
   margin-top: 18px;
-  padding: 14px 20px;
-  border: 2px dashed var(--edge);
-  border-radius: var(--r-lg);
-  background: rgba(255, 250, 241, .6);
+  padding: 22px 30px 26px;
 }
 .score-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .score-label { color: var(--ink-soft); font-size: .7rem; font-weight: 900; letter-spacing: .14em; }
@@ -189,13 +170,12 @@ main:focus { outline: none; }
 }
 @media (max-width: 760px) {
   .game-card { grid-template-columns: minmax(0, 1fr); }
-  .pam-card { grid-template-columns: auto minmax(0, 1fr); justify-items: start; align-items: center; gap: 14px; padding: 16px 18px; border-right: 0; border-bottom: 2px dashed rgba(185, 124, 18, .35); text-align: left; }
+  .pam-card { grid-template-columns: auto minmax(0, 1fr); justify-items: start; align-items: center; gap: 14px; margin: 22px 22px 0; padding: 14px 16px; text-align: left; }
   .portrait-frame { width: 88px; height: 116px; border-radius: 46px 46px 14px 14px; }
   .portrait { padding: 6px 4px 0; }
   .pam-teaser { display: none; }
-  .pam-play { padding: 20px 16px 22px; gap: 14px; }
-  .speech { min-height: 0; padding: 18px 18px 20px; }
-  .speech::before { left: 34px; top: -11px; border-left: 2px solid var(--edge); border-top: 2px solid var(--edge); border-bottom: 0; border-radius: 5px 0 0 0; }
+  .pam-play { padding: 20px 24px 30px; gap: 14px; }
+  .speech { --felt-h: 150px; min-height: 0; padding: 18px 24px 34px 30px; }
   .question { font-size: clamp(1.45rem, 6.4vw, 1.9rem); }
   .q-dots { gap: 3px; }
   .score-panel { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 14px 16px; }
@@ -212,3 +192,4 @@ main:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   .game-card[data-stage] .portrait { animation: none; }
 }
+@media (max-width: 760px) { .game-card { --felt-h: 230px; } }
