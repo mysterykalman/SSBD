@@ -20,6 +20,20 @@ def norm(value):
     return value
 
 
+def labels(synset, limit=4):
+    try:
+        return [str(x).replace('_', ' ') for x in synset.lemmas()][:limit]
+    except Exception:
+        return []
+
+
+def related(synset, method):
+    try:
+        return list(getattr(synset, method)())
+    except Exception:
+        return []
+
+
 if not os.path.exists(INVENTORY):
     raise SystemExit(f'Missing inventory: {INVENTORY}')
 
@@ -36,11 +50,18 @@ with open(INVENTORY, newline='', encoding='utf-8-sig') as f:
 
 results = []
 matched = 0
+skipped_named = 0
 for i, row in enumerate(rows, 1):
     name = row.get('Canonical answer', '').strip()
+    qid = (row.get('Wikidata QID') or '').strip()
     if not name:
         continue
-    traits = set()
+    # WordNet is lexical knowledge. Never attach a generic lexical sense directly
+    # to a named/QID entity; named entities are handled by Wikidata/CSKG identity.
+    if qid:
+        skipped_named += 1
+        continue
+
     try:
         synsets = oewn.synsets(name, pos='n')
         if not synsets and ' ' in name:
@@ -51,43 +72,56 @@ for i, row in enumerate(rows, 1):
         synsets = []
 
     noun_synsets = [s for s in synsets if getattr(s, 'pos', None) == 'n'] or list(synsets)
-    for syn in noun_synsets[:3]:
-        try:
-            lemmas = [str(x).replace('_', ' ') for x in syn.lemmas()]
-            for lemma in lemmas[:4]:
-                if norm(lemma) != norm(name):
-                    traits.add(f'alias:{lemma}')
-        except Exception:
-            pass
+    if not noun_synsets:
+        continue
 
-        frontier = [(syn, 0)]
-        seen = set()
-        while frontier:
-            node, depth = frontier.pop(0)
-            node_id = getattr(node, 'id', None) or repr(node)
-            if node_id in seen or depth >= 4:
-                continue
-            seen.add(node_id)
-            try:
-                hypers = node.hypernyms()
-            except Exception:
-                hypers = []
-            for hyper in hypers[:4]:
-                try:
-                    labels = [str(x).replace('_', ' ') for x in hyper.lemmas()]
-                except Exception:
-                    labels = []
-                if labels:
-                    traits.add(f'isa:{labels[0]}')
-                frontier.append((hyper, depth + 1))
+    # OEWN returns senses in lexical order. Taking one sense is deliberately
+    # conservative: combining several senses recreates the homonym-merging bug.
+    syn = noun_synsets[0]
+    traits = set()
+
+    for lemma in labels(syn):
+        if norm(lemma) != norm(name):
+            traits.add(f'alias:{lemma}')
+
+    frontier = [(syn, 0)]
+    seen = set()
+    while frontier:
+        node, depth = frontier.pop(0)
+        node_id = getattr(node, 'id', None) or repr(node)
+        if node_id in seen or depth >= 6:
+            continue
+        seen.add(node_id)
+        for hyper in related(node, 'hypernyms')[:6]:
+            hyper_labels = labels(hyper, 2)
+            if hyper_labels:
+                traits.add(f'isa:{hyper_labels[0]}')
+            frontier.append((hyper, depth + 1))
+
+    for method, prefix in (
+        ('part_meronyms', 'hasa'),
+        ('substance_meronyms', 'madeof'),
+        ('member_meronyms', 'hasmember'),
+        ('part_holonyms', 'partof'),
+        ('substance_holonyms', 'partof'),
+        ('member_holonyms', 'memberof'),
+    ):
+        for target in related(syn, method)[:8]:
+            target_labels = labels(target, 1)
+            if target_labels:
+                traits.add(f'{prefix}:{target_labels[0]}')
 
     if traits:
         matched += 1
-        results.append({'concept': name, 'traits': sorted(traits)[:20]})
+        results.append({
+            'concept': name,
+            'synset': str(getattr(syn, 'id', '') or ''),
+            'traits': sorted(traits)[:60],
+        })
     if i % 10000 == 0:
-        print(f'WordNet processed {i:,}; matched {matched:,}', file=sys.stderr)
+        print(f'WordNet processed {i:,}; matched {matched:,}; skipped named {skipped_named:,}', file=sys.stderr)
 
 with open(OUT, 'w', encoding='utf-8') as f:
     json.dump(results, f, ensure_ascii=False)
 
-print(json.dumps({'concepts': len(rows), 'matched': matched, 'output': OUT}))
+print(json.dumps({'concepts': len(rows), 'matched': matched, 'skippedNamed': skipped_named, 'output': OUT}))
