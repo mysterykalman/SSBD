@@ -13,7 +13,10 @@
     "smoke": "node scripts/smoke.mjs",
     "check": "npm run lint && npm run typecheck && npm test && npm run test:e2e",
     "mom:knowledge": "node scripts/build-mom-static-wikidata.mjs",
-    "mom:runtime": "node scripts/build-mom-runtime-knowledge.mjs"
+    "mom:runtime": "node scripts/build-mom-runtime-knowledge.mjs",
+    "mom:audit": "node scripts/mom-knowledge-repair.mjs",
+    "mom:cskg": "python3 scripts/extract-cskg-traits.py",
+    "mom:wordnet": "python3 scripts/extract-wordnet-traits.py"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
