@@ -2,6 +2,12 @@
  "about": "Which components wear which felt piece. Every pill, tile and chip is the same stitched shape in many colours, so colour carries meaning: each mode has its own, the word pair changes colour every move, and actions are colour-coded. scripts/build.mjs turns this into CSS (later entries win at equal specificity). Images: src/client/felt/<asset>.webp from scripts/build-felt-assets.py. Each component sets --felt-h, the height its piece is drawn at.",
  "skins": [
   {
+   "asset": "tile-yellow",
+   "selectors": [
+    ".rv-count.words"
+   ]
+  },
+  {
    "asset": "tile-cream",
    "selectors": [
     ".tile",

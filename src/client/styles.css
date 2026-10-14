@@ -607,3 +607,5 @@ main:focus { outline: none; }
   main > .hero h1 { font-size: clamp(2.1rem, 3.6vw, 3rem); }
   main > .hero .hero-rules { max-width: 520px; }
 }
+/* "Same time!" at the end of the countdown: a felt word tile, not a drawn pill. */
+.rv-count.words { --felt-h: 104px; width: fit-content; height: auto; min-width: 0; padding-inline: 44px; border-radius: 0; }
