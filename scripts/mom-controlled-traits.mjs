@@ -153,17 +153,30 @@ const OCCUPATIONS=[
  ['actor',/\b(actor|actress|film actor|television actor)\b/],['musician',/\b(musician|singer|rapper|composer|guitarist|pianist)\b/],['athlete',/\b(athlete|footballer|baseball player|hockey player|basketball player|tennis player|racing driver)\b/],['politician',/\b(politician|president|prime minister|legislator|statesman)\b/],['scientist',/\b(scientist|physicist|chemist|biologist|astronomer|mathematician)\b/],['writer',/\b(writer|author|novelist|poet|playwright|journalist)\b/],['artist',/\b(artist|painter|sculptor|illustrator)\b/],['chef',/\b(chef|cook|restaurateur)\b/]
 ];
 
+function isTaxonomicEvidence(type='') {
+ const normalized=String(type||'').toLowerCase().replaceAll('_',' ').replaceAll('-',' ').trim();
+ return /^(?:is ?a|instance ?of|hypernym|category|taxonomy|taxonomic|superordinate|class|subclass ?of)$/.test(normalized);
+}
+
 export function mapEvidence(evidence){
  const out=new Set();
  for(const ev of evidence||[]){
-  const source=String(ev.source||'').toLowerCase();
   const type=String(ev.type||'').toLowerCase();
   const raw=String(ev.trait||'').toLowerCase().replaceAll('_',' ');
   const text=`${type} ${raw}`;
-  if(/\bfictional character\b|\bfictional person\b|\bcharacter from fiction\b/.test(text)) out.add('fictional_character');
-  if(/\breal person\b|\bhuman being\b/.test(text)) out.add('real_person');
-  for(const [id,re] of RULES) if(re.test(text)) out.add(id);
-  if(/\boccupation\b/.test(type)||source==='wikidata') for(const [id,re] of OCCUPATIONS) if(re.test(text)) out.add(id);
+  const taxonomic=isTaxonomicEvidence(type);
+  // Root/subtype classification must come from taxonomy. Relationship objects are
+  // not classifications of the subject (e.g. library HasA book != library IsA book).
+  if(taxonomic){
+   if(/\bfictional character\b|\bfictional person\b|\bcharacter from fiction\b/.test(text)) out.add('fictional_character');
+   if(/\breal person\b|\bhuman being\b/.test(text)) out.add('real_person');
+   for(const [id,re] of RULES) if(re.test(text)) out.add(id);
+  }
+  // Occupations describe people even though they are not an IsA edge in Wikidata.
+  if(/\boccupation\b/.test(type)){
+   if(/\bfictional character\b|\bfictional person\b|\bcharacter from fiction\b/.test(text)) out.add('fictional_character');
+   for(const [id,re] of OCCUPATIONS) if(re.test(text)) out.add(id);
+  }
   if(/madeof|made of|material/.test(text)){
    if(/\bmetal|steel|iron|aluminium|aluminum\b/.test(text))out.add('metal');
    if(/\bwood|wooden|timber\b/.test(text))out.add('wood');
