@@ -587,3 +587,23 @@ main:focus { outline: none; }
 .stone.final { --badge: var(--badge-yellow); width: 34px; height: 34px; }
 .progress.ssbd-loss .stone.final { --badge: var(--badge-coral); color: #fff; }
 .rv-count { --badge: var(--badge-orange); width: 150px; height: 150px; }
+
+/* Home header: the logo large on the left; the intro right-aligned beside it, under the help button. */
+@media (min-width: 820px) {
+  body:has(main > .hero) .brand-logo { width: 250px; } /* the logo file is 250px wide: never upscaled */
+  body:has(main > .hero) .topbar { align-items: flex-start; padding-bottom: 0; }
+  body:has(main > .hero) .top-actions { margin-top: 6px; }
+  main > .hero {
+    position: relative;
+    width: min(560px, calc(100% - 290px));
+    max-width: none;
+    margin: -160px 0 0 auto;
+    padding: 0 0 34px;
+    min-height: 160px;
+    align-content: start;
+    justify-items: end;
+    text-align: right;
+  }
+  main > .hero h1 { font-size: clamp(2.1rem, 3.6vw, 3rem); }
+  main > .hero .hero-rules { max-width: 520px; }
+}
