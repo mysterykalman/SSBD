@@ -15,6 +15,7 @@
     "mom:knowledge": "node scripts/build-mom-static-wikidata.mjs",
     "mom:runtime": "node scripts/build-mom-runtime-knowledge.mjs",
     "mom:audit": "node scripts/mom-knowledge-repair.mjs",
+    "mom:wordnet": "python3 scripts/extract-wordnet-traits.py",
     "mom:cskg": "python3 scripts/extract-cskg-traits.py"
   },
   "devDependencies": {
