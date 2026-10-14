@@ -36,7 +36,8 @@
   <div id="result-actions" class="actions" hidden><button class="btn primary big" id="again-btn" type="button">Play again</button><a class="btn ghost big" href="/">Back to games</a></div>
  </div>
 </section>
-<section class="score-panel" aria-label="Score and streak">
+<!-- Score, rank and streak are still kept (and synced) here, but only shown on /review. -->
+<section class="score-panel" aria-label="Score and streak" hidden>
  <div class="score-main"><span class="score-label">SCORE</span><strong id="pam-score">0</strong><span id="pam-rank" class="rank-badge">Look at You</span></div>
  <div class="score-side"><div class="mini-stat"><span>Streak</span><strong id="pam-streak">0</strong></div><div class="mini-stat"><span>Best round</span><strong id="pam-best">0</strong></div></div>
  <div class="rank-progress-wrap"><div class="rank-progress-copy"><span id="rank-progress-label">Next rank: Okay, Sweetie · 100 points</span><span id="best-streak-label">Best streak: 0</span></div><div class="rank-progress"><div id="rank-progress-fill"></div></div></div>
