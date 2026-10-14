@@ -29,13 +29,13 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   assert.equal(await page.locator(".hero .hero-rules").innerText(), "You each secretly pick any word. Match and you win. Miss and your two words become the next clue. Keep connecting the dots until your brains finally cooperate.");
   assert.doesNotMatch(hero, /reveal them at the same time|connects them/, "no mechanical explanation");
   const solo = await page.locator(".solo-card").innerText();
-  // The tile, exactly: title (with its small Beta badge), two short paragraphs, the button, and nothing else.
-  assert.equal(solo.trim().replace(/\s+/g, " "), "Solo Play BETA Milo finished his homework early, so now he’s free to play. OR We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building. Choose your player");
+  // The tile, exactly: title (with its small Beta badge), headline, two short paragraphs, the button, and nothing else.
+  assert.equal(solo.trim().replace(/\s+/g, " "), "Solo Play BETA We found you someone to play with. Somehow, we found two. Milo volunteered before we finished asking. Gary would like it noted that he was not consulted. Choose your teammate");
   assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play BETA");
-  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your player");
-  // Both bios in ink (#2b1b3d), with "or" between them.
-  const colours = await page.evaluate(() => ["bio-milo", "bio-or", "bio-gary"].map(c => { const el = document.querySelector(`.solo-card .${c}`); return [el.textContent.trim(), getComputedStyle(el).color]; }));
-  assert.deepEqual(colours, [["Milo finished his homework early, so now he’s free to play.", "rgb(43, 27, 61)"], ["or", "rgb(107, 78, 99)"], ["We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building.", "rgb(43, 27, 61)"]]);
+  assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your teammate");
+  // All three lines in ink (#3b2a24).
+  const colours = await page.$$eval(".solo-card .start-copy p", ps => ps.map(el => [el.textContent.trim(), getComputedStyle(el).color]));
+  assert.deepEqual(colours, [["We found you someone to play with. Somehow, we found two.", "rgb(59, 42, 36)"], ["Milo volunteered before we finished asking.", "rgb(59, 42, 36)"], ["Gary would like it noted that he was not consulted.", "rgb(59, 42, 36)"]]);
   assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|We heard you had no friends|There is no cake|Plays offline too/);
   assert.doesNotMatch(solo, /without internet/i);
   const together = await page.locator(".family-card").innerText();
@@ -48,7 +48,7 @@ test("homepage copy (EN and FR): short premise, one joke per section, empty stat
   await page.click('[data-lang="fr"]');
   assert.match(await page.locator(".hero").innerText(), /Essayez de lire dans les pensées de l’autre\./);
   assert.match(await page.locator(".hero .hero-rules").innerText(), /^Choisissez chacun un mot en secret\. Les mêmes mots[\s\u202f]\? Vous gagnez[\s\u202f]! Sinon, vos deux mots deviennent le prochain indice\. Continuez à faire des liens jusqu’à ce que vos cerveaux coopèrent enfin\.$/);
-  assert.match(await page.locator(".solo-card").innerText(), /^Jeu en solo\s+BÊTA\s+Milo a fini ses devoirs en avance, alors maintenant il est libre de jouer\.\s+OU\s+On n’a trouvé personne d’autre, alors on a fait venir Gary de la comptabilité\. Les RH disent que c’est du team building\.\s+Choisis ton joueur$/);
+  assert.match(await page.locator(".solo-card").innerText(), /^Jeu en solo\s+BÊTA\s+On t’a trouvé quelqu’un pour jouer\. Allez savoir comment, on en a trouvé deux\.\s+Milo s’est porté volontaire avant qu’on finisse de demander\.\s+Gary tient à préciser qu’on ne l’a pas consulté\.\s+Choisis ton coéquipier$/);
   assert.match(await page.locator(".family-card").innerText(), /Jouer ensemble/);
   assert.doesNotMatch(await visibleText(page), EMOJI);
   await context.close();

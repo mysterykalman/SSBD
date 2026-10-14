@@ -80,7 +80,7 @@ function renderMomReview() {
   if (!review || review.querySelector("#rvPam")) return Boolean(review);
   const games = loadMomGames().slice().sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)));
   const section = el("section", {class: "card rv-section", "aria-labelledby": "rvPam"},
-    el("h2", {id: "rvPam"}, "Pam / Mom Mode"),
+    el("h2", {id: "rvPam"}, "Pam / Don’t Tell Me"),
     el("p", {class: "rv-note"}, `Question-and-answer traces from this browser: ${games.length}. These logs include the locked answer, question ranking diagnostics and Pam's top candidates so late-game drift can be reviewed directly.`),
     statsTable(loadMomProgress()),
     el("div", {class: "rv-filters"},
