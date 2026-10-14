@@ -49,13 +49,17 @@ const inventory = readJsonl(INVENTORY);
 if (!inventory.length) throw new Error('Playable inventory is empty.');
 
 const wantedEvidenceKeys = new Set();
+const wantedEvidenceQids = new Set();
 for (const item of inventory) {
   for (const value of [item.name, ...(Array.isArray(item.aliases) ? item.aliases : [])]) {
     const key = normalize(value);
     if (key) wantedEvidenceKeys.add(key);
   }
+  const qid=String(item.qid||'').trim();
+  if(qid)wantedEvidenceQids.add(qid);
 }
 const evidenceByName = new Map();
+const evidenceByQid = new Map();
 const evidenceStream = fs.createWriteStream(EVIDENCE_OUT, { encoding: 'utf8' });
 let preservedEvidence = 0;
 async function addEvidence(record) {
@@ -63,9 +67,17 @@ async function addEvidence(record) {
   if (!key || !record.trait) return;
   await write(evidenceStream, `${JSON.stringify(record)}\n`);
   preservedEvidence += 1;
+  const qid=String(record.qid||'').trim();
+  const normalizedRecord={ source: record.source || '', type: record.type || '', trait: record.trait, ...(qid?{qid}:{}) };
+  if(qid&&wantedEvidenceQids.has(qid)){
+    const list=evidenceByQid.get(qid)||[];
+    list.push(normalizedRecord);
+    evidenceByQid.set(qid,list);
+    return;
+  }
   if (!wantedEvidenceKeys.has(key)) return;
   const list = evidenceByName.get(key) || [];
-  list.push({ source: record.source || '', type: record.type || '', trait: record.trait });
+  list.push(normalizedRecord);
   evidenceByName.set(key, list);
 }
 
@@ -80,7 +92,7 @@ for (const filename of EXTRA_FILES) {
   }
 }
 await finish(evidenceStream);
-console.log(`[mom profiles] indexed evidence for ${evidenceByName.size.toLocaleString()} lookup keys; preserved ${preservedEvidence.toLocaleString()} full evidence records`);
+console.log(`[mom profiles] indexed evidence for ${evidenceByName.size.toLocaleString()} label keys and ${evidenceByQid.size.toLocaleString()} QIDs; preserved ${preservedEvidence.toLocaleString()} full evidence records`);
 
 const featureById = new Map(featureRecords().map(feature => [feature.id, feature]));
 const traitIds = new Set(TRAITS.map(trait => trait.id));
@@ -103,7 +115,8 @@ for (const item of inventory) {
   if (!name) continue;
   const aliases = Array.isArray(item.aliases) ? item.aliases : [];
   const keys = [...new Set([name, ...aliases].map(normalize).filter(Boolean))];
-  const conceptEvidence = keys.flatMap(key => evidenceByName.get(key) || []);
+  const qid=String(item.qid||'').trim();
+  const conceptEvidence = qid ? (evidenceByQid.get(qid)||[]) : keys.flatMap(key => (evidenceByName.get(key)||[]).filter(record=>!record.qid));
   if (conceptEvidence.length) extraMatched += 1;
   const evidence = [
     ...(item.broadCategory ? [{ source: 'inventory taxonomy', type: 'category', trait: item.broadCategory }] : []),

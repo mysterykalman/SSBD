@@ -28,6 +28,12 @@ function acceptable(name) {
   return true;
 }
 
+export function candidateIdentityKey(name, qid='') {
+  const normalized = normalize(name);
+  const entityId = String(qid || '').trim();
+  return entityId ? `wd:${entityId}` : normalized;
+}
+
 export function createCandidateAccumulator() {
   const candidates = new Map();
   return {
@@ -35,12 +41,14 @@ export function createCandidateAccumulator() {
     addCandidate(name, source, score, fields = {}) {
       name = niceName(name);
       if (!acceptable(name)) return;
-      const key = normalize(name), current = candidates.get(key);
-      const record = { name, key, aliases: new Set(), score: Number(score) || 0, sources: new Set([source]),
+      const key = normalize(name), qid = String(fields.qid || '').trim();
+      const identityKey = candidateIdentityKey(name, qid);
+      const current = candidates.get(identityKey);
+      const record = { name, key, identityKey, aliases: new Set(), score: Number(score) || 0, sources: new Set([source]),
         sourceCategory: fields.sourceCategory || '', broadCategory: fields.broadCategory || '', difficulty: fields.difficulty || '',
-        concreteness: fields.concreteness ?? '', percentKnown: fields.percentKnown ?? '', pos: fields.pos || '', qid: fields.qid || '',
+        concreteness: fields.concreteness ?? '', percentKnown: fields.percentKnown ?? '', pos: fields.pos || '', qid,
         wikipediaUrl: fields.wikipediaUrl || '', sourceRank: fields.sourceRank ?? '', reason: fields.reason || '', facets: normalizeFacets(fields.facets) };
-      if (!current) { candidates.set(key, record); return; }
+      if (!current) { candidates.set(identityKey, record); return; }
       current.sources.add(source); current.aliases.add(record.name);
       mergeFacets(current.facets, record.facets);
       const isBetter = record.score > current.score;

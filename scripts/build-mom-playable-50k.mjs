@@ -41,7 +41,6 @@ function csvEscape(v) {
 
 const { candidates, addCandidate } = createCandidateAccumulator();
 
-// Common word support sets. They improve confidence; they are not dumped directly into the answer pool.
 const cel = new Set();
 const celPath = path.join(SOURCE_DIR, 'cel_2-45.txt');
 if (fs.existsSync(celPath)) {
@@ -60,7 +59,6 @@ if (fs.existsSync(wordnikPath)) {
   }
 }
 
-// THINGS: purpose-built object concepts, highest-confidence ordinary-answer donor.
 const thingsPath = path.join(SOURCE_DIR, 'things.csv');
 if (fs.existsSync(thingsPath)) {
   const rows = parseCsv(readText(thingsPath));
@@ -72,7 +70,6 @@ if (fs.existsSync(thingsPath)) {
   }
 }
 
-// Brysbaert: generally-known English lemmas with human concreteness ratings.
 const bryPath = path.join(SOURCE_DIR, 'brysbaert.txt');
 if (fs.existsSync(bryPath)) {
   const lines = readText(bryPath).split(/\r?\n/).filter(Boolean);
@@ -115,7 +112,6 @@ if (fs.existsSync(bryPath)) {
   }
 }
 
-// AllenAI: mine actual Twenty Questions subjects/targets from extracted dataset files.
 const allenDir = path.join(SOURCE_DIR, 'allenai');
 const ALLEN_KEYS = new Set(['subject','target','targetword','target_word','object','concept','secret','entity','item']);
 function addAllenValue(value) {
@@ -159,7 +155,6 @@ function walkFiles(dir) {
 }
 walkFiles(allenDir);
 
-// Wikipedia Vital Articles: donor for named entities/culture/history, no longer the backbone.
 if (fs.existsSync(OLD_50K)) {
   const rows = parseCsv(readText(OLD_50K));
   const header = rows.shift()?.map(x => x.trim()) || [];
@@ -176,7 +171,6 @@ if (fs.existsSync(OLD_50K)) {
     const level = Number(row[levelI]) || 6;
     const category = row[catI] || '';
     const source = row[sourceI] || 'Wikipedia Vital Articles';
-    // Lower levels = more vital. Level 5 remains useful but ranks below ordinary/common concept sources.
     const score = ({1:98,2:94,3:88,4:73,5:58}[level] || 48);
     addCandidate(name, source.includes('pam-existing') ? 'Pam existing' : 'Wikipedia Vital Articles', score, {
       broadCategory: 'Named / cultural knowledge',
@@ -189,15 +183,12 @@ if (fs.existsSync(OLD_50K)) {
   }
 }
 
-// Reward agreement between independent sources.
 for (const c of candidates.values()) {
   const count = c.sources.size;
   if (count >= 2) c.score += 10 + Math.min(10, (count - 2) * 4);
 }
 
 const all = [...candidates.values()];
-
-// Keep Wikipedia from crowding out ordinary 20Q-style concepts.
 const nonWiki = all.filter(c => c.sources.size > 1 || !c.sources.has('Wikipedia Vital Articles'))
   .sort((a,b) => b.score - a.score || a.name.localeCompare(b.name));
 const wikiOnly = all.filter(c => c.sources.size === 1 && c.sources.has('Wikipedia Vital Articles'))
@@ -208,13 +199,13 @@ const selectedKeys = new Set();
 function take(list, limit = Infinity) {
   for (const c of list) {
     if (selected.length >= TARGET || limit <= 0) break;
-    if (selectedKeys.has(c.key)) continue;
-    selected.push(c); selectedKeys.add(c.key); limit -= 1;
+    const identityKey = c.identityKey || c.key;
+    if (selectedKeys.has(identityKey)) continue;
+    selected.push(c); selectedKeys.add(identityKey); limit -= 1;
   }
 }
 
 take(nonWiki);
-// Hard cap Wikipedia-only donor concepts at 22k unless needed to reach exactly 50k.
 take(wikiOnly, 22000);
 if (selected.length < TARGET) take(wikiOnly);
 
@@ -239,7 +230,7 @@ selected.forEach((c, i) => {
 fs.writeFileSync(path.join(OUT_DIR, 'playable_50k.csv'), lines.join('\n') + '\n');
 const jsonl = selected.map(c => JSON.stringify({
   rank: selected.indexOf(c) + 1, name: c.name, aliases: [...c.aliases].filter(alias => normalize(alias) !== c.key).sort((a,b) => a.localeCompare(b)),
-  key: c.key, difficulty: difficulty(c), sourceCategory: c.sourceCategory, broadCategory: c.broadCategory, facets: c.facets || {},
+  key: c.key, identityKey: c.identityKey || c.key, difficulty: difficulty(c), sourceCategory: c.sourceCategory, broadCategory: c.broadCategory, facets: c.facets || {},
   sourceCount: c.sources.size, sources: [...c.sources].sort(), score: c.score, concreteness: c.concreteness,
   percentKnown: c.percentKnown, pos: c.pos, qid: c.qid, wikipediaUrl: c.wikipediaUrl, reason: c.reason
 })).join('\n') + (selected.length ? '\n' : '');
