@@ -30,7 +30,7 @@ test("Mom Mode is a live five-answer guessing game with a hunch choice",async()=
 });
 test("Mom has a point of view, conversational hunches, callbacks, and one-guess rules",async()=>{
  const copy=await read("copy.js");
- for(const term of ["bio:","intro:","early:","middle:","close:","surprise:","hunch:","hunchAside:","guess:","correct:","stumped:","uncertain:","milestones:","callbacks:","rare:","lock it in","This is very you","one guess"])assert.ok(copy.includes(term),term);
+ for(const term of ["bio:","intro:","early:","middle:","close:","surprise:","hunch:","hunchAside:","guess:","correct:","stumped:","uncertain:","milestones:","callbacks:","rare:","lock it in","This is very you","No changing your mind halfway through"])assert.ok(copy.includes(term),term);
  assert.doesNotMatch(copy,/Save room for dinner|Okay\. Recalculating|Think of a common/);
 });
 test("Mom progression stays inside Mom Mode and persists locally",async()=>{
