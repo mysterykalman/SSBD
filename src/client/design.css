@@ -281,3 +281,7 @@ dialog::backdrop { background: rgba(59, 42, 36, .45); backdrop-filter: blur(3px)
 
 /* Disabled buttons: readable text on the beige felt (4.5:1). */
 .btn:disabled, .btn[aria-disabled="true"] { color: #5a4a42 !important; }
+
+/* Pam's cut-out has a pale fringe from its background removal: on a near-white backdrop it disappears
+   (on lavender it read as see-through patches). */
+[data-character="pam"], .pam-standee { --char-bg: #fdf9f3; --char-glow: rgba(239, 230, 251, .9); }

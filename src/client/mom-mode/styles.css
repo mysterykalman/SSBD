@@ -131,3 +131,4 @@ main:focus { outline: none; }
 .rule-list > div:nth-child(2)::before { --badge: var(--badge-orange); }
 .rule-list > div:nth-child(3)::before { --badge: var(--badge-teal); }
 .rule-list > div:nth-child(4)::before { --badge: var(--badge-purple); }
+.portrait-frame { background: radial-gradient(circle at 50% 30%, rgba(239, 230, 251, .9), transparent 62%), #fdf9f3; }
