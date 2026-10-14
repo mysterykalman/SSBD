@@ -483,13 +483,12 @@ function renderHome() {
       h("p", {class: "hero-rules"}, t("heroRules"))),
     h("div", {class: "home-grid start-grid"},
       h("section", {class: "card mode-card start solo-card", "data-mode": "solo", "aria-labelledby": "soloTitle"},
-        // Both characters, side by side and the same size: "Choose your player" lets the player pick either.
+        // Both characters, side by side and the same size: "Choose your teammate" lets the player pick either.
         h("div", {class: "mode-stage start-icon pair", id: "soloPair", "aria-hidden": "true"},
           ...CHARACTER_IDS.map(id => h("span", {class: `badge gary standee pair-${id}`, "data-character": id, "data-name": t(character(id).name)}, characterArt(id, "meh", "badge-art standee-art")))),
         h("div", {class: "mode-body"},
           h("h2", {id: "soloTitle"}, t("soloTitle"), " ", betaBadge()),
-          // Milo or Gary, with "or" between them (pick either one).
-          h("div", {class: "start-copy solo-bios"}, h("p", {class: "bio-milo"}, t("soloBody")), h("div", {class: "bio-or"}, t("soloOr")), h("p", {class: "bio-gary"}, t("soloBody2"))),
+          h("div", {class: "start-copy"}, h("p", {class: "mode-headline"}, t("soloHeadline")), h("p", {}, t("soloBody")), h("p", {}, t("soloBody2"))),
           h("div", {class: "mode-actions"},
             h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))))),
       h("section", {class: "card mode-card mom-card", "data-mode": "pam", "data-character": "pam", "aria-labelledby": "momModeTitle"},
@@ -497,8 +496,7 @@ function renderHome() {
           h("span", {class: "standee pam-standee", "data-name": "Pam"}, h("img", {class: "mom-card-art", src: "/mom/pam-v2.webp", alt: "", width: "720", height: "900", decoding: "async"}))),
         h("div", {class: "mode-body mom-card-copy"},
           h("h2", {id: "momModeTitle"}, t("momTitle")),
-          h("p", {}, t("momCopy")),
-          h("p", {class: "muted"}, t("momAside")),
+          h("div", {class: "start-copy"}, h("p", {class: "mode-headline"}, t("momHeadline")), h("p", {}, t("momCopy")), h("p", {}, t("momAside"))),
           h("div", {class: "mode-actions"},
             h("a", {class: "btn big sun", href: "/mom/"}, t("momPlayCta"))))),
       h("section", {class: `card mode-card start family-card ${familyNote ? "is-unavailable" : ""}`, "data-mode": "together", "aria-labelledby": "familyTitle"},

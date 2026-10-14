@@ -1,6 +1,16 @@
 // Same-device Pam/Mom Mode review panel. The Mom page writes a compact question/answer trace to
 // localStorage; this developer-only hook exposes it at /review without changing Solo's server log.
 const MOM_LOG_KEY = "ssbd.mom.gamelog.v1";
+const MOM_PROGRESS_KEY = "ssbd:mom-progress:v1";
+
+/** Pam's score, streak and best round for this device (hidden in Mom Mode itself, shown here). */
+function loadMomProgress() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(MOM_PROGRESS_KEY) || "null") || {};
+    const num = v => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.floor(Number(v)) : 0);
+    return {totalPoints: num(raw.totalPoints), games: num(raw.games), streak: num(raw.streak), bestStreak: num(raw.bestStreak), bestRound: num(raw.bestRound), updatedAt: raw.updatedAt || ""};
+  } catch { return {totalPoints: 0, games: 0, streak: 0, bestStreak: 0, bestRound: 0, updatedAt: ""}; }
+}
 
 function loadMomGames() {
   try {
@@ -57,14 +67,22 @@ function summary(game) {
   return `${new Date(game.startedAt).toLocaleString()} · answer: ${game.secretWord || "—"} · ${questions.length} questions · ${outcome}`;
 }
 
+function statsTable(p) {
+  const rows = [["Score", p.totalPoints.toLocaleString()], ["Rounds played", p.games], ["Current streak", p.streak], ["Best streak", p.bestStreak], ["Best round", p.bestRound], ["Last updated", p.updatedAt ? new Date(p.updatedAt).toLocaleString() : "—"]];
+  return el("table", {class: "rv-metrics", id: "rvPamStats"},
+    el("caption", {}, "Stats on this device"),
+    el("tbody", {}, ...rows.map(([label, value]) => el("tr", {}, el("th", {scope: "row"}, label), el("td", {}, String(value))))));
+}
+
 function renderMomReview() {
   if (location.pathname !== "/review") return false;
   const review = document.querySelector(".review");
   if (!review || review.querySelector("#rvPam")) return Boolean(review);
   const games = loadMomGames().slice().sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)));
   const section = el("section", {class: "card rv-section", "aria-labelledby": "rvPam"},
-    el("h2", {id: "rvPam"}, "Pam / Mom Mode"),
+    el("h2", {id: "rvPam"}, "Pam / Don’t Tell Me"),
     el("p", {class: "rv-note"}, `Question-and-answer traces from this browser: ${games.length}. These logs include the locked answer, question ranking diagnostics and Pam's top candidates so late-game drift can be reviewed directly.`),
+    statsTable(loadMomProgress()),
     el("div", {class: "rv-filters"},
       el("button", {type: "button", class: "btn small ghost", onclick: () => downloadMomLog(games)}, "Export Pam JSON")));
   if (!games.length) section.append(el("p", {}, "No Pam games have been logged on this device yet."));

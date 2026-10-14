@@ -1,0 +1,88 @@
+question_id,question,type
+abstract,"Is it an idea, feeling, or other abstract concept?",category
+air,Does it travel through the air?,everyday
+alive,Is it alive?,category
+animal,Is it an animal?,category
+appliance,Is it an appliance?,everyday
+battery,Does it need batteries?,everyday
+bedroom,Would you keep it in a bedroom?,everyday
+berry,Is it a berry?,everyday
+big,Is it bigger than an adult human?,everyday
+caffeinated,Does it usually contain caffeine?,everyday
+citrus,Is it citrus-based?,everyday
+cleaning,Is it used for cleaning?,everyday
+coffeeBased,Is it made from coffee beans?,everyday
+cold,Is it usually cold?,everyday
+communication,Is it used to communicate?,everyday
+computer,Is it a kind of computer?,everyday
+cutting,Is it used for cutting?,everyday
+dairy,Is it a dairy food?,everyday
+danger,Could it hurt you?,everyday
+dessert,Is it a dessert?,everyday
+edible,Can you eat it?,everyday
+event,Is it an event or something that happened?,category
+fallingWater,Does the water fall downward?,everyday
+farm,Would you find it on a farm?,everyday
+fictional,Is it fictional?,everyday
+fire,Is it associated with fire?,everyday
+fly,Can it fly?,everyday
+food,Is it food?,category
+food_drink,Is it something you can eat or drink?,category
+footwear,Is it worn on your feet?,everyday
+fragile,Does it break easily?,everyday
+frozen,Is it usually frozen?,everyday
+fruit,Is it a fruit?,everyday
+fur,Does it have fur or hair?,everyday
+handle,Does it have a handle?,everyday
+hardSole,Does it usually have a hard sole?,everyday
+headRest,Do you rest your head on it?,everyday
+hot,Is it usually served or used hot?,everyday
+household,Would you find it in a home?,everyday
+indoors,Is it usually found indoors?,everyday
+leafyVeg,Is it a leafy or flowering vegetable?,everyday
+legs,Does it have legs?,everyday
+legwear,Is it worn mainly on your legs?,everyday
+lemonBased,Is it made from lemons?,everyday
+light,Does it give off light?,everyday
+liquid,Is it a liquid?,everyday
+living,Is it alive?,category
+manmade,Was it made or created by people?,category
+media_work,"Is it a creative work, like a book, movie, song, or game?",category
+medical,Is it strongly associated with medicine or health care?,everyday
+music,Is it related to music?,everyday
+naturalPlace,Is it a natural place?,everyday
+nature,Is it part of nature?,everyday
+object,Is it a physical object?,category
+opens,Does it open and close?,everyday
+organization,"Is it an organization, company, or group?",category
+outdoors,Would you normally associate it with being outdoors?,everyday
+person,Is it a person?,category
+phone,Is it a phone?,everyday
+place,Is it a place?,category
+plant,Is it a plant?,category
+preparedFood,Do people mainly go there to eat prepared food?,everyday
+prongs,Does it have prongs?,everyday
+public,Is it commonly shared with strangers?,everyday
+rail,Does it travel on rails?,everyday
+reading,Is it mainly for reading?,everyday
+road,Does it usually travel on roads?,everyday
+rootVeg,Is it a root vegetable?,everyday
+salty,Is it usually salty?,everyday
+school,Would you commonly find it at school?,everyday
+scoop,Is it shaped for scooping?,everyday
+screen,Does it have a screen?,everyday
+sea,Does it travel on water?,everyday
+shopping,Do people mainly go there to shop?,everyday
+sound,Does it make a sound by itself?,everyday
+specificPerson,Are you thinking of a specific real person?,everyday
+sports,Is it related to sports?,everyday
+striped,Does it usually have stripes?,everyday
+swim,Can it swim?,everyday
+teaBased,Is it made from tea leaves?,everyday
+upperBody,Is it worn on your upper body?,everyday
+vegetable,Is it a vegetable?,everyday
+water,Is it strongly associated with water?,everyday
+wearable,Can you wear it?,everyday
+wheels,Does it have wheels?,everyday
+work,Would you commonly find it at a workplace?,everyday
+writing,Is it used for writing or drawing?,everyday

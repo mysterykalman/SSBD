@@ -60,13 +60,13 @@
   {
    "asset": "bubble-left",
    "fill": false,
-   "center": "#f8f0e2",
-   "repeat": "round",
+   "middle": "bubble-mid",
    "selectors": [
     ".bubble",
     ".gary-bubble",
     ".speech"
-   ]
+   ],
+   "repeat": "round"
   },
   {
    "asset": "chip-cream",

@@ -110,8 +110,10 @@ test("homepage copy", () => {
   const en = STRINGS.en;
   assert.equal(en.heroTitle, "Try to read each other’s minds.");
   assert.equal(en.heroCopy, "No pressure. Just your entire friendship.");
-  assert.deepEqual([en.soloTitle, en.soloBody, en.soloBody2, en.soloStart], ["Solo Play", "Milo finished his homework early, so now he’s free to play.",
-    "We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building.", "Choose your player"]);
+  assert.deepEqual([en.soloTitle, en.soloHeadline, en.soloBody, en.soloBody2, en.soloStart], ["Solo Play", "We found you someone to play with. Somehow, we found two.",
+    "Milo volunteered before we finished asking.", "Gary would like it noted that he was not consulted.", "Choose your teammate"]);
+  assert.deepEqual([en.momTitle, en.momHeadline, en.momCopy, en.momAside, en.momPlayCta], ["Don’t Tell Me", "Pam would like a word with your brain.",
+    "Pick something. She’ll ask the questions and try to narrow it down before you get too pleased with yourself.", "Good luck with that.", "Stump Pam"]);
   // The old Solo tile copy is gone (the cake joke lives on Gary's card only).
   for (const key of ["soloCopy1", "soloCopy2", "soloCopy3", "soloOfflineNote"]) assert.equal(en[key], undefined, key);
   assert.deepEqual([en.togetherTitle, en.togetherCopy1, en.togetherCopy2, en.familyCreate, en.familyJoin],

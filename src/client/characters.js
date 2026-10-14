@@ -56,7 +56,7 @@ export const CHARACTERS = {
     id: "milo",
     name: "miloName",
     title: "miloName",
-    card: ["miloCard1", "miloCard2"], // the character picker card ("character select")
+    card: ["miloBio1", "miloBio2"], // the character picker card ("character select"): his bio
     personality: "bouncy",
     voiceId: null, // no recorded voice yet
     voiceStyle: "bright, warm, a little impatient to play",

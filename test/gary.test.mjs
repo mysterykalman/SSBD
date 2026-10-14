@@ -10,7 +10,7 @@ import {getLexicon} from "../src/shared/lexicon/index.js";
 
 // Titles, picker cards, the narratives and each character's wording of shared Solo sentences may be longer than a quick remark.
 const LONG_OK = new Set([...CHARACTER_IDS.flatMap(id => characterKeys(id).filter(key => /^(gn|mn)\./.test(key))), "garyIntroCta", "garyTitle", "garyMeetAgain",
-  ...CHARACTER_IDS.flatMap(id => [...CHARACTERS[id].card, ...Object.values(CHARACTERS[id].copy), ...Object.values(CHARACTERS[id].results).flat(), ...CHARACTERS[id].rating])]);
+  ...CHARACTER_IDS.flatMap(id => [...CHARACTERS[id].card, ...(CHARACTERS[id].replay?.lines || []), ...Object.values(CHARACTERS[id].copy), ...Object.values(CHARACTERS[id].results).flat(), ...CHARACTERS[id].rating])]);
 
 // The two approved scripts share these exact lines (each character's own copy of it).
 const SHARED_APPROVED = new Set(["That was annoyingly sensible.", "Not it."]);
@@ -41,8 +41,9 @@ test("Gary and Milo share one config system: id, name, card, avatar, personality
     assert.equal(c.pools, undefined, `${id} has no rotating pools`);
   }
   assert.equal(CHARACTERS.milo.intro, null, "the picker card is Milo's introduction");
-  // "Meet Milo again" replays exactly his picker card lines.
-  assert.deepEqual(CHARACTERS.milo.replay.lines, CHARACTERS.milo.card);
+  // His picker card is his bio; "Meet Milo again" replays his own lines.
+  assert.deepEqual(CHARACTERS.milo.card, ["miloBio1", "miloBio2"]);
+  assert.deepEqual(CHARACTERS.milo.replay.lines, ["miloCard1", "miloCard2"]);
   assert.equal(CHARACTERS.milo.meetAgain, "miloMeetAgain");
   for (const id of CHARACTER_IDS) {
     assert.deepEqual(Object.values(CHARACTERS[id].lines.mismatch), []);
@@ -71,7 +72,7 @@ test("every character line exists in English and French, short and simple; the c
   assert.equal(STRINGS.en[CHARACTERS.gary.name], "Gary");
   assert.deepEqual(CHARACTERS.gary.card.map(key => STRINGS.en[key]), ["We heard you had no friends, so we lured Gary over from Accounting with the promise of cake.", "There is no cake."]);
   assert.equal(STRINGS.en[CHARACTERS.milo.name], "Milo");
-  assert.deepEqual(CHARACTERS.milo.card.map(key => STRINGS.en[key]), ["I’ve been waiting, like, all day.", "Are you ready to play already?"]);
+  assert.deepEqual(CHARACTERS.milo.card.map(key => STRINGS.en[key]), ["Milo volunteered before we finished asking.", "He’s been waiting all day for someone to keep up."]);
   assert.equal(STRINGS.en.pickStart.replace("{name}", "Gary"), "Play with Gary");
   assert.equal(STRINGS.en.pickStart.replace("{name}", "Milo"), "Play with Milo");
   // The deliberately odd line stays odd.
@@ -100,7 +101,7 @@ test("Milo's old one-line script is gone; every Milo line is his name, card, rat
   const milo = CHARACTERS.milo;
   for (const lang of ["en", "fr"]) {
     for (const key of OLD_MILO_KEYS) assert.equal(STRINGS[lang][key], undefined, `${lang}.${key} is gone`);
-    for (const key of Object.keys(STRINGS[lang]).filter(k => k.startsWith("milo"))) assert.ok([milo.name, ...milo.card, ...milo.rating, milo.replay.kicker, milo.replay.cta, milo.meetAgain].includes(key), `${lang}.${key} is not his name, card, rating or "Meet Milo again"`);
+    for (const key of Object.keys(STRINGS[lang]).filter(k => k.startsWith("milo"))) assert.ok([milo.name, ...milo.card, ...milo.replay.lines, ...milo.rating, milo.replay.kicker, milo.replay.cta, milo.meetAgain].includes(key), `${lang}.${key} is not his name, card, rating or "Meet Milo again"`);
     for (const key of characterKeys("milo")) assert.ok(STRINGS[lang][key], `${lang}.${key}`);
   }
   assert.deepEqual(milo.rating.map(key => STRINGS.en[key]), ["Okay, important question.", "How much fun was that?"], "his rating question, exactly");
@@ -125,9 +126,9 @@ test("shared Solo copy suits both characters; each character's own wording keeps
     assert.match(STRINGS[lang].soloBody, /Milo/);
   }
   assert.equal(STRINGS.en.soloTitle, "Solo Play");
-  assert.equal(STRINGS.en.soloBody, "Milo finished his homework early, so now he’s free to play.");
-  assert.equal(STRINGS.en.soloBody2, "We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building.");
-  assert.equal(STRINGS.en.soloStart, "Choose your player");
+  assert.equal(STRINGS.en.soloBody, "Milo volunteered before we finished asking.");
+  assert.equal(STRINGS.en.soloBody2, "Gary would like it noted that he was not consulted.");
+  assert.equal(STRINGS.en.soloStart, "Choose your teammate");
   for (const id of CHARACTER_IDS) {
     const other = CHARACTER_IDS.find(x => x !== id);
     for (const [base, own] of Object.entries(CHARACTERS[id].copy)) {

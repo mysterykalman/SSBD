@@ -21,7 +21,7 @@ const allText = page => page.evaluate(() => [document.body.textContent,
   ...[...document.querySelectorAll("[aria-label], [alt], [title]")].map(el => `${el.getAttribute("aria-label") || ""} ${el.getAttribute("alt") || ""} ${el.getAttribute("title") || ""}`)].join(" "));
 const portrait = (page, selector) => page.locator(selector).first().evaluate(el => el.querySelector("img")?.className || el.className);
 
-test("the homepage tile: 'Solo Play', Gary and Milo side by side at the same size, 'Choose your player' opens the picker", async () => {
+test("the homepage tile: 'Solo Play', Gary and Milo side by side at the same size, 'Choose your teammate' opens the picker", async () => {
   for (const viewport of [{width: 390, height: 844}, {width: 1280, height: 860}]) {
     const context = await browser.newContext({viewport, reducedMotion: "reduce"});
     const page = await context.newPage();
@@ -30,9 +30,9 @@ test("the homepage tile: 'Solo Play', Gary and Milo side by side at the same siz
     // The title, with the small Beta badge beside it.
     assert.equal((await page.locator(".solo-card h2").innerText()).trim(), "Solo Play BETA");
     assert.equal((await page.locator(".solo-card h2 .beta-badge").innerText()).trim(), "BETA");
-    assert.deepEqual((await page.locator(".solo-card .start-copy p").allInnerTexts()).map(x => x.trim()), ["Milo finished his homework early, so now he’s free to play.",
-      "We couldn’t find anyone else, so we got Gary from Accounting. HR said this counts as team building."]);
-    assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your player");
+    assert.deepEqual((await page.locator(".solo-card .start-copy p").allInnerTexts()).map(x => x.trim()), ["We found you someone to play with. Somehow, we found two.",
+      "Milo volunteered before we finished asking.", "Gary would like it noted that he was not consulted."]);
+    assert.equal((await page.locator("#startSolo").innerText()).trim(), "Choose your teammate");
     assert.doesNotMatch(await page.locator("main").innerText(), /Play Solo|Plays offline too|We heard you had no friends/);
     // Both portraits (the existing artwork), the same size, side by side, neither on top of the other.
     const pair = await page.$$eval("#soloPair .badge", badges => badges.map(b => ({art: b.querySelector("img")?.className || "", box: b.getBoundingClientRect().toJSON()})));
@@ -64,7 +64,7 @@ test("the picker: 'Who do you want to play with?', two big cards, a clear select
     assert.equal((await page.locator('label[data-character="gary"]').innerText()).trim().replace(/\s+/g, " "),
       "Gary We heard you had no friends, so we lured Gary over from Accounting with the promise of cake. There is no cake.");
     assert.equal((await page.locator('label[data-character="milo"]').innerText()).trim().replace(/\s+/g, " "),
-      "Milo I’ve been waiting, like, all day. Are you ready to play already?");
+      "Milo Milo volunteered before we finished asking. He’s been waiting all day for someone to keep up.");
     assert.deepEqual(await page.locator(".pick-name").allInnerTexts(), ["Gary", "Milo"]);
     assert.doesNotMatch(picker, OLD_MILO);
     assert.doesNotMatch(picker, /say hi|meet your/i);
@@ -237,8 +237,8 @@ test("the built app: the new cards are in it; the old tile copy and Milo's old w
   assert.ok(bundle.includes("We heard you had no friends, so we lured Gary over from Accounting with the promise of cake."));
   assert.ok(bundle.includes("been waiting, like, all day."), "Milo's card");
   assert.ok(bundle.includes("since, like, five minutes before we started."), "Milo's narrative");
-  assert.ok(bundle.includes("Solo Play") && bundle.includes("Choose your player") && bundle.includes("HR said this counts as team building."));
-  for (const old of ["Hang out with Milo or Gary from Accounting.", "Friends not around?", "Choose someone who claims to know you well.", "Time to investigate."]) assert.ok(!bundle.includes(old), `"${old}" is still in the app`);
+  assert.ok(bundle.includes("Solo Play") && bundle.includes("Choose your teammate") && bundle.includes("Gary would like it noted that he was not consulted."));
+  for (const old of ["HR said this counts as team building.", "Milo finished his homework early", "Hang out with Milo or Gary from Accounting.", "Friends not around?", "Choose someone who claims to know you well.", "Time to investigate."]) assert.ok(!bundle.includes(old), `"${old}" is still in the app`);
 });
 
 test("the choice is remembered and preselected; Play again keeps Milo and he greets the rematch", async () => {

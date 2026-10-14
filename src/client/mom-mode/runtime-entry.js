@@ -16,7 +16,7 @@ function guessState(action){lastGuess=action;return{kind:'guess',text:action.tex
 function stumpedState(action){lastGuess=null;return{kind:'result',correct:false,stumped:true,guess:null,turns:action.turns,questionsAsked:action.turns,continueCost:action.continueCost||0,score:action.score,fast:false,long:true};}
 function stateFor(action){pending=action;if(action.kind==='hunch')return hunchState(action);if(action.kind==='guess')return guessState(action);if(action.kind==='stumped')return stumpedState(action);return questionState(action);}
 
-function startGame(){api=createMomRuntimeGame(runtime,{budget:20,noise:0.06,guessThreshold:0.92,minGuessQuestions:5,continuePrice:2});lastGuess=null;return stateFor(api.choose());}
+function startGame(){api=createMomRuntimeGame(runtime,{budget:20,guessThreshold:0.92,minGuessQuestions:5,continuePrice:2});lastGuess=null;return stateFor(api.choose());}
 function getNextQuestion(){if(!api)return startGame();return stateFor(api.choose());}
 function submitAnswer(answer){if(!api||!pending||pending.kind!=='question')throw new Error('No Mom Mode question is waiting for an answer');if(!supportedAnswers.includes(answer))throw new Error('Unsupported Mom Mode answer');return stateFor(api.answer(pending,answer));}
 function makeGuess(){if(!api||!pending||pending.kind!=='hunch')throw new Error('Pam does not have a hunch to guess from');return stateFor(api.commitGuess(pending));}

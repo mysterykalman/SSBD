@@ -58,6 +58,7 @@ function branchEligibility(runtime,questionIndexValue,confirmedYes){
   }
   return{eligible:true,reason:'branch_ok'};
 }
+function normalizedText(text){return String(text||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
 function renderFacetText(template,value){
   const article=/^[aeiou]/i.test(value)?'an':'a';
   return String(template||'Is it {value}?').replaceAll('{value}',String(value)).replaceAll('{article}',article);
@@ -149,6 +150,8 @@ export function createMomRuntimeReasoner(runtime){
     const asked=context.asked||new Set();
     const confirmedYes=context.confirmedYes||new Set();
     if(asked.has(questionIndexValue))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'already_asked'};
+    // Several questions share the same wording under different ids: never ask the same words twice.
+    if((context.askedTexts||new Set()).has(normalizedText(question.q)))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'already_asked_text'};
     if(question.requires!=null&&!confirmedYes.has(question.requires))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'requires_branch'};
     const branch=branchEligibility(runtime,questionIndexValue,confirmedYes);
     if(!branch.eligible)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:branch.reason};
@@ -172,6 +175,7 @@ export function createMomRuntimeReasoner(runtime){
     if(!definition||!yesIndexes?.length)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'missing_facet'};
     const key=`facet:${type}:${value}`;
     if((context.askedFacetKeys||new Set()).has(key))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'already_asked'};
+    if((context.askedTexts||new Set()).has(normalizedText(renderFacetText(definition.question,value))))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'already_asked_text'};
     const total=totalBelief(belief);if(total<=0)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'no_information'};
     const yesMass=sumBelief(belief,yesIndexes);
     if(yesMass<=1e-12)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'no_information'};
@@ -221,14 +225,17 @@ export function createMomRuntimeReasoner(runtime){
 
   function bestQuestion(belief,context={}){
     const staticBest=bestStaticQuestion(belief,context);
-    const facetBest=bestFacetQuestion(belief,context);
+    // Specific "Is it a ___?" probes only once she has narrowed things down (focus = belief held by
+    // her top candidates); while she is still lost, broader questions find the way back.
+    const focused=(context.focus??1)>=(context.facetFocus??0.45);
+    const facetBest=focused||!staticBest?bestFacetQuestion(belief,context):null;
     if(!staticBest)return facetBest;
     if(!facetBest)return staticBest;
     if(facetBest.score>staticBest.score+1e-12)return facetBest;
     return staticBest;
   }
 
-  return{runtime,questionIndex,truthAt,appliesToConcept,semanticCoverage,knownCoverage,questionGain,questionScore,facetQuestionScore,bestStaticQuestion,bestFacetQuestion,bestQuestion};
+  return{runtime,questionIndex,normalizedText,truthAt,appliesToConcept,semanticCoverage,knownCoverage,questionGain,questionScore,facetQuestionScore,bestStaticQuestion,bestFacetQuestion,bestQuestion};
 }
 
 export function initialRuntimeBelief(runtime){

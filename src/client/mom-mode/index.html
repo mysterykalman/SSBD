@@ -1,21 +1,21 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f3e6d2"><title>Stump Mom | Same Same but Different</title>
-<meta name="description" content="Stump Mom in 20 questions before she figures out what you're thinking.">
+<meta name="theme-color" content="#f3e6d2"><title>Don’t Tell Me | Same Same but Different</title>
+<meta name="description" content="Don’t Tell Me: stump Pam in 20 questions before she figures out what you’re thinking.">
 <link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="./design.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./character.css">
 </head><body>
-<a class="skip" href="#mom-app">Skip to Stump Mom</a>
+<a class="skip" href="#mom-app">Skip to the game</a>
 <header class="topbar">
  <a class="brand" href="/" aria-label="Same Same but Different"><img class="brand-logo" src="/logo.webp" alt="" aria-hidden="true" width="680" height="526"></a>
  <div class="top-actions"><a class="btn small ghost" href="/"><span aria-hidden="true">←</span> Games</a><button class="btn small ghost" id="rules-btn" type="button" aria-haspopup="dialog" aria-controls="rules-dialog"><span aria-hidden="true">?</span> How to play</button></div>
 </header>
 <main id="mom-app" class="wrap">
-<div class="mode-heading"><p class="eyebrow">MOM MODE</p><h1>Stump Mom<span class="title-dot">.</span></h1><p class="mode-subtitle">Think of something. She gets 20 questions and one guess.</p></div>
-<section class="card game-card" data-character="pam" aria-label="Stump Mom game">
+<div class="mode-heading"><p class="eyebrow">DON’T TELL ME</p><h1>Stump Pam<span class="title-dot">.</span></h1><p class="mode-subtitle">Think of something. She gets 20 questions and one guess.</p></div>
+<section class="card game-card" data-character="pam" aria-label="Don’t Tell Me game">
  <aside class="pam-card" aria-label="About Mom">
   <div class="portrait-frame"><img class="portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="720" height="900"></div>
-  <div class="pam-copy"><h2>Mom</h2><p class="pam-role">Hi, I’m Pam.</p><p id="pam-bio" class="pam-teaser"></p></div>
+  <div class="pam-copy"><h2>Pam</h2><p class="pam-role">Hi, honey. I’m Pam.</p><p id="pam-bio" class="pam-teaser"></p></div>
  </aside>
  <div class="pam-play">
   <div class="game-top"><span id="stage-label" class="eyebrow">ROUND SETUP</span><span id="question-counter" class="counter" hidden></span></div>
@@ -36,7 +36,8 @@
   <div id="result-actions" class="actions" hidden><button class="btn primary big" id="again-btn" type="button">Play again</button><a class="btn ghost big" href="/">Back to games</a></div>
  </div>
 </section>
-<section class="score-panel" aria-label="Score and streak">
+<!-- Score, rank and streak are still kept (and synced) here, but only shown on /review. -->
+<section class="score-panel" aria-label="Score and streak" hidden>
  <div class="score-main"><span class="score-label">SCORE</span><strong id="pam-score">0</strong><span id="pam-rank" class="rank-badge">Look at You</span></div>
  <div class="score-side"><div class="mini-stat"><span>Streak</span><strong id="pam-streak">0</strong></div><div class="mini-stat"><span>Best round</span><strong id="pam-best">0</strong></div></div>
  <div class="rank-progress-wrap"><div class="rank-progress-copy"><span id="rank-progress-label">Next rank: Okay, Sweetie · 100 points</span><span id="best-streak-label">Best streak: 0</span></div><div class="rank-progress"><div id="rank-progress-fill"></div></div></div>
@@ -47,14 +48,14 @@
  <div class="character-ribbon">MEET YOUR OPPONENT</div>
  <div class="character-portrait-frame"><img class="character-portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="720" height="900"></div>
  <h2 id="pam-intro-title">Pam</h2>
- <p class="character-role">Hi, honey. I’m Pam.<br>I get 20 questions and one guess.<br>Try not to make that face. It gives things away.</p>
+ <p class="character-role">Hi, honey. I’m Pam.<br>I get 20 questions and one guess.</p>
  <button id="pam-intro-play" class="btn primary big character-cta" type="button">Okay, Mom. Let’s play.</button>
 </dialog>
 <dialog id="rules-dialog" class="rules-dialog" aria-labelledby="rules-title">
- <div class="rules-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rules-title">Stump Mom</h2></div><button id="rules-close" class="dialog-close" type="button" aria-label="Close rules">×</button></div>
+ <div class="rules-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rules-title">Don’t Tell Me</h2></div><button id="rules-close" class="dialog-close" type="button" aria-label="Close rules">×</button></div>
  <div class="rule-list">
   <div><strong>Write it down first.</strong><p>Lock in the thing you’re thinking of before the questions start. No changing it halfway through.</p></div>
-  <div><strong>20 questions. One guess.</strong><p>She can guess once. If all 20 questions are gone and she still won’t lock in an answer, you stumped her.</p></div>
+  <div><strong>20 questions. One guess.</strong><p>She gets one guess, and she always takes it by question 20. If it’s wrong, you stumped her.</p></div>
   <div><strong>Every question is worth a point.</strong><p>A wrong guess or a full stump adds 10.</p></div>
   <div><strong>Push your luck.</strong><p>When she has a strong hunch, make her guess or buy another question for 2 points.</p></div>
  </div>

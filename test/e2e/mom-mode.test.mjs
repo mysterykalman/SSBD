@@ -130,7 +130,7 @@ test("existing home still exposes Solo and Together plus live Mom Mode",async()=
  assert.ok(await page.locator('#createFamily').count());
  await page.waitForSelector('.mom-card a.btn');
  assert.equal(await page.locator('.mom-card a.btn').getAttribute('href'),'/mom/');
- assert.match(await page.locator('.mom-card a.btn').textContent(),/Play Mom Mode/);
+ assert.match(await page.locator('.mom-card a.btn').textContent(),/^Stump Pam$/);
  assert.equal(await page.locator('.mom-card-art').evaluate(img=>img.naturalWidth>0),true);
  await page.close();
 });
