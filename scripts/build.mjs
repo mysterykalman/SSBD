@@ -27,13 +27,19 @@ for (const {asset, selectors, fill = true, repeat = "round stretch"} of feltSkin
   const m = feltSlices[asset];
   if (!m) throw new Error(`felt skin "${asset}" has no processed image`);
   const [t, r, b, l] = m.slice;
-  const [bt, , bb] = m.body;
+  const [, bt, , bb] = m.body; // body insets are [left, top, right, bottom]
   feltCss.push(`${selectors.join(",")}{--skin-img:url("/felt/${asset}.webp");--skin-slice:${t} ${r} ${b} ${l}${fill ? " fill" : ""};--skin-wt:${round4(t / m.h)};--skin-wr:${round4(r / m.h)};--skin-wb:${round4(b / m.h)};--skin-wl:${round4(l / m.h)};--skin-bt:${round4(bt / m.h)};--skin-bb:${round4(bb / m.h)};--skin-repeat:${repeat}}`);
 }
 // Every skinned component: the felt piece replaces its border, background and shadow; text stays live.
 const W = side => `calc(var(--felt-h, 48px) * var(--skin-w${side}))`;
 const allSkinned = [...new Set(feltSkins.skins.flatMap(skin => skin.selectors))];
 feltCss.splice(1, 0, `${allSkinned.join(",")}{border:0 solid transparent!important;border-image-source:var(--skin-img)!important;border-image-slice:var(--skin-slice)!important;border-image-width:${W("t")} ${W("r")} ${W("b")} ${W("l")}!important;border-image-outset:0!important;border-image-repeat:var(--skin-repeat)!important;background:none!important;box-shadow:none!important}`);
+// Text sits in the optical centre of each piece: the vertical padding is worked out from the
+// piece's own shape (its top edge and the shadow under it) and the text's line height, so a
+// single line is exactly centred on the felt and longer text grows evenly.
+const padded = [...new Set(feltSkins.skins.filter(skin => skin.fill !== false).flatMap(skin => skin.selectors))];
+const inner = "(var(--felt-h, 48px) * (1 - var(--skin-bt) - var(--skin-bb)) - 1lh) / 2";
+feltCss.push(`${padded.join(",")}{min-height:var(--felt-h, 48px);padding-top:calc(${inner} + var(--felt-h, 48px) * var(--skin-bt))!important;padding-bottom:calc(${inner} + var(--felt-h, 48px) * var(--skin-bb))!important}`);
 // Pieces drawn without their middle (the speech bubble): a flat felt-coloured centre underneath,
 // inset to half of each edge so it never shows outside the rounded shape.
 for (const {selectors, fill = true, center} of feltSkins.skins) {

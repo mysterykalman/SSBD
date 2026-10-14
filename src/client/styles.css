@@ -59,7 +59,6 @@ main:focus { outline: none; }
   box-shadow: 0 0 0 4px #fffaf1, 0 0 0 6px #e7d2b4, 0 14px 20px -12px rgba(60, 38, 26, .55);
 }
 .standee > .gary-art-wrap, .standee > img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; overflow: hidden; }
-.standee .gary-art { object-position: 50% 0; }
 .standee::after {
   --felt-h: 32px;
   content: attr(data-name);
@@ -367,7 +366,6 @@ main:focus { outline: none; }
 .pick-card:has(.pick-radio:checked)::after { content: "✓"; position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--green); color: #fff; font-weight: 900; }
 .pick-card:has(.pick-radio:focus-visible) { outline: 3px solid var(--focus); outline-offset: 4px; }
 .pick-card .pick-art { width: clamp(104px, 30vw, 146px); height: clamp(120px, 34vw, 168px); border-radius: 74px 74px 22px 22px; background: radial-gradient(circle at 50% 26%, var(--char-glow, #fff), transparent 58%), var(--char-bg, #f6ead7); box-shadow: 0 0 0 4px #fffaf1, 0 0 0 6px #e7d2b4; }
-.pick-card .pick-art .gary-art { object-position: 50% 0; }
 .pick-name { font-size: clamp(1.1rem, 4.4vw, 1.35rem); font-weight: 900; }
 .pick-copy { display: grid; gap: 4px; }
 .pick-line { font-size: .95rem; line-height: 1.35; }

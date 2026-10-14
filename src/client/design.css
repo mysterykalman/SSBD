@@ -248,3 +248,12 @@ dialog::backdrop { background: rgba(59, 42, 36, .45); backdrop-filter: blur(3px)
 @media (forced-colors: active) {
   .card, .panel, .dialog { border-color: CanvasText; }
 }
+
+/* ---------- character art (src/client/gary-art.js) ---------- */
+/* Portraits are never cropped or stretched: the whole character fits its frame, standing on its
+   bottom edge, at no more than the size its source supports. */
+.gary-art-wrap { position: relative; display: block; overflow: hidden; }
+.gary-art { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; user-select: none; -webkit-user-drag: none; }
+.standee .gary-art, .pick-art .gary-art { object-fit: contain; object-position: 50% 100%; }
+.gary-art-wrap.art-missing .gary-art { display: none; }
+.art-fallback { display: grid; place-items: center; width: 100%; height: 100%; color: var(--char, var(--ink)); font-weight: 900; font-size: 2.4rem; line-height: 1; }
