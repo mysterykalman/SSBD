@@ -93,7 +93,7 @@ function renderState(state){
   progress(state.questionsAsked,state.maxQuestions);text("stage-label","FINAL GUESS");hide("result-points",true);dialogue(script.guessLead(state.questionsAsked),state.text,"One guess. No take-backs.");actions("guess-actions");return;
  }
  progress(state.questionsAsked??state.turns,20);text("stage-label",state.correct?"ROUND LOST":"ROUND WON");
- let question;if(state.stumped)question="Okay. I don't know.";else if(state.correct)question=`She got it: ${state.guess}.`;else question=`She guessed ${state.guess}. Wrong.`;
+ let question;if(state.stumped)question=script.copy.stumpedResult;else if(state.correct)question=`She got it: ${state.guess}.`;else question=`She guessed ${state.guess}. Wrong.`;
  const summary=recordResult(state);let aside=script.resultAside(state);if(summary.rankChanged){const milestone=script.milestoneLine(summary.newRank.min);if(milestone)aside=milestone;}
  dialogue(script.resultLine(state),question,aside);showResultPoints(summary);actions("result-actions");
 }
