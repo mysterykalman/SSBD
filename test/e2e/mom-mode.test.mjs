@@ -66,7 +66,7 @@ test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persis
   await page.waitForSelector('#result-actions:not([hidden])');
   assert.match(await page.locator('#pam-question').textContent(),/She got it:/i);
  }else{
-  assert.match(await page.locator('#pam-question').textContent(),/I don't know/i);
+  assert.match(await page.locator('#pam-question').textContent(),/I don[’']t know/i);
  }
  assert.match(await page.locator('#result-points').textContent(),/points/i);
  const scoreAfterFirst=Number((await page.locator('#pam-score').textContent()).replace(/,/g,''));
@@ -88,7 +88,7 @@ test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persis
   assert.equal(await page.locator('#answer-actions:not([hidden])').count(),0);
   assert.equal(await page.locator('#guess-actions:not([hidden])').count(),0);
  }else{
-  assert.match(await page.locator('#pam-question').textContent(),/I don't know/i);
+  assert.match(await page.locator('#pam-question').textContent(),/I don[’']t know/i);
  }
  assert.match(await page.locator('#result-points').textContent(),/points/i);
  assert.ok(Number(await page.locator('#pam-streak').textContent())>=1);

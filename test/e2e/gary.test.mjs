@@ -55,7 +55,7 @@ test("first Solo game introduces Gary once; the intro can be reopened from the p
   await page.waitForSelector("#garyIntro[open][data-character=milo]");
   const milo = await page.locator("#garyIntro").innerText();
   assert.match(milo, /YOUR TEAMMATE/i);
-  assert.match(milo, /I’ve been waiting, like, all day\.\s+Are you ready to play already\?/);
+  assert.match(milo, /I’ve been ready forever\.\s+You coming or what\?/);
   assert.match(await page.locator("#garyIntroGo").innerText(), /Okay, Milo\. Let’s play!/);
   await page.click("#garyIntroGo");
   await page.waitForSelector("#garyIntro", {state: "detached"});

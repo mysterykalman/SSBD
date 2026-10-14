@@ -163,7 +163,7 @@ test("an already-played word: one plain Together message, and each character's o
   // Gary rotates through his four exact lines (see gary-narrative.test.mjs), Milo through his three.
   assert.deepEqual(oneOffKeys("alreadyUsed").map(key => STRINGS.en[key]), ["We already used that one. I checked.", "That word’s already been played. Unfortunately, I remember.", "We used that already. Try another one.", "Already played. I have notes."]);
   const milo = MILO_NARRATIVE.oneOffKeys("alreadyUsed");
-  assert.deepEqual(milo.map(key => STRINGS.en[key]), ["We used that one already! Pick another.", "Already played. My memory works sometimes.", "That one’s taken. Try another."]);
+  assert.deepEqual(milo.map(key => STRINGS.en[key]), ["We already used that!", "Nope. Taken. Pick another.", "That one again? Come on."]);
   for (const lang of ["en", "fr"]) {
     for (const key of ["errALREADY_USED", ...milo, ...oneOffKeys("alreadyUsed")]) assert.ok(STRINGS[lang][key].length <= 70, `${lang}.${key} is short enough for gameplay`);
     for (const key of oneOffKeys("alreadyUsed")) assert.doesNotMatch(STRINGS[lang][key], /!/, "Gary does not exclaim");
@@ -200,10 +200,10 @@ test("Gary's voice: dry, reluctant, understated; never excited, gloomy or mean; 
 
 test("Milo's one-off moments: rematch greeting, waiting, typo and repeated-word lines are his own exact lines", () => {
   const line = key => STRINGS.en[key];
-  assert.deepEqual(CHARACTERS.milo.lines.rematch.map(line), ["Again? Yes.", "Okay, round two.", "Absolutely. I’m ready.", "Again. I think we can do better."]);
+  assert.deepEqual(CHARACTERS.milo.lines.rematch.map(line), ["Again? YES.", "Okay, go go go.", "Absolutely. I’m ready.", "Rematch. Right now."]);
   for (const r of [0, 0.3, 0.6, 0.99]) assert.ok(CHARACTERS.milo.lines.rematch.includes(rematchLine("milo", () => r)));
-  assert.deepEqual(MILO_NARRATIVE.oneOffKeys("waiting").map(line), ["No rush. I’m still thinking about everything we’ve already said.", "I’m ready whenever you are.", "Take your time. I already picked mine.", "I am being extremely patient right now."]);
-  assert.deepEqual(MILO_NARRATIVE.oneOffKeys("typo").map(line), ["Ohhh, okay. That makes sense.", "Yep. That’s the one I thought you meant.", "Got it."]);
+  assert.deepEqual(MILO_NARRATIVE.oneOffKeys("waiting").map(line), ["You’re still thinking?", "I already picked mine like twelve years ago.", "Come onnn.", "Hurry up, my brain is getting bored.", "I’m waiting.", "Catch up!"]);
+  assert.deepEqual(MILO_NARRATIVE.oneOffKeys("typo").map(line), ["Ohhh. Yep. That makes way more sense.", "Okay, THAT word.", "Got it."]);
   // Rotation per game: the n-th line of each one-off pool cycles through all of them.
   for (const kind of MILO_NARRATIVE.ONE_OFF) {
     const keys = MILO_NARRATIVE.oneOffKeys(kind);

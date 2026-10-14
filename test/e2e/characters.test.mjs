@@ -235,8 +235,8 @@ test("the built app: the new cards are in it; the old tile copy and Milo's old w
     assert.ok(!bundle.includes(old), `"${old}" is still in the app`);
   }
   assert.ok(bundle.includes("We heard you had no friends, so we lured Gary over from Accounting with the promise of cake."));
-  assert.ok(bundle.includes("been waiting, like, all day."), "Milo's card");
-  assert.ok(bundle.includes("since, like, five minutes before we started."), "Milo's narrative");
+  assert.ok(bundle.includes("He’s been waiting all day for someone to keep up."), "Milo's card");
+  assert.ok(bundle.includes("I swear the answer is running away from us."), "Milo's narrative");
   assert.ok(bundle.includes("Solo Play") && bundle.includes("Choose your teammate") && bundle.includes("Gary would like it noted that he was not consulted."));
   for (const old of ["HR said this counts as team building.", "Milo finished his homework early", "Hang out with Milo or Gary from Accounting.", "Friends not around?", "Choose someone who claims to know you well.", "Time to investigate."]) assert.ok(!bundle.includes(old), `"${old}" is still in the app`);
 });
