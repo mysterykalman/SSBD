@@ -29,13 +29,24 @@ SPECS = {
     "bubble-left": (230, "xy"),
     "panel-card": (560, "xy"),
 }
-# Variants recoloured from a source: name: (source, hue shift degrees, saturation x, value x)
+# Variants recoloured from a source (every pill, tile and chip is the same stitched shape, so one
+# shape serves every colour): name: (source, hue shift degrees, saturation x, value x)
 VARIANTS = {
     "tile-teal": ("tile-yellow", 128, 0.5, 0.8),
+    "tile-coral": ("tile-yellow", -42, 0.78, 0.95),
+    "tile-purple": ("tile-yellow", 222, 0.45, 0.9),
+    "tile-green": ("tile-yellow", 68, 0.45, 0.82),
+    "tile-blue": ("tile-yellow", 168, 0.42, 0.9),
     "chip-teal": ("chip-yellow", 128, 0.5, 0.8),
+    "chip-blue": ("chip-yellow", 168, 0.42, 0.9),
+    "chip-orange": ("chip-yellow", -14, 1.0, 1.0),
+    "btn-teal": ("btn-primary", 140, 0.5, 0.82),
+    "btn-purple": ("btn-primary", 228, 0.42, 0.92),
+    "btn-blue": ("btn-primary", 176, 0.45, 0.92),
     "btn-secondary-pressed": ("btn-secondary", 0, 1.08, 0.92),
     "chip-cream": ("tile-cream", 0, 1.0, 1.0),
 }
+CHIP_SOURCES = {"chip-cream", "chip-blue", "chip-orange", "chip-teal"}
 
 
 def load(path):
@@ -148,9 +159,15 @@ def process(name, a, body_h, axes):
         # Pills stretch vertically only in a thin band through the middle.
         top = int(by0 + (by1 - by0) * 0.42)
         bottom = H - int(by0 + (by1 - by0) * 0.58)
+    # The felt colour in the middle of the piece: drawn underneath it, so the hairline gaps a
+    # browser can leave between stretched sections never show the page through.
+    cy, cx = (by0 + by1) // 2, (bx0 + bx1) // 2
+    ry, rx = max(2, (by1 - by0) // 6), max(2, (bx1 - bx0) // 6)
+    core = a[cy - ry:cy + ry, cx - rx:cx + rx, :3].reshape(-1, 3)
+    center = "#%02x%02x%02x" % tuple(int(v) for v in np.median(core, axis=0))
     out = Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGBA")
     out.save(os.path.join(OUT, f"{name}.webp"), "WEBP", quality=86, method=6)
-    return {"w": W, "h": H, "slice": [top, right, bottom, left], "body": [int(bx0), int(by0), int(W - 1 - bx1), int(H - 1 - by1)]}
+    return {"w": W, "h": H, "slice": [top, right, bottom, left], "body": [int(bx0), int(by0), int(W - 1 - bx1), int(H - 1 - by1)], "center": center}
 
 
 def main(src):
@@ -164,7 +181,7 @@ def main(src):
         if name in files or base not in files:
             continue
         body_h, axes = SPECS[base]
-        if name == "chip-cream":
+        if name in CHIP_SOURCES:
             body_h = SPECS["chip-yellow"][0]
         manifest[name] = process(name, recolour(load(files[base]), hue, sat, val), body_h, axes)
     with open(os.path.join(OUT, "felt-slices.json"), "w") as fh:

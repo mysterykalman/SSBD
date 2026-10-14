@@ -1055,7 +1055,8 @@ function playPanel(view, move) {
   if (!waiting && left <= 3) panel.append(h("p", {class: "notice moves-warning", id: "movesWarning", role: "status"}, left > 1 ? t("movesWarning", {n: left}) : t("movesWarningLast")));
   if (!first) {
     // The "+" is glued to the second word so it never dangles at the end of a line.
-    panel.append(h("div", {class: "prompt", id: "prompt", lang: view.language},
+    // Each move's pair gets its own colours (yellow + teal, coral + blue, purple + yellow, green + coral).
+    panel.append(h("div", {class: "prompt", id: "prompt", lang: view.language, "data-tone": String((((move.number - 2) % 4) + 4) % 4)},
       h("span", {class: "tile"}, move.prompts[0]),
       h("span", {class: "join"}, h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "tile"}, move.prompts[1]))));
     if (!solo) panel.append(closeEnoughBlock(view, move));
