@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   auditMomKnowledge,
+  buildIdentityRepairTargets,
   buildRepairTargets,
+  conceptRootConflicts,
   duplicateQuestionGroups,
   normalizeQuestionText,
   questionAppliesToConcept,
@@ -54,4 +56,20 @@ test('repair targets skip known and inapplicable cells and rank by prior',()=>{
   assert.equal(targets[0].concept_id,'dog');
   assert.equal(targets.some(row=>row.concept_id==='chair'&&row.question_id==='fur'),false);
   assert.equal(targets.some(row=>row.concept_id==='dog'&&row.question_id==='animal'),false);
+});
+
+test('identity repair targets include zero-knowledge concepts',()=>{
+  const targets=buildIdentityRepairTargets(runtime,{limit:10});
+  assert.equal(targets.some(row=>row.concept_id==='chair'),false);
+  const blankRuntime={...runtime,concepts:[...runtime.concepts,{id:'mystery',name:'Mystery',category:'unknown',subcategory:null,prior:3,yes:[],no:[],maybe:[]}]};
+  const blankTargets=buildIdentityRepairTargets(blankRuntime,{limit:10});
+  assert.equal(blankTargets[0].concept_id,'mystery');
+  assert.equal(blankTargets[0].repair_reason,'zero_knowledge');
+});
+
+test('root conflict detection identifies incompatible positive domain roots',()=>{
+  const conflictRuntime={...runtime,concepts:[{id:'odd',name:'Odd',category:'animal',subcategory:null,prior:1,yes:[0],no:[],maybe:[]}],questions:[...runtime.questions,{id:'object',q:'Is it a physical object?',group:'domain',family:'ontology',breadth:'broad',requires:null,appliesTo:[],excludes:[]}]};
+  conflictRuntime.concepts[0].yes.push(4);
+  const conflicts=conceptRootConflicts(conflictRuntime);
+  assert.deepEqual(conflicts[0].roots,['animal','object']);
 });
