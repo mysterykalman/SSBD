@@ -20,11 +20,19 @@ function guessText(concept){
   return `Is it ${'aeiou'.includes(lower[0])?'an':'a'} ${lower}?`;
 }
 
+function naturalQuestionText(text,id='',value=''){
+  const raw=String(text||'').trim();
+  const key=String(id||'').toLowerCase();
+  const facetValue=String(value||'').toLowerCase();
+  if(key==='clothing'||facetValue==='clothing'||/^is it an? clothing\??$/i.test(raw))return 'Is it clothing or something you wear?';
+  return raw;
+}
+
 export function createMomRuntimeGame(runtime,opts={}){
   const reasoner=createMomRuntimeReasoner(runtime);
   const game={
     runtime,reasoner,belief:initialRuntimeBelief(runtime),
-    asked:new Set(),askedFacetKeys:new Set(),answers:new Map(),confirmedYes:new Set(),
+    asked:new Set(),askedFacetKeys:new Set(),answers:new Map(),confirmedYes:new Set(),confirmedFacetYes:new Set(),
     turn:0,budget:opts.budget||20,noise:opts.noise??0.06,guessThreshold:opts.guessThreshold??0.92,
     minGuessQuestions:opts.minGuessQuestions??5,continuePrice:opts.continuePrice??2,pending:null,status:'playing',
     history:/** @type {Array<Record<string, any>>} */([]),surprise:false,guessUsed:false,continueCost:0,deferGuessOnce:false,
@@ -47,7 +55,8 @@ export function createMomRuntimeGame(runtime,opts={}){
   function context(){
     return{
       turn:game.turn,noise:game.noise,asked:game.asked,askedFacetKeys:game.askedFacetKeys,
-      confirmedYes:game.confirmedYes,recentQuestionIndexes:game.recentQuestionIndexes,recentFacetTypes:game.recentFacetTypes
+      confirmedYes:game.confirmedYes,confirmedFacetYes:game.confirmedFacetYes,
+      recentQuestionIndexes:game.recentQuestionIndexes,recentFacetTypes:game.recentFacetTypes
     };
   }
   function facetTruth(conceptIndex,type,value){
@@ -123,8 +132,8 @@ export function createMomRuntimeGame(runtime,opts={}){
     return{kind:'stumped',turns:game.turn,continueCost:game.continueCost,score:scoreFor(game.turn,false,true,game.continueCost)};
   }
   function questionAction(best){
-    if(best.kind==='facet')return{kind:'question',source:'facet',key:best.key,type:best.type,value:best.value,id:best.key,text:best.text,gain:best.gain,naturalScore:best.score,semanticCoverage:best.semantic,knownCoverage:best.known,confidence:top().p};
-    return{kind:'question',source:'static',index:best.index,id:best.question.id,text:best.question.q,gain:best.gain,naturalScore:best.score,semanticCoverage:best.semantic,knownCoverage:best.known,confidence:top().p};
+    if(best.kind==='facet')return{kind:'question',source:'facet',key:best.key,type:best.type,value:best.value,id:best.key,text:naturalQuestionText(best.text,best.key,best.value),gain:best.gain,naturalScore:best.score,semanticCoverage:best.semantic,knownCoverage:best.known,confidence:top().p};
+    return{kind:'question',source:'static',index:best.index,id:best.question.id,text:naturalQuestionText(best.question.q,best.question.id),gain:best.gain,naturalScore:best.score,semanticCoverage:best.semantic,knownCoverage:best.known,confidence:top().p};
   }
   function choose(){
     if(game.status!=='playing')throw new Error('game finished');
@@ -152,7 +161,10 @@ export function createMomRuntimeGame(runtime,opts={}){
     if(question.source==='facet')game.askedFacetKeys.add(question.key);
     else if(Number.isInteger(question.index))game.asked.add(question.index);
     game.answers.set(answerKey(question),value);
-    if((value==='yes'||value==='probably')&&question.source!=='facet'&&Number.isInteger(question.index))game.confirmedYes.add(question.index);
+    if(value==='yes'||value==='probably'){
+      if(question.source==='facet')game.confirmedFacetYes.add(question.key);
+      else if(Number.isInteger(question.index))game.confirmedYes.add(question.index);
+    }
     game.turn++;
     game.surprise=false;
     if(mix){

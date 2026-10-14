@@ -2,7 +2,7 @@
 "use strict";
 const script=window.PamCopy,adapter=window.MomModeAdapter;
 const byId=id=>document.getElementById(id);const text=(id,value)=>{byId(id).textContent=value??"";};const hide=(id,value)=>{byId(id).hidden=Boolean(value);};
-const STORAGE_KEY="ssbd:mom-progress:v1";
+const STORAGE_KEY="ssbd:mom-progress:v1",MOM_LOG_KEY="ssbd.mom.gamelog.v1",MOM_LOG_KEEP=50;
 const RANKS=[
  {min:0,name:"Look at You"},
  {min:100,name:"Okay, Sweetie"},
@@ -17,7 +17,10 @@ function loadProgress(){
  try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null")||{};return{totalPoints:cleanNumber(raw.totalPoints),games:cleanNumber(raw.games),streak:cleanNumber(raw.streak),bestStreak:cleanNumber(raw.bestStreak),bestRound:cleanNumber(raw.bestRound),updatedAt:String(raw.updatedAt||"")};}
  catch{return{totalPoints:0,games:0,streak:0,bestStreak:0,bestRound:0,updatedAt:""};}
 }
-let profile=loadProgress(),stage="intro",secretWord="";
+function loadMomLog(){try{const raw=JSON.parse(localStorage.getItem(MOM_LOG_KEY)||"null");return raw?.v===1&&Array.isArray(raw.games)?raw:{v:1,games:[]};}catch{return{v:1,games:[]};}}
+function saveMomLog(data){try{data.games=data.games.slice(-MOM_LOG_KEEP);localStorage.setItem(MOM_LOG_KEY,JSON.stringify(data));}catch{}}
+function newMomId(){try{return crypto.randomUUID();}catch{return `mom-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;}}
+let profile=loadProgress(),stage="intro",secretWord="",momRun=null;
 function saveProgress(){profile.updatedAt=new Date().toISOString();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));window.dispatchEvent(new CustomEvent("ssbd:progress-changed"));}catch{}}
 function rankState(points){let current=RANKS[0],next=null;for(let i=0;i<RANKS.length;i++){if(points>=RANKS[i].min)current=RANKS[i];else{next=RANKS[i];break;}}return{current,next};}
 function renderProfile(){
@@ -34,17 +37,52 @@ function recordResult(state){
  const afterRank=rankState(profile.totalPoints).current,rankChanged=afterRank.min>beforeRank.min;
  return{earned,before,after:profile.totalPoints,rankChanged,newRank:rankChanged?afterRank:null};
 }
+function persistMomRun(){
+ if(!momRun)return;
+ const data=loadMomLog();
+ const index=data.games.findIndex(game=>game.id===momRun.id);
+ if(index>=0)data.games[index]=momRun;else data.games.push(momRun);
+ saveMomLog(data);
+}
+function beginMomRun(){
+ const snap=adapter.debugSnapshot?.(5)||{};
+ momRun={id:newMomId(),startedAt:new Date().toISOString(),endedAt:null,secretWord,runtime:snap.runtime||null,events:[],result:null};
+ persistMomRun();
+}
+function recordMomState(state){
+ if(!momRun||!state)return;
+ const snap=adapter.debugSnapshot?.(5)||{};
+ const base={kind:state.kind,at:new Date().toISOString(),confidence:state.confidence??null,topCandidates:snap.topCandidates||[]};
+ if(state.kind==='question'){
+  const existing=momRun.events.find(event=>event.kind==='question'&&event.number===state.number&&event.id===state.questionId);
+  if(!existing)momRun.events.push({...base,number:state.number,id:state.questionId||null,text:state.text,source:state.source||null,gain:state.gain??null,naturalScore:state.naturalScore??null,semanticCoverage:state.semanticCoverage??null,knownCoverage:state.knownCoverage??null,answer:null});
+ }else if(state.kind==='hunch')momRun.events.push({...base,questionsAsked:state.questionsAsked,reason:state.reason||null});
+ else if(state.kind==='guess')momRun.events.push({...base,questionsAsked:state.questionsAsked,text:state.text,guess:state.guess,reason:state.guessReason||null});
+ else if(state.kind==='result'){
+  momRun.events.push({...base,questionsAsked:state.questionsAsked??state.turns,correct:state.correct,stumped:state.stumped,guess:state.guess||null,score:state.score});
+  momRun.result={correct:Boolean(state.correct),stumped:Boolean(state.stumped),guess:state.guess||null,questionsAsked:state.questionsAsked??state.turns,score:state.score};
+  momRun.endedAt=new Date().toISOString();
+ }
+ persistMomRun();
+}
+function recordMomAnswer(value){
+ if(!momRun)return;
+ for(let i=momRun.events.length-1;i>=0;i--){const event=momRun.events[i];if(event.kind==='question'&&!event.answer){event.answer=value;event.answeredAt=new Date().toISOString();break;}}
+ persistMomRun();
+}
 window.addEventListener("ssbd:cloud-restored",()=>{profile=loadProgress();renderProfile();});
 text("pam-bio",script.copy.bio);renderProfile();
 function actions(active){for(const id of ["intro-actions","answer-actions","hunch-actions","guess-actions","result-actions"])hide(id,id!==active);}
-function progress(number,max){const limit=Number.isFinite(max)&&max>0?max:20,n=Math.min(Math.max(Number(number)||0,0),limit);byId("progress-fill").style.width=(n/limit*100)+"%";const track=document.querySelector(".progress-track");track.setAttribute("aria-valuemax",String(limit));track.setAttribute("aria-valuenow",String(n));text("question-counter",n?`${n} / ${limit}`:"");hide("question-counter",!n);}
+// 20-question progress as felt tokens (one per question; used ones filled, the last few warmer), not a bar.
+function progress(number,max){const limit=Number.isFinite(max)&&max>0?max:20,n=Math.min(Math.max(Number(number)||0,0),limit);const dots=byId("progress-fill");if(dots.childElementCount!==limit){dots.replaceChildren(...Array.from({length:limit},()=>document.createElement("i")));}[...dots.children].forEach((dot,i)=>{dot.className=i<n?(i>=limit-4?"used late":"used"):i===n&&stage==="question"?"next":"";});const track=document.querySelector(".progress-track");track.setAttribute("aria-valuemax",String(limit));track.setAttribute("aria-valuenow",String(n));text("question-counter",n?`${n} / ${limit}`:"");hide("question-counter",!n);}
 function dialogue(lead,question,aside){text("pam-lead",lead);text("pam-question",question);text("pam-aside",aside);hide("pam-aside",!aside);}
 function showSecret(){text("secret-word-lock",`YOUR ANSWER · ${secretWord}`);hide("secret-word-lock",!secretWord);}
-function intro(){stage="intro";secretWord="";adapter.reset();text("stage-label","ROUND SETUP");dialogue(script.copy.intro.lead,script.copy.intro.question,script.copy.intro.aside);progress(0,20);hide("result-points",true);hide("secret-word-lock",true);hide("secret-error",true);const input=byId("secret-word");if(input)input.value="";actions("intro-actions");setTimeout(()=>input?.focus(),0);}
+function intro(){if(momRun&&!momRun.endedAt){momRun.endedAt=new Date().toISOString();momRun.result={abandoned:true};persistMomRun();}momRun=null;stage="intro";secretWord="";adapter.reset();markStage("intro");text("stage-label","ROUND SETUP");dialogue(script.copy.intro.lead,script.copy.intro.question,script.copy.intro.aside);progress(0,20);hide("result-points",true);hide("secret-word-lock",true);hide("secret-error",true);const input=byId("secret-word");if(input)input.value="";actions("intro-actions");setTimeout(()=>input?.focus(),0);}
 function stageLabel(state){if(state.kind==='hunch')return"STRONG HUNCH";if(state.kind==='guess')return"FINAL GUESS";if(state.number>=17)return"GETTING CLOSE";if(state.number>=9)return"NARROWING IT DOWN";return"THINKING";}
 function showResultPoints(summary){text("result-points",`+${summary.earned} points`);hide("result-points",false);}
+function markStage(value,extra){const card=document.querySelector(".game-card");if(card){card.dataset.stage=value;if(extra)card.dataset.outcome=extra;else delete card.dataset.outcome;}}
 function renderState(state){
- if(!state||!["question","hunch","guess","result"].includes(state.kind))throw Error("Invalid Mom Mode adapter state");stage=state.kind;showSecret();
+ if(!state||!["question","hunch","guess","result"].includes(state.kind))throw Error("Invalid Mom Mode adapter state");stage=state.kind;markStage(stage,stage==="result"?(state.correct?"lost":"won"):(stage==="question"&&state.number>=17?"late":""));recordMomState(state);showSecret();
  if(stage==="question"){
   progress(state.questionsAsked??state.number-1,state.maxQuestions);text("stage-label",stageLabel(state));hide("result-points",true);dialogue(script.leadFor(state),state.text,"");actions("answer-actions");return;
  }
@@ -62,9 +100,9 @@ function renderState(state){
 function start(){
  const input=byId("secret-word"),value=String(input?.value||"").replace(/\s+/g," ").trim();
  if(!value){hide("secret-error",false);input?.focus();return;}
- secretWord=value;hide("secret-error",true);showSecret();renderState(adapter.start());
+ secretWord=value;hide("secret-error",true);showSecret();beginMomRun();renderState(adapter.start());
 }
-function answer(value){if(stage!=="question")return;renderState(adapter.answer(value));}
+function answer(value){if(stage!=="question")return;recordMomAnswer(value);renderState(adapter.answer(value));}
 function chooseGuess(){if(stage!=="hunch")return;renderState(adapter.makeGuess());}
 function keepAsking(){if(stage!=="hunch")return;renderState(adapter.keepAsking());}
 function confirm(correct){if(stage!=="guess")return;renderState(adapter.confirm(correct));}

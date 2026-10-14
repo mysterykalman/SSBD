@@ -1,4 +1,4 @@
-// Final-state polish for the move trail and exhausted-game audio.
+// Final-state marker for the move trail (a crossed last stone, styled in styles.css) and exhausted-game audio.
 // Kept in the main audio bundle so it respects the same device-local sound preference.
 
 const LOSS_SOUND_URL = "https://raw.githubusercontent.com/jonjonsson/SoundMonster/main/Public%20domain/buzzer.mp3";
@@ -63,25 +63,6 @@ function playLossSound() {
   } catch {}
 }
 
-function installEndgameStyles() {
-  if (document.getElementById("ssbdEndgamePolish")) return;
-  const style = document.createElement("style");
-  style.id = "ssbdEndgamePolish";
-  style.textContent = `
-    .progress.finale .stones {
-      width: fit-content;
-      max-width: 100%;
-      margin-inline: auto;
-    }
-    .progress.ssbd-loss .stone.final {
-      background: var(--coral);
-      color: var(--ink);
-      box-shadow: 0 3px 0 var(--ink);
-    }
-  `;
-  document.head.append(style);
-}
-
 function syncEndgameState() {
   const app = document.getElementById("app");
   const progress = document.getElementById("progress");
@@ -104,8 +85,6 @@ function syncEndgameState() {
     playLossSound();
   }
 }
-
-installEndgameStyles();
 
 const app = document.getElementById("app");
 if (app) {

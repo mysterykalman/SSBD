@@ -86,3 +86,17 @@ test('logical single-candidate result bypasses hunch like the Phase 3 engine',()
   assert.equal(action.kind,'guess');
   assert.equal(action.label,'Nintendo Switch');
 });
+
+test('awkward clothing label is rendered as natural English',()=>{
+  const clothingRuntime={
+    questions:[{id:'clothing',q:'Is it a clothing?',family:'object',breadth:'category',reliability:0.97,requires:null,appliesTo:[],excludes:[],minCoverage:0}],
+    concepts:[
+      {name:'Shirt',category:'object',prior:0.5,yes:[0],no:[],maybe:[]},
+      {name:'Lamp',category:'object',prior:0.5,yes:[],no:[0],maybe:[]}
+    ],aliases:{},facetIndex:{version:1,types:{}}
+  };
+  const api=createMomRuntimeGame(clothingRuntime,{minGuessQuestions:20});
+  const action=api.choose();
+  assert.equal(action.kind,'question');
+  assert.equal(action.text,'Is it clothing or something you wear?');
+});

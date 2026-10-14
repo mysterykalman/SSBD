@@ -3,11 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<meta name="theme-color" content="#f7ead8">
+<meta name="theme-color" content="#f3e6d2">
 <meta name="app-version" content="%APP_VERSION%">
 <title>Same Same but Different</title>
 <meta name="description" content="A ridiculous word game for people who think they know each other.">
-<!-- Social/share previews (absolute URLs: share platforms fetch these from outside the app) -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Same Same but Different">
 <meta property="og:description" content="A ridiculous word game for people who think they know each other.">
@@ -23,15 +22,13 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="%STYLES_CSS%">
-<style>.btn{text-decoration:none}</style>
 </head>
 <body>
 <a class="skip" href="#app">Skip to game</a>
 <header class="topbar">
-  <a class="brand" id="brandLink" href="/" aria-label="Same Same but Different"><img class="brand-logo" src="/logo.webp" alt="" aria-hidden="true"><span class="brand-text-fallback"><span id="brandTop">Same Same</span><span id="brandBottom">but different</span></span></a>
+  <a class="brand" id="brandLink" href="/" aria-label="Same Same but Different"><img class="brand-logo" src="/logo.webp" alt="" aria-hidden="true" width="680" height="526"><span class="brand-text-fallback"><span id="brandTop">Same Same</span><span id="brandBottom">but different</span></span></a>
   <div class="top-actions">
     <span class="offline-pill" id="offlinePill" hidden></span>
-    <!-- French stays wired in the app, but the switch is intentionally hidden during English-only public testing. -->
     <div class="lang-switch" id="langGroup" role="group" aria-label="Language" aria-hidden="true" style="display:none">
       <button type="button" data-lang="en" aria-pressed="true"><span aria-hidden="true">EN</span><span class="sr-only">English</span></button>
       <button type="button" data-lang="fr" aria-pressed="false"><span class="sr-only" lang="fr">Français</span></button>

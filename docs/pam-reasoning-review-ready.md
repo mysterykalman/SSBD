@@ -1,0 +1,1 @@
+Pam reasoning and same-device review logging changes are ready for focused CI validation.

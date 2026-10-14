@@ -1,0 +1,257 @@
+{
+ "about": "Which components wear which felt piece. Every pill, tile and chip is the same stitched shape in many colours, so colour carries meaning: each mode has its own, the word pair changes colour every move, and actions are colour-coded. scripts/build.mjs turns this into CSS (later entries win at equal specificity). Images: src/client/felt/<asset>.webp from scripts/build-felt-assets.py. Each component sets --felt-h, the height its piece is drawn at.",
+ "skins": [
+  {
+   "asset": "tile-yellow",
+   "selectors": [
+    ".rv-count.words"
+   ]
+  },
+  {
+   "asset": "tile-cream",
+   "selectors": [
+    ".tile",
+    ".rv-word",
+    ".share-code",
+    ".duo-word.two"
+   ]
+  },
+  {
+   "asset": "tile-yellow",
+   "selectors": [
+    ".prompt > .tile",
+    ".rv-word.you",
+    ".duo-word",
+    ".prompt[data-tone='2'] .join .tile"
+   ]
+  },
+  {
+   "asset": "tile-teal",
+   "selectors": [
+    ".prompt .join .tile",
+    ".rv-word.other"
+   ]
+  },
+  {
+   "asset": "tile-coral",
+   "selectors": [
+    ".prompt[data-tone='1'] > .tile",
+    ".prompt[data-tone='3'] .join .tile"
+   ]
+  },
+  {
+   "asset": "tile-blue",
+   "selectors": [
+    ".prompt[data-tone='1'] .join .tile"
+   ]
+  },
+  {
+   "asset": "tile-purple",
+   "selectors": [
+    ".prompt[data-tone='2'] > .tile"
+   ]
+  },
+  {
+   "asset": "tile-green",
+   "selectors": [
+    ".prompt[data-tone='3'] > .tile"
+   ]
+  },
+  {
+   "asset": "bubble-left",
+   "fill": false,
+   "center": "#f8f0e2",
+   "repeat": "round",
+   "selectors": [
+    ".bubble",
+    ".gary-bubble",
+    ".speech"
+   ]
+  },
+  {
+   "asset": "chip-cream",
+   "selectors": [
+    ".chip",
+    ".pill",
+    ".mode-chip",
+    ".counter",
+    ".rank-badge",
+    ".mini-stat",
+    ".offline-pill",
+    ".secret-word-lock",
+    ".start-label",
+    ".standee::after",
+    ".rv-next",
+    ".code",
+    ".game-top .eyebrow"
+   ]
+  },
+  {
+   "asset": "chip-orange",
+   "selectors": [
+    ".move-count",
+    ".pill.orange",
+    ".result-points"
+   ]
+  },
+  {
+   "asset": "chip-yellow",
+   "selectors": [
+    ".chip.you",
+    ".moves-warning",
+    ".pill.yellow",
+    ".game-card[data-stage=hunch] .game-top .eyebrow",
+    ".game-card[data-stage=guess] .game-top .eyebrow"
+   ]
+  },
+  {
+   "asset": "chip-teal",
+   "selectors": [
+    ".chip.other",
+    ".pill.teal",
+    ".beta-badge",
+    ".mode-chip[data-character=milo]",
+    ".answer.probably"
+   ]
+  },
+  {
+   "asset": "chip-blue",
+   "selectors": [
+    ".toast",
+    ".pill.blue",
+    ".game-top .eyebrow"
+   ]
+  },
+  {
+   "asset": "chip-green",
+   "selectors": [
+    ".trail-row.match .chip",
+    ".toast.success",
+    ".pill.green",
+    ".match-badge",
+    ".mode-chip[data-character=gary]",
+    ".game-card[data-outcome=won] .game-top .eyebrow"
+   ]
+  },
+  {
+   "asset": "chip-red",
+   "selectors": [
+    ".toast.error",
+    ".pill.red",
+    ".notif-new",
+    ".mode-chip[data-mode=together]",
+    ".game-card[data-outcome=lost] .game-top .eyebrow",
+    ".game-card[data-outcome=late] .game-top .eyebrow"
+   ]
+  },
+  {
+   "asset": "chip-purple",
+   "selectors": [
+    ".pill.purple",
+    ".mode-chip[data-mode=pam]"
+   ]
+  },
+  {
+   "asset": "field-default",
+   "selectors": [
+    ".word-input",
+    ".text-input",
+    ".secret-field input",
+    ".account-grid input",
+    ".settings-name-row input"
+   ]
+  },
+  {
+   "asset": "btn-primary",
+   "selectors": [
+    ".btn",
+    ".toast-action"
+   ]
+  },
+  {
+   "asset": "btn-secondary",
+   "selectors": [
+    ".btn.ghost",
+    ".answer.unknown",
+    ".lang-switch"
+   ]
+  },
+  {
+   "asset": "btn-teal",
+   "selectors": [
+    "#joinFamily",
+    ".sg-use",
+    "#retryFamily"
+   ]
+  },
+  {
+   "asset": "btn-blue",
+   "selectors": [
+    "#closeBtn",
+    "#keep-asking-btn",
+    "#historyBtn.btn"
+   ]
+  },
+  {
+   "asset": "btn-purple",
+   "selectors": [
+    ".btn.sun",
+    "#pam-intro-play"
+   ]
+  },
+  {
+   "asset": "btn-destructive",
+   "selectors": [
+    ".btn.teal",
+    ".btn.together",
+    ".btn.danger",
+    ".answer.no",
+    "#quitConfirm",
+    "#wrong-btn"
+   ]
+  },
+  {
+   "asset": "btn-positive",
+   "selectors": [
+    ".btn.sage",
+    ".btn.success",
+    ".answer.yes",
+    ".end-actions #newGameBtn",
+    ".wc-actions #newGameBtn",
+    "#again-btn",
+    "#closeYes",
+    "#correct-btn"
+   ]
+  },
+  {
+   "asset": "chip-orange",
+   "selectors": [
+    ".answer.probably-not"
+   ]
+  },
+  {
+   "asset": "btn-primary-pressed",
+   "selectors": [
+    ".btn:not(.ghost):not(.teal):not(.sage):not(.sun):not(.danger):not(.answer):not(#joinFamily):not(#closeBtn):not(.sg-use):active:not(:disabled)"
+   ]
+  },
+  {
+   "asset": "btn-secondary-pressed",
+   "selectors": [
+    ".btn.ghost:not(#joinFamily):active:not(:disabled)",
+    ".answer.unknown:active"
+   ]
+  },
+  {
+   "asset": "btn-disabled",
+   "selectors": [
+    ".btn:disabled",
+    ".btn[aria-disabled=true]",
+    "#joinFamily:disabled",
+    "#closeBtn:disabled",
+    "#retryFamily:disabled",
+    "#keep-asking-btn:disabled"
+   ]
+  }
+ ]
+}

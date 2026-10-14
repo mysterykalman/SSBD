@@ -8,23 +8,25 @@ function totalBelief(belief){let total=0;for(const p of belief)total+=Number(p||
 function stageFactor(turn,breadth){
   if(turn<=2)return breadth==='broad'?1.25:breadth==='category'?1.03:breadth==='specific'?0.58:0.82;
   if(turn<=7)return breadth==='broad'?1.02:breadth==='category'?1.18:breadth==='specific'?0.78:1;
-  if(turn<=13)return breadth==='broad'?0.88:breadth==='category'?1.03:breadth==='specific'?1.02:1.1;
-  return breadth==='broad'?0.78:breadth==='category'?0.94:breadth==='specific'?1.2:1.03;
+  if(turn<=13)return breadth==='broad'?0.88:breadth==='category'?1.05:breadth==='specific'?0.98:1.1;
+  // Late game should keep narrowing the established branch. Do not reward leaf-level
+  // "is it X?" probes merely because the turn count is high.
+  return breadth==='broad'?0.72:breadth==='category'?1.14:breadth==='specific'?0.9:1.08;
 }
 function repetitionFactor(runtime,questionIndexValue,recentQuestionIndexes=[]){
   const family=runtime.questions[questionIndexValue]?.family;
-  const recent=recentQuestionIndexes.slice(-2);
+  const recent=recentQuestionIndexes.slice(-3);
   if(!recent.length||!family)return 1;
   const lastFamily=runtime.questions[recent[recent.length-1]]?.family;
-  if(lastFamily===family)return 0.72;
-  if(recent.some(index=>runtime.questions[index]?.family===family))return 0.88;
+  if(lastFamily===family)return 0.42;
+  if(recent.some(index=>runtime.questions[index]?.family===family))return 0.64;
   return 1;
 }
 function facetRepetitionFactor(type,recentFacetTypes=[]){
-  const recent=recentFacetTypes.slice(-2);
+  const recent=recentFacetTypes.slice(-3);
   if(!recent.length)return 1;
-  if(recent[recent.length-1]===type)return 0.72;
-  if(recent.includes(type))return 0.88;
+  if(recent[recent.length-1]===type)return 0.4;
+  if(recent.includes(type))return 0.62;
   return 1;
 }
 function sequenceFactor(runtime,questionIndexValue,confirmedYes){
@@ -33,6 +35,28 @@ function sequenceFactor(runtime,questionIndexValue,confirmedYes){
   if(!established&&question.family==='ontology')return 1.12;
   if(established&&question.family==='ontology'&&question.breadth==='broad')return 0.9;
   return 1;
+}
+function confirmedIds(runtime,confirmedYes){
+  return new Set([...confirmedYes].map(index=>runtime.questions[index]?.id).filter(Boolean));
+}
+function branchEligibility(runtime,questionIndexValue,confirmedYes){
+  const question=runtime.questions[questionIndexValue];
+  if(!question)return{eligible:false,reason:'missing_question'};
+  const yes=confirmedIds(runtime,confirmedYes);
+  const yesFamilies=new Set([...confirmedYes].map(index=>runtime.questions[index]?.family).filter(Boolean));
+  const objectBranch=yes.has('object')||yes.has('device')||yes.has('electronic')||yesFamilies.has('technology');
+  if(objectBranch&&question.family==='ontology'&&new Set(['person','animal','plant','place','food_drink','food','drink','media_work','event','organization','abstract','living','alive']).has(question.id)){
+    return{eligible:false,reason:'contradicts_established_object_branch'};
+  }
+  const personBranch=yes.has('person')||yesFamilies.has('person');
+  if(personBranch&&question.family==='ontology'&&new Set(['animal','plant','place','food_drink','food','drink','object','media_work','event','organization','abstract']).has(question.id)){
+    return{eligible:false,reason:'contradicts_established_person_branch'};
+  }
+  const vehicleEstablished=yes.has('vehicle');
+  if(new Set(['car','aircraft','watercraft']).has(question.id)&&!vehicleEstablished){
+    return{eligible:false,reason:'requires_vehicle_branch'};
+  }
+  return{eligible:true,reason:'branch_ok'};
 }
 function renderFacetText(template,value){
   const article=/^[aeiou]/i.test(value)?'an':'a';
@@ -126,6 +150,8 @@ export function createMomRuntimeReasoner(runtime){
     const confirmedYes=context.confirmedYes||new Set();
     if(asked.has(questionIndexValue))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'already_asked'};
     if(question.requires!=null&&!confirmedYes.has(question.requires))return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:'requires_branch'};
+    const branch=branchEligibility(runtime,questionIndexValue,confirmedYes);
+    if(!branch.eligible)return{eligible:false,score:0,gain:0,semantic:0,known:0,reason:branch.reason};
     const gain=questionGain(belief,questionIndexValue,context.noise??0.06);
     if(gain<=1e-12)return{eligible:false,score:0,gain,semantic:0,known:0,reason:'no_information'};
     const semantic=semanticCoverage(belief,questionIndexValue);

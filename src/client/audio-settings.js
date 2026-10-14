@@ -153,35 +153,6 @@ const copy = {
   }
 };
 
-function injectStyles() {
-  if (document.getElementById("audioSettingsStyle")) return;
-  const style = document.createElement("style");
-  style.id = "audioSettingsStyle";
-  style.textContent = `
-    .audio-settings-panel{border-top:1px solid rgba(36,31,25,.14);margin-top:.85rem;padding-top:.85rem;text-align:left}
-    .audio-settings-heading{font-size:1rem;margin:0 0 .3rem;font-weight:800}.audio-settings-hint{margin:0 0 .8rem;font-size:.84rem;opacity:.72;line-height:1.35}
-    .audio-master{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:.2rem 0 .85rem;font-weight:750}.audio-master input{width:1.15rem;height:1.15rem;accent-color:currentColor}
-    .audio-channel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.15rem .7rem;align-items:center;margin:.75rem 0}.audio-channel label{font-weight:750}.audio-channel small{grid-column:1;opacity:.68;font-size:.78rem}
-    .audio-range-row{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) 3.2rem;gap:.65rem;align-items:center;margin-top:.3rem}.audio-range-row input[type=range]{width:100%;accent-color:currentColor}
-    .audio-value{font-variant-numeric:tabular-nums;text-align:right;font-size:.82rem;font-weight:750}.audio-settings-panel.muted .audio-channel{opacity:.5}
-    .games.ssbd-games-scroll{display:flex;flex-direction:column;min-height:0;overflow:hidden}
-    .games.ssbd-games-scroll>h2{flex:0 0 auto;position:relative;z-index:1;background:var(--paper);padding-bottom:6px}
-    .games.ssbd-games-scroll .game-list{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-right:6px;scrollbar-gutter:stable}
-  `;
-  document.head.append(style);
-}
-
-function syncHomeGamesCard() {
-  const games = document.querySelector(".games");
-  const solo = document.querySelector(".solo-card");
-  const family = document.querySelector(".family-card");
-  if (!games || !solo || !family) return;
-  games.classList.add("ssbd-games-scroll");
-  games.style.height = "";
-  const target = Math.ceil(Math.max(solo.getBoundingClientRect().height, family.getBoundingClientRect().height));
-  if (target > 0) games.style.height = `${target}px`;
-}
-
 function channelRow(channel, title, hint, previewSound) {
   const wrap = document.createElement("div");
   wrap.className = "audio-channel";
@@ -281,16 +252,12 @@ function installObservers() {
   const app = document.getElementById("app");
   if (app) {
     new MutationObserver(inspectGameAudio).observe(app, {attributes: true, attributeFilter: ["data-phase"]});
-    new MutationObserver(() => requestAnimationFrame(syncHomeGamesCard)).observe(app, {childList: true, subtree: true});
   }
   document.addEventListener("click", event => {
     if (event.target instanceof Element && event.target.closest("#profileBtn")) scheduleProfileEnhance();
   });
-  window.addEventListener("resize", () => requestAnimationFrame(syncHomeGamesCard), {passive: true});
   inspectGameAudio();
-  requestAnimationFrame(syncHomeGamesCard);
 }
 
-injectStyles();
 installInteractionSounds();
 installObservers();

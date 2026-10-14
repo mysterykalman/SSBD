@@ -287,7 +287,7 @@ function initialOf(name) {
 }
 /** Decorative badge; the name is always written next to it, so it is hidden from screen readers. */
 function badge(name, {bot = false, who = "gary", cls = ""} = {}) {
-  if (bot) return h("span", {class: `badge gary ${cls}`, "aria-hidden": "true"}, characterArt(characterId(who), "meh", "badge-art"));
+  if (bot) return h("span", {class: `badge gary ${cls}`, "data-character": characterId(who), "aria-hidden": "true"}, characterArt(characterId(who), "meh", "badge-art"));
   return h("span", {class: `badge ${cls}`, "aria-hidden": "true"}, initialOf(name));
 }
 const otherBadge = (view, cls) => badge(view.otherName, {bot: isSoloLike(view), who: view.character, cls});
@@ -473,39 +473,50 @@ function renderHome() {
   stopPolling();
   renderChrome();
   const familyDisabled = !state.online || state.apiDown;
+  // Together stays a real game box when it can't be played right now (offline, or no server):
+  // its stage, title and buttons keep their place, with the reason as its copy.
+  const familyNote = !state.online ? "offline" : state.apiDown ? "unavailable" : null;
   mount(
     h("section", {class: "hero"},
       h("h1", {}, t("heroTitle")),
       h("p", {class: "lede"}, t("heroCopy")),
       h("p", {class: "hero-rules"}, t("heroRules"))),
-    h("div", {class: "start-grid"},
-      h("section", {class: "card start solo-card", "aria-labelledby": "soloTitle"},
-        // Both characters, side by side and the same size: "Choose someone" lets the player pick either.
-        h("div", {class: "start-icon pair", id: "soloPair", "aria-hidden": "true"}, ...CHARACTER_IDS.map(id => badge(null, {bot: true, who: id, cls: `pair-${id}`}))),
-        h("h2", {id: "soloTitle"}, t("soloTitle"), " ", betaBadge()),
-        // Milo or Gary: each bio in its character's colour, with "or" between them (pick either one).
-        h("div", {class: "start-copy solo-bios"}, h("p", {class: "bio-milo"}, t("soloBody")), h("div", {class: "bio-or"}, t("soloOr")), h("p", {class: "bio-gary"}, t("soloBody2"))),
-        h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))),
-      h("section", {class: "card start family-card", "aria-labelledby": "familyTitle"},
-        h("div", {class: "start-icon duo", "aria-hidden": "true"}, badge(state.player?.display_name || t("you"), {cls: "you"}), badge(null, {cls: "other"})),
-        h("h2", {id: "familyTitle"}, t("togetherTitle")),
-        !state.online
-          ? h("div", {class: "start-copy"}, h("p", {}, t("familyOffline")))
-          : state.apiDown
-            ? h("div", {class: "start-copy", id: "familyUnavailable"}, h("p", {}, t("familyUnavailable")),
-              h("button", {class: "btn ghost small", type: "button", id: "retryFamily", onclick: () => checkApi()}, t("retry")))
-            : h("div", {class: "start-copy"}, h("p", {}, t("togetherCopy1")), h("p", {}, t("togetherCopy2"))),
-        h("div", {class: "row"},
-          h("button", {class: "btn teal", type: "button", id: "createFamily", disabled: familyDisabled, onclick: () => ensurePlayer(createFamily)}, t("familyCreate")),
-          h("button", {class: "btn ghost", type: "button", id: "joinFamily", disabled: familyDisabled, onclick: () => joinDialog("")}, t("familyJoin"))))),
-    h("section", {class: "card mom-card", "aria-labelledby": "momModeTitle"},
-      h("img", {class: "mom-card-art", src: "/mom-mode/pam.webp", alt: "Pam smiling knowingly"}),
-      h("div", {class: "mom-card-copy"},
-        h("p", {class: "mom-preview"}, t("momPreview")),
-        h("h2", {id: "momModeTitle"}, t("momTitle")),
-        h("p", {}, t("momCopy")),
-        h("p", {class: "muted"}, t("momAside"))),
-      h("a", {class: "btn big", href: "/mom-mode/"}, t("momPreviewCta"))),
+    h("div", {class: "home-grid start-grid"},
+      h("section", {class: "card mode-card start solo-card", "data-mode": "solo", "aria-labelledby": "soloTitle"},
+        // Both characters, side by side and the same size: "Choose your player" lets the player pick either.
+        h("div", {class: "mode-stage start-icon pair", id: "soloPair", "aria-hidden": "true"},
+          ...CHARACTER_IDS.map(id => h("span", {class: `badge gary standee pair-${id}`, "data-character": id, "data-name": t(character(id).name)}, characterArt(id, "meh", "badge-art standee-art")))),
+        h("div", {class: "mode-body"},
+          h("h2", {id: "soloTitle"}, t("soloTitle"), " ", betaBadge()),
+          // Milo or Gary, with "or" between them (pick either one).
+          h("div", {class: "start-copy solo-bios"}, h("p", {class: "bio-milo"}, t("soloBody")), h("div", {class: "bio-or"}, t("soloOr")), h("p", {class: "bio-gary"}, t("soloBody2"))),
+          h("div", {class: "mode-actions"},
+            h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))))),
+      h("section", {class: "card mode-card mom-card", "data-mode": "pam", "data-character": "pam", "aria-labelledby": "momModeTitle"},
+        h("div", {class: "mode-stage", "aria-hidden": "true"},
+          h("span", {class: "standee pam-standee", "data-name": "Pam"}, h("img", {class: "mom-card-art", src: "/mom/pam-v2.webp", alt: "", width: "720", height: "900", decoding: "async"}))),
+        h("div", {class: "mode-body mom-card-copy"},
+          h("h2", {id: "momModeTitle"}, t("momTitle")),
+          h("p", {}, t("momCopy")),
+          h("p", {class: "muted"}, t("momAside")),
+          h("div", {class: "mode-actions"},
+            h("a", {class: "btn big sun", href: "/mom/"}, t("momPlayCta"))))),
+      h("section", {class: `card mode-card start family-card ${familyNote ? "is-unavailable" : ""}`, "data-mode": "together", "aria-labelledby": "familyTitle"},
+        h("div", {class: "mode-stage start-icon duo", "aria-hidden": "true"},
+          badge(state.player?.display_name || t("you"), {cls: "you duo-token"}),
+          h("span", {class: "duo-link"}, h("i"), h("i"), h("i")),
+          badge(null, {cls: "other duo-token"})),
+        h("div", {class: "mode-body"},
+          h("h2", {id: "familyTitle"}, t("togetherTitle")),
+          familyNote === "offline"
+            ? h("div", {class: "start-copy mode-note"}, h("p", {}, t("familyOffline")))
+            : familyNote === "unavailable"
+              ? h("div", {class: "start-copy mode-note", id: "familyUnavailable"}, h("p", {}, t("familyUnavailable")),
+                h("button", {class: "btn ghost small", type: "button", id: "retryFamily", onclick: () => checkApi()}, t("retry")))
+              : h("div", {class: "start-copy"}, h("p", {}, t("togetherCopy1")), h("p", {}, t("togetherCopy2"))),
+          h("div", {class: "row mode-actions"},
+            h("button", {class: "btn teal", type: "button", id: "createFamily", disabled: familyDisabled, onclick: () => ensurePlayer(createFamily)}, t("familyCreate")),
+            h("button", {class: "btn ghost", type: "button", id: "joinFamily", disabled: familyDisabled, onclick: () => joinDialog("")}, t("familyJoin")))))),
     h("section", {class: "card games", "aria-labelledby": "gamesTitle"},
       h("h2", {id: "gamesTitle"}, t("gamesTitle")),
       h("ul", {class: "game-list", id: "gameList"}, gameListItems())));
@@ -542,7 +553,7 @@ function gameListItems() {
     });
   }
   items.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  if (!items.length) return [h("li", {class: "empty"}, h("span", {class: "empty-line"}, t("gamesEmpty1")), h("span", {class: "empty-line muted"}, t("gamesEmpty2")))];
+  if (!items.length) return [h("li", {class: "empty"}, h("span", {class: "empty-art", "aria-hidden": "true"}, h("i"), h("i"), h("i")), h("span", {class: "empty-copy"}, h("span", {class: "empty-line"}, t("gamesEmpty1")), h("span", {class: "empty-line muted"}, t("gamesEmpty2"))))];
   return items.map(item => {
     const finished = FINISHED.has(item.status);
     const status = item.status === "MATCHED" ? t("statusMatched")
@@ -669,15 +680,15 @@ function renderGame() {
   $("app").dataset.phase = state.reveal ? state.reveal.phase : finished ? "gameOver" : "playing";
 
   // Mode lives next to the back button; the board starts with the progress trail.
-  const board = h("section", {class: `card board ${finished ? "finished" : ""}`, "aria-labelledby": "boardTitle"},
+  const board = h("section", {class: `card board ${finished ? "finished" : ""}`, "data-mode": solo ? "solo" : "together", "data-character": solo ? characterId(view.character) : null, "aria-labelledby": "boardTitle"},
     progressTrail(view, move, finished, revealed, fresh),
     languageNote(view),
     finished ? endPanel(view, revealed, fresh) : playPanel(view, move));
 
   mount(
-    h("div", {class: "game-nav"},
+    h("div", {class: "game-nav", "data-mode": solo ? "solo" : "together"},
       h("button", {class: "btn ghost small", type: "button", id: "backBtn", onclick: () => navigate("/")}, backLabel()),
-      h("span", {class: "mode-chip"},
+      h("span", {class: "mode-chip", "data-mode": solo ? "solo" : "together", "data-character": solo ? characterId(view.character) : null},
         view.waitingForPlayer && !solo ? null : otherBadge(view, "small"),
         h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")})),
         solo ? betaBadge() : null),
@@ -800,7 +811,7 @@ function startReveal(view, move) {
   const ended = move.status === "MATCHED" || move.status === "EXHAUSTED";
   // Together: a short, kind word about how close the two answers were (the same for both players).
   const cheer = solo ? null : togetherReaction(view, move);
-  const dlg = h("dialog", {id: "revealModal", class: `reveal-modal ${move.status === "MATCHED" ? "match" : ""}`, "aria-labelledby": "revealHeading",
+  const dlg = h("dialog", {id: "revealModal", class: `reveal-modal ${move.status === "MATCHED" ? "match" : ""}`, "data-mode": solo ? "solo" : "together", "data-character": solo ? characterId(view.character) : null, "aria-labelledby": "revealHeading",
     oncancel: event => { event.preventDefault(); if (state.reveal?.phase === "ready") finishReveal(); }},
     h("div", {class: "rv-body"},
       h("p", {class: "rv-kicker", id: "revealHeading"}, t("revealTitle")),
@@ -1044,7 +1055,8 @@ function playPanel(view, move) {
   if (!waiting && left <= 3) panel.append(h("p", {class: "notice moves-warning", id: "movesWarning", role: "status"}, left > 1 ? t("movesWarning", {n: left}) : t("movesWarningLast")));
   if (!first) {
     // The "+" is glued to the second word so it never dangles at the end of a line.
-    panel.append(h("div", {class: "prompt", id: "prompt", lang: view.language},
+    // Each move's pair gets its own colours (yellow + teal, coral + blue, purple + yellow, green + coral).
+    panel.append(h("div", {class: "prompt", id: "prompt", lang: view.language, "data-tone": String((((move.number - 2) % 4) + 4) % 4)},
       h("span", {class: "tile"}, move.prompts[0]),
       h("span", {class: "join"}, h("span", {class: "op", "aria-hidden": "true"}, "+"), h("span", {class: "tile"}, move.prompts[1]))));
     if (!solo) panel.append(closeEnoughBlock(view, move));
@@ -1077,7 +1089,13 @@ function playPanel(view, move) {
     submitWord(source);
   }},
     h("label", {class: "sr-only", for: "word"}, t("placeholder")),
-    h("p", {id: "formHelp", class: "form-help", "aria-live": "polite"}, solo ? soloHelp(view, move) : move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})),
+    // Solo: the line above the word box is the character talking (portrait + bubble, one component).
+    // Together: a status line about the other player.
+    solo
+      ? h("div", {class: "speaker", "data-character": view.character},
+        characterArt(view.character, "meh", "speaker-art"),
+        h("p", {id: "formHelp", class: "form-help bubble", "aria-live": "polite"}, soloHelp(view, move)))
+      : h("p", {id: "formHelp", class: "form-help status-line", "aria-live": "polite"}, move.otherLocked ? t("otherLocked", {name: otherName}) : t("otherThinking", {name: otherName})),
     h("div", {id: "suggestion", class: "suggestion", "aria-live": "polite"}),
     h("input", {id: "word", name: "word", type: "text", class: "word-input", placeholder: t("placeholder"), autocomplete: "off", autocapitalize: "none", autocorrect: "off", spellcheck: "true", lang: view.language, maxlength: "40", enterkeyhint: "go", "aria-describedby": first ? "formHelp" : "prompt formHelp", "aria-invalid": "false", oninput: onWordInput,
       onkeydown: event => { submitSource = event.key === "Enter" && !event.isComposing ? "enter" : null; }}),

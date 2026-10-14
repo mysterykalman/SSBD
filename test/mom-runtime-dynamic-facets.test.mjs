@@ -39,11 +39,12 @@ test('brand becomes a natural best filter once only consoles remain',()=>{
   assert.match(best.text,/made by/);
 });
 
-test('repeating brand filters is discouraged but not globally forbidden',()=>{
+test('repeating brand filters is strongly discouraged but not globally forbidden',()=>{
   const r=createMomRuntimeReasoner(runtime);
   const belief=new Float64Array([1/3,1/3,1/3,0]);
   const normal=r.facetQuestionScore(belief,'brand','Nintendo',{turn:8});
   const repeated=r.facetQuestionScore(belief,'brand','Nintendo',{turn:8,recentFacetTypes:['brand']});
-  assert.equal(repeated.repetition,0.72);
+  assert.equal(repeated.repetition,0.4);
   assert.ok(repeated.score<normal.score);
+  assert.ok(repeated.eligible);
 });
