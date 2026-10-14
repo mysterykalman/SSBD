@@ -609,3 +609,20 @@ main:focus { outline: none; }
 }
 /* "Same time!" at the end of the countdown: a felt word tile, not a drawn pill. */
 .rv-count.words { --felt-h: 104px; width: fit-content; height: auto; min-width: 0; padding-inline: 44px; border-radius: 0; }
+
+/* Win card decoration: small felt buttons scattered around the card (your round badges), not drawn shapes. */
+.wc-piece, .wc-piece.star, .wc-piece.dot, .wc-piece.squiggle, .wc-piece.confetto {
+  width: 26px; height: 26px; border: 0; border-radius: 50%; clip-path: none; transform: none;
+  background: var(--badge, var(--badge-yellow)) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 2px 2px rgba(60, 38, 26, .18));
+}
+.wc-piece.star { --badge: var(--badge-yellow); top: 34px; left: 34px; width: 30px; height: 30px; }
+.wc-piece.dot { --badge: var(--badge-teal); top: 40px; right: 40px; left: auto; }
+.wc-piece.squiggle { --badge: var(--badge-purple); top: 104px; right: 13%; width: 20px; height: 20px; }
+.wc-piece.confetto { --badge: var(--badge-orange); top: 112px; left: 12%; width: 20px; height: 20px; }
+.wc-piece.dot.small { --badge: var(--badge-coral); top: auto; bottom: 38px; left: 38px; right: auto; width: 22px; height: 22px; }
+.wc-piece.star.small { --badge: var(--badge-green); top: auto; bottom: 110px; right: 36px; left: auto; width: 22px; height: 22px; }
+.wc-piece.confetto.alt { --badge: var(--badge-yellow); top: auto; bottom: 160px; left: 30px; width: 18px; height: 18px; }
+.duo-confetti i { width: 16px; height: 16px; border-radius: 50%; transform: none; background: var(--badge) center / 100% 100% no-repeat !important; }
+.duo-confetti .c1 { --badge: var(--badge-coral); } .duo-confetti .c2 { --badge: var(--badge-teal); } .duo-confetti .c3 { --badge: var(--badge-yellow); }
+.duo-confetti .c4 { --badge: var(--badge-purple); } .duo-confetti .c5 { --badge: var(--badge-orange); width: 12px; height: 12px; } .duo-confetti .c6 { --badge: var(--badge-green); width: 12px; height: 12px; }
