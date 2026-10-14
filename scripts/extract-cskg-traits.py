@@ -4,6 +4,7 @@ import gzip
 import json
 import os
 import re
+import sys
 from collections import defaultdict
 
 USEFUL_RELATIONS = {
@@ -18,6 +19,18 @@ USEFUL_RELATIONS = {
     '/r/CreatedBy': 'createdby',
     '/r/LocatedNear': 'locatednear',
 }
+
+
+def configure_csv_field_limit():
+    """Allow real KGTK rows whose metadata/sentence fields exceed csv's ~128 KB default."""
+    limit = sys.maxsize
+    while limit > 0:
+        try:
+            csv.field_size_limit(limit)
+            return limit
+        except OverflowError:
+            limit //= 10
+    raise RuntimeError('Unable to configure a usable CSV field size limit')
 
 
 def norm(value):
@@ -151,6 +164,7 @@ def main():
     if not os.path.exists(args.cskg):
         raise SystemExit(f'Missing CSKG file: {args.cskg}')
 
+    configure_csv_field_limit()
     by_key, by_qid = load_inventory(args.inventory)
     merged = defaultdict(list) if args.replace else load_existing(args.output)
     seen = {name: {json.dumps(item, sort_keys=True, ensure_ascii=False) for item in items} for name, items in merged.items()}
