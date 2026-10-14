@@ -278,3 +278,6 @@ dialog::backdrop { background: rgba(59, 42, 36, .45); backdrop-filter: blur(3px)
 }
 .icon-btn::before, .avatar::before, .bell::before, .dialog-x::before, .dialog-close::before { display: none; }
 .icon-btn:active, .avatar:active, .bell:active, .dialog-x:active, .dialog-close:active { filter: brightness(.95); }
+
+/* Disabled buttons: readable text on the beige felt (4.5:1). */
+.btn:disabled, .btn[aria-disabled="true"] { color: #5a4a42 !important; }
