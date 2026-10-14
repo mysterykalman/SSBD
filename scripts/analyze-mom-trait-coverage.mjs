@@ -42,7 +42,8 @@ for(const c of concepts){
 }
 function resolveLabelConcept(value){
   const matches=byKey.get(normalize(value))||[];
-  if(matches.length===1)return matches[0];
+  // Label-only lexical evidence is generic by definition. Never let a unique
+  // string match select a QID/named entity; named evidence must carry identity.
   const generic=matches.filter(c=>!c.qid);
   return generic.length===1?generic[0]:null;
 }
@@ -93,7 +94,7 @@ for(const row of wikidataRows){
  for(const evidence of row.evidence||[]){
   if(addEvidenceToConcept(target,'Wikidata',evidence.trait,evidence.type||'',{confidence:evidence.confidence,qid:rowQid})){matched=true;wikidataEvidenceItems++;}
  }
- if(matched)matchedWikidataConcepts.add(target.key);
+ if(matched)matchedWikidataConcepts.add(target.qid?`wd:${target.qid}`:`concept:${target.key}`);
 }
 const wikidataMatchedConcepts=matchedWikidataConcepts.size;
 if(wikidataMatchedConcepts===0||wikidataEvidenceItems===0) throw new Error('Required static Wikidata evidence did not match any playable concepts.');

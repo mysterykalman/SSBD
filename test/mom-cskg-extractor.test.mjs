@@ -32,6 +32,7 @@ test('CSKG extractor keeps generic and QID homonyms isolated',()=>{
     const byName=new Map(rows.map(row=>[row.concept,row.evidence]));
     assert.ok(byName.get('guitar').some(e=>e.trait==='hasa:strings'));
     assert.ok(byName.get('Noodle').some(e=>e.trait==='isa:fictional character'));
+    assert.ok(byName.get('Noodle').some(e=>e.trait==='isa:fictional character'&&e.qid==='Q192874'));
     assert.ok(byName.get('noodle').some(e=>e.trait==='isa:food'));
     assert.equal(byName.get('Noodle').some(e=>e.trait==='isa:food'),false);
   }finally{

@@ -123,6 +123,7 @@ def evidence_for_row(row, by_key, by_qid):
             out.append((target['name'], {
                 'source': f'CSKG:{source}', 'type': kind, 'trait': f'{kind}:{label2}',
                 'relation': relation, 'node': node1, 'otherNode': node2,
+                **({'qid': target['qid']} if target.get('qid') else {}),
                 **({'sentence': sentence} if sentence else {})
             }))
 
@@ -133,6 +134,7 @@ def evidence_for_row(row, by_key, by_qid):
             out.append((target['name'], {
                 'source': f'CSKG:{source}', 'type': inverse_kind, 'trait': f'{inverse_kind}:{label1}',
                 'relation': relation, 'node': node2, 'otherNode': node1,
+                **({'qid': target['qid']} if target.get('qid') else {}),
                 **({'sentence': sentence} if sentence else {})
             }))
     return out
