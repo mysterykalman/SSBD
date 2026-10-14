@@ -588,19 +588,21 @@ main:focus { outline: none; }
 .progress.ssbd-loss .stone.final { --badge: var(--badge-coral); color: #fff; }
 .rv-count { --badge: var(--badge-orange); width: 150px; height: 150px; }
 
-/* Home header: the logo large on the left; the intro right-aligned beside it, under the help button. */
+/* Home header: the help button alone at the top right; below it the logo (large, left) and the
+   intro (right-aligned), the logo vertically centred on the intro. */
 @media (min-width: 820px) {
-  body:has(main > .hero) .brand-logo { width: 250px; } /* the logo file is 250px wide: never upscaled */
-  body:has(main > .hero) .topbar { align-items: flex-start; padding-bottom: 0; }
-  body:has(main > .hero) .top-actions { margin-top: 6px; }
+  body:has(main > .hero) .topbar { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; padding-bottom: 0; }
+  body:has(main > .hero) .top-actions { grid-column: 2; grid-row: 1; justify-self: end; }
+  body:has(main > .hero) .brand { grid-column: 1; grid-row: 2; align-self: center; margin-top: var(--logo-shift, 0px); }
+  body:has(main > .hero) .brand-logo { width: 330px; }
   main > .hero {
-    position: relative;
-    width: min(560px, calc(100% - 290px));
+    width: min(560px, calc(100% - 370px));
     max-width: none;
-    margin: -160px 0 0 auto;
-    padding: 0 0 34px;
-    min-height: 160px;
-    align-content: start;
+    margin: -264px 0 0 auto; /* up beside the logo: level with its top */
+    min-height: 256px; /* as tall as the logo, so the text centres on it at any width */
+    padding: 0;
+    margin-bottom: 30px;
+    align-content: center;
     justify-items: end;
     text-align: right;
   }
