@@ -14,3 +14,4 @@
   .character-dialog h2 { font-size: 1.7rem; }
 }
 .character-portrait-frame { background: radial-gradient(circle at 50% 30%, rgba(239, 230, 251, .9), transparent 62%), #fdf9f3; }
+.character-portrait { object-fit: cover; object-position: 50% 0; padding: 0; }

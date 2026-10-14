@@ -494,7 +494,7 @@ function renderHome() {
             h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))))),
       h("section", {class: "card mode-card mom-card", "data-mode": "pam", "data-character": "pam", "aria-labelledby": "momModeTitle"},
         h("div", {class: "mode-stage", "aria-hidden": "true"},
-          h("span", {class: "standee pam-standee", "data-name": "Pam"}, h("img", {class: "mom-card-art", src: "/mom/pam-v2.webp", alt: "", width: "159", height: "220", decoding: "async"}))),
+          h("span", {class: "standee pam-standee", "data-name": "Pam"}, h("img", {class: "mom-card-art", src: "/mom/pam-v2.webp", alt: "", width: "720", height: "900", decoding: "async"}))),
         h("div", {class: "mode-body mom-card-copy"},
           h("h2", {id: "momModeTitle"}, t("momTitle")),
           h("p", {}, t("momCopy")),

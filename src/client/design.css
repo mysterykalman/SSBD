@@ -285,3 +285,10 @@ dialog::backdrop { background: rgba(59, 42, 36, .45); backdrop-filter: blur(3px)
 /* Pam's cut-out has a pale fringe from its background removal: on a near-white backdrop it disappears
    (on lavender it read as see-through patches). */
 [data-character="pam"], .pam-standee { --char-bg: #fdf9f3; --char-glow: rgba(239, 230, 251, .9); }
+
+/* The portraits are full felt scenes (each character on their own backdrop, 720px wide): frames are
+   filled edge to edge, anchored at the top so heads and hats are never cut. */
+.gary-art, .standee .gary-art, .pick-art .gary-art { object-fit: cover; object-position: 50% 0; }
+[data-character="gary"] { --char-bg: #556043; }
+[data-character="milo"] { --char-bg: #a4815d; }
+[data-character="pam"], .pam-standee { --char-bg: #9d7a54; }
