@@ -29,19 +29,31 @@ const inventory=fs.readFileSync(INVENTORY,'utf8').split(/\r?\n/).filter(Boolean)
 const concepts=inventory.map((item,i)=>({rank:item.rank||i+1,name:String(item.name||'').trim(),key:normalize(item.name),aliases:Array.isArray(item.aliases)?item.aliases:[],difficulty:item.difficulty||'',qid:String(item.qid||'').trim(),traits:new Map(),sources:new Set()})).filter(c=>c.name);
 const byKey=new Map();
 const byQid=new Map();
+function addLookup(key,concept){
+  if(!key)return;
+  const list=byKey.get(key)||[];
+  if(!list.includes(concept))list.push(concept);
+  byKey.set(key,list);
+}
 for(const c of concepts){
-  byKey.set(c.key,c);
-  for(const alias of c.aliases)byKey.set(normalize(alias),c);
+  addLookup(c.key,c);
+  for(const alias of c.aliases)addLookup(normalize(alias),c);
   if(/^Q\d+$/.test(c.qid)&&!byQid.has(c.qid))byQid.set(c.qid,c);
+}
+function resolveLabelConcept(value){
+  const matches=byKey.get(normalize(value))||[];
+  if(matches.length===1)return matches[0];
+  const generic=matches.filter(c=>!c.qid);
+  return generic.length===1?generic[0]:null;
 }
 function addEvidenceToConcept(c,source,rawTrait,type='',metadata={}){
   const trait=String(rawTrait??'').trim();if(!trait)return false;
   const evidenceKey=`${source}|${type}|${trait}`;const current=c.traits.get(evidenceKey);
   if(current){current.support+=Number(metadata.support)||1;if(metadata.weight!=null)current.weight=Math.max(Number(current.weight)||0,Number(metadata.weight)||0);}
-  else c.traits.set(evidenceKey,{concept:c.name,source,type,trait,normalizedTrait:normalize(trait),support:Number(metadata.support)||1,...(metadata.confidence!=null?{confidence:metadata.confidence}:{}),...(metadata.weight!=null?{weight:metadata.weight}:{}),...(metadata.qid?{qid:metadata.qid}:{})});
+  else c.traits.set(evidenceKey,{concept:c.name,source,type,trait,normalizedTrait:normalize(trait),support:Number(metadata.support)||1,...(metadata.confidence!=null?{confidence:metadata.confidence}:{}),...(metadata.weight!=null?{weight:metadata.weight}:{}),...((metadata.qid||c.qid)?{qid:metadata.qid||c.qid}:{})});
   c.sources.add(source);return true;
 }
-function addEvidence(rawConcept,source,rawTrait,type='',metadata={}){const key=normalize(rawConcept).replace(/\b([a-z]+)\d+$/,'$1');const c=byKey.get(key);return c?addEvidenceToConcept(c,source,rawTrait,type,metadata):false;}
+function addEvidence(rawConcept,source,rawTrait,type='',metadata={}){const key=normalize(rawConcept).replace(/\b([a-z]+)\d+$/,'$1');const c=resolveLabelConcept(key);return c?addEvidenceToConcept(c,source,rawTrait,type,metadata):false;}
 
 if(fs.existsSync(MCRAE_THINGS)){
  const pairs=JSON.parse(fs.readFileSync(MCRAE_THINGS,'utf8'));const taxonomy=fs.existsSync(MCRAE_TAXONOMY)?JSON.parse(fs.readFileSync(MCRAE_TAXONOMY,'utf8')):{};
@@ -72,12 +84,11 @@ let wikidataEvidenceItems=0,wikidataSenseMismatches=0;
 const matchedWikidataConcepts=new Set();
 for(const row of wikidataRows){
  const rowQid=String(row.qid||'').trim();
- const labelConcept=byKey.get(normalize(row.concept));
+ const labelMatches=byKey.get(normalize(row.concept))||[];
+ const labelConcept=resolveLabelConcept(row.concept);
  const qidConcept=rowQid?byQid.get(rowQid):null;
- // QID is authoritative when both sides know it. Do not merge a same-label Wikidata
- // sense into a different inventory concept just because the display names collide.
- const target=qidConcept||(!rowQid||!labelConcept?.qid?labelConcept:null);
- if(!target){if(labelConcept&&rowQid)wikidataSenseMismatches++;continue;}
+ const target=qidConcept||(!rowQid?labelConcept:null);
+ if(!target){if(rowQid&&labelMatches.length)wikidataSenseMismatches++;continue;}
  let matched=false;
  for(const evidence of row.evidence||[]){
   if(addEvidenceToConcept(target,'Wikidata',evidence.trait,evidence.type||'',{confidence:evidence.confidence,qid:rowQid})){matched=true;wikidataEvidenceItems++;}
