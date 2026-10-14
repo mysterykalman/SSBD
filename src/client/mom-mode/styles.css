@@ -43,7 +43,7 @@ main:focus { outline: none; }
 .secret-word-lock { --felt-h: 40px; justify-self: start; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 16px 9px; font-size: .8rem; font-weight: 900; letter-spacing: .06em; overflow-wrap: anywhere; }
 
 /* Pam's speech: the felt speech bubble, tail toward her */
-.speech { --felt-h: 190px; position: relative; min-height: 150px; padding: 24px 36px 42px 42px; }
+.speech { --felt-h: 124px; position: relative; }
 .lead { color: var(--purple-deep); font-size: 1.05rem; font-weight: 900; }
 .question { margin-top: 6px; font-size: clamp(1.7rem, 3.6vw, 2.5rem); line-height: 1.12; letter-spacing: -.02em; text-wrap: balance; }
 .aside { margin-top: 10px; color: var(--ink-soft); line-height: 1.45; }
@@ -108,7 +108,7 @@ main:focus { outline: none; }
   .portrait { padding: 6px 4px 0; }
   .pam-teaser { display: none; }
   .pam-play { padding: 22px 18px 26px; gap: 14px; }
-  .speech { --felt-h: 150px; min-height: 0; padding: 18px 24px 34px 30px; }
+  .speech { --felt-h: 104px; }
   .question { font-size: clamp(1.45rem, 6.4vw, 1.9rem); }
   .q-dots { gap: 3px; }
   .score-panel { padding: 14px 16px; }

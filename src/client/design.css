@@ -295,6 +295,6 @@ dialog::backdrop { background: rgba(59, 42, 36, .45); backdrop-filter: blur(3px)
 
 /* Speech bubbles: the text area sits inside the stitching (insets are fractions of the piece's drawn
    height, measured from the bubble art), with extra room bottom-left for the tail. */
-.bubble, .gary-bubble, .speech { padding: calc(var(--felt-h) * .2) calc(var(--felt-h) * .19) calc(var(--felt-h) * .32) calc(var(--felt-h) * .24) !important; }
-.bubble, .gary-bubble { --felt-h: 92px; min-height: 0 !important; }
-.speech { --felt-h: 150px; min-height: 150px; }
+.bubble, .gary-bubble, .speech { padding: calc(var(--felt-h) * .19) calc(var(--felt-h) * .22) calc(var(--felt-h) * .34) calc(var(--felt-h) * .22) !important; }
+.bubble, .gary-bubble { --felt-h: 96px; min-height: 0 !important; }
+.speech { --felt-h: 124px; min-height: 0; }
