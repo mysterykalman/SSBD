@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import zlib from 'node:zlib';
 import {createCandidateAccumulator} from '../scripts/mom-playable-candidates.mjs';
 import {compileMomRuntimeKnowledge} from '../scripts/mom-runtime-compiler.mjs';
 
@@ -58,10 +59,12 @@ test('trait analysis and profile compilation isolate generic evidence from named
     fs.mkdirSync(sourceDir,{recursive:true});
     const inventory=[
       {rank:1,name:'Noodle',aliases:[],key:'noodle',identityKey:'noodle',difficulty:'Core',qid:'',score:120,sources:['THINGS'],broadCategory:'Everyday things',sourceCategory:''},
-      {rank:2,name:'Noodle',aliases:[],key:'noodle',identityKey:'wd:Q192874',difficulty:'Long Tail',qid:'Q192874',score:60,sources:['Wikipedia Vital Articles'],broadCategory:'Named / cultural knowledge',sourceCategory:''}
+      {rank:2,name:'Noodle',aliases:[],key:'noodle',identityKey:'wd:Q192874',difficulty:'Long Tail',qid:'Q192874',score:60,sources:['Wikipedia Vital Articles'],broadCategory:'Named / cultural knowledge',sourceCategory:''},
+      {rank:3,name:'205 Live',aliases:[],key:'205 live',identityKey:'wd:Q999999',difficulty:'Long Tail',qid:'Q999999',score:50,sources:['Wikipedia Vital Articles'],broadCategory:'Named / cultural knowledge',sourceCategory:''}
     ];
     fs.writeFileSync(path.join(inventoryDir,'playable_50k.jsonl'),inventory.map(row=>JSON.stringify(row)).join('\n')+'\n');
     fs.writeFileSync(path.join(sourceDir,'wordnet-evidence.json'),JSON.stringify([{concept:'Noodle',traits:['hypernym:food']}])) ;
+    fs.writeFileSync(path.join(sourceDir,'conceptnet-assertions-5.7.0.csv.gz'),zlib.gzipSync(['/a/test','/r/IsA','/c/en/205_live','/c/en/person',JSON.stringify({weight:1})].join('\t')+'\n'));
     fs.writeFileSync(path.join(sourceDir,'wikidata-labelled-evidence.json'),JSON.stringify([
       {concept:'Noodle',qid:'Q192874',evidence:[{trait:'fictional character',type:'instance of',confidence:1}]}
     ]));
@@ -75,6 +78,8 @@ test('trait analysis and profile compilation isolate generic evidence from named
     assert.ok(namedEvidence.some(row=>row.source==='Wikidata'));
     assert.ok(!genericEvidence.some(row=>row.source==='Wikidata'));
     assert.ok(!namedEvidence.some(row=>row.source==='Open English WordNet'));
+    const uniqueNamedEvidence=evidence.filter(row=>row.qid==='Q999999');
+    assert.ok(!uniqueNamedEvidence.some(row=>row.source==='ConceptNet'));
 
     const compile=spawnSync(NODE,[path.join(ROOT,'scripts/build-mom-controlled-profiles.mjs')],{cwd:root,encoding:'utf8'});
     assert.equal(compile.status,0,compile.stderr||compile.stdout);
