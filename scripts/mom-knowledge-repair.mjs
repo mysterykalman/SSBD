@@ -3,6 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const DEFAULT_RUNTIME = path.join('src','client','mom-mode','knowledge.runtime.json');
+const DOMAIN_IDS=['person','animal','plant','place','food_drink','object','media_work','event','organization','abstract'];
 
 export function normalizeQuestionText(value='') {
   return String(value)
@@ -44,6 +45,32 @@ export function questionAppliesToConcept(runtime,questionIndexValue,conceptIndex
     if(requiredIndex!=null&&truthAt(runtime,conceptIndex,requiredIndex)==='Y')return true;
   }
   return false;
+}
+
+export function conceptRootConflicts(runtime){
+  const questionIndex=buildQuestionIndex(runtime);
+  return (runtime?.concepts||[]).flatMap((concept,index)=>{
+    const roots=DOMAIN_IDS.filter(id=>questionIndex[id]!=null&&truthAt(runtime,index,questionIndex[id])==='Y');
+    return roots.length>1?[{index,id:concept.id,name:concept.name,category:concept.category,roots}]:[];
+  });
+}
+
+export function buildIdentityRepairTargets(runtime,{limit=1000,includeConflicts=true}={}){
+  const conflictsByIndex=new Map(conceptRootConflicts(runtime).map(row=>[row.index,row]));
+  return (runtime?.concepts||[])
+    .map((concept,index)=>({concept,index,known:(concept.yes?.length||0)+(concept.no?.length||0)+(concept.maybe?.length||0),conflict:conflictsByIndex.get(index)}))
+    .filter(row=>row.known===0||(includeConflicts&&row.conflict))
+    .sort((a,b)=>(Number(b.concept.prior)||0)-(Number(a.concept.prior)||0)||a.concept.name.localeCompare(b.concept.name,'en'))
+    .slice(0,limit)
+    .map(({concept,known,conflict})=>({
+      concept_id:concept.id,
+      name:concept.name,
+      current_category:concept.category,
+      current_subcategory:concept.subcategory||'',
+      known_cells:known,
+      root_conflict:(conflict?.roots||[]).join('|'),
+      repair_reason:known===0?'zero_knowledge':'conflicting_roots'
+    }));
 }
 
 export function duplicateQuestionGroups(runtime){
@@ -112,6 +139,7 @@ export function auditMomKnowledge(runtime){
 
   const theoreticalCells=runtime.concepts.length*runtime.questions.length;
   const duplicates=duplicateQuestionGroups(runtime);
+  const rootConflicts=conceptRootConflicts(runtime);
   const gatedQuestions=runtime.questions.filter(q=>q.requires!=null||(q.appliesTo||[]).length>0).length;
   const branchRequiredQuestions=runtime.questions.filter(q=>q.requires!=null).length;
   const zeroKnowledgeByCategory=Object.entries(runtime.concepts.reduce((acc,concept)=>{
@@ -136,12 +164,14 @@ export function auditMomKnowledge(runtime){
       zeroKnowledgeConcepts,
       zeroApplicableKnowledgeConcepts,
       duplicateWordingGroups:duplicates.length,
-      duplicateQuestionRecords:duplicates.reduce((sum,group)=>sum+group.questions.length,0)
+      duplicateQuestionRecords:duplicates.reduce((sum,group)=>sum+group.questions.length,0),
+      rootConflictConcepts:rootConflicts.length
     },
     zeroKnowledgeByCategory,
     categoryStats:[...categoryStats.values()].map(row=>({...row,coverage:row.total?row.known/row.total:0})).sort((a,b)=>b.missing-a.missing||a.key.localeCompare(b.key)),
     questionStats:questionStats.map(row=>({...row,coverage:row.applicable?row.known/row.applicable:0})).sort((a,b)=>b.missing-a.missing||a.id.localeCompare(b.id)),
-    duplicates
+    duplicates,
+    rootConflicts
   };
 }
 
@@ -187,17 +217,19 @@ export function formatAuditSummary(audit){
     `Questions with explicit requires gate: ${m.branchRequiredQuestions.toLocaleString('en-US')}`,
     `Concepts with zero knowledge: ${m.zeroKnowledgeConcepts.toLocaleString('en-US')}`,
     `Concepts with zero applicable knowledge: ${m.zeroApplicableKnowledgeConcepts.toLocaleString('en-US')}`,
-    `Duplicate wording groups: ${m.duplicateWordingGroups.toLocaleString('en-US')}`
+    `Duplicate wording groups: ${m.duplicateWordingGroups.toLocaleString('en-US')}`,
+    `Concepts with conflicting positive domain roots: ${m.rootConflictConcepts.toLocaleString('en-US')}`
   ].join('\n');
 }
 
 function parseArgs(argv){
-  const out={runtime:DEFAULT_RUNTIME,json:'',targets:'',limit:1000};
+  const out={runtime:DEFAULT_RUNTIME,json:'',targets:'',identityTargets:'',limit:1000};
   for(let i=0;i<argv.length;i++){
     const arg=argv[i];
     if(arg==='--runtime')out.runtime=argv[++i];
     else if(arg==='--json')out.json=argv[++i];
     else if(arg==='--targets')out.targets=argv[++i];
+    else if(arg==='--identity-targets')out.identityTargets=argv[++i];
     else if(arg==='--limit')out.limit=Math.max(1,Number(argv[++i])||1000);
   }
   return out;
@@ -208,8 +240,7 @@ function csvCell(value){
   return /[",\n\r]/.test(text)?`"${text.replaceAll('"','""')}"`:text;
 }
 
-function writeTargetsCsv(file,targets){
-  const columns=['concept_id','name','category','subcategory','question_id','question','question_group','question_family','question_breadth'];
+function writeCsv(file,targets,columns){
   const rows=[columns.join(','),...targets.map(target=>columns.map(column=>csvCell(target[column])).join(','))];
   fs.mkdirSync(path.dirname(file),{recursive:true});
   fs.writeFileSync(file,rows.join('\n')+'\n');
@@ -227,8 +258,13 @@ function main(){
   }
   if(args.targets){
     const targets=buildRepairTargets(runtime,{limit:args.limit});
-    const out=path.resolve(process.cwd(),args.targets);writeTargetsCsv(out,targets);
+    const out=path.resolve(process.cwd(),args.targets);writeCsv(out,targets,['concept_id','name','category','subcategory','question_id','question','question_group','question_family','question_breadth']);
     console.log(`Repair targets: ${path.relative(process.cwd(),out)} (${targets.length.toLocaleString('en-US')} rows)`);
+  }
+  if(args.identityTargets){
+    const targets=buildIdentityRepairTargets(runtime,{limit:args.limit});
+    const out=path.resolve(process.cwd(),args.identityTargets);writeCsv(out,targets,['concept_id','name','current_category','current_subcategory','known_cells','root_conflict','repair_reason']);
+    console.log(`Identity repair targets: ${path.relative(process.cwd(),out)} (${targets.length.toLocaleString('en-US')} rows)`);
   }
 }
 
