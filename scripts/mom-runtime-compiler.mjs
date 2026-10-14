@@ -73,6 +73,11 @@ function canonicalSupplements(supplements) {
 function hashSources(value) {
   return createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 }
+function runtimeIdentityKey(value={}) {
+  const qid=String(value.qid||'').trim();
+  if(qid)return `wd:${qid}`;
+  return `concept:${normalizeMomLookup(value.key||value.name)}`;
+}
 function conceptId(profile, inventory, supplements=[]) {
   const qid = String(profile.qid || inventory?.qid || supplements.find(x=>x.qid)?.qid || '').trim();
   if (qid) return `wd:${qid}`;
@@ -97,7 +102,9 @@ function consolidateSupplementObjects(supplements) {
     const name=String(raw?.name||'').trim();
     if(!name) continue;
     const key=normalizeMomLookup(name);
-    const current=map.get(key)||{name,key,aliases:new Set(),yes:new Set(),no:new Set(),maybe:new Set(),weight:0,qid:'',kind:'',facets:{},sources:new Set()};
+    const qid=String(raw.qid||'').trim();
+    const identityKey=qid?`wd:${qid}`:`concept:${key}`;
+    const current=map.get(identityKey)||{name,key,identityKey,aliases:new Set(),yes:new Set(),no:new Set(),maybe:new Set(),weight:0,qid:'',kind:'',facets:{},sources:new Set()};
     current.sources.add(supplement.source||'supplement');
     for(const alias of raw.aliases||[]) if(alias) current.aliases.add(String(alias).trim());
     for(const id of raw.yes||[]) if(id) current.yes.add(id);
@@ -107,7 +114,7 @@ function consolidateSupplementObjects(supplements) {
     current.qid ||= String(raw.qid||'');
     current.kind ||= String(raw.kind||'');
     if(raw.facets&&typeof raw.facets==='object')current.facets={...current.facets,...raw.facets};
-    map.set(key,current);
+    map.set(identityKey,current);
   }
   for(const record of map.values()){
     for(const id of record.yes){record.no.delete(id);record.maybe.delete(id);}
@@ -119,7 +126,8 @@ function supplementIndexes(records){
   const byLookup=new Map(),byQid=new Map();
   for(const record of records){
     for(const value of [record.name,...record.aliases]){
-      const key=normalizeMomLookup(value);if(key&&!byLookup.has(key))byLookup.set(key,record);
+      const key=normalizeMomLookup(value);if(!key)continue;
+      const list=byLookup.get(key)||[];list.push(record);byLookup.set(key,list);
     }
     if(record.qid&&!byQid.has(record.qid))byQid.set(record.qid,record);
   }
@@ -127,10 +135,14 @@ function supplementIndexes(records){
 }
 function matchSupplementRecords(profile,source,indexes){
   const found=new Set();
-  const qid=String(profile.qid||source.qid||'');
-  if(qid&&indexes.byQid.has(qid))found.add(indexes.byQid.get(qid));
+  const qid=String(profile.qid||source.qid||'').trim();
+  if(qid){
+    if(indexes.byQid.has(qid))found.add(indexes.byQid.get(qid));
+    return [...found];
+  }
   for(const value of [profile.name,...(profile.aliases||[]),source.name,...(source.aliases||[])]){
-    const key=normalizeMomLookup(value);if(key&&indexes.byLookup.has(key))found.add(indexes.byLookup.get(key));
+    const key=normalizeMomLookup(value);if(!key)continue;
+    for(const record of indexes.byLookup.get(key)||[])if(!record.qid)found.add(record);
   }
   return [...found];
 }
@@ -166,15 +178,14 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
     };
   });
 
-  const inventoryByKey=new Map(inventory.map(item=>[normalizeMomLookup(item.key||item.name),item]));
+  const inventoryByIdentity=new Map(inventory.map(item=>[runtimeIdentityKey(item),item]));
   const supplementRecords=consolidateSupplementObjects(supplements);
   const supplementIndex=supplementIndexes(supplementRecords);
   const matchedSupplement=new Set();
   const seeds=[];
 
   for(const profile of [...profiles].sort((a,b)=>String(a.name).localeCompare(String(b.name),'en'))){
-    const key=normalizeMomLookup(profile.key||profile.name);
-    const source=inventoryByKey.get(key)||{};
+    const source=inventoryByIdentity.get(runtimeIdentityKey(profile))||{};
     const matches=matchSupplementRecords(profile,source,supplementIndex);
     matches.forEach(record=>matchedSupplement.add(record));
     seeds.push({profile,source,matches});
@@ -219,7 +230,7 @@ export function compileMomRuntimeKnowledge({inventory=[], profiles=[], traits=[]
   const sourceHash=hashSources(canonicalSources);
   return{
     version:1,
-    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'6'},
+    meta:{conceptCount:concepts.length,questionCount:questions.length,sourceHash,generatedAt,compilerVersion:'7'},
     questions,concepts,aliases,facetIndex
   };
 }
