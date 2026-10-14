@@ -257,3 +257,24 @@ dialog::backdrop { background: rgba(59, 42, 36, .45); backdrop-filter: blur(3px)
 .standee .gary-art, .pick-art .gary-art { object-fit: contain; object-position: 50% 100%; }
 .gary-art-wrap.art-missing .gary-art { display: none; }
 .art-fallback { display: grid; place-items: center; width: 100%; height: 100%; color: var(--char, var(--ink)); font-weight: 900; font-size: 2.4rem; line-height: 1; }
+
+/* ---------- round felt badges (src/client/felt/badge-*.webp) ----------
+   Every circle in the game is a felt button: progress dots, the + / = between words, player
+   tokens, icon buttons, move numbers, the countdown and Pam's numbered rules. */
+:root {
+  --badge-cream: url("/felt/badge-cream.webp");
+  --badge-coral: url("/felt/badge-coral.webp");
+  --badge-yellow: url("/felt/badge-yellow.webp");
+  --badge-orange: url("/felt/badge-orange.webp");
+  --badge-purple: url("/felt/badge-purple.webp");
+  --badge-teal: url("/felt/badge-teal.webp");
+  --badge-green: url("/felt/badge-green.webp");
+}
+.felt-badge, .icon-btn, .avatar, .bell, .dialog-x, .dialog-close, .op, .badge:not(.gary), .move-badge, .stone, .q-dots i, .rv-count:not(.words), .rule-list > div::before {
+  background: var(--badge, var(--badge-cream)) center / 100% 100% no-repeat !important;
+  border: 0 !important;
+  border-radius: 50%;
+  box-shadow: none !important;
+}
+.icon-btn::before, .avatar::before, .bell::before, .dialog-x::before, .dialog-close::before { display: none; }
+.icon-btn:active, .avatar:active, .bell:active, .dialog-x:active, .dialog-close:active { filter: brightness(.95); }

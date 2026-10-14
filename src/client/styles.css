@@ -564,3 +564,26 @@ main:focus { outline: none; }
   .pick-card, .pick-card:hover { transition: none; transform: none; }
   .now-dot, .form-help.status-line::before { animation: none; }
 }
+
+/* badge colours */
+.op { --badge: var(--badge-cream); color: var(--ink); width: 40px; height: 40px; }
+.reveal-modal.match .rv-words > .op, .trail-row.match .op { --badge: var(--badge-green); }
+.trail-eq .op { width: 28px; height: 28px; }
+.badge.you { --badge: var(--badge-coral); }
+.badge.other { --badge: var(--badge-teal); }
+.badge { --badge: var(--badge-yellow); }
+.move-badge { --badge: var(--badge-cream); }
+.trail-now .move-badge { --badge: var(--badge-orange); color: var(--ink); }
+.bell-count { background: var(--badge-coral) center / 100% 100% no-repeat; }
+.stone { --badge: var(--badge-cream); width: 24px; height: 24px; }
+.stone.done:nth-child(6n + 1) { --badge: var(--badge-coral); }
+.stone.done:nth-child(6n + 2) { --badge: var(--badge-orange); }
+.stone.done:nth-child(6n + 3) { --badge: var(--badge-yellow); }
+.stone.done:nth-child(6n + 4) { --badge: var(--badge-green); }
+.stone.done:nth-child(6n + 5) { --badge: var(--badge-teal); }
+.stone.done:nth-child(6n) { --badge: var(--badge-purple); }
+.stone.now { --badge: var(--badge-cream); width: 34px; height: 34px; color: var(--ink); font-size: .8rem; }
+.stone.lit { --badge: var(--badge-green); }
+.stone.final { --badge: var(--badge-yellow); width: 34px; height: 34px; }
+.progress.ssbd-loss .stone.final { --badge: var(--badge-coral); color: #fff; }
+.rv-count { --badge: var(--badge-orange); width: 150px; height: 150px; }

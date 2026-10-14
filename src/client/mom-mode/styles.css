@@ -121,3 +121,13 @@ main:focus { outline: none; }
   .top-actions .btn { padding-inline: 14px; font-size: .86rem; }
 }
 @media (prefers-reduced-motion: reduce) { .game-card[data-stage] .portrait { animation: none; } }
+
+/* round felt badges for the question dots and rule numbers */
+.q-dots i { --badge: var(--badge-cream); max-width: 24px; }
+.q-dots i.used { --badge: var(--badge-purple); }
+.q-dots i.used.late { --badge: var(--badge-coral); }
+.q-dots i.next { --badge: var(--badge-yellow); transform: scale(1.15); }
+.rule-list > div::before { --badge: var(--badge-coral); color: #fff; width: 38px; height: 38px; }
+.rule-list > div:nth-child(2)::before { --badge: var(--badge-orange); }
+.rule-list > div:nth-child(3)::before { --badge: var(--badge-teal); }
+.rule-list > div:nth-child(4)::before { --badge: var(--badge-purple); }
