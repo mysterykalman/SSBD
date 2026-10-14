@@ -69,7 +69,7 @@ export const TRAITS=[
  t('plastic','Is plastic a common major material?','material',['object']),
  t('glass','Is glass a common major material?','material',['object']),
  t('paper','Is paper or cardboard a major material?','material',['object']),
- t('fabric','Is fabric a common major material?','material',['object']),
+ t('fabric','Is fabric a major material?','material',['object']),
  t('round','Is it usually round or circular?','shape',['object']),
  t('soft','Is it usually soft to the touch?','physical',['object']),
 
@@ -161,7 +161,6 @@ function isTaxonomicEvidence(type='') {
 export function mapEvidence(evidence){
  const out=new Set();
  for(const ev of evidence||[]){
-  const source=String(ev.source||'').toLowerCase();
   const type=String(ev.type||'').toLowerCase();
   const raw=String(ev.trait||'').toLowerCase().replaceAll('_',' ');
   const text=`${type} ${raw}`;
