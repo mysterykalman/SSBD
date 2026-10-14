@@ -59,14 +59,13 @@
   },
   {
    "asset": "bubble-left",
-   "fill": false,
-   "center": "#f8f0e2",
    "repeat": "round",
    "selectors": [
     ".bubble",
     ".gary-bubble",
     ".speech"
-   ]
+   ],
+   "underlay": "middle"
   },
   {
    "asset": "chip-cream",
