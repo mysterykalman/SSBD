@@ -29,3 +29,25 @@ test('feature records use only known prerequisite traits',()=>{
  const ids=new Set(TRAITS.map(t=>t.id));
  for(const f of featureRecords())if(f.requires)assert.ok(ids.has(f.requires),`${f.id} has unknown prerequisite ${f.requires}`);
 });
+
+test('relationship targets do not masquerade as root classifications',()=>{
+ const hasBook=mapEvidence([{source:'CSKG:ConceptNet',type:'hasa',trait:'hasa:book'}]);
+ assert.ok(!hasBook.has('media_work'));
+ assert.ok(!hasBook.has('book'));
+
+ const atPark=mapEvidence([{source:'CSKG:ConceptNet',type:'atlocation',trait:'atlocation:park'}]);
+ assert.ok(!atPark.has('place'));
+ assert.ok(!atPark.has('park'));
+
+ const madeByPerson=mapEvidence([{source:'ConceptNet',type:'CreatedBy',trait:'CreatedBy:person'}]);
+ assert.ok(!madeByPerson.has('person'));
+ assert.ok(!madeByPerson.has('living'));
+});
+
+test('taxonomic evidence still maps controlled roots and subtypes',()=>{
+ const book=mapEvidence([{source:'CSKG:WordNet',type:'isa',trait:'isa:book'}]);
+ for(const id of ['book','media_work','manmade'])assert.ok(book.has(id),`missing ${id}`);
+
+ const company=mapEvidence([{source:'ConceptNet',type:'IsA',trait:'IsA:company'}]);
+ for(const id of ['company','organization'])assert.ok(company.has(id),`missing ${id}`);
+});
