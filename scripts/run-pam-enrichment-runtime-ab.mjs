@@ -31,10 +31,22 @@ function run(command,args,env={}){
 function mustExist(file,label){
   if(!fs.existsSync(file))fail(`Missing ${label}: ${file}`);
 }
+function bootstrapPrerequisites(){
+  if(!fs.existsSync(INVENTORY)){
+    console.log(`[pam runtime A/B] Playable 50k inventory is missing. Rebuilding it with the existing deterministic builder.`);
+    run(process.execPath,['scripts/build-mom-playable-50k.mjs']);
+  }
+  mustExist(INVENTORY,'playable 50k inventory after rebuild');
 
-mustExist(INVENTORY,'playable 50k inventory');
-mustExist(COVERAGE,'trait coverage evidence');
+  if(!fs.existsSync(COVERAGE)){
+    console.log(`[pam runtime A/B] Trait coverage evidence is missing. Rebuilding it with the existing offline coverage pipeline.`);
+    run(process.execPath,['scripts/analyze-mom-trait-coverage.mjs']);
+  }
+  mustExist(COVERAGE,'trait coverage evidence after rebuild');
+}
+
 mustExist(APPROVED,'approved enrichment evidence');
+bootstrapPrerequisites();
 
 let approved;
 try{approved=JSON.parse(fs.readFileSync(APPROVED,'utf8'));}
