@@ -96,7 +96,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .dev-data/baseline
-          gh release download pam-baseline-v1             --repo "${{ github.repository }}"             --pattern "pam-films-v6.sqlite"             --pattern "pam-films-v6.sqlite.sha256"             --dir .dev-data/baseline
+          gh release download pam-baseline-v1             --repo "${{ github.repository }}"             --pattern "pam-films-v6.sqlite"             --pattern "pam-films-v6.sqlite.sha256" \
+            --pattern "missing-film-profiles.csv"             --dir .dev-data/baseline
           cd .dev-data/baseline
           shasum -a 256 -c pam-films-v6.sqlite.sha256
 
@@ -110,6 +111,7 @@ jobs:
         env:
           PAM_SUBJECT: ${{ matrix.subject }}
           PAM_MAX_RECORDS: ${{ inputs.max_records || '1500' }}
+          PAM_FILM_INPUT: .dev-data/baseline/missing-film-profiles.csv
         run: |
           set -euo pipefail
 
