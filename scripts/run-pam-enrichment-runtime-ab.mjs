@@ -6,11 +6,12 @@ import {spawnSync} from 'node:child_process';
 const ROOT=process.cwd();
 const DATA_ROOT=path.resolve(process.env.PAM_KNOWLEDGE_ROOT||'/Volumes/Samsung_T5/Pam-Knowledge');
 const ENRICH_DIR=path.resolve(process.env.PAM_ENRICHMENT_DIR||path.join(DATA_ROOT,'validated-enrichment'));
+const BASELINE_DB=path.resolve(process.env.PAM_BASELINE_DB||path.join(DATA_ROOT,'baseline','pam-films-v6.sqlite'));
 const APPROVED=path.join(ENRICH_DIR,'approved-runtime-evidence.json');
-const INVENTORY=path.join(ROOT,'.dev-data','mom-playable-50k','playable_50k.jsonl');
-const COVERAGE=path.join(ROOT,'.dev-data','mom-trait-coverage','evidence.jsonl');
-const DEFAULT_EXTRA=path.join(ROOT,'.dev-data','trait-sources','extra-public-evidence.json');
 const OUT=path.join(ENRICH_DIR,'runtime-ab');
+const SQLITE_INPUTS=path.join(OUT,'sqlite-baseline-inputs');
+const INVENTORY=path.join(SQLITE_INPUTS,'inventory.jsonl');
+const COVERAGE=path.join(SQLITE_INPUTS,'evidence.jsonl');
 const BASELINE_PROFILES=path.join(OUT,'baseline-profiles');
 const ENRICHED_PROFILES=path.join(OUT,'enriched-profiles');
 const BASELINE_RUNTIME_DIR=path.join(OUT,'baseline-runtime');
@@ -31,22 +32,23 @@ function run(command,args,env={}){
 function mustExist(file,label){
   if(!fs.existsSync(file))fail(`Missing ${label}: ${file}`);
 }
-function bootstrapPrerequisites(){
-  if(!fs.existsSync(INVENTORY)){
-    console.log(`[pam runtime A/B] Playable 50k inventory is missing. Rebuilding it with the existing deterministic builder.`);
-    run(process.execPath,['scripts/build-mom-playable-50k.mjs']);
-  }
-  mustExist(INVENTORY,'playable 50k inventory after rebuild');
-
-  if(!fs.existsSync(COVERAGE)){
-    console.log(`[pam runtime A/B] Trait coverage evidence is missing. Rebuilding it with the existing offline coverage pipeline.`);
-    run(process.execPath,['scripts/analyze-mom-trait-coverage.mjs']);
-  }
-  mustExist(COVERAGE,'trait coverage evidence after rebuild');
+function pythonCommand(){
+  const preferred=process.env.PAM_PYTHON||path.join(process.env.HOME||'','Documents','Wikidata','.venv','bin','python');
+  return fs.existsSync(preferred)?preferred:(process.env.PYTHON||'python3');
 }
 
+mustExist(BASELINE_DB,'immutable Pam baseline SQLite');
 mustExist(APPROVED,'approved enrichment evidence');
-bootstrapPrerequisites();
+fs.mkdirSync(OUT,{recursive:true});
+
+console.log('[pam runtime A/B] Exporting runtime inputs directly from the accepted immutable Pam SQLite baseline.');
+run(pythonCommand(),[
+  'scripts/export-pam-sqlite-runtime-inputs.py',
+  '--database',BASELINE_DB,
+  '--output-dir',SQLITE_INPUTS
+]);
+mustExist(INVENTORY,'SQLite-derived runtime inventory');
+mustExist(COVERAGE,'SQLite-derived controlled-trait evidence');
 
 let approved;
 try{approved=JSON.parse(fs.readFileSync(APPROVED,'utf8'));}
@@ -56,14 +58,12 @@ if(!approved.every(row=>row&&typeof row.concept==='string'&&Array.isArray(row.ev
   fail('Approved enrichment evidence does not match the controlled-profile adapter schema.');
 }
 
-fs.mkdirSync(OUT,{recursive:true});
-const baselineExtraFiles=fs.existsSync(DEFAULT_EXTRA)?[DEFAULT_EXTRA]:[];
-const enrichedExtraFiles=[...baselineExtraFiles,APPROVED];
-
+// Baseline = exactly the accepted SQLite positive controlled-trait facts.
+// Enriched = that same baseline plus only the approved offline enrichment evidence.
 run(process.execPath,['scripts/build-mom-controlled-profiles.mjs'],{
   MOM_PROFILE_INVENTORY:INVENTORY,
   MOM_PROFILE_COVERAGE_EVIDENCE:COVERAGE,
-  MOM_PROFILE_EXTRA_FILES:baselineExtraFiles.join(path.delimiter),
+  MOM_PROFILE_EXTRA_FILES:'',
   MOM_PROFILE_OUT_DIR:BASELINE_PROFILES
 });
 run(process.execPath,['scripts/build-mom-runtime-knowledge.mjs'],{
@@ -75,7 +75,7 @@ run(process.execPath,['scripts/build-mom-runtime-knowledge.mjs'],{
 run(process.execPath,['scripts/build-mom-controlled-profiles.mjs'],{
   MOM_PROFILE_INVENTORY:INVENTORY,
   MOM_PROFILE_COVERAGE_EVIDENCE:COVERAGE,
-  MOM_PROFILE_EXTRA_FILES:enrichedExtraFiles.join(path.delimiter),
+  MOM_PROFILE_EXTRA_FILES:APPROVED,
   MOM_PROFILE_OUT_DIR:ENRICHED_PROFILES
 });
 run(process.execPath,['scripts/build-mom-runtime-knowledge.mjs'],{
@@ -97,11 +97,13 @@ mustExist(comparisonPath,'runtime A/B comparison');
 const comparison=JSON.parse(fs.readFileSync(comparisonPath,'utf8'));
 const baselineProfileSummary=JSON.parse(fs.readFileSync(path.join(BASELINE_PROFILES,'summary.json'),'utf8'));
 const enrichedProfileSummary=JSON.parse(fs.readFileSync(path.join(ENRICHED_PROFILES,'summary.json'),'utf8'));
+const inputSummary=JSON.parse(fs.readFileSync(path.join(SQLITE_INPUTS,'summary.json'),'utf8'));
 
 const summary={
-  mode:'isolated-pam-enrichment-runtime-ab',
+  mode:'isolated-pam-enrichment-runtime-ab-from-sqlite-baseline',
+  baselineSource:BASELINE_DB,
+  baselineAdapter:inputSummary,
   approvedEvidenceConceptRows:approved.length,
-  defaultExtraEvidencePresent:fs.existsSync(DEFAULT_EXTRA),
   baselineRuntime:BASELINE_RUNTIME,
   enrichedRuntime:ENRICHED_RUNTIME,
   baselineProfiles:{
