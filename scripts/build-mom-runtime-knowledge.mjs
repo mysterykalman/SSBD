@@ -5,17 +5,17 @@ import {compileMomRuntimeKnowledge} from './mom-runtime-compiler.mjs';
 import {loadMomRuntimeSupplements} from './load-mom-runtime-supplements.mjs';
 
 const ROOT = process.cwd();
-const INVENTORY = path.join(ROOT, '.dev-data', 'mom-playable-50k', 'playable_50k.jsonl');
-const PROFILES = path.join(ROOT, '.dev-data', 'mom-controlled-profiles', 'mom-controlled-profiles.json');
-const OUT_DIR = path.join(ROOT, '.dev-data', 'mom-runtime');
-const OUT = path.join(OUT_DIR, 'knowledge.runtime.json');
+const INVENTORY = path.resolve(ROOT, process.env.MOM_RUNTIME_INVENTORY || '.dev-data/mom-playable-50k/playable_50k.jsonl');
+const PROFILES = path.resolve(ROOT, process.env.MOM_RUNTIME_PROFILES || '.dev-data/mom-controlled-profiles/mom-controlled-profiles.json');
+const OUT_DIR = path.resolve(ROOT, process.env.MOM_RUNTIME_OUT_DIR || '.dev-data/mom-runtime');
+const OUT = path.join(OUT_DIR, process.env.MOM_RUNTIME_OUT_FILE || 'knowledge.runtime.json');
 
 function readJsonl(file) {
   return fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
 }
 
-if (!fs.existsSync(INVENTORY)) throw new Error('Missing playable 50k inventory. Run build-mom-playable-50k.mjs first.');
-if (!fs.existsSync(PROFILES)) throw new Error('Missing controlled profiles. Run build-mom-controlled-profiles.mjs first.');
+if (!fs.existsSync(INVENTORY)) throw new Error(`Missing playable 50k inventory: ${INVENTORY}`);
+if (!fs.existsSync(PROFILES)) throw new Error(`Missing controlled profiles: ${PROFILES}`);
 
 const inventory = readJsonl(INVENTORY);
 const profileFile = JSON.parse(fs.readFileSync(PROFILES, 'utf8'));
