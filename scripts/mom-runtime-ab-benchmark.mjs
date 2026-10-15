@@ -8,6 +8,7 @@ const WITH_PATH=path.resolve(ROOT,process.env.MOM_RUNTIME_WITH_WIKIDATA||'.dev-d
 const WITHOUT_PATH=path.resolve(ROOT,process.env.MOM_RUNTIME_WITHOUT_WIKIDATA||'.dev-data/mom-runtime-ab/without-wikidata.json');
 const BENCHMARK_REPORT_PATH=path.resolve(ROOT,process.env.MOM_RUNTIME_WITH_REPORT||'.dev-data/mom-runtime-benchmark/report.json');
 const OUT_DIR=path.resolve(ROOT,process.env.MOM_RUNTIME_AB_OUT_DIR||'.dev-data/mom-runtime-ab');
+const PROGRESS_EVERY=Math.max(1,Number(process.env.MOM_RUNTIME_AB_PROGRESS_EVERY||50));
 
 function readRuntime(filename){
   if(!fs.existsSync(filename))throw new Error(`Missing runtime: ${filename}`);
@@ -46,11 +47,16 @@ const withRuntime=readRuntime(WITH_PATH);
 const withoutRuntime=readRuntime(WITHOUT_PATH);
 const rows=loadBenchmarkRows();
 const cachedWithRows=reusableBenchmarkRows(withRuntime,rows);
-const withRows=cachedWithRows||evaluateRuntimeBenchmark(withRuntime,rows,{selfPlay:true});
-console.log(cachedWithRows
-  ?`Reusing ${withRows.length.toLocaleString()} validated with-Wikidata gameplay rows from ${path.relative(ROOT,BENCHMARK_REPORT_PATH)}.`
-  :'No matching prior with-Wikidata gameplay report found; evaluating that side now.');
-const withoutRows=evaluateRuntimeBenchmark(withoutRuntime,rows,{selfPlay:true});
+let withRows;
+if(cachedWithRows){
+  withRows=cachedWithRows;
+  console.log(`Reusing ${withRows.length.toLocaleString()} validated enriched gameplay rows from ${path.relative(ROOT,BENCHMARK_REPORT_PATH)}.`);
+}else{
+  console.log(`No matching prior enriched gameplay report found. Evaluating ${rows.length.toLocaleString()} benchmark rows.`);
+  withRows=evaluateRuntimeBenchmark(withRuntime,rows,{selfPlay:true,progressEvery:PROGRESS_EVERY,progressLabel:'Enriched'});
+}
+console.log(`Starting baseline gameplay evaluation for ${rows.length.toLocaleString()} benchmark rows.`);
+const withoutRows=evaluateRuntimeBenchmark(withoutRuntime,rows,{selfPlay:true,progressEvery:PROGRESS_EVERY,progressLabel:'Baseline'});
 const withSummary=summarizeRuntimeBenchmark(withRuntime,withRows);
 const withoutSummary=summarizeRuntimeBenchmark(withoutRuntime,withoutRows);
 
