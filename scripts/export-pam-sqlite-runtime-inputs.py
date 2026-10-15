@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 """Export the accepted Pam SQLite baseline as deterministic runtime inputs.
 
-This is a recovery adapter for local environments where historical .dev-data source
-dumps are no longer present. It does not alter the SQLite database. It emits:
+This adapter is intentionally lossless for the answer matrix. It does not alter
+SQLite. It emits:
   - inventory.jsonl: one row per accepted baseline concept
-  - evidence.jsonl: one row per baseline `yes` answer whose question_id is a
-    canonical controlled runtime trait
+  - baseline-profiles.json: profiles preserving every yes/no/sometimes answer by
+    exact question_id
+  - enriched-profiles.json: the same profiles plus approved enrichment facts
+    when --approved-evidence is supplied
 
-The controlled trait IDs are parsed from scripts/mom-controlled-traits.mjs so the
-adapter stays aligned with the game-facing vocabulary without duplicating it.
+The runtime compiler already understands profile.traits/yes, profile.no and
+profile.maybe, so this avoids reconstructing accepted Pam knowledge from sparse
+positive-only evidence.
 """
 import argparse
 import json
 import re
 import sqlite3
+import unicodedata
+from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,15 +27,8 @@ DEFAULT_OUT = Path('/Volumes/Samsung_T5/Pam-Knowledge/validated-enrichment/runti
 
 
 def normalize(value):
-    return ' '.join(str(value or '').strip().casefold().replace('_', ' ').split())
-
-
-def controlled_trait_ids(path):
-    text = Path(path).read_text(encoding='utf-8')
-    ids = set(re.findall(r"\bt\('([^']+)'", text))
-    if not ids:
-        raise SystemExit(f'Could not parse controlled trait IDs from {path}')
-    return ids
+    text = unicodedata.normalize('NFKC', str(value or ''))
+    return ' '.join(text.casefold().replace('_', ' ').split())
 
 
 def qid_from_concept_id(value):
@@ -40,10 +38,23 @@ def qid_from_concept_id(value):
     return ''
 
 
+def load_approved(path):
+    if not path:
+        return []
+    filename = Path(path)
+    if not filename.is_file():
+        raise SystemExit(f'Missing approved enrichment evidence: {filename}')
+    data = json.loads(filename.read_text(encoding='utf-8'))
+    if not isinstance(data, list):
+        raise SystemExit('Approved enrichment evidence must be a JSON array')
+    return data
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--database', default=str(DEFAULT_DB))
     parser.add_argument('--output-dir', default=str(DEFAULT_OUT))
+    parser.add_argument('--approved-evidence')
     args = parser.parse_args()
 
     db = Path(args.database)
@@ -52,78 +63,149 @@ def main():
     if not db.is_file():
         parser.error(f'Missing Pam baseline SQLite: {db}')
 
-    traits = controlled_trait_ids(ROOT / 'scripts/mom-controlled-traits.mjs')
     con = sqlite3.connect(f'file:{db}?mode=ro', uri=True)
     con.row_factory = sqlite3.Row
     if con.execute('PRAGMA quick_check').fetchone()[0] != 'ok':
         raise SystemExit('Pam baseline SQLite quick_check failed')
 
-    concepts = list(con.execute('SELECT row_id, concept_id, name FROM concepts ORDER BY row_id'))
+    concepts = [dict(r) for r in con.execute(
+        'SELECT row_id, concept_id, name, category, subcategory FROM concepts ORDER BY row_id'
+    )]
     questions = {
-        int(r['question_index']): (str(r['question_id']), str(r['wording'] or ''))
-        for r in con.execute('SELECT question_index, question_id, wording FROM questions')
+        int(r['question_index']): str(r['question_id'])
+        for r in con.execute('SELECT question_index, question_id FROM questions')
     }
+    question_ids = set(questions.values())
+
+    answers = defaultdict(lambda: {'yes': set(), 'no': set(), 'sometimes': set()})
+    answer_counts = Counter()
+    for r in con.execute('SELECT concept_row_id, question_index, answer FROM answers ORDER BY concept_row_id, question_index'):
+        qid = questions.get(int(r['question_index']))
+        answer = str(r['answer'] or '')
+        if not qid or answer not in ('yes', 'no', 'sometimes'):
+            continue
+        answers[int(r['concept_row_id'])][answer].add(qid)
+        answer_counts[answer] += 1
+    con.close()
 
     inventory_path = out / 'inventory.jsonl'
+    baseline_profiles_path = out / 'baseline-profiles.json'
+    enriched_profiles_path = out / 'enriched-profiles.json'
+
+    objects = []
+    by_qid = {}
+    by_name = defaultdict(list)
     with inventory_path.open('w', encoding='utf-8') as f:
         for rank, r in enumerate(concepts, 1):
             name = str(r['name'] or '').strip()
             if not name:
                 continue
-            row = {
+            qid = qid_from_concept_id(r.get('concept_id'))
+            key = normalize(name)
+            truth = answers[int(r['row_id'])]
+            inventory = {
                 'rank': rank,
                 'name': name,
                 'aliases': [],
-                'key': normalize(name),
+                'key': key,
                 'difficulty': 'Unknown',
-                'sourceCategory': '',
-                'broadCategory': '',
+                'sourceCategory': str(r.get('subcategory') or ''),
+                'broadCategory': str(r.get('category') or ''),
                 'facets': {},
                 'sourceCount': 1,
                 'sources': ['Pam SQLite baseline'],
-                'score': 0,
-                'qid': qid_from_concept_id(r['concept_id']),
+                'score': 1,
+                'qid': qid,
                 'reason': 'Accepted Pam SQLite baseline concept',
             }
-            f.write(json.dumps(row, ensure_ascii=False, separators=(',', ':')) + '\n')
-
-    evidence_path = out / 'evidence.jsonl'
-    evidence_count = 0
-    represented_questions = set()
-    query = '''
-        SELECT a.concept_row_id, a.question_index, c.name
-        FROM answers a
-        JOIN concepts c ON c.row_id = a.concept_row_id
-        WHERE a.answer = 'yes'
-        ORDER BY a.concept_row_id, a.question_index
-    '''
-    with evidence_path.open('w', encoding='utf-8') as f:
-        for r in con.execute(query):
-            question_id, wording = questions.get(int(r['question_index']), ('', ''))
-            if question_id not in traits:
-                continue
-            payload = {
-                'concept': str(r['name']),
-                'source': 'Pam SQLite baseline',
-                'type': 'canonical-trait-id',
-                'trait': question_id,
-                'question': wording,
-                'support': 1,
+            f.write(json.dumps(inventory, ensure_ascii=False, separators=(',', ':')) + '\n')
+            profile = {
+                'name': name,
+                'aliases': [],
+                'key': key,
+                'qid': qid,
+                'difficulty': 'Unknown',
+                'score': 1,
+                'sources': ['Pam SQLite baseline'],
+                'broadCategory': str(r.get('category') or ''),
+                'sourceCategory': str(r.get('subcategory') or ''),
+                'facets': {},
+                'traits': sorted(truth['yes']),
+                'no': sorted(truth['no']),
+                'maybe': sorted(truth['sometimes']),
             }
-            f.write(json.dumps(payload, ensure_ascii=False, separators=(',', ':')) + '\n')
-            evidence_count += 1
-            represented_questions.add(question_id)
-    con.close()
+            idx = len(objects)
+            objects.append(profile)
+            if qid:
+                by_qid[qid] = idx
+            by_name[key].append(idx)
+
+    baseline_doc = {'version': 3, 'source': 'Pam SQLite accepted truth matrix', 'objects': objects}
+    baseline_profiles_path.write_text(json.dumps(baseline_doc, ensure_ascii=False, separators=(',', ':')) + '\n', encoding='utf-8')
+
+    enriched_objects = json.loads(json.dumps(objects, ensure_ascii=False))
+    approved = load_approved(args.approved_evidence)
+    applied = 0
+    skipped = Counter()
+    touched = set()
+    for row in approved:
+        if not isinstance(row, dict):
+            skipped['malformed_row'] += 1
+            continue
+        concept_name = str(row.get('concept') or '').strip()
+        qid = str(row.get('qid') or '').strip()
+        idx = by_qid.get(qid) if qid else None
+        if idx is None:
+            matches = by_name.get(normalize(concept_name), [])
+            if len(matches) == 1:
+                idx = matches[0]
+            elif len(matches) > 1:
+                skipped['ambiguous_name'] += 1
+                continue
+        if idx is None:
+            skipped['missing_concept'] += 1
+            continue
+        evidence_rows = row.get('evidence') if isinstance(row.get('evidence'), list) else []
+        for evidence in evidence_rows:
+            trait = str((evidence or {}).get('trait') or '').strip()
+            if not trait or trait not in question_ids:
+                skipped['unknown_question_id'] += 1
+                continue
+            profile = enriched_objects[idx]
+            yes = set(profile.get('traits') or [])
+            no = set(profile.get('no') or [])
+            maybe = set(profile.get('maybe') or [])
+            if trait in yes:
+                skipped['already_yes'] += 1
+                continue
+            if trait in no:
+                skipped['explicit_no_conflict'] += 1
+                continue
+            yes.add(trait)
+            maybe.discard(trait)
+            profile['traits'] = sorted(yes)
+            profile['no'] = sorted(no)
+            profile['maybe'] = sorted(maybe)
+            applied += 1
+            touched.add(idx)
+
+    enriched_doc = {'version': 3, 'source': 'Pam SQLite accepted truth matrix plus approved enrichment', 'objects': enriched_objects}
+    enriched_profiles_path.write_text(json.dumps(enriched_doc, ensure_ascii=False, separators=(',', ':')) + '\n', encoding='utf-8')
 
     summary = {
-        'mode': 'pam-sqlite-baseline-runtime-adapter',
+        'mode': 'pam-sqlite-lossless-runtime-adapter',
         'database': str(db),
-        'concepts': len(concepts),
-        'controlled_trait_count': len(traits),
-        'baseline_yes_evidence_rows': evidence_count,
-        'represented_controlled_traits': len(represented_questions),
+        'concepts': len(objects),
+        'question_ids': len(question_ids),
+        'baseline_answer_counts': dict(answer_counts),
+        'baseline_answer_rows': sum(answer_counts.values()),
+        'approved_concept_rows': len(approved),
+        'approved_facts_applied': applied,
+        'approved_concepts_touched': len(touched),
+        'approved_skipped': dict(skipped),
         'inventory': str(inventory_path),
-        'evidence': str(evidence_path),
+        'baseline_profiles': str(baseline_profiles_path),
+        'enriched_profiles': str(enriched_profiles_path),
         'database_modified': False,
     }
     (out / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
