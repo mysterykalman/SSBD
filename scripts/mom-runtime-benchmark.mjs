@@ -65,16 +65,35 @@ export function runtimePathFlags(row,path){
   return[...new Set(flags)];
 }
 
-export function evaluateRuntimeBenchmark(runtime,rows,{selfPlay=true}={}){
-  return rows.map(row=>{
+export function evaluateRuntimeBenchmark(runtime,rows,{selfPlay=true,progressEvery=0,progressLabel='Benchmark'}={}){
+  const results=[];
+  const total=rows.length;
+  const started=Date.now();
+  for(let i=0;i<total;i++){
+    const row=rows[i];
     const match=resolveRuntimeConcept(runtime,row.item);
-    if(match.index==null)return{...row,present:false,ambiguous:Boolean(match.ambiguous),matchedName:'',pamWon:false,turns:null,sensibleQuestionPath:null,pathFlags:[],failureReason:match.ambiguous?'ambiguous_alias':'missing_from_runtime_knowledge',path:[]};
-    if(!selfPlay)return{...row,present:true,ambiguous:false,matchedName:match.concept.name,pamWon:null,turns:null,sensibleQuestionPath:null,pathFlags:[],failureReason:'',path:[]};
-    const traced=traceRuntimeSelfPlay(runtime,match.index);
-    const flags=runtimePathFlags(row,traced.path);
-    const pamWon=traced.result.winner==='pam';
-    return{...row,present:true,ambiguous:false,matchedName:match.concept.name,pamWon,turns:traced.result.turns,sensibleQuestionPath:flags.length===0,pathFlags:flags,failureReason:pamWon?'':(traced.result.reason||'not_guessed_within_20'),path:traced.path};
-  });
+    let result;
+    if(match.index==null){
+      result={...row,present:false,ambiguous:Boolean(match.ambiguous),matchedName:'',pamWon:false,turns:null,sensibleQuestionPath:null,pathFlags:[],failureReason:match.ambiguous?'ambiguous_alias':'missing_from_runtime_knowledge',path:[]};
+    }else if(!selfPlay){
+      result={...row,present:true,ambiguous:false,matchedName:match.concept.name,pamWon:null,turns:null,sensibleQuestionPath:null,pathFlags:[],failureReason:'',path:[]};
+    }else{
+      const traced=traceRuntimeSelfPlay(runtime,match.index);
+      const flags=runtimePathFlags(row,traced.path);
+      const pamWon=traced.result.winner==='pam';
+      result={...row,present:true,ambiguous:false,matchedName:match.concept.name,pamWon,turns:traced.result.turns,sensibleQuestionPath:flags.length===0,pathFlags:flags,failureReason:pamWon?'':(traced.result.reason||'not_guessed_within_20'),path:traced.path};
+    }
+    results.push(result);
+    const completed=i+1;
+    if(progressEvery>0&&(completed===1||completed%progressEvery===0||completed===total)){
+      const elapsedSeconds=(Date.now()-started)/1000;
+      const rate=elapsedSeconds>0?completed/elapsedSeconds:0;
+      const remaining=rate>0?(total-completed)/rate:null;
+      const eta=remaining==null?'':` | ETA ~${Math.max(0,Math.round(remaining/60))}m`;
+      console.log(`[${progressLabel}] ${completed.toLocaleString()} / ${total.toLocaleString()} (${(completed/total*100).toFixed(1)}%) | ${rate.toFixed(2)} rows/s${eta}`);
+    }
+  }
+  return results;
 }
 
 function aggregate(rows,key){
