@@ -16,6 +16,11 @@ ASSOCIATION = {"RelatedTo", "Synonym"}
 CAUTION = {"Antonym", "DistinctFrom", "Causes"}
 MAX_PER_CONCEPT_RELATION = 25
 
+
+def sql_literal(value):
+    return "'" + str(value).replace("'", "''") + "'"
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--baseline", default="/Volumes/Samsung_T5/Pam-Knowledge/baseline/pam-films-v6.sqlite")
@@ -26,11 +31,13 @@ def main():
     p.add_argument("--threads", type=int, default=4)
     args = p.parse_args()
     import duckdb
+
     baseline, evidence, wikidata = map(Path, (args.baseline, args.conceptnet, args.wikidata))
     if not all(x.is_file() for x in (baseline, evidence, wikidata)):
         p.error("Missing baseline, ConceptNet Parquet, or Wikidata validation CSV")
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
+
     sq = sqlite3.connect(f"file:{baseline}?mode=ro", uri=True)
     sq.row_factory = sqlite3.Row
     if sq.execute("PRAGMA quick_check").fetchone()[0] != "ok":
@@ -43,35 +50,37 @@ def main():
     for r in sq.execute("SELECT concept_row_id,question_index,answer FROM answers"):
         answers[(r["concept_row_id"], r["question_index"])] = r["answer"]
     sq.close()
+
     db = duckdb.connect()
-    db.execute("SET memory_limit=?", [args.memory])
-    db.execute("SET threads=?", [args.threads])
-    db.execute("SET temp_directory=?", [str(out)])
-    db.execute("CREATE VIEW evidence AS SELECT * FROM read_parquet(?)", [str(evidence)])
-    # Keep full evidence in Parquet. Review exports are capped per
-    # concept/relation, and never promoted automatically.
-    db.execute("""
+    db.execute(f"SET memory_limit={sql_literal(args.memory)}")
+    db.execute(f"SET threads={int(args.threads)}")
+    db.execute(f"SET temp_directory={sql_literal(str(out))}")
+    db.execute(f"CREATE VIEW evidence AS SELECT * FROM read_parquet({sql_literal(str(evidence))})")
+
+    ranked = out / "ranked-conceptnet-evidence.parquet"
+    db.execute(f"""
       COPY (
         SELECT *, row_number() OVER (
           PARTITION BY concept_row_id, relation ORDER BY object
         ) AS evidence_rank
         FROM evidence
-      ) TO ? (FORMAT PARQUET, COMPRESSION ZSTD)
-    """, [str(out / "ranked-conceptnet-evidence.parquet")])
+      ) TO {sql_literal(str(ranked))} (FORMAT PARQUET, COMPRESSION ZSTD)
+    """)
+
     counts = dict(db.execute("SELECT relation,count(*) FROM evidence GROUP BY relation").fetchall())
     concept_count = db.execute("SELECT count(DISTINCT concept_row_id) FROM evidence").fetchone()[0]
     total = sum(counts.values())
-    # SQLite has no reliable mapping from ConceptNet edge targets to its
-    # yes/no question semantics. Do not manufacture yes/no answers.
-    sample = db.execute("""
+
+    sample = db.execute(f"""
       SELECT concept_row_id, relation, subject_term, object_term, subject, object
       FROM evidence
       WHERE relation IN ('IsA','UsedFor','AtLocation','HasProperty','MadeOf','CapableOf','PartOf','HasA','ReceivesAction')
       QUALIFY row_number() OVER (
         PARTITION BY concept_row_id, relation ORDER BY object
-      ) <= ?
+      ) <= {MAX_PER_CONCEPT_RELATION}
       ORDER BY concept_row_id,relation,object
-    """, [MAX_PER_CONCEPT_RELATION])
+    """)
+
     with (out / "conceptnet-factual-review.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["concept_row_id","concept_name","baseline_category","relation","subject_term","object_term","subject_uri","object_uri","status","reason"])
@@ -80,12 +89,14 @@ def main():
             name, category = concepts.get(cid, ("", ""))
             w.writerow([cid,name,category,relation,subj,obj,subj_uri,obj_uri,"needs-review","no-verified-question-mapping"])
             reviewed += 1
+
     with (out / "conceptnet-relation-summary.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["relation","relationships","handling"])
         for relation, count in sorted(counts.items(), key=lambda x: -x[1]):
             handling = "fact-review" if relation in FACT else ("association-only" if relation in ASSOCIATION else "caution-no-answer-promotion")
             w.writerow([relation,count,handling])
+
     wd = Counter()
     wd_examples = []
     with wikidata.open(newline="", encoding="utf-8") as f:
@@ -94,13 +105,13 @@ def main():
             wd[status] += 1
             if status == "needs-review":
                 wd_examples.append(r)
-    # Classification review: domain mismatch can be useful for correction,
-    # but never reclassify based on a single Wikidata edge.
+
     with (out / "wikidata-classification-review.csv").open("w", newline="", encoding="utf-8") as f:
         fields = list(wd_examples[0]) if wd_examples else ["validation_status"]
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         w.writerows(r for r in wd_examples if r.get("reason") == "domain-category-mismatch")
+
     summary = {
       "mode":"read-only-combined-review",
       "baseline_concepts":len(concepts),
@@ -120,6 +131,7 @@ def main():
     (out / "summary.json").write_text(json.dumps(summary,indent=2)+"\n")
     print(json.dumps(summary,indent=2))
     db.close()
+
 
 if __name__ == "__main__":
     main()
