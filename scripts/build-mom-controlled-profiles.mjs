@@ -112,6 +112,11 @@ for (const item of inventory) {
     ...conceptEvidence
   ];
   const traits = mapEvidence(evidence);
+  for (const ev of conceptEvidence) {
+    if (String(ev.type || '') === 'canonical-trait-id' && traitIds.has(String(ev.trait || ''))) {
+      traits.add(String(ev.trait));
+    }
+  }
   const yes = [...traits].filter(id => traitIds.has(id)).sort();
   const facets = deriveProfileFacets({base:item.facets,evidence:conceptEvidence,traits:yes});
   if (Object.values(facets).some(value => !Array.isArray(value))) {
