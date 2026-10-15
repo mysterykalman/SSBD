@@ -79,7 +79,7 @@ def main():
         PARTITION BY concept_row_id, relation ORDER BY object
       ) <= {MAX_PER_CONCEPT_RELATION}
       ORDER BY concept_row_id,relation,object
-    """)
+    """).fetchall()
 
     with (out / "conceptnet-factual-review.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
