@@ -1,0 +1,148 @@
+name: Pam knowledge completion
+
+on:
+  workflow_dispatch:
+    inputs:
+      subject:
+        description: Subject table to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - subject_abstract
+          - subject_actual_20q_answers
+          - subject_animal
+          - subject_common_concepts
+          - subject_concrete_concepts
+          - subject_event
+          - subject_everyday_things
+          - subject_food_drink
+          - subject_media_work
+          - subject_named_cultural_knowledge
+          - subject_object
+          - subject_organization
+          - subject_person
+          - subject_place
+          - subject_plant
+          - subject_unknown
+      max_records:
+        description: Maximum records for this run
+        required: true
+        default: "1500"
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: pam-knowledge-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      subjects: ${{ steps.select.outputs.subjects }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: select
+        shell: bash
+        run: |
+          set -euo pipefail
+          subject="${{ inputs.subject || 'all' }}"
+
+          if [[ "$subject" == "all" ]]; then
+            echo 'subjects=["subject_abstract","subject_actual_20q_answers","subject_animal","subject_common_concepts","subject_concrete_concepts","subject_event","subject_everyday_things","subject_food_drink","subject_media_work","subject_named_cultural_knowledge","subject_object","subject_organization","subject_person","subject_place","subject_plant","subject_unknown"]' >> "$GITHUB_OUTPUT"
+          else
+            printf 'subjects=["%s"]\n' "$subject" >> "$GITHUB_OUTPUT"
+          fi
+
+  enrich:
+    needs: preflight
+    if: ${{ needs.preflight.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        subject: ${{ fromJSON(needs.preflight.outputs.subjects) }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache@v4
+        with:
+          path: .dev-data
+          key: pam-${{ matrix.subject }}-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            pam-${{ matrix.subject }}-${{ runner.os }}-
+
+      - name: Check workspace budget
+        run: |
+          set -euo pipefail
+          available=$(df --output=avail . | tail -1)
+          test "$available" -gt 10485760
+
+      - name: Run subject enrichment
+        env:
+          PAM_SUBJECT: ${{ matrix.subject }}
+          PAM_MAX_RECORDS: ${{ inputs.max_records || '1500' }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$PAM_SUBJECT" == "subject_media_work" ]]; then
+            python scripts/pam-film-wikipedia-enrich.py
+          else
+            mkdir -p ".dev-data/$PAM_SUBJECT"
+            echo "Importer not yet registered for $PAM_SUBJECT" \
+              | tee ".dev-data/$PAM_SUBJECT/STATUS.txt"
+          fi
+
+      - name: Upload checkpoint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-${{ matrix.subject }}-${{ github.run_id }}
+          path: .dev-data
+          retention-days: 30
+          if-no-files-found: ignore
+
+  report:
+    needs: enrich
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write run report
+        run: |
+          mkdir -p .dev-data
+          cat > .dev-data/workflow-report.md <<EOF
+          # Pam knowledge workflow
+
+          Run: ${{ github.run_id }}
+          Branch: ${{ github.ref_name }}
+          Result: ${{ needs.enrich.result }}
+
+          Review each subject artifact before importing records into the runtime.
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pam-workflow-report-${{ github.run_id }}
+          path: .dev-data/workflow-report.md
+          retention-days: 90
