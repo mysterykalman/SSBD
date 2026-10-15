@@ -17,6 +17,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -107,7 +108,8 @@ def load_profiles(path):
 
 
 def normalize(v):
-    return ' '.join(str(v or '').normalize('NFKC').casefold().replace('_',' ').split())
+    text = unicodedata.normalize('NFKC', str(v or ''))
+    return ' '.join(text.casefold().replace('_',' ').split())
 
 
 def main():
@@ -178,6 +180,10 @@ def main():
         except Exception: continue
         uniq[key] = r
 
+    traits_by_concept = defaultdict(set)
+    for cid, trait in uniq:
+        traits_by_concept[cid].add(trait)
+
     adjudicated=[]
     for (cid, trait), srcrow in sorted(uniq.items()):
         concept = concepts.get(cid)
@@ -203,7 +209,7 @@ def main():
         elif not evs:
             status='needs-human-review'; reason='missing-provenance'; confidence='low'
         else:
-            group_traits = {t for (cc,t) in uniq if cc==cid}
+            group_traits = traits_by_concept[cid]
             compatible, compat_reason = compatible_traits(group_traits, parents)
             lexical_title_risk = bool(TITLEISH.match(str(concept['name']))) and not qid and len(sources)==1
             exact_wd = any(e['source']=='Wikidata' and e.get('qid') and ('wd:'+e['qid'])==concept.get('concept_id') for e in evs)
