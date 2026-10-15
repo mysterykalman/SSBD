@@ -90,6 +90,16 @@ jobs:
           restore-keys: |
             pam-${{ matrix.subject }}-${{ runner.os }}-
 
+      - name: Download and verify Pam baseline database
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p .dev-data/baseline
+          gh release download pam-baseline-v1             --repo "${{ github.repository }}"             --pattern "pam-films-v6.sqlite"             --pattern "pam-films-v6.sqlite.sha256"             --dir .dev-data/baseline
+          cd .dev-data/baseline
+          shasum -a 256 -c pam-films-v6.sqlite.sha256
+
       - name: Check workspace budget
         run: |
           set -euo pipefail
