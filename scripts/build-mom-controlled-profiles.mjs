@@ -6,12 +6,13 @@ import { TRAITS, mapEvidence, featureRecords } from './mom-controlled-traits.mjs
 import {deriveProfileFacets} from './mom-profile-facets.mjs';
 
 const ROOT = process.cwd();
-const INVENTORY = path.join(ROOT, '.dev-data', 'mom-playable-50k', 'playable_50k.jsonl');
-const COVERAGE_EVIDENCE = path.join(ROOT, '.dev-data', 'mom-trait-coverage', 'evidence.jsonl');
-const EXTRA_FILES = [
-  path.join(ROOT, '.dev-data', 'trait-sources', 'extra-public-evidence.json')
-];
-const OUT = path.join(ROOT, '.dev-data', 'mom-controlled-profiles');
+const INVENTORY = path.resolve(ROOT, process.env.MOM_PROFILE_INVENTORY || '.dev-data/mom-playable-50k/playable_50k.jsonl');
+const COVERAGE_EVIDENCE = path.resolve(ROOT, process.env.MOM_PROFILE_COVERAGE_EVIDENCE || '.dev-data/mom-trait-coverage/evidence.jsonl');
+const DEFAULT_EXTRA = path.join(ROOT, '.dev-data', 'trait-sources', 'extra-public-evidence.json');
+const EXTRA_FILES = process.env.MOM_PROFILE_EXTRA_FILES
+  ? process.env.MOM_PROFILE_EXTRA_FILES.split(path.delimiter).filter(Boolean).map(file => path.resolve(ROOT, file))
+  : [DEFAULT_EXTRA];
+const OUT = path.resolve(ROOT, process.env.MOM_PROFILE_OUT_DIR || '.dev-data/mom-controlled-profiles');
 const PROFILES_OUT = path.join(OUT, 'mom-controlled-profiles.json');
 const SUMMARY_OUT = path.join(OUT, 'summary.json');
 const WEAK_OUT = path.join(OUT, 'needs_enrichment.json');
@@ -44,7 +45,7 @@ function normalize(value) {
     .replace(/[^a-z0-9']+/g, ' ').trim().replace(/\s+/g, ' ');
 }
 
-if (!fs.existsSync(INVENTORY)) throw new Error('Run the playable inventory builder first.');
+if (!fs.existsSync(INVENTORY)) throw new Error(`Missing playable inventory: ${INVENTORY}`);
 const inventory = readJsonl(INVENTORY);
 if (!inventory.length) throw new Error('Playable inventory is empty.');
 
@@ -155,6 +156,6 @@ await write(profileStream, '\n]}\n');
 await write(weakStream, '\n]\n');
 await Promise.all([finish(profileStream), finish(weakStream)]);
 
-const summary = { total: emitted, counts, extraMatched, needsEnrichment, preservedEvidence, facetedProfiles };
+const summary = { total: emitted, counts, extraMatched, needsEnrichment, preservedEvidence, facetedProfiles, outputDir: path.relative(ROOT, OUT), extraFiles: EXTRA_FILES.map(file => path.relative(ROOT, file)) };
 fs.writeFileSync(SUMMARY_OUT, JSON.stringify(summary, null, 2) + '\n');
 console.log(JSON.stringify(summary, null, 2));
