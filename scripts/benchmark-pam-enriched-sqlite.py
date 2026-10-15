@@ -29,6 +29,13 @@ def load_db(path: Path):
     return con, counts, answer_counts, by_concept, qids
 
 
+def answer_rows(con):
+    return {
+        (int(r[0]), int(r[1]), str(r[2]))
+        for r in con.execute("SELECT concept_row_id,question_index,answer FROM answers")
+    }
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--baseline", default="/Volumes/Samsung_T5/Pam-Knowledge/baseline/pam-films-v6.sqlite")
@@ -46,11 +53,8 @@ def main():
     bcon, bcounts, bans, bby, bq = load_db(baseline)
     ccon, ccounts, cans, cby, cq = load_db(candidate)
 
-    # Exact row-level diff. Since the candidate was produced from the baseline,
-    # any deletion/change is a regression and should block promotion.
-    removed = bcon.execute("SELECT concept_row_id,question_index,answer FROM answers EXCEPT SELECT concept_row_id,question_index,answer FROM main.answers").fetchall() if False else []
-    baseline_rows = set(bcon.execute("SELECT concept_row_id,question_index,answer FROM answers").fetchall())
-    candidate_rows = set(ccon.execute("SELECT concept_row_id,question_index,answer FROM answers").fetchall())
+    baseline_rows = answer_rows(bcon)
+    candidate_rows = answer_rows(ccon)
     added = candidate_rows - baseline_rows
     missing = baseline_rows - candidate_rows
 
@@ -65,8 +69,14 @@ def main():
     with (out / "added-answers.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["concept_row_id", "question_index", "question_id", "answer"])
-        for cid, qidx, ans in sorted(added):
+        for cid, qidx, ans in sorted(added, key=lambda r: (r[0], r[1], r[2])):
             w.writerow([cid, qidx, cq.get(qidx, ""), ans])
+
+    with (out / "missing-answers.csv").open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["concept_row_id", "question_index", "question_id", "answer"])
+        for cid, qidx, ans in sorted(missing, key=lambda r: (r[0], r[1], r[2])):
+            w.writerow([cid, qidx, bq.get(qidx, ""), ans])
 
     with (out / "question-gains.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
