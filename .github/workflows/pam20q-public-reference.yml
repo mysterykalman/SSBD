@@ -10,6 +10,7 @@ on:
       - 'scripts/pam20q/build_final_questions.py'
       - 'scripts/pam20q/write_reference_report.py'
       - 'scripts/pam20q/build.py'
+      - 'scripts/pam20q/compile_2bit.py'
       - '.github/workflows/pam20q-public-reference.yml'
   workflow_dispatch:
 
@@ -62,6 +63,7 @@ jobs:
             --skip-ai \
             --reset \
             --external .dev-data/pam20q/existing-runtime-evidence.csv
+          python3 scripts/pam20q/compile_2bit.py
 
       - name: Verify AI was not used
         run: |
@@ -69,11 +71,14 @@ jobs:
           import json
           from pathlib import Path
           report=json.loads(Path('.dev-data/pam20q/report.json').read_text())
+          two=json.loads(Path('.dev-data/pam20q/compiled/pam20q.v1.2bit.report.json').read_text())
           assert report['cells_estimated_by_ai'] == 0, report
           assert report['ai_enrichment_ran'] is False, report
           assert report['canonical_question_count'] == 150, report
           assert report['public_20q_import']['targets'] == 1200, report
-          print(json.dumps(report, indent=2))
+          assert two['concept_count'] == report['total_concepts'], two
+          assert two['question_count'] == report['canonical_question_count'], two
+          print(json.dumps({'uint8_gzip_bytes':report['compiled_artifact_size_bytes'],'two_bit_gzip_bytes':two['gzip_artifact_bytes']}, indent=2))
           PY
 
       - name: Persist evaluation outputs
@@ -85,6 +90,7 @@ jobs:
           cp .dev-data/pam20q/public-reference-evaluation/disagreements.csv docs/pam20q-public-reference/
           cp .dev-data/pam20q/public-reference-evaluation/summary.json docs/pam20q-public-reference/
           cp .dev-data/pam20q/report.json docs/pam20q-public-reference/seeded-build-report.json
+          cp .dev-data/pam20q/compiled/pam20q.v1.2bit.report.json docs/pam20q-public-reference/seeded-2bit-report.json
           python3 scripts/pam20q/write_reference_report.py
 
       - name: Commit deterministic reference artifacts
