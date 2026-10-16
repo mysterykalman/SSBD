@@ -15,7 +15,8 @@ async function reachDecision(page){
   }
   if(await page.locator('#guess-actions:not([hidden])').count())return 'guess';
   if(await page.locator('#result-actions:not([hidden])').count())return 'result';
-  if(await page.locator('#answer-actions:not([hidden])').count())await page.click('[data-answer="no"]');
+  if(await page.locator('#category-actions:not([hidden])').count())await page.click('#category-actions [data-answer="other"]');
+  else if(await page.locator('#answer-actions:not([hidden])').count())await page.click('#answer-actions [data-answer="no"]');
   else await page.waitForTimeout(20);
  }
  if(await page.locator('#result-actions:not([hidden])').count())return 'result';
@@ -23,21 +24,13 @@ async function reachDecision(page){
 }
 
 function assertMomRuntimeAssets(scriptPaths){
- const compact=scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.runtime\.[a-f0-9]{10}\.js$/.test(path));
- if(compact){
-  assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/runtime-entry\.[a-f0-9]{10}\.js$/.test(path)));
-  assert.equal(scriptPaths.some(path=>/knowledge\.generated\./.test(path)),false);
-  assert.equal(scriptPaths.some(path=>/\/engine\.[a-f0-9]{10}\.js$/.test(path)),false);
- }else{
-  assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.generated\.[a-f0-9]{10}\.js$/.test(path)));
-  assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/engine\.[a-f0-9]{10}\.js$/.test(path)));
-  assert.equal(scriptPaths.some(path=>path==='/mom/knowledge.generated.js'),false);
- }
+ assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.generated\.[a-f0-9]{10}\.js$/.test(path)));
+ assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/engine\.[a-f0-9]{10}\.js$/.test(path)));
+ assert.equal(scriptPaths.some(path=>path==='/mom/knowledge.generated.js'),false);
  assert.ok(scriptPaths.some(path=>/^\/mom\/assets\/debug\.[a-f0-9]{10}\.js$/.test(path)));
- return compact;
 }
 
-test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persists progression, replays, exits, and fits mobile",async()=>{
+test("Mom Mode loads the frozen offline runtime, richer answers, portrait and rules, persists progression, replays, exits, and fits mobile",async()=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(`${server.url}/mom/`);
  await page.waitForSelector('#start-btn');
@@ -51,13 +44,19 @@ test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persis
  await page.click('#rules-btn');
  await page.waitForSelector('#rules-dialog[open]');
  assert.match(await page.locator('#rules-dialog').textContent(),/20 questions\. One guess\./i);
+ assert.match(await page.locator('#rules-dialog').textContent(),/Animal.*vegetable.*mineral/is);
  await page.click('#rules-close');
  assert.equal(await page.locator('#rules-dialog[open]').count(),0);
  assert.equal(await page.locator('#pam-score').textContent(),'0');
  assert.match(await page.locator('.score-label').textContent(),/^SCORE$/i);
  await page.fill('#secret-word','chair');
  await page.click('#start-btn');
+ await page.waitForSelector('#category-actions:not([hidden])');
+ assert.equal(await page.locator('#category-actions [data-answer]').count(),4);
+ await page.click('#category-actions [data-answer="other"]');
  await page.waitForSelector('#answer-actions:not([hidden])');
+ assert.equal(await page.locator('#answer-actions [data-answer]').count(),6);
+ for(const answer of ['yes','probably','maybe','unknown','doubtful','no'])assert.equal(await page.locator(`#answer-actions [data-answer="${answer}"]`).count(),1);
  const aside=page.locator('#pam-aside');
  assert.equal(await aside.locator('button').count(),0);
  const first=await reachDecision(page);
@@ -65,8 +64,6 @@ test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persis
   await page.click('#correct-btn');
   await page.waitForSelector('#result-actions:not([hidden])');
   assert.match(await page.locator('#pam-question').textContent(),/She got it:/i);
- }else{
-  assert.match(await page.locator('#pam-question').textContent(),/I don[’']t know/i);
  }
  assert.match(await page.locator('#result-points').textContent(),/points/i);
  const scoreAfterFirst=Number((await page.locator('#pam-score').textContent()).replace(/,/g,''));
@@ -87,8 +84,6 @@ test("Mom Mode loads hashed runtime assets, shows the portrait and rules, persis
   assert.match(await page.locator('#pam-question').textContent(),/She guessed .*\. Wrong\./i);
   assert.equal(await page.locator('#answer-actions:not([hidden])').count(),0);
   assert.equal(await page.locator('#guess-actions:not([hidden])').count(),0);
- }else{
-  assert.match(await page.locator('#pam-question').textContent(),/I don[’']t know/i);
  }
  assert.match(await page.locator('#result-points').textContent(),/points/i);
  assert.ok(Number(await page.locator('#pam-streak').textContent())>=1);
@@ -104,22 +99,6 @@ test("Mom Mode exposes the push-your-luck controls when a hunch is shown",async(
  assert.ok(await page.locator('#keep-asking-btn').count());
  assert.match(await page.locator('#guess-now-btn').textContent(),/Make her guess/i);
  assert.match(await page.locator('#keep-asking-btn').textContent(),/costs 2 pts/i);
- await page.close();
-});
-
-test("compact Mom runtime exposes opt-in lookup and reasoning diagnostics",async()=>{
- const page=await browser.newPage();
- await page.goto(`${server.url}/mom/?debug=1`);
- await page.waitForSelector('#start-btn');
- const scriptPaths=await page.locator('script[src]').evaluateAll(nodes=>nodes.map(node=>new URL(node.src).pathname));
- const compact=scriptPaths.some(path=>/^\/mom\/assets\/knowledge\.runtime\.[a-f0-9]{10}\.js$/.test(path));
- if(compact){
-  await page.waitForSelector('#mom-debug-panel');
-  await page.fill('#secret-word','Nintendo Switch');
-  await page.waitForFunction(()=>document.querySelector('#mom-debug-knowledge-status')?.textContent.includes('known'));
-  assert.match(await page.locator('#mom-debug-knowledge-status').textContent(),/known/i);
-  assert.match(await page.locator('#mom-debug-output').textContent(),/concepts/i);
- }
  await page.close();
 });
 
