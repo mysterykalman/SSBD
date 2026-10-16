@@ -32,19 +32,7 @@ jobs:
             "https://api.openai.com/v1/models/$PAM20Q_MODEL")
           if [ "$code" != "200" ]; then
             echo "Configured API credential cannot access $PAM20Q_MODEL (HTTP $code)." >&2
-            python3 - <<'PY'
-import json
-try:
-    x=json.load(open('/tmp/model.json'))
-    err=x.get('error',{})
-    print({'type':err.get('type'),'code':err.get('code'),'message':err.get('message')})
-except Exception:
-    pass
-PY
+            python3 -c "import json; x=json.load(open('/tmp/model.json')); e=x.get('error',{}); print({'type':e.get('type'),'code':e.get('code'),'message':e.get('message')})"
             exit 43
           fi
-          python3 - <<'PY'
-import json
-x=json.load(open('/tmp/model.json'))
-print({'model':x.get('id'),'object':x.get('object'),'access':'ok'})
-PY
+          python3 -c "import json; x=json.load(open('/tmp/model.json')); print({'model':x.get('id'),'object':x.get('object'),'access':'ok'})"
