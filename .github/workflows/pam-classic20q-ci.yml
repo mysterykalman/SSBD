@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - feature/pam-classic20q
+      - feature/pam-expand-200
   pull_request:
     paths:
       - 'data/pam20q/reference/classic/**'
+      - 'data/pam20q/extensions/**'
       - 'src/client/mom-mode/**'
       - 'scripts/build-pam-classic.mjs'
+      - 'scripts/pam-classic-model.mjs'
       - 'test/pam-classic20q.test.mjs'
       - 'test/e2e/mom-mode.test.mjs'
       - 'package.json'
@@ -37,6 +40,7 @@ jobs:
           test -n "$ENGINE_ASSET"
           grep -q 'PAM_CLASSIC_MODEL' "$MODEL_ASSET"
           grep -q 'frozen-classic-20q' "$ENGINE_ASSET"
+          grep -q 'extensionTargets:200' "$MODEL_ASSET"
           if grep -R -n -i 'david-ar' dist/mom; then
             echo 'Source-specific identifier leaked into shipped Pam assets.'
             exit 1
