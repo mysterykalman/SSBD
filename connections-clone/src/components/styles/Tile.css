@@ -1,7 +1,0 @@
-:root { --tile-bg:#efefe6; --tile-color:#000; --tile-selected-bg:#5a594e; --tile-selected-color:#fff; }
-.dark-mode { --tile-bg:#414141; --tile-color:#fff; --tile-selected-bg:#888; --tile-selected-color:#000; }
-.tile { overflow:hidden; display:flex; font-size:20px; width:150px; height:80px; min-width:0; justify-content:center; align-content:center; align-items:center; flex-wrap:wrap; border-radius:6px; position:relative; font-weight:700; text-transform:uppercase; z-index:0; user-select:none; background:var(--tile-bg); color:var(--tile-color); cursor:pointer; transition:transform .12s ease; }
-.tile.selected { background:var(--tile-selected-bg); color:var(--tile-selected-color); }
-.tile:active { transform:scale(.95); }
-.tile.disabled { cursor:not-allowed; }
-@media(max-width:600px){.tile{font-size:14px;width:84px;height:84px;padding:4px;text-align:center;}}

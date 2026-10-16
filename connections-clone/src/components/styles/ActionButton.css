@@ -1,8 +1,0 @@
-:root { --button-bg:#fff; --button-color:#000; --button-border:#000; --button-disabled-opacity:.5; }
-.dark-mode { --button-bg:#444; --button-color:#fff; --button-border:#fff; --button-disabled-opacity:.3; }
-.action_button { font-family:'Franklin Gothic Medium',Arial; font-size:16px; font-weight:600; padding:20px; display:flex; min-width:5.5em; max-width:80vw; height:3em; justify-content:center; align-items:center; border-radius:32px; line-height:1.5em; cursor:pointer; border:1px solid var(--button-border); background-color:var(--button-bg); color:var(--button-color); }
-.action_button:active { transform:scale(.95); }
-.action_button.disabled { opacity:var(--button-disabled-opacity); cursor:not-allowed; }
-.action_button.submit_button:not(.disabled) { --button-bg:#121212; --button-color:#f8f8f8; }
-.dark-mode .action_button.submit_button:not(.disabled) { --button-bg:#fff; --button-color:#000; }
-@media(max-width:600px){.action_button{font-size:14px;padding:8px 16px;}}
