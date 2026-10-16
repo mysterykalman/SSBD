@@ -88,6 +88,6 @@ test('200-target expansion is playable and reports deterministic self-play quali
  }
  const rate=exact/extensionCount;
  console.log(`Pam expansion self-play: ${exact}/${extensionCount} exact (${(rate*100).toFixed(1)}%)`);
- if(failures.length)console.log('Sample misses:',failures.slice(0,12));
+ if(failures.length)console.log('ALL_PAM_EXPANSION_MISSES='+JSON.stringify(failures));
  assert.ok(rate>=0.20,`Expansion self-play exact rate ${(rate*100).toFixed(1)}% is below 20%`);
 });
