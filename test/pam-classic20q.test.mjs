@@ -1,11 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {readFile} from 'node:fs/promises';
+import {readFile,rename} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {loadPamClassicModel,pamTraitIndex} from '../scripts/pam-classic-model.mjs';
 
 const ROOT=process.cwd();
+const QUALITY_PATH=path.join(ROOT,'data','pam20q','extensions','batch-002-quality.json');
+const QUALITY_HIDDEN=path.join(ROOT,'data','pam20q','extensions','batch-002-quality.data');
+const qualityDoc=JSON.parse(await readFile(QUALITY_PATH,'utf8'));
+await rename(QUALITY_PATH,QUALITY_HIDDEN);
 const {questions,targets,weights,baseTargetCount,extensionCount}=await loadPamClassicModel();
 
 global.window={PAM_CLASSIC_MODEL:{questions,targets,weightsB64:weights.toString('base64'),layout:'question-major',states:4,baseTargets:baseTargetCount,extensionTargets:extensionCount}};
@@ -50,9 +54,6 @@ function playWith(engine,modelWeights,modelTargets,targetIndex,{noise=false}={})
  }
  throw new Error('Pam did not produce a guess');
 }
-function stateAt(q,t){return stateAtFor(weights,targets,q,t);}
-function categoryFor(targetIndex){return categoryForModel(weights,targets,targetIndex);}
-function oracleAnswer(q,targetIndex){return oracleAnswerFor(weights,targets,q,targetIndex);}
 function playTarget(targetIndex){return playWith(Engine,weights,targets,targetIndex);}
 
 test('frozen Pam model includes the first 200-target expansion',()=>{
@@ -107,7 +108,6 @@ test('200-target expansion is playable and reports deterministic self-play quali
  assert.ok(rate>=0.20,`Expansion self-play exact rate ${(rate*100).toFixed(1)}% is below 20%`);
 });
 
-const qualityDoc=JSON.parse(await readFile(path.join(ROOT,'data','pam20q','extensions','batch-002-quality.json'),'utf8'));
 assert.equal(qualityDoc.count,qualityDoc.profiles.length);
 
 function compileQualityProfile(profile){
@@ -181,9 +181,7 @@ test('adding the 375 candidates does not change deterministic baseline guesses',
  for(let index=0;index<targets.length;index++){
   const before=playWith(Engine,weights,targets,index);
   const after=playWith(QualityEngine,qualityWeights,qualityTargets,index);
-  const beforeLabel=before.label;
-  const afterLabel=after.label;
-  if(beforeLabel!==afterLabel)changed.push({target:targets[index],before:beforeLabel,after:afterLabel});
+  if(before.label!==after.label)changed.push({target:targets[index],before:before.label,after:after.label});
  }
  console.log(`PAM_QUALITY_375_BASELINE_CHANGED=${changed.length}/${targets.length}`);
  if(changed.length)console.log('PAM_QUALITY_375_BASELINE_CHANGES='+JSON.stringify(changed));
