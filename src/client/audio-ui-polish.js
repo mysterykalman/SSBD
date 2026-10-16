@@ -123,7 +123,7 @@ function installAudioFeltStyles() {
       font-weight: 900;
       justify-self: end;
       position: relative;
-      top: -6px;
+      top: -14px;
     }
     .audio-felt-panel input[type="range"] {
       appearance: none;
