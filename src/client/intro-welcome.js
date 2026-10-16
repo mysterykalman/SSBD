@@ -9,62 +9,50 @@ function shouldShow() {
   return (location.pathname === "/" || location.pathname === "/index.html") && !sessionGet(INTRO_SESSION_KEY) && !sessionGet(GAME_MUSIC_SESSION_KEY);
 }
 
-function closeWelcome() {
-  const dlg = document.getElementById("audioIntroWelcome");
-  if (!dlg) return;
-  if (dlg.open) dlg.close();
-  dlg.remove();
+function removeWelcome() {
+  document.getElementById("audioIntroWelcome")?.remove();
 }
 
 function buildWelcome(skipButton) {
   if (!shouldShow() || document.getElementById("audioIntroWelcome")) return;
+  const hero = document.querySelector("#app .hero") || document.getElementById("app");
+  if (!hero) return;
 
-  const dlg = document.createElement("dialog");
-  dlg.id = "audioIntroWelcome";
-  dlg.className = "dialog";
-  dlg.setAttribute("aria-labelledby", "audioIntroWelcomeTitle");
+  const chip = document.createElement("div");
+  chip.id = "audioIntroWelcome";
+  chip.className = "mode-chip";
+  chip.setAttribute("role", "status");
+  chip.setAttribute("aria-label", "Welcome intro music");
+  Object.assign(chip.style, {
+    width: "fit-content",
+    maxWidth: "100%",
+    margin: "0 auto 8px",
+    flexWrap: "wrap",
+    justifyContent: "center"
+  });
 
-  const body = document.createElement("div");
-  body.className = "dialog-body";
-  body.style.textAlign = "center";
-  body.style.display = "grid";
-  body.style.justifyItems = "center";
-  body.style.gap = "18px";
-
-  const title = document.createElement("p");
-  title.id = "audioIntroWelcomeTitle";
-  title.className = "eyebrow";
-  title.textContent = "WELCOME TO";
+  const badge = document.createElement("span");
+  badge.className = "beta-badge";
+  badge.textContent = "WELCOME TO";
 
   const logo = document.createElement("img");
   logo.src = "/logo.webp";
   logo.alt = "Same Same but Different";
-  logo.width = 340;
-  logo.height = 263;
-  logo.style.width = "min(280px, 72vw)";
-  logo.style.height = "auto";
+  logo.width = 136;
+  logo.height = 105;
+  Object.assign(logo.style, {width: "108px", height: "auto", flex: "none"});
 
-  const note = document.createElement("p");
-  note.className = "muted";
-  note.textContent = "A tiny opening number before we get started.";
-
-  const actions = document.createElement("div");
-  actions.className = "row center";
+  const note = document.createElement("span");
+  note.textContent = "A tiny fanfare for absolutely no reason.";
+  Object.assign(note.style, {fontWeight: "800", textAlign: "center"});
 
   skipButton.removeAttribute("style");
-  skipButton.className = "btn ghost";
+  skipButton.className = "btn small ghost";
   skipButton.textContent = "Skip intro";
-  skipButton.addEventListener("click", closeWelcome, {once: true});
-  actions.append(skipButton);
+  skipButton.addEventListener("click", removeWelcome, {once: true});
 
-  body.append(title, logo, note, actions);
-  dlg.append(body);
-  dlg.addEventListener("cancel", event => {
-    event.preventDefault();
-    skipButton.click();
-  });
-  document.body.append(dlg);
-  dlg.showModal();
+  chip.append(badge, logo, note, skipButton);
+  hero.prepend(chip);
 }
 
 function attachToExistingSkip() {
@@ -85,7 +73,7 @@ if (shouldShow()) {
 }
 
 const removalObserver = new MutationObserver(() => {
-  const dlg = document.getElementById("audioIntroWelcome");
-  if (dlg && !document.getElementById("audioIntroSkip")) closeWelcome();
+  const welcome = document.getElementById("audioIntroWelcome");
+  if (welcome && !document.getElementById("audioIntroSkip")) removeWelcome();
 });
 removalObserver.observe(document.documentElement, {childList: true, subtree: true});
