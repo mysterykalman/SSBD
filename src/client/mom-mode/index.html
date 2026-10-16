@@ -13,7 +13,7 @@
 <main id="mom-app" class="wrap">
 <div class="mode-heading"><p class="eyebrow">DON’T TELL ME</p><h1>Stump Pam<span class="title-dot">.</span></h1><p class="mode-subtitle">Think of something. She gets 20 questions and one guess.</p></div>
 <section class="card game-card" data-character="pam" aria-label="Don’t Tell Me game">
- <aside class="pam-card" aria-label="About Mom">
+ <aside class="pam-card" aria-label="About Pam">
   <div class="portrait-frame"><img class="portrait" src="./pam-v2.webp" alt="Pam smiling knowingly in her kitchen" width="720" height="900"></div>
   <div class="pam-copy"><h2>Pam</h2><p class="pam-role">Hi, honey. I’m Pam.</p><p id="pam-bio" class="pam-teaser"></p></div>
  </aside>
@@ -28,15 +28,17 @@
     <p id="secret-error" class="secret-error" hidden>Write down your answer first.</p>
     <button class="btn primary big" id="start-btn" type="button">Lock it in and start</button>
   </div>
-  <div id="answer-actions" class="answers five" role="group" aria-label="Answer the question" hidden>
-   <button type="button" data-answer="yes" class="btn answer yes">Yes</button><button type="button" data-answer="probably" class="btn answer probably">Probably</button><button type="button" data-answer="unknown" class="btn answer unknown">Not sure</button><button type="button" data-answer="probably_not" class="btn answer probably-not">Probably not</button><button type="button" data-answer="no" class="btn answer no">No</button>
+  <div id="category-actions" class="answers category-answers" role="group" aria-label="Choose a broad category" hidden>
+   <button type="button" data-answer="animal" class="btn answer category">Animal</button><button type="button" data-answer="vegetable" class="btn answer category">Vegetable</button><button type="button" data-answer="mineral" class="btn answer category">Mineral</button><button type="button" data-answer="other" class="btn answer category">Other</button>
+  </div>
+  <div id="answer-actions" class="answers six" role="group" aria-label="Answer the question" hidden>
+   <button type="button" data-answer="yes" class="btn answer yes">Yes</button><button type="button" data-answer="probably" class="btn answer probably">Probably</button><button type="button" data-answer="maybe" class="btn answer maybe">Maybe</button><button type="button" data-answer="unknown" class="btn answer unknown">Don’t know</button><button type="button" data-answer="doubtful" class="btn answer probably-not">Doubtful</button><button type="button" data-answer="no" class="btn answer no">No</button>
   </div>
   <div id="hunch-actions" class="actions hunch-actions" hidden><button class="btn primary big" id="guess-now-btn" type="button">Make her guess</button><button class="btn ghost big" id="keep-asking-btn" type="button">Keep asking · costs 2 pts</button></div>
   <div id="guess-actions" class="actions" hidden><button class="btn sage big" id="correct-btn" type="button">You got it</button><button class="btn primary big" id="wrong-btn" type="button">Nope</button></div>
   <div id="result-actions" class="actions" hidden><button class="btn primary big" id="again-btn" type="button">Play again</button><a class="btn ghost big" href="/">Back to games</a></div>
  </div>
 </section>
-<!-- Score, rank and streak are still kept (and synced) here, but only shown on /review. -->
 <section class="score-panel" aria-label="Score and streak" hidden>
  <div class="score-main"><span class="score-label">SCORE</span><strong id="pam-score">0</strong><span id="pam-rank" class="rank-badge">Look at You</span></div>
  <div class="score-side"><div class="mini-stat"><span>Streak</span><strong id="pam-streak">0</strong></div><div class="mini-stat"><span>Best round</span><strong id="pam-best">0</strong></div></div>
@@ -55,9 +57,9 @@
  <div class="rules-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rules-title">Don’t Tell Me</h2></div><button id="rules-close" class="dialog-close" type="button" aria-label="Close rules">×</button></div>
  <div class="rule-list">
   <div><strong>Write it down first.</strong><p>Lock in the thing you’re thinking of before the questions start. No changing it halfway through.</p></div>
-  <div><strong>20 questions. One guess.</strong><p>She gets one guess, and she always takes it by question 20. If it’s wrong, you stumped her.</p></div>
-  <div><strong>Every question is worth a point.</strong><p>A wrong guess or a full stump adds 10.</p></div>
-  <div><strong>Push your luck.</strong><p>When she has a strong hunch, make her guess or buy another question for 2 points.</p></div>
+  <div><strong>Start broad.</strong><p>Tell Pam whether it’s animal, vegetable, mineral, or something else. Then answer as naturally as you can.</p></div>
+  <div><strong>20 questions. One guess.</strong><p>Yes, no, probably, doubtful, maybe, and don’t know are all fair answers. Pam always guesses by question 20.</p></div>
+  <div><strong>Stump her.</strong><p>If Pam’s one guess is wrong, you win the round.</p></div>
  </div>
 </dialog>
 <script type="module" src="/cloud-sync.js"></script>
