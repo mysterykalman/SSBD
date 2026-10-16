@@ -51,10 +51,10 @@ function questionCopy(text,index){
 function context(){const history=game?.history||[];const previous=[...history].reverse().find(h=>h.kind==='question')||null;return{previous,history:history.filter(h=>h.kind==='question')};}
 function categoryState(q){return{kind:'category',text:q.text,number:1,questionsAsked:0,maxQuestions:game.budget,options:[...supportedCategories],...context()};}
 function questionState(q){return{kind:'question',text:questionCopy(q.text,q.index),number:game.turn+1,questionsAsked:game.turn,maxQuestions:game.budget,questionId:q.id,confidence:q.confidence||Engine.top(game).p,gain:q.gain??null,...context()};}
-function hunchState(q){lastGuess=null;return{kind:'hunch',number:game.turn,questionsAsked:game.turn,maxQuestions:game.budget,confidence:q.confidence,continuePrice:q.continuePrice,continueCost:q.continueCost,...context()};}
+function hunchState(q){lastGuess=null;return{kind:'hunch',number:game.turn,questionsAsked:game.turn,maxQuestions:game.budget,confidence:q.confidence,continuePrice:q.continuePrice,continueCost:q.continueCost,forcedQuestions:q.forcedQuestions||4,...context()};}
 function guessState(q){lastGuess=q;return{kind:'guess',text:q.text,guess:q.label,number:game.turn,questionsAsked:game.turn,maxQuestions:game.budget,confidence:q.confidence||Engine.top(game).p,guessReason:q.reason||null,continueCost:game.continueCost,...context()};}
 function stateFor(q){pending=q;if(q.kind==='category')return categoryState(q);if(q.kind==='hunch')return hunchState(q);if(q.kind==='guess')return guessState(q);return questionState(q);}
-function startGame(){game=Engine.createGame({budget:20,minGuessQuestions:7,continuePrice:2});lastGuess=null;return stateFor(Engine.choose(game));}
+function startGame(){game=Engine.createGame({budget:20,minGuessQuestions:7,continuePrice:0});lastGuess=null;return stateFor(Engine.choose(game));}
 function submitAnswer(value){
  if(!game||!pending)throw new Error('No Pam question is waiting for an answer');
  const answer=String(value||'').toLowerCase();
