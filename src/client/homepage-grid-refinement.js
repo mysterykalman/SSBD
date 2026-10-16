@@ -1,188 +1,154 @@
 const STYLE_ID = "homepageFourModeGrid";
 
 const css = `
-@media (min-width: 681px) {
-  .home-grid.start-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    grid-auto-rows: 1fr;
-    gap: 24px;
-    align-items: stretch;
-  }
-  .home-grid.start-grid > .mode-card {
-    height: 100%;
-    min-height: 100%;
-  }
-  .home-grid.start-grid > .solo-card {
-    grid-column: auto !important;
-  }
+.home-grid.start-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-auto-rows:1fr;
+  gap:24px;
+  align-items:stretch;
 }
+.home-grid.start-grid>.mode-card{
+  grid-column:auto!important;
+  height:100%;
+  min-height:100%;
+}
+.home-grid.start-grid>.mode-card>.mode-stage,
+.home-grid.start-grid>.mode-card>.conn-launch-stage{
+  height:200px;
+  min-height:200px;
+}
+.home-grid.start-grid>.mode-card>.mode-body{
+  display:flex;
+  flex-direction:column;
+  flex:1;
+  padding:20px 28px 28px;
+}
+.home-grid.start-grid>.mode-card .start-copy{display:grid;gap:8px}
+.home-grid.start-grid>.mode-card .mode-actions{margin-top:auto;padding-top:18px}
+.games{margin-top:40px!important}
 
-.games {
-  margin-top: 36px !important;
-}
+.conn-launch .conn-launch-stage{justify-content:space-evenly!important;gap:10px!important;padding-inline:20px!important}
+.conn-launch .conn-launch-standee.standee{width:82px!important;height:100px!important;margin-bottom:26px!important}
+.conn-launch .conn-launch-standee::after{width:82px!important;min-width:82px!important;max-width:82px!important}
 
-.conn-launch.mode-card {
-  display: flex;
-  flex-direction: column;
+@media(max-width:680px){
+  .home-grid.start-grid{grid-template-columns:minmax(0,1fr)!important;grid-auto-rows:auto;gap:18px}
+  .home-grid.start-grid>.mode-card{height:auto;min-height:0}
+  .home-grid.start-grid>.mode-card>.mode-stage,
+  .home-grid.start-grid>.mode-card>.conn-launch-stage{height:172px;min-height:172px}
+  .home-grid.start-grid>.mode-card>.mode-body{padding:18px 22px 24px}
+  .games{margin-top:32px!important}
+  .conn-launch .conn-launch-stage{padding-inline:12px!important;gap:8px!important}
+  .conn-launch .conn-launch-standee.standee{width:68px!important;height:84px!important;margin-bottom:24px!important}
+  .conn-launch .conn-launch-standee::after{width:70px!important;min-width:70px!important;max-width:70px!important}
 }
-.conn-launch .mode-stage.conn-launch-stage {
-  --wash: #fbe6c3;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-evenly;
-  gap: 10px;
-  height: 200px;
-  padding: 0 20px;
-  overflow: visible;
-  background: radial-gradient(90% 120% at 50% 100%, var(--wash), transparent 75%);
-}
-.conn-launch .conn-launch-standee.standee {
-  width: 82px;
-  height: 100px;
-  margin: 0 0 26px;
-  border-radius: 44px 44px 16px 16px;
-  flex: 0 0 auto;
-}
-.conn-launch .conn-launch-standee > img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  object-fit: cover;
-  object-position: 50% 0;
-}
-.conn-launch .conn-launch-standee::after {
-  --felt-h: 28px;
-  width: 82px;
-  min-width: 82px;
-  max-width: 82px;
-  min-height: 28px;
-  bottom: -14px;
-  padding: 2px 6px 6px;
-  font-size: .52rem;
-  letter-spacing: .055em;
-  overflow: visible;
-  text-overflow: clip;
-}
-.conn-launch .mode-body {
-  padding: 20px 28px 28px;
-}
-.conn-launch .start-copy {
-  display: grid;
-  gap: 8px;
-}
-.conn-launch .mode-actions {
-  margin-top: auto;
-  padding-top: 12px;
-}
-
-@media (max-width: 680px) {
-  .home-grid.start-grid {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-auto-rows: auto;
-  }
-  .home-grid.start-grid > .solo-card {
-    grid-column: auto !important;
-  }
-  .conn-launch .mode-stage.conn-launch-stage {
-    height: 172px;
-    padding: 0 12px;
-    gap: 8px;
-  }
-  .conn-launch .conn-launch-standee.standee {
-    width: 68px;
-    height: 84px;
-    margin-bottom: 24px;
-    border-radius: 36px 36px 14px 14px;
-  }
-  .conn-launch .conn-launch-standee::after {
-    --felt-h: 26px;
-    width: 70px;
-    min-width: 70px;
-    max-width: 70px;
-    bottom: -13px;
-    font-size: .46rem;
-    letter-spacing: .04em;
-    padding-inline: 4px;
-  }
-}
-
-@media (max-width: 420px) {
-  .conn-launch .mode-stage.conn-launch-stage {
-    padding-inline: 8px;
-    gap: 5px;
-  }
-  .conn-launch .conn-launch-standee.standee {
-    width: 62px;
-    height: 78px;
-  }
-  .conn-launch .conn-launch-standee::after {
-    width: 64px;
-    min-width: 64px;
-    max-width: 64px;
-    font-size: .42rem;
-    letter-spacing: .025em;
-  }
+@media(max-width:420px){
+  .conn-launch .conn-launch-stage{padding-inline:7px!important;gap:5px!important}
+  .conn-launch .conn-launch-standee.standee{width:62px!important;height:78px!important}
+  .conn-launch .conn-launch-standee::after{width:64px!important;min-width:64px!important;max-width:64px!important}
 }
 `;
 
-function installStyles() {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = css;
+function installStyles(){
+  if(document.getElementById(STYLE_ID))return;
+  const style=document.createElement("style");
+  style.id=STYLE_ID;
+  style.textContent=css;
   document.head.append(style);
 }
 
-function normalizeOddOneInCard() {
-  const card = document.querySelector('.home-grid.start-grid [data-mode="connections"]');
-  if (!card || card.dataset.homeGridNormalized === "true") return;
+function titleOf(card){return card?.querySelector("h2")?.textContent?.trim().toLowerCase()||"";}
+function findCard(grid,kind){
+  const cards=[...grid.querySelectorAll(":scope > .mode-card")];
+  if(kind==="solo")return cards.find(card=>card.dataset.mode==="solo"||card.classList.contains("solo-card")||titleOf(card).includes("solo play"));
+  if(kind==="together")return cards.find(card=>card.dataset.mode==="together"||card.classList.contains("family-card")||titleOf(card).includes("play together"));
+  if(kind==="pam")return cards.find(card=>card.dataset.mode==="pam"||titleOf(card).includes("don’t tell me")||titleOf(card).includes("mom mode"));
+  if(kind==="connections")return cards.find(card=>card.dataset.mode==="connections"||titleOf(card).includes("odd one in"));
+  return null;
+}
 
-  const body = card.querySelector(":scope > .mode-body");
-  const cast = body?.querySelector(":scope > .conn-launch-cast");
-  if (!body || !cast) return;
-
-  cast.classList.add("mode-stage", "conn-launch-stage");
-  cast.classList.remove("conn-launch-cast");
-  card.insertBefore(cast, body);
-
-  const standees = [...cast.querySelectorAll(".conn-launch-standee")];
-  const labels = ["OWEN", "ZOE", "MARTIN", "PROF. BRAINE"];
-  standees.forEach((standee, index) => {
-    if (labels[index]) standee.dataset.name = labels[index];
-  });
-
-  const title = body.querySelector("#connectionsTitle");
-  const paragraphs = [...body.querySelectorAll(":scope > p")];
-  if (paragraphs.length) {
-    const copy = document.createElement("div");
-    copy.className = "start-copy";
-    paragraphs.forEach(paragraph => copy.append(paragraph));
+function paragraph(text){const p=document.createElement("p");p.textContent=text;return p;}
+function replaceCopy(card,lines){
+  const body=card?.querySelector(":scope > .mode-body");
+  if(!body)return;
+  let copy=body.querySelector(":scope > .start-copy");
+  if(!copy){
+    copy=document.createElement("div");
+    copy.className="start-copy home-copy-refined";
+    const title=body.querySelector(":scope > h2");
     title?.after(copy);
   }
-
-  const button = body.querySelector(":scope > button");
-  if (button) {
-    const actions = document.createElement("div");
-    actions.className = "mode-actions";
-    actions.append(button);
-    body.append(actions);
-  }
-
-  card.dataset.homeGridNormalized = "true";
+  copy.replaceChildren(...lines.map(paragraph));
+  [...body.querySelectorAll(":scope > p")].forEach(p=>p.remove());
 }
 
-function applyHomepageRefinement() {
+function refinePam(card){
+  if(!card)return;
+  const title=card.querySelector("h2");
+  if(title)title.textContent="Don’t Tell Me";
+  replaceCopy(card,[
+    "Pick a word. Pam will take it from there.",
+    "She’ll ask the questions and narrow it down before you get too pleased with yourself.",
+    "Good luck with that."
+  ]);
+}
+
+function refineTogether(card){
+  if(!card)return;
+  const unavailable=card.classList.contains("is-unavailable");
+  replaceCopy(card,unavailable?[
+    "Grab a friend and see if your brains make the same strange choices.",
+    "Right now this mode is taking a short break. Solo still works."
+  ]:[
+    "Grab a friend and see if your brains make the same strange choices.",
+    "Start a game or join one already in progress."
+  ]);
+}
+
+function refineConnections(card){
+  if(!card)return;
+  const title=card.querySelector("h2");
+  if(title)title.textContent="Odd One In";
+  replaceCopy(card,[
+    "Some words belong together.",
+    "Some are just being difficult.",
+    "Pick a challenge and sort out the troublemaker."
+  ]);
+  const button=card.querySelector(".mode-actions .go, .mode-actions button, .mode-body > button");
+  if(button)button.childNodes.length===1?button.textContent="Choose your challenge":null;
+  const standees=[...card.querySelectorAll(".conn-launch-standee")];
+  const labels=["OWEN","ZOE","MARTIN","PROF. BRAINE"];
+  standees.forEach((standee,index)=>{if(labels[index])standee.dataset.name=labels[index];});
+}
+
+function reorder(grid){
+  const solo=findCard(grid,"solo");
+  const together=findCard(grid,"together");
+  const pam=findCard(grid,"pam");
+  const connections=findCard(grid,"connections");
+  [solo,together,pam,connections].filter(Boolean).forEach(card=>grid.append(card));
+}
+
+function applyHomepageRefinement(){
   installStyles();
-  normalizeOddOneInCard();
+  const grid=document.querySelector(".home-grid.start-grid");
+  if(!grid)return;
+  const together=findCard(grid,"together");
+  const pam=findCard(grid,"pam");
+  const connections=findCard(grid,"connections");
+  refineTogether(together);
+  refinePam(pam);
+  refineConnections(connections);
+  reorder(grid);
 }
 
-const observer = new MutationObserver(applyHomepageRefinement);
-observer.observe(document.documentElement, {childList: true, subtree: true});
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", applyHomepageRefinement, {once: true});
-} else {
-  applyHomepageRefinement();
+let scheduled=false;
+function schedule(){
+  if(scheduled)return;
+  scheduled=true;
+  requestAnimationFrame(()=>{scheduled=false;applyHomepageRefinement();});
 }
+const observer=new MutationObserver(schedule);
+observer.observe(document.documentElement,{childList:true,subtree:true});
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",schedule,{once:true});
+else schedule();
