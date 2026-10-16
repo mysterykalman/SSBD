@@ -94,7 +94,11 @@ export async function loadPamClassicModel(){
 
   const candidates=[];
   if(existsSync(extRoot)){
-    const files=(await readdir(extRoot)).filter(name=>name.endsWith('.json')).sort();
+    const files=(await readdir(extRoot)).filter(name=>name.endsWith('.json')).sort((a,b)=>{
+      const ar=a.includes('reserve'),br=b.includes('reserve');
+      if(ar!==br)return ar?1:-1;
+      return a.localeCompare(b);
+    });
     for(const file of files){
       const doc=JSON.parse(await readFile(join(extRoot,file),'utf8'));
       if(!Array.isArray(doc.profiles))throw new Error(`Pam extension ${file} is missing profiles[]`);
