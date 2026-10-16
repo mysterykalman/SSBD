@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ssbd.local/schemas/pam20q-model-v1.json",
+  "title": "Pam frozen 20Q model manifest",
+  "type": "object",
+  "required": ["format", "version", "concept_count", "question_count", "matrix_file", "unknown_sentinel", "probability_scale", "concepts", "questions", "sha256"],
+  "properties": {
+    "format": {"const": "pam20q-dense-u8-gzip"},
+    "version": {"type": "integer", "const": 1},
+    "concept_count": {"type": "integer", "minimum": 1},
+    "question_count": {"type": "integer", "minimum": 1},
+    "matrix_file": {"type": "string"},
+    "unknown_sentinel": {"type": "integer", "const": 255},
+    "probability_scale": {
+      "type": "object",
+      "required": ["min", "max", "decode"],
+      "properties": {
+        "min": {"const": 0},
+        "max": {"const": 254},
+        "decode": {"const": "p = byte / 254; 255 = unknown"}
+      },
+      "additionalProperties": false
+    },
+    "concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "text": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "additionalProperties": false
+}
