@@ -487,7 +487,7 @@ function renderHome() {
         h("div", {class: "mode-stage start-icon pair", id: "soloPair", "aria-hidden": "true"},
           ...CHARACTER_IDS.map(id => h("span", {class: `badge gary standee pair-${id}`, "data-character": id, "data-name": t(character(id).name)}, characterArt(id, "meh", "badge-art standee-art")))),
         h("div", {class: "mode-body"},
-          h("h2", {id: "soloTitle"}, t("soloTitle"), " ", betaBadge()),
+          h("h2", {id: "soloTitle"}, t("soloTitle")),
           h("div", {class: "start-copy"}, h("p", {class: "mode-headline"}, t("soloHeadline")), h("p", {}, t("soloBody")), h("p", {}, t("soloBody2"))),
           h("div", {class: "mode-actions"},
             h("button", {class: "btn big", type: "button", id: "startSolo", "aria-haspopup": "dialog", onclick: () => pickCharacter()}, t("soloStart"))))),
@@ -689,7 +689,7 @@ function renderGame() {
       h("span", {class: "mode-chip", "data-mode": solo ? "solo" : "together", "data-character": solo ? characterId(view.character) : null},
         view.waitingForPlayer && !solo ? null : otherBadge(view, "small"),
         h("span", {}, solo ? t("solo") : view.waitingForPlayer ? t("familyTitle") : t("vs", {name: view.otherName || t("friend")})),
-        solo ? betaBadge() : null),
+        null),
       // Quit (Solo) / Leave (Together): always there while the game is on, never a main action.
       finished ? null : h("button", {class: "quit-link", type: "button", id: "quitBtn", onclick: () => confirmQuit(state.game)}, solo ? t("quitBtn") : t("leaveBtn"))),
     board,

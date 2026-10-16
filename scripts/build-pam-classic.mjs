@@ -1,4 +1,4 @@
-import {readFile,writeFile} from 'node:fs/promises';
+import {copyFile,mkdir,readFile,writeFile} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {loadPamClassicModel} from './pam-classic-model.mjs';
@@ -24,6 +24,15 @@ try{
     writeFile(stylesPath,`${baseStyles}\n/* Pam frozen 20Q UI */\n${classicStyles}\n`,'utf8')
   ]);
   await import(pathToFileURL(join(root,'scripts','build.mjs')).href+`?pamClassic=${Date.now()}`);
+
+  const dist=join(root,'dist');
+  const audioDist=join(dist,'audio');
+  await mkdir(audioDist,{recursive:true});
+  await Promise.all([
+    copyFile(join(root,'src','client','audio','intro.mp3'),join(audioDist,'intro.mp3')),
+    copyFile(join(root,'src','client','audio','game-music.mp3'),join(audioDist,'game-music.mp3')),
+    copyFile(join(root,'src','client','audio-settings.js'),join(dist,'audio-settings.js'))
+  ]);
 }finally{
   await Promise.all([writeFile(generatedPath,previous,'utf8'),writeFile(stylesPath,baseStyles,'utf8')]);
 }

@@ -148,7 +148,17 @@ function showSettingsDialog() {
     playerSection.append(note,actions);
   }
 
-  wrap.append(playerSection);
+  const introSection=settingsSection("Intro");
+  const replayIntro=button("Play intro again","btn sun");
+
+  replayIntro.addEventListener("click",async()=>{
+    closeDialog();
+    await window.SSBDAudio?.replayIntro?.();
+  });
+
+  introSection.append(replayIntro);
+
+  wrap.append(playerSection,introSection);
   d.append(wrap);
   if(typeof d.showModal==="function") d.showModal(); else d.setAttribute("open","");
 }
