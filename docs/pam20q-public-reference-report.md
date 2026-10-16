@@ -4,13 +4,13 @@
 
 The classic public model has been imported as pinned build-time reference data. No production gameplay files depend on Hugging Face, and AI enrichment was not run.
 
-The authoritative Pam SQLite baseline remains `/Volumes/Samsung_T5/Pam-Knowledge/baseline/pam-films-v6.sqlite` with 53,092 concepts. That file is intentionally outside GitHub, so the checked-in remote validation cannot enumerate the 452 SQLite-only identities. `scripts/pam20q/reconcile_inventory.py` produces the required deterministic 452-row explanation on the machine that has the baseline.
+The authoritative Pam SQLite baseline remains `/Volumes/Samsung_T5/Pam-Knowledge/baseline/pam-films-v6.sqlite` with 53,092 concepts. That file is intentionally outside GitHub, so the checked-in remote validation cannot enumerate the 452 SQLite-only identities. `scripts/pam20q/reconcile_inventory.py` produces the required deterministic 452-row explanation on the machine that has the baseline, and `scripts/pam20q/run_authoritative_reference.py` runs the complete authoritative no-AI evaluation.
 
 ## Public reference
 
 - Source: `david-ar/20q` at revision `2363b1f67ed554275dc2bd14032390325aa7ae29`
 - Public questions: 156
-- Public targets: 1200
+- Public targets: 1,200
 - Matrix cells: 187,200
 - Published model SHA-256: `2951edb8c699882522bb7bf5d473a9dba7b7e6ec9d0b61e7e131633c2e22b72c`
 - Imported weight SHA-256: `3912f5798b7a802d8e158d262913445c54a85a66dd4749da6a6e6e8c3ac8e1d7`
@@ -23,13 +23,15 @@ The authoritative Pam SQLite baseline remains `/Volumes/Samsung_T5/Pam-Knowledge
 - Exact equivalents: 9
 - Semantic equivalents: 16
 - Partial overlaps: 30
-- Genuinely useful public additions: 20
+- Genuinely useful public ideas: 20
+- Net-new public-inspired questions added: 19
+- Public questions directly reusable as seed questions: 25 existing equivalents + 19 net-new = 44
 - Redundant public questions: 32
 - Poor-fit public questions: 49
 - Proposed final Pam vocabulary: 150
 - Pam questions retained without a useful public equivalent: 98
 
-The final vocabulary keeps Pam’s named-entity/media questions and adds only broad classic physical/common-sense splits. The complete 156-row classification is in `docs/pam20q-public-reference/question-comparison.csv`.
+The 20 useful public ideas produce 19 net-new questions because the public “Does it have lights on it?” signal is merged into the broader `buttons_controls` device question rather than creating another correlated canonical question. The final vocabulary keeps Pam’s named-entity/media questions and adds only broad classic physical/common-sense splits. The complete 156-row classification is in `docs/pam20q-public-reference/question-comparison.csv`.
 
 ## Public target mapping
 
@@ -38,9 +40,10 @@ The final vocabulary keeps Pam’s named-entity/media questions and adds only br
 - Safe alias matches: 14
 - Ambiguous matches: 0
 - Unmatched targets: 187
-- Safely mapped targets: 1013
+- Safely mapped targets: 1,013
 - Public matrix cells available as seed evidence on this fallback-inventory validation: 44,572
-- Public/Pam disagreements found against existing runtime evidence: 1221
+- Public/Pam disagreements found against existing runtime evidence: 1,221
+- Public 20Q cells actually retained in the seeded build after higher-precedence evidence won: 38,434
 
 These mapping counts are conservative and are regenerated against the 53,092-concept SQLite inventory when the local reconciliation command is run. Distinct concept IDs/QIDs are never merged solely because names normalize to the same text.
 
@@ -62,6 +65,7 @@ The public source itself only has four states, so its uint8 form is a lossless e
 ## Full Pam structural size
 
 At 53,092 concepts × 150 questions, Pam has 7,963,800 cells.
+
 - uint8 dense matrix: 7,963,800 bytes before compression/header
 - 2-bit values: 1,990,950 bytes
 - Separate unknown mask: 995,475 bytes
@@ -71,14 +75,14 @@ At 53,092 concepts × 150 questions, Pam has 7,963,800 cells.
 
 - Validation inventory concepts: 52,640
 - Questions: 150
-- Accepted SQLite cells: 0 (0 in remote CI because the accepted SQLite is local)
+- Accepted SQLite cells: 0 in remote CI because the accepted SQLite is local
 - Curated cells: 0
 - Verified external cells: 269,210
-- Public 20Q cells: 38,434
+- Public 20Q cells retained: 38,434
 - Hierarchy cells: 83
 - AI cells: 0
 - Remaining unknown cells in fallback validation: 7,588,273
 - Estimated remaining unknown cells at authoritative 53,092-concept scale: approximately 7,653,431
 - Compiled uint8 gzip artifact in fallback validation: 81,845 bytes
 
-No large-scale AI generation has been launched. The exact authoritative unknown-cell count, 452-row inventory report, authoritative public target mapping, and authoritative disagreement count are produced by the local baseline run before any API spend.
+No large-scale AI generation has been launched. The exact authoritative unknown-cell count, 452-row inventory report, authoritative public target mapping, and authoritative disagreement count require the local accepted SQLite baseline and are generated by `python3 scripts/pam20q/run_authoritative_reference.py` before any API spend.
