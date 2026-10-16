@@ -234,6 +234,37 @@ function isGameRoute() {
   return /^\/(?:solo|games)\//.test(location.pathname) || /^\/mom(?:-mode)?(?:\/|$)/.test(location.pathname);
 }
 
+
+let gameMusicPausedForBackground = false;
+
+function pauseGameMusicForBackground() {
+  if (!gameMusicAudio || gameMusicAudio.paused) return;
+
+  gameMusicPausedForBackground = true;
+  gameMusicAudio.pause();
+}
+
+function resumeGameMusicFromBackground() {
+  if (!gameMusicPausedForBackground) return;
+
+  gameMusicPausedForBackground = false;
+
+  if (!settings.enabled || musicTarget() <= 0) return;
+  if (!gameMusicAudio || document.hidden) return;
+
+  gameMusicAudio.play().catch(() => {});
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    pauseGameMusicForBackground();
+  } else {
+    resumeGameMusicFromBackground();
+  }
+});
+
+window.addEventListener("pagehide", pauseGameMusicForBackground);
+
 function syncBackgroundMusic() {
   if (!settings.enabled) { pauseBackgroundMusic(); return; }
   if (isGameRoute() || sessionGet(GAME_MUSIC_SESSION_KEY)) startGameMusic();

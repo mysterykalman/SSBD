@@ -62,10 +62,11 @@ function installAudioFeltStyles() {
       transform: translateX(14px);
     }
     .audio-felt-panel .audio-channel.audio-setting-tile {
-      --felt-h: 118px;
       width: 100%;
-      min-height: 118px;
-      padding: 20px 38px 28px;
+      min-height: 0;
+      aspect-ratio: 1776 / 784;
+      box-sizing: border-box;
+      padding: clamp(18px, 4.1vw, 28px) clamp(26px, 6vw, 42px) clamp(22px, 5vw, 34px);
       display: grid;
       grid-template-columns: minmax(0,1fr) auto;
       grid-template-areas:
@@ -79,6 +80,14 @@ function installAudioFeltStyles() {
       letter-spacing: normal;
       font-size: 1rem;
       line-height: 1.25;
+
+      background-image: url("/felt/audio-panel-patch.png") !important;
+      background-repeat: no-repeat !important;
+      background-position: center !important;
+      background-size: 100% 100% !important;
+      background-color: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
     }
     .audio-felt-panel .audio-channel > label {
       grid-area: label;
@@ -158,9 +167,8 @@ function installAudioFeltStyles() {
     .audio-felt-panel.muted .audio-master-felt { filter: saturate(.45); opacity: .72; }
     @media (max-width: 560px) {
       .audio-felt-panel .audio-channel.audio-setting-tile {
-        --felt-h: 132px;
-        min-height: 132px;
-        padding: 20px 30px 30px;
+        min-height: 0;
+        padding: 18px 28px 24px;
       }
       .audio-felt-panel .audio-channel > small { font-size: .74rem; }
     }

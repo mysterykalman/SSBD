@@ -2267,14 +2267,6 @@ function boot() {
   });
   if (!store.healthy) toast(t("errSTORAGE"), {kind: "error", timeout: 8000});
 
-  // Coming back to the bare app: return to the game that was open last.
-  const last = store.last();
-  let booted = false;
-  try { booted = Boolean(sessionStorage.getItem("ssbd.booted")); } catch {}
-  if (location.pathname === "/" && last && !booted) {
-    if (last.kind === "solo" && store.soloGame(last.id) && !isFinished(store.soloGame(last.id))) history.replaceState({}, "", `/solo/${last.id}`);
-  }
-  try { sessionStorage.setItem("ssbd.booted", "1"); } catch {}
   // An invite link opened offline: joining needs the internet, so explain instead of offering a join dialog.
   if (!state.online && /^\/join\//.test(location.pathname)) {
     history.replaceState({}, "", "/");
