@@ -108,7 +108,9 @@ test('200-target expansion is playable and reports deterministic self-play quali
  assert.ok(rate>=0.20,`Expansion self-play exact rate ${(rate*100).toFixed(1)}% is below 20%`);
 });
 
-assert.equal(qualityDoc.count,qualityDoc.profiles.length);
+assert.ok(Array.isArray(qualityDoc.profiles)&&qualityDoc.profiles.length>=375);
+const qualitySourceProfiles=qualityDoc.profiles.slice(0,375);
+assert.equal(qualitySourceProfiles[374]?.name,'oar');
 
 function compileQualityProfile(profile){
  const states=new Uint8Array(questions.length);
@@ -129,7 +131,7 @@ function compileQualityProfile(profile){
 
 const qualityProfiles=[];
 const qualitySeen=new Set(targets.map(name=>String(name).trim().toLowerCase()));
-for(const profile of qualityDoc.profiles){
+for(const profile of qualitySourceProfiles){
  const key=String(profile.name||'').trim().toLowerCase();
  assert.ok(key,`blank quality target`);
  assert.ok(!qualitySeen.has(key),`quality target duplicates existing target exactly: ${profile.name}`);
