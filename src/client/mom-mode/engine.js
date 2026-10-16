@@ -5,7 +5,7 @@ if(!model)throw new Error('Pam classic model not loaded');
 const QUESTIONS=Object.freeze([...model.questions]);
 const TARGETS=Object.freeze([...model.targets]);
 const N=TARGETS.length,F=QUESTIONS.length;
-if(N!==1200||F!==156)throw new Error(`Unexpected Pam classic model shape ${N}×${F}`);
+if(N<1200||F!==156)throw new Error(`Unexpected Pam classic model shape ${N}×${F}`);
 function decodeBase64(value){const raw=atob(value);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 const WEIGHTS=decodeBase64(model.weightsB64);
 if(WEIGHTS.length!==N*F)throw new Error(`Pam classic matrix has ${WEIGHTS.length} cells; expected ${N*F}`);
@@ -111,7 +111,7 @@ function confirm(game,guess,correct){
  if(!guess||guess.kind!=='guess')throw new Error('No Pam guess to confirm');game.status='finished';
  return{kind:'result',winner:correct?'pam':'player',correct:Boolean(correct),turns:game.turn,guess:guess.label,reason:guess.reason,continueCost:game.continueCost,score:scoreFor(game.turn,Boolean(correct),game.continueCost)};
 }
-function debugSnapshot(game,limit=5){return{runtime:{mode:'frozen-classic-20q',concepts:N,questions:F,offline:true},topCandidates:rank(game,limit).map(i=>({name:TARGETS[i],score:game.scores[i],confidence:i===rank(game,1)[0]?confidence(game):null})),turn:game.turn,category:game.category};}
+function debugSnapshot(game,limit=5){return{runtime:{mode:'frozen-classic-20q',concepts:N,questions:F,offline:true,baseConcepts:model.baseTargets||1200,extensionConcepts:model.extensionTargets||Math.max(0,N-1200)},topCandidates:rank(game,limit).map(i=>({name:TARGETS[i],score:game.scores[i],confidence:i===rank(game,1)[0]?confidence(game):null})),turn:game.turn,category:game.category};}
 
 global.PamClassic20Q=Object.freeze({N,F,QUESTIONS,TARGETS,createGame,choose,answer,setCategory,commitGuess,deferGuess,confirm,top,debugSnapshot});
 })(window);
