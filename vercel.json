@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "test \"$VERCEL_GIT_COMMIT_REF\" = \"feature/connections-native-platform\"",
+  "ignoreCommand": "test \"$VERCEL_GIT_COMMIT_REF\" = \"feature/connections-native-platform\" || test \"$VERCEL_GIT_COMMIT_REF\" = \"feature/homepage-4-mode-grid\"",
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
