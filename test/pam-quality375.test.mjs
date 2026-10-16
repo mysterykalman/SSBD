@@ -7,7 +7,8 @@ import {pathToFileURL} from 'node:url';
 import {loadPamClassicModel,pamTraitIndex} from '../scripts/pam-classic-model.mjs';
 
 const ROOT=process.cwd();
-const encoded=(await readFile(path.join(ROOT,'data','pam20q','quality','quality-375.json.gz.b64'),'utf8')).trim();
+const parts=await Promise.all([1,2,3,4].map(i=>readFile(path.join(ROOT,'data','pam20q','quality',`quality-375.part${i}`),'utf8')));
+const encoded=parts.join('').trim();
 const qualityDoc=JSON.parse(gunzipSync(Buffer.from(encoded,'base64')).toString('utf8'));
 const {questions,targets,weights,baseTargetCount,extensionCount}=await loadPamClassicModel();
 assert.equal(qualityDoc.count,375);
