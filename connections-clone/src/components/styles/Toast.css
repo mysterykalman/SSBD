@@ -1,0 +1,7 @@
+:root { --background-color:#000; --text-color:#fff; }
+.dark-mode { --background-color:#fff; --text-color:#222; }
+.toast-wrapper { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; }
+.toasty { display:flex; background-color:var(--background-color); color:var(--text-color); padding:12px 16px; border-radius:6px; }
+@keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:none}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-10px) scale(.95)}}
+.toast-in{animation:toastIn .25s ease-out}.toast-out{animation:toastOut .4s ease-in forwards}

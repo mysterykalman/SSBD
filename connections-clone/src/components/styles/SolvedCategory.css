@@ -1,0 +1,8 @@
+:root { --straightforward-color:rgb(249,223,109); --easy-color:rgb(160,195,90); --medium-color:rgb(176,196,239); --tricky-color:rgb(186,129,197); }
+.dark-mode { --straightforward-color:rgb(134,134,17); --easy-color:rgb(44,125,20); --medium-color:rgb(78,92,127); --tricky-color:rgb(147,95,158); }
+.solvedCategory[data-category='1']{background-color:var(--straightforward-color)}
+.solvedCategory[data-category='2']{background-color:var(--easy-color)}
+.solvedCategory[data-category='3']{background-color:var(--medium-color)}
+.solvedCategory[data-category='4']{background-color:var(--tricky-color)}
+.solvedCategory { grid-column:1/-1; width:100%; min-width:0; height:80px; display:flex; justify-content:center; align-items:center; flex-direction:column; border-radius:6px; font-family:Arial; font-size:20px; line-height:25px; z-index:1; overflow:hidden; text-transform:uppercase; }
+.category-title{font-weight:700}
