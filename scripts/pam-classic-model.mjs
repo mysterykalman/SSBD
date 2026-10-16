@@ -70,6 +70,7 @@ function compileProfile(profile,questionCount){
   const template=KIND[profile.kind];
   if(!template)throw new Error(`Unknown Pam extension kind: ${profile.kind}`);
   const states=new Uint8Array(questionCount);
+  states.fill(2);
   const selected=CATEGORY_INDEX[template.category];
   for(let q=0;q<4;q++)states[q]=q===selected?3:2;
   for(const key of template.yes||[])applyTrait(states,key,3);
