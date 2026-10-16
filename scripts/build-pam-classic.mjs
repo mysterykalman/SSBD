@@ -7,6 +7,8 @@ const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const refRoot=join(root,'data','pam20q','reference');
 const momDir=join(root,'src','client','mom-mode');
 const generatedPath=join(momDir,'knowledge.generated.js');
+const stylesPath=join(momDir,'styles.css');
+const classicStylesPath=join(momDir,'classic.css');
 
 async function findPinnedModel(){
   const dirs=await readdir(refRoot,{withFileTypes:true});
@@ -20,8 +22,8 @@ async function findPinnedModel(){
 }
 
 const source=await findPinnedModel();
-const [questionsRaw,targetsRaw,weights]=await Promise.all([
-  readFile(source.q,'utf8'),readFile(source.t,'utf8'),readFile(source.w)
+const [questionsRaw,targetsRaw,weights,previous,baseStyles,classicStyles]=await Promise.all([
+  readFile(source.q,'utf8'),readFile(source.t,'utf8'),readFile(source.w),readFile(generatedPath,'utf8'),readFile(stylesPath,'utf8'),readFile(classicStylesPath,'utf8')
 ]);
 const questions=JSON.parse(questionsRaw),targets=JSON.parse(targetsRaw);
 if(questions.length!==156)throw new Error(`Expected 156 Pam questions, found ${questions.length}`);
@@ -29,11 +31,13 @@ if(targets.length!==1200)throw new Error(`Expected 1200 Pam targets, found ${tar
 if(weights.length!==questions.length*targets.length)throw new Error(`Pam weight matrix has ${weights.length} cells; expected ${questions.length*targets.length}`);
 for(const value of weights)if(value>3)throw new Error(`Pam weight matrix contains invalid state ${value}`);
 
-const previous=await readFile(generatedPath,'utf8');
 const payload=`window.PAM_CLASSIC_MODEL=Object.freeze({questions:${JSON.stringify(questions)},targets:${JSON.stringify(targets)},weightsB64:${JSON.stringify(weights.toString('base64'))},layout:'question-major',states:4});\n`;
 try{
-  await writeFile(generatedPath,payload,'utf8');
+  await Promise.all([
+    writeFile(generatedPath,payload,'utf8'),
+    writeFile(stylesPath,`${baseStyles}\n/* Pam frozen 20Q UI */\n${classicStyles}\n`,'utf8')
+  ]);
   await import(pathToFileURL(join(root,'scripts','build.mjs')).href+`?pamClassic=${Date.now()}`);
 }finally{
-  await writeFile(generatedPath,previous,'utf8');
+  await Promise.all([writeFile(generatedPath,previous,'utf8'),writeFile(stylesPath,baseStyles,'utf8')]);
 }
