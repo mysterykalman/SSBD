@@ -90,7 +90,7 @@ function renderPicker() {
   overlay.replaceChildren(shell(
     el("section", {class:"conn-intro"},
       el("h2", {}, "Who are we getting involved in this?"),
-      el("p", {}, "Sixteen words. Four groups. A completely unnecessary number of opinions."),
+      el("p", {}, "Sixteen words. Four groups. Everyone thinks they see it."),
       el("div", {class:"conn-tiers"}, ...Object.values(ODD_ONE_IN_CHARACTERS).map(characterButton)))));
   overlay.querySelector(".conn-tier")?.focus();
 }
