@@ -1,118 +1,47 @@
 (function(){
-"use strict";
+'use strict';
 const script=window.PamCopy,adapter=window.MomModeAdapter;
-const byId=id=>document.getElementById(id);const text=(id,value)=>{byId(id).textContent=value??"";};const hide=(id,value)=>{byId(id).hidden=Boolean(value);};
-const STORAGE_KEY="ssbd:mom-progress:v1",MOM_LOG_KEY="ssbd.mom.gamelog.v1",MOM_LOG_KEEP=50;
-const RANKS=[
- {min:0,name:"Look at You"},
- {min:100,name:"Okay, Sweetie"},
- {min:250,name:"You’re Getting Good at This"},
- {min:500,name:"Alright, Now You’re Showing Off"},
- {min:1000,name:"I’m Very Proud. Also Annoyed."},
- {min:2000,name:"This Is Getting Personal, Honey"},
- {min:5000,name:"Fine. You’re the Favourite"}
-];
-function cleanNumber(v){const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):0;}
-function loadProgress(){
- try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null")||{};return{totalPoints:cleanNumber(raw.totalPoints),games:cleanNumber(raw.games),streak:cleanNumber(raw.streak),bestStreak:cleanNumber(raw.bestStreak),bestRound:cleanNumber(raw.bestRound),updatedAt:String(raw.updatedAt||"")};}
- catch{return{totalPoints:0,games:0,streak:0,bestStreak:0,bestRound:0,updatedAt:""};}
-}
-function loadMomLog(){try{const raw=JSON.parse(localStorage.getItem(MOM_LOG_KEY)||"null");return raw?.v===1&&Array.isArray(raw.games)?raw:{v:1,games:[]};}catch{return{v:1,games:[]};}}
+const byId=id=>document.getElementById(id);const text=(id,value)=>{const el=byId(id);if(el)el.textContent=value??'';};const hide=(id,value)=>{const el=byId(id);if(el)el.hidden=Boolean(value);};
+const STORAGE_KEY='ssbd:mom-progress:v1',MOM_LOG_KEY='ssbd.mom.gamelog.v1',MOM_LOG_KEEP=50;
+const RANKS=[{min:0,name:'Look at You'},{min:100,name:'Okay, Sweetie'},{min:250,name:'You’re Getting Good at This'},{min:500,name:'Alright, Now You’re Showing Off'},{min:1000,name:'I’m Very Proud. Also Annoyed.'},{min:2000,name:'This Is Getting Personal, Honey'},{min:5000,name:'Fine. You’re the Favourite'}];
+const cleanNumber=v=>{const n=Number(v);return Number.isFinite(n)&&n>=0?Math.floor(n):0;};
+function loadProgress(){try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')||{};return{totalPoints:cleanNumber(raw.totalPoints),games:cleanNumber(raw.games),streak:cleanNumber(raw.streak),bestStreak:cleanNumber(raw.bestStreak),bestRound:cleanNumber(raw.bestRound),updatedAt:String(raw.updatedAt||'')};}catch{return{totalPoints:0,games:0,streak:0,bestStreak:0,bestRound:0,updatedAt:''};}}
+function loadMomLog(){try{const raw=JSON.parse(localStorage.getItem(MOM_LOG_KEY)||'null');return raw?.v===1&&Array.isArray(raw.games)?raw:{v:1,games:[]};}catch{return{v:1,games:[]};}}
 function saveMomLog(data){try{data.games=data.games.slice(-MOM_LOG_KEEP);localStorage.setItem(MOM_LOG_KEY,JSON.stringify(data));}catch{}}
-function newMomId(){try{return crypto.randomUUID();}catch{return `mom-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;}}
-let profile=loadProgress(),stage="intro",secretWord="",momRun=null;
-function saveProgress(){profile.updatedAt=new Date().toISOString();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));window.dispatchEvent(new CustomEvent("ssbd:progress-changed"));}catch{}}
-function rankState(points){let current=RANKS[0],next=null;for(let i=0;i<RANKS.length;i++){if(points>=RANKS[i].min)current=RANKS[i];else{next=RANKS[i];break;}}return{current,next};}
-function renderProfile(){
- const ranks=rankState(profile.totalPoints);
- text("pam-score",profile.totalPoints.toLocaleString());text("pam-rank",ranks.current.name);text("pam-streak",profile.streak);text("pam-best",profile.bestRound);text("best-streak-label",`Best streak: ${profile.bestStreak}`);
- const fill=byId("rank-progress-fill");
- if(!ranks.next){fill.style.width="100%";text("rank-progress-label","Top rank reached");return;}
- const span=ranks.next.min-ranks.current.min,earned=profile.totalPoints-ranks.current.min,remaining=ranks.next.min-profile.totalPoints;
- fill.style.width=`${Math.max(0,Math.min(100,earned/span*100))}%`;text("rank-progress-label",`Next rank: ${ranks.next.name} · ${remaining} point${remaining===1?"":"s"}`);
-}
-function recordResult(state){
- const before=profile.totalPoints,beforeRank=rankState(before).current,earned=cleanNumber(state.score),wonRound=Boolean(state.stumped||state.correct===false);
- profile.totalPoints+=earned;profile.games+=1;profile.streak=wonRound?profile.streak+1:0;profile.bestStreak=Math.max(profile.bestStreak,profile.streak);profile.bestRound=Math.max(profile.bestRound,earned);saveProgress();renderProfile();
- const afterRank=rankState(profile.totalPoints).current,rankChanged=afterRank.min>beforeRank.min;
- return{earned,before,after:profile.totalPoints,rankChanged,newRank:rankChanged?afterRank:null};
-}
-function persistMomRun(){
- if(!momRun)return;
- const data=loadMomLog();
- const index=data.games.findIndex(game=>game.id===momRun.id);
- if(index>=0)data.games[index]=momRun;else data.games.push(momRun);
- saveMomLog(data);
-}
-function beginMomRun(){
- const snap=adapter.debugSnapshot?.(5)||{};
- momRun={id:newMomId(),startedAt:new Date().toISOString(),endedAt:null,secretWord,runtime:snap.runtime||null,events:[],result:null};
- persistMomRun();
-}
-function recordMomState(state){
- if(!momRun||!state)return;
- const snap=adapter.debugSnapshot?.(5)||{};
- const base={kind:state.kind,at:new Date().toISOString(),confidence:state.confidence??null,topCandidates:snap.topCandidates||[]};
- if(state.kind==='question'){
-  const existing=momRun.events.find(event=>event.kind==='question'&&event.number===state.number&&event.id===state.questionId);
-  if(!existing)momRun.events.push({...base,number:state.number,id:state.questionId||null,text:state.text,source:state.source||null,gain:state.gain??null,naturalScore:state.naturalScore??null,semanticCoverage:state.semanticCoverage??null,knownCoverage:state.knownCoverage??null,answer:null});
- }else if(state.kind==='hunch')momRun.events.push({...base,questionsAsked:state.questionsAsked,reason:state.reason||null});
- else if(state.kind==='guess')momRun.events.push({...base,questionsAsked:state.questionsAsked,text:state.text,guess:state.guess,reason:state.guessReason||null});
- else if(state.kind==='result'){
-  momRun.events.push({...base,questionsAsked:state.questionsAsked??state.turns,correct:state.correct,stumped:state.stumped,guess:state.guess||null,score:state.score});
-  momRun.result={correct:Boolean(state.correct),stumped:Boolean(state.stumped),guess:state.guess||null,questionsAsked:state.questionsAsked??state.turns,score:state.score};
-  momRun.endedAt=new Date().toISOString();
- }
- persistMomRun();
-}
-function recordMomAnswer(value){
- if(!momRun)return;
- for(let i=momRun.events.length-1;i>=0;i--){const event=momRun.events[i];if(event.kind==='question'&&!event.answer){event.answer=value;event.answeredAt=new Date().toISOString();break;}}
- persistMomRun();
-}
-window.addEventListener("ssbd:cloud-restored",()=>{profile=loadProgress();renderProfile();});
-text("pam-bio",script.copy.bio);renderProfile();
-function actions(active){for(const id of ["intro-actions","answer-actions","hunch-actions","guess-actions","result-actions"])hide(id,id!==active);}
-// 20-question progress as felt tokens (one per question; used ones filled, the last few warmer), not a bar.
-function progress(number,max){const limit=Number.isFinite(max)&&max>0?max:20,n=Math.min(Math.max(Number(number)||0,0),limit);const dots=byId("progress-fill");if(dots.childElementCount!==limit){dots.replaceChildren(...Array.from({length:limit},()=>document.createElement("i")));}[...dots.children].forEach((dot,i)=>{dot.className=i<n?(i>=limit-4?"used late":"used"):i===n&&stage==="question"?"next":"";});const track=document.querySelector(".progress-track");track.setAttribute("aria-valuemax",String(limit));track.setAttribute("aria-valuenow",String(n));text("question-counter",n?`${n} / ${limit}`:"");hide("question-counter",!n);}
-function dialogue(lead,question,aside){text("pam-lead",lead);text("pam-question",question);text("pam-aside",aside);hide("pam-aside",!aside);}
-function showSecret(){text("secret-word-lock",`YOUR ANSWER · ${secretWord}`);hide("secret-word-lock",!secretWord);}
-function intro(){if(momRun&&!momRun.endedAt){momRun.endedAt=new Date().toISOString();momRun.result={abandoned:true};persistMomRun();}momRun=null;stage="intro";secretWord="";adapter.reset();markStage("intro");text("stage-label","ROUND SETUP");dialogue(script.copy.intro.lead,script.copy.intro.question,script.copy.intro.aside);progress(0,20);hide("result-points",true);hide("secret-word-lock",true);hide("secret-error",true);const input=byId("secret-word");if(input)input.value="";actions("intro-actions");setTimeout(()=>input?.focus(),0);}
-function stageLabel(state){if(state.kind==='hunch')return"STRONG HUNCH";if(state.kind==='guess')return"FINAL GUESS";if(state.number>=17)return"GETTING CLOSE";if(state.number>=9)return"NARROWING IT DOWN";return"THINKING";}
-function showResultPoints(summary){text("result-points",`+${summary.earned} points`);hide("result-points",false);}
-function markStage(value,extra){const card=document.querySelector(".game-card");if(card){card.dataset.stage=value;if(extra)card.dataset.outcome=extra;else delete card.dataset.outcome;}}
-function renderState(state){
- if(!state||!["question","hunch","guess","result"].includes(state.kind))throw Error("Invalid Mom Mode adapter state");stage=state.kind;markStage(stage,stage==="result"?(state.correct?"lost":"won"):(stage==="question"&&state.number>=17?"late":""));recordMomState(state);showSecret();
- if(stage==="question"){
-  progress(state.questionsAsked??state.number-1,state.maxQuestions);text("stage-label",stageLabel(state));hide("result-points",true);dialogue(script.leadFor(state),state.text,"");actions("answer-actions");return;
- }
- if(stage==="hunch"){
-  progress(state.questionsAsked,state.maxQuestions);text("stage-label","STRONG HUNCH");hide("result-points",true);dialogue(script.hunchLead(state.questionsAsked),"Want me to guess now?",script.hunchAside(state.questionsAsked));text("keep-asking-btn",`Keep asking · costs ${state.continuePrice} pts`);actions("hunch-actions");return;
- }
- if(stage==="guess"){
-  progress(state.questionsAsked,state.maxQuestions);text("stage-label","FINAL GUESS");hide("result-points",true);dialogue(script.guessLead(state.questionsAsked),state.text,"One guess. No take-backs.");actions("guess-actions");return;
- }
- progress(state.questionsAsked??state.turns,20);text("stage-label",state.correct?"ROUND LOST":"ROUND WON");
- let question;if(state.stumped)question=script.copy.stumpedResult;else if(state.correct)question=`She got it: ${state.guess}.`;else question=`She guessed ${state.guess}. Wrong.`;
- const summary=recordResult(state);let aside=script.resultAside(state);if(summary.rankChanged){const milestone=script.milestoneLine(summary.newRank.min);if(milestone)aside=milestone;}
- dialogue(script.resultLine(state),question,aside);showResultPoints(summary);actions("result-actions");
-}
-function start(){
- const input=byId("secret-word"),value=String(input?.value||"").replace(/\s+/g," ").trim();
- if(!value){hide("secret-error",false);input?.focus();return;}
- secretWord=value;hide("secret-error",true);showSecret();beginMomRun();renderState(adapter.start());
-}
-function answer(value){if(stage!=="question")return;recordMomAnswer(value);renderState(adapter.answer(value));}
-function chooseGuess(){if(stage!=="hunch")return;renderState(adapter.makeGuess());}
-function keepAsking(){if(stage!=="hunch")return;renderState(adapter.keepAsking());}
-function confirm(correct){if(stage!=="guess")return;renderState(adapter.confirm(correct));}
-const rules=byId("rules-dialog");
-function openRules(){if(typeof rules.showModal==="function")rules.showModal();else rules.setAttribute("open","");}
-function closeRules(){if(typeof rules.close==="function"&&rules.open)rules.close();else rules.removeAttribute("open");}
-byId("rules-btn").addEventListener("click",openRules);byId("rules-close").addEventListener("click",closeRules);rules.addEventListener("click",e=>{if(e.target===rules)closeRules();});
-const pamIntro=byId("pam-intro-dialog");
-function openPamIntro(){if(typeof pamIntro.showModal==="function")pamIntro.showModal();else pamIntro.setAttribute("open","");}
-function closePamIntro(){if(typeof pamIntro.close==="function"&&pamIntro.open)pamIntro.close();else pamIntro.removeAttribute("open");}
-byId("pam-intro-close").addEventListener("click",closePamIntro);byId("pam-intro-play").addEventListener("click",closePamIntro);pamIntro.addEventListener("click",e=>{if(e.target===pamIntro)closePamIntro();});
-byId("start-btn").addEventListener("click",start);byId("secret-word").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();start();}});document.querySelectorAll("[data-answer]").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.answer)));byId("guess-now-btn").addEventListener("click",chooseGuess);byId("keep-asking-btn").addEventListener("click",keepAsking);byId("correct-btn").addEventListener("click",()=>confirm(true));byId("wrong-btn").addEventListener("click",()=>confirm(false));byId("again-btn").addEventListener("click",()=>intro());intro();openPamIntro();
+function newMomId(){try{return crypto.randomUUID();}catch{return`mom-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;}}
+let profile=loadProgress(),stage='intro',secretWord='',momRun=null;
+function saveProgress(){profile.updatedAt=new Date().toISOString();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(profile));window.dispatchEvent(new CustomEvent('ssbd:progress-changed'));}catch{}}
+function rankState(points){let current=RANKS[0],next=null;for(const rank of RANKS){if(points>=rank.min)current=rank;else{next=rank;break;}}return{current,next};}
+function renderProfile(){const ranks=rankState(profile.totalPoints);text('pam-score',profile.totalPoints.toLocaleString());text('pam-rank',ranks.current.name);text('pam-streak',profile.streak);text('pam-best',profile.bestRound);text('best-streak-label',`Best streak: ${profile.bestStreak}`);const fill=byId('rank-progress-fill');if(!fill)return;if(!ranks.next){fill.style.width='100%';text('rank-progress-label','Top rank reached');return;}const span=ranks.next.min-ranks.current.min,earned=profile.totalPoints-ranks.current.min;fill.style.width=`${Math.max(0,Math.min(100,earned/span*100))}%`;text('rank-progress-label',`Next rank: ${ranks.next.name} · ${ranks.next.min-profile.totalPoints} points`);}
+function recordResult(state){const before=profile.totalPoints,beforeRank=rankState(before).current,earned=cleanNumber(state.score),playerWon=!state.correct;profile.totalPoints+=earned;profile.games++;profile.streak=playerWon?profile.streak+1:0;profile.bestStreak=Math.max(profile.bestStreak,profile.streak);profile.bestRound=Math.max(profile.bestRound,earned);saveProgress();renderProfile();const afterRank=rankState(profile.totalPoints).current;return{earned,rankChanged:afterRank.min>beforeRank.min,newRank:afterRank};}
+function persistMomRun(){if(!momRun)return;const data=loadMomLog(),index=data.games.findIndex(g=>g.id===momRun.id);if(index>=0)data.games[index]=momRun;else data.games.push(momRun);saveMomLog(data);}
+function beginMomRun(){const snap=adapter.debugSnapshot?.(5)||{};momRun={id:newMomId(),startedAt:new Date().toISOString(),endedAt:null,secretWord,runtime:snap.runtime||null,events:[],result:null};persistMomRun();}
+function recordState(state){if(!momRun||!state)return;const snap=adapter.debugSnapshot?.(5)||{},base={kind:state.kind,at:new Date().toISOString(),confidence:state.confidence??null,topCandidates:snap.topCandidates||[]};if(state.kind==='category')momRun.events.push({...base,number:1,text:state.text,answer:null});else if(state.kind==='question')momRun.events.push({...base,number:state.number,id:state.questionId||null,text:state.text,gain:state.gain??null,answer:null});else if(state.kind==='hunch')momRun.events.push({...base,questionsAsked:state.questionsAsked});else if(state.kind==='guess')momRun.events.push({...base,questionsAsked:state.questionsAsked,guess:state.guess,reason:state.guessReason||null});else if(state.kind==='result'){momRun.events.push({...base,questionsAsked:state.questionsAsked,correct:state.correct,guess:state.guess||null,score:state.score});momRun.result={correct:Boolean(state.correct),guess:state.guess||null,questionsAsked:state.questionsAsked,score:state.score};momRun.endedAt=new Date().toISOString();}persistMomRun();}
+function recordAnswer(value){if(!momRun)return;for(let i=momRun.events.length-1;i>=0;i--){const event=momRun.events[i];if((event.kind==='question'||event.kind==='category')&&!event.answer){event.answer=value;event.answeredAt=new Date().toISOString();break;}}persistMomRun();}
+window.addEventListener('ssbd:cloud-restored',()=>{profile=loadProgress();renderProfile();});
+text('pam-bio',script.copy.bio);renderProfile();
+function actions(active){for(const id of ['intro-actions','category-actions','answer-actions','hunch-actions','guess-actions','result-actions'])hide(id,id!==active);}
+function progress(number,max=20){const limit=Number.isFinite(max)&&max>0?max:20,n=Math.min(Math.max(Number(number)||0,0),limit),dots=byId('progress-fill');if(dots.childElementCount!==limit)dots.replaceChildren(...Array.from({length:limit},()=>document.createElement('i')));[...dots.children].forEach((dot,i)=>{dot.className=i<n?(i>=limit-4?'used late':'used'):i===n&&(stage==='question'||stage==='category')?'next':'';});const track=document.querySelector('.progress-track');track?.setAttribute('aria-valuemax',String(limit));track?.setAttribute('aria-valuenow',String(n));text('question-counter',n?`${n} / ${limit}`:'');hide('question-counter',!n);}
+function dialogue(lead,question,aside=''){text('pam-lead',lead);text('pam-question',question);text('pam-aside',aside);hide('pam-aside',!aside);}
+function showSecret(){text('secret-word-lock',`YOUR ANSWER · ${secretWord}`);hide('secret-word-lock',!secretWord);}
+function markStage(value,outcome){const card=document.querySelector('.game-card');if(!card)return;card.dataset.stage=value;if(outcome)card.dataset.outcome=outcome;else delete card.dataset.outcome;}
+function intro(){if(momRun&&!momRun.endedAt){momRun.endedAt=new Date().toISOString();momRun.result={abandoned:true};persistMomRun();}momRun=null;stage='intro';secretWord='';adapter.reset();markStage('intro');text('stage-label','ROUND SETUP');dialogue(script.copy.intro.lead,script.copy.intro.question,script.copy.intro.aside);progress(0,20);hide('result-points',true);hide('secret-word-lock',true);hide('secret-error',true);const input=byId('secret-word');if(input)input.value='';actions('intro-actions');setTimeout(()=>input?.focus(),0);}
+function stageLabel(state){if(state.kind==='category')return'QUESTION 1';if(state.kind==='hunch')return'STRONG HUNCH';if(state.kind==='guess')return'FINAL GUESS';if(state.number>=17)return'GETTING CLOSE';if(state.number>=9)return'NARROWING IT DOWN';return'THINKING';}
+function renderState(state){if(!state||!['category','question','hunch','guess','result'].includes(state.kind))throw Error('Invalid Pam game state');stage=state.kind;markStage(stage,stage==='result'?(state.correct?'lost':'won'):'');recordState(state);showSecret();hide('result-points',true);
+ if(stage==='category'){progress(0,state.maxQuestions);text('stage-label','QUESTION 1');dialogue('Let’s start broad.',state.text,'Old-school rules, honey. Pick the closest one.');actions('category-actions');return;}
+ if(stage==='question'){progress(state.questionsAsked,state.maxQuestions);text('stage-label',stageLabel(state));dialogue(script.leadFor(state),state.text);actions('answer-actions');return;}
+ if(stage==='hunch'){progress(state.questionsAsked,state.maxQuestions);text('stage-label','STRONG HUNCH');dialogue(script.hunchLead(state.questionsAsked),'Want me to guess now?',script.hunchAside(state.questionsAsked));text('keep-asking-btn',`Keep asking · costs ${state.continuePrice} pts`);actions('hunch-actions');return;}
+ if(stage==='guess'){progress(state.questionsAsked,state.maxQuestions);text('stage-label','FINAL GUESS');dialogue(script.guessLead(state.questionsAsked),state.text,'One guess. No take-backs.');actions('guess-actions');return;}
+ progress(state.questionsAsked??state.turns,20);text('stage-label',state.correct?'ROUND LOST':'ROUND WON');const question=state.correct?`She got it: ${state.guess}.`:`She guessed ${state.guess}. Wrong.`;const summary=recordResult(state);let aside=script.resultAside(state);if(summary.rankChanged){const milestone=script.milestoneLine(summary.newRank.min);if(milestone)aside=milestone;}dialogue(script.resultLine(state),question,aside);text('result-points',`+${summary.earned} points`);hide('result-points',false);actions('result-actions');}
+function start(){const input=byId('secret-word'),value=String(input?.value||'').replace(/\s+/g,' ').trim();if(!value){hide('secret-error',false);input?.focus();return;}secretWord=value;hide('secret-error',true);showSecret();beginMomRun();renderState(adapter.start());}
+function answer(value){if(stage!=='category'&&stage!=='question')return;recordAnswer(value);renderState(adapter.answer(value));}
+function chooseGuess(){if(stage==='hunch')renderState(adapter.makeGuess());}
+function keepAsking(){if(stage==='hunch')renderState(adapter.keepAsking());}
+function confirm(correct){if(stage==='guess')renderState(adapter.confirm(correct));}
+const rules=byId('rules-dialog');const pamIntro=byId('pam-intro-dialog');
+const openDialog=d=>typeof d?.showModal==='function'?d.showModal():d?.setAttribute('open','');const closeDialog=d=>typeof d?.close==='function'&&d.open?d.close():d?.removeAttribute('open');
+byId('rules-btn')?.addEventListener('click',()=>openDialog(rules));byId('rules-close')?.addEventListener('click',()=>closeDialog(rules));rules?.addEventListener('click',e=>{if(e.target===rules)closeDialog(rules);});
+byId('pam-intro-close')?.addEventListener('click',()=>closeDialog(pamIntro));byId('pam-intro-play')?.addEventListener('click',()=>closeDialog(pamIntro));pamIntro?.addEventListener('click',e=>{if(e.target===pamIntro)closeDialog(pamIntro);});
+byId('start-btn')?.addEventListener('click',start);byId('secret-word')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();start();}});document.querySelectorAll('[data-answer]').forEach(button=>button.addEventListener('click',()=>answer(button.dataset.answer)));byId('guess-now-btn')?.addEventListener('click',chooseGuess);byId('keep-asking-btn')?.addEventListener('click',keepAsking);byId('correct-btn')?.addEventListener('click',()=>confirm(true));byId('wrong-btn')?.addEventListener('click',()=>confirm(false));byId('again-btn')?.addEventListener('click',intro);
+intro();openDialog(pamIntro);
 })();
