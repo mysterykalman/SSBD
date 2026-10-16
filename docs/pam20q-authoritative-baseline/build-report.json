@@ -43,5 +43,125 @@
   },
   "populated_cells": 307587,
   "populated_percentage": 0.03862314472990281,
-  "unresolved_percentage": 0.9613768552700972
+  "unresolved_percentage": 0.9613768552700972,
+  "ai_run": {
+    "pipeline_version": "pam20q-ai-validated-v1",
+    "model": null,
+    "batches_attempted": 0,
+    "batches_accepted": 0,
+    "batch_retry_attempts": 0,
+    "cached_batches_reused": 0,
+    "api_requests": 0,
+    "malformed_outputs": 0,
+    "rejected_cells": 0,
+    "accepted_ai_cells_this_run": 0,
+    "token_usage": "not exposed by the existing build.py openai_call helper",
+    "elapsed_generation_seconds": 0.0
+  },
+  "profile_sparsity": {
+    "concepts_with_fewer_than_100_resolved_questions": 53092,
+    "concepts_with_fewer_than_50_resolved_questions": 52151,
+    "sparsest_20": [
+      {
+        "concept_id": "wd:Q155016",
+        "name": "...Baby One More Time",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q8349",
+        "name": "\"Weird Al\" Yankovic",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q2016260",
+        "name": "(Sittin' On) The Dock of the Bay",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q14985",
+        "name": "1-Propanol",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q137587",
+        "name": "1,2-rearrangement",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q161532",
+        "name": "1,4-Dioxane",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q2640",
+        "name": "10 Hygiea",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q163892",
+        "name": "10,000 metres",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q5107751",
+        "name": "100 metre freestyle",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q164761",
+        "name": "100 metres",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q209499",
+        "name": "12-hour clock",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q25238",
+        "name": "13th Dalai Lama",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q17293",
+        "name": "14th Dalai Lama",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q191691",
+        "name": "1500 metres",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q191293",
+        "name": "1556 Shaanxi earthquake",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q194368",
+        "name": "16-bit computing",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q2471444",
+        "name": "16-cell",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q7017",
+        "name": "16th century",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q3875690",
+        "name": "16th Street Baptist Church bombing",
+        "resolved_questions": 0
+      },
+      {
+        "concept_id": "wd:Q191055",
+        "name": "1755 Lisbon earthquake",
+        "resolved_questions": 0
+      }
+    ]
+  }
 }
