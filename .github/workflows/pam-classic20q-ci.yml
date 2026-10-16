@@ -16,7 +16,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,8 +30,18 @@ jobs:
         run: npm run build
       - name: Verify classic assets are shipped
         run: |
-          test -f dist/mom-mode/knowledge.generated.js
-          test -f dist/mom-mode/engine.js
-          grep -q 'PAM_CLASSIC_MODEL' dist/mom-mode/knowledge.generated.js
-          grep -q 'frozen-classic-20q' dist/mom-mode/engine.js
-          ! grep -R -n -i 'david-ar' dist/mom-mode dist/mom || exit 1
+          test -d dist/mom/assets
+          MODEL_ASSET="$(find dist/mom/assets -maxdepth 1 -type f -name 'knowledge.generated.*.js' -print -quit)"
+          ENGINE_ASSET="$(find dist/mom/assets -maxdepth 1 -type f -name 'engine.*.js' -print -quit)"
+          test -n "$MODEL_ASSET"
+          test -n "$ENGINE_ASSET"
+          grep -q 'PAM_CLASSIC_MODEL' "$MODEL_ASSET"
+          grep -q 'frozen-classic-20q' "$ENGINE_ASSET"
+          if grep -R -n -i 'david-ar' dist/mom; then
+            echo 'Source-specific identifier leaked into shipped Pam assets.'
+            exit 1
+          fi
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Smoke test Pam UI
+        run: node --test --test-concurrency=1 test/e2e/mom-mode.test.mjs
