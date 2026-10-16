@@ -81,6 +81,8 @@ const css = [feltDesign, await readFile(src("client/styles.css"), "utf8")].join(
 const logo = await readFile(src("client/logo.webp"));
 const cloudSync = await readFile(src("client/cloud-sync.js"), "utf8");
 const account = await readFile(src("client/account.js"), "utf8");
+const ODD_ONE_IN_STATIC = ["owen.png", "zoe.png", "martin.png", "professor-braine.png"];
+const oddOneInStatic = Object.fromEntries(await Promise.all(ODD_ONE_IN_STATIC.map(async name => [`/odd-one-in/${name}`, await readFile(src(`client/${name}`))])));
 const ICONS = ["favicon.ico", "favicon-32.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const icons = Object.fromEntries(await Promise.all(ICONS.map(async name => [`/${name}`, await readFile(src(`client/icons/${name}`))])));
 const manifest = await readFile(src("client/manifest.webmanifest"), "utf8");
@@ -93,7 +95,7 @@ const RUNTIME_MOM_JS = ["copy.js", "app.js", "debug.js"];
 const MOM_JS = hasMomRuntime ? RUNTIME_MOM_JS : LEGACY_MOM_JS;
 const MOM_CSS = ["styles.css", "character.css"];
 const MOM_STATIC = ["pam.webp", "pam-v2.webp"];
-const legacyMomScriptChain = '<script src="./knowledge.js" defer></script><script src="./knowledge.general.js" defer></script><script src="./knowledge.generated.js" defer></script><script src="./facets.js" defer></script><script src="./engine.js" defer></script><script src="./deduction.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
+const legacyMomScriptChain = '<script src="./knowledge.js" defer></script><script src="./knowledge.general.js" defer></script><script src="./facets.js" defer></script><script src="./engine.js" defer></script><script src="./deduction.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
 const runtimeMomScriptChain = '<script src="./knowledge.runtime.js" defer></script><script src="./runtime-entry.js" defer></script><script src="./copy.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
 let momIndex = await readFile(src("client/mom-mode/index.html"), "utf8");
 if (hasMomRuntime) {
@@ -145,7 +147,7 @@ for (const [name, body] of Object.entries({...momCss, ...momJs})) {
 const html = (await readFile(src("client/index.html"), "utf8")).replace("%APP_JS%", appName).replace("%AUDIO_JS%", audioName).replace("%STYLES_CSS%", cssName);
 const swTemplate = await readFile(src("client/sw.js"), "utf8");
 const iconHash = createHash("sha256");
-for (const body of [...Object.values(icons), ...Object.values(felt), ...Object.values(fonts)]) iconHash.update(body);
+for (const body of [...Object.values(icons), ...Object.values(felt), ...Object.values(fonts), ...Object.values(oddOneInStatic)]) iconHash.update(body);
 const momHash = createHash("sha256");
 momHash.update(momPage);
 for (const body of Object.values(momJs)) momHash.update(body);
@@ -156,7 +158,7 @@ const page = html.replace("%APP_VERSION%", version);
 const momPrecache = ["/mom/", ...momAssetUrls, "/mom/pam.webp", "/mom/pam-v2.webp"];
 const swSource = swTemplate
   .replace("%VERSION%", version)
-  .replace("%PRECACHE%", JSON.stringify(["/", appName, audioName, cssName, "/logo.webp", "/mom-launch.js", "/cloud-sync.js", "/account.js", "/favicon.ico", "/favicon-32.png", "/manifest.webmanifest", ...FELT, ...Object.keys(fonts), ...momPrecache]));
+  .replace("%PRECACHE%", JSON.stringify(["/", appName, audioName, cssName, "/logo.webp", "/mom-launch.js", "/cloud-sync.js", "/account.js", "/favicon.ico", "/favicon-32.png", "/manifest.webmanifest", ...FELT, ...Object.keys(fonts), ...Object.keys(oddOneInStatic), ...momPrecache]));
 if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEHOLDER%");
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
@@ -173,6 +175,7 @@ const files = {
   ...icons,
   ...felt,
   ...fonts,
+  ...oddOneInStatic,
   "/manifest.webmanifest": manifest,
   "/mom/index.html": momPage,
   "/mom-mode/index.html": momPage,
