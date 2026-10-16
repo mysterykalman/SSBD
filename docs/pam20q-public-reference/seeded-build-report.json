@@ -1,0 +1,22 @@
+{
+  "total_concepts": 52640,
+  "canonical_question_count": 150,
+  "total_concept_question_cells": 7896000,
+  "cells_seeded_from_accepted_pam_data": 0,
+  "cells_seeded_from_curated_pam_evidence": 0,
+  "cells_supported_by_external_sources": 269210,
+  "cells_seeded_from_public_20q": 38434,
+  "cells_inferred_from_hierarchy": 83,
+  "cells_estimated_by_ai": 0,
+  "unresolved_cells": 7588273,
+  "contradiction_count": 78,
+  "compiled_artifact_size_bytes": 81845,
+  "compiled_raw_matrix_bytes": 7896016,
+  "compiled_sha256": "97c27c8b1226ef1ee98e135a0857f634618a308c781246b4a85d4b5a296e16bb",
+  "public_20q_import": {
+    "targets": 1200,
+    "safe_targets": 1001,
+    "cells": 38508
+  },
+  "ai_enrichment_ran": false
+}

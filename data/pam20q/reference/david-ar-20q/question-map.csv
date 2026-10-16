@@ -1,0 +1,157 @@
+public_index,public_question,classification,pam_question_id,seedable,note
+0,Is it classified as Animal,semantic equivalent,animal,True,same broad animal split
+1,Is it classified as Vegetable,partial overlap,vegetable_food,False,public AVM Vegetable does not equal culinary vegetable
+2,Is it classified as Mineral,partial overlap,object,False,"AVM mineral is an old 20Q ontology, broader than material/object"
+3,Is it classified as Other,partial overlap,object,False,residual AVM class is not a stable Pam domain
+4,Do you hold it when you use it,semantic equivalent,handheld,True,ordinary handheld use
+5,Does it come in a box,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+6,Is it white,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+7,Does it bring joy to people,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+8,Is it smaller than a loaf of bread,partial overlap,handheld,False,size proxy only
+9,Is it black,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+10,Is it a common household object,partial overlap,home,False,"Pam asks location, public asks household-object status"
+11,Does it get wet,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+12,Is it larger than a pound of butter,partial overlap,larger_than_person,False,size direction overlaps but threshold differs
+13,Is it colorful,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+14,Does it have a hole in it,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+15,Is it round,exact equivalent,round,True,same question
+16,Does it break if dropped,semantic equivalent,fragile,True,operational form of fragility
+17,Does it open,partial overlap,opens_closes,False,Pam asks open-and-close behaviour
+18,Is it flat,genuinely useful new question,flat,True,adds a broad classic-20Q split missing from Pam
+19,Is it fragile,exact equivalent,fragile,True,same question
+20,Is it soft,exact equivalent,soft,True,same physical trait
+21,Is it dangerous,semantic equivalent,dangerous,True,Pam frames danger as ability to hurt a person
+22,Is it smaller than a golf ball,partial overlap,pocket_sized,False,narrower size threshold
+23,Is it bright,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+24,Is it larger than a bread box (or microwave oven),partial overlap,larger_than_person,False,different size threshold
+25,Do you know any songs about it,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+26,Is it made of plastic,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+27,Is it brown,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+28,Can it be refilled,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+29,Is it heavy,genuinely useful new question,heavy,True,adds a broad classic-20Q split missing from Pam
+30,Does it make noise,semantic equivalent,sound,True,same sound-producing behaviour
+31,Does it roll,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+32,Can it be heard,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+33,Is it electronic,exact equivalent,electronic,True,same trait
+34,Can you lift it,partial overlap,heavy,False,inverse/related rather than equivalent
+35,Do you love it,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+36,Does it have buttons,genuinely useful new question,buttons_controls,True,adds a broad classic-20Q split missing from Pam
+37,Can you buy it,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+38,Can it be played,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+39,Does it weigh more than a duck,partial overlap,heavy,False,culture-specific size/weight proxy
+40,Does it have lights on it,genuinely useful new question,buttons_controls,False,adds a broad classic-20Q split missing from Pam
+41,Was it used over 100 years ago,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+42,Does it burn,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+43,Is it very large,partial overlap,larger_than_person,False,subjective size proxy
+44,Do you carry it in your pocket,genuinely useful new question,pocket_sized,True,adds a broad classic-20Q split missing from Pam
+45,Can it float,genuinely useful new question,floats,True,adds a broad classic-20Q split missing from Pam
+46,Does it store information,genuinely useful new question,stores_information,True,adds a broad classic-20Q split missing from Pam
+47,Does it move,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+48,Is it warm,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+49,Is it manufactured,semantic equivalent,manmade,True,same human-made distinction
+50,Is it useful,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+51,Is it cold,semantic equivalent,cold,True,Pam contextualizes served/used cold
+52,Can you smell it,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+53,Does it produce light,semantic equivalent,light,True,same light-emission trait
+54,Is it a tool,exact equivalent,tool,True,same question
+55,Does it come in specific sizes,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+56,Can you see through it,genuinely useful new question,transparent,True,adds a broad classic-20Q split missing from Pam
+57,Is it bigger than a sofa,partial overlap,larger_than_person,False,different threshold
+58,Does it spin,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+59,Is it used to carry things,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+60,Is it tall,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+61,Can you stretch it,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+62,Does it have legs,semantic equivalent,legs,True,same trait
+63,Do you use it with a computer,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+64,Does it have a good smell,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+65,Is it hot,semantic equivalent,hot,True,Pam contextualizes served/used hot
+66,Is it sharp,genuinely useful new question,sharp,True,adds a broad classic-20Q split missing from Pam
+67,Would you be lost without it,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+68,Was it invented,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+69,Can it be placed on your head,partial overlap,clothing,False,broader than headwear and can include non-wearables
+70,Is it used in a game,partial overlap,toy,False,game use is broader than toy identity
+71,Is it a specific color,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+72,Is it crunchy,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+73,Is it annoying,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+74,Is it green,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+75,Does it come in pairs,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+76,Do you wear it,semantic equivalent,clothing,True,same wearable split
+77,Can it carry people,partial overlap,vehicle,False,strong vehicle clue but not identity
+78,Is it slippery,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+79,Does it ring,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+80,Is it mechanical,genuinely useful new question,mechanical,True,adds a broad classic-20Q split missing from Pam
+81,Can you recycle it,genuinely useful new question,recyclable,True,adds a broad classic-20Q split missing from Pam
+82,Does it provide shade,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+83,Have you seen one in real life,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+84,Can it climb,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+85,Can you eat it,exact equivalent,edible,True,same question
+86,Does it taste sweet,semantic equivalent,sweet,True,same ordinary sweetness judgment
+87,Is it red,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+88,Does it have a trunk,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+89,Does it live in the forest,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+90,Does it have a long tail,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+91,Does it have leaves,genuinely useful new question,leaves,True,adds a broad classic-20Q split missing from Pam
+92,Is it cool,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+93,Is it planted in gardens,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+94,Can it swim,semantic equivalent,swims,True,same swimming behaviour
+95,Does it communicate,partial overlap,communication,False,Pam asks primary use for communication
+96,Does it live in groups (gregarious),poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+97,Is it alive,exact equivalent,living,True,same question
+98,Is it motorized,genuinely useful new question,motorized,True,adds a broad classic-20Q split missing from Pam
+99,Does it lay eggs,genuinely useful new question,lays_eggs,True,adds a broad classic-20Q split missing from Pam
+100,Does it live in water,genuinely useful new question,lives_in_water,True,adds a broad classic-20Q split missing from Pam
+101,Is it fluffy,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+102,Is it delivered,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+103,Is it a body part,genuinely useful new question,body_part,True,adds a broad classic-20Q split missing from Pam
+104,Is it made of stone,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+105,Does it smell sweet,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+106,Does it have tough skin,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+107,Is it colorless,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+108,Is it yellow,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+109,Does it have seeds,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+110,Would you touch it with a 10-foot pole,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+111,Can it growl,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+112,Is it spontaneous,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+113,Is it a type of dog,partial overlap,mammal,False,too narrow for a canonical question
+114,Is it used for transportation,partial overlap,vehicle,False,transport use is broader than vehicle identity
+115,Is it a carnivore,partial overlap,animal,False,dietary animal subtype
+116,Is it clear,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+117,Is it tasty,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+118,Can you blow it up,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+119,Is it a vegetarian,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+120,Does it live in salt-water,partial overlap,lives_in_water,False,salt-water subtype
+121,Is it an abstract concept,semantic equivalent,abstract,True,same domain split
+122,Is it addictive,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+123,Is it striped,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+124,Is it a rodent,partial overlap,mammal,False,narrow mammal subtype
+125,Is it furry,semantic equivalent,fur_hair,True,same fur/hair trait
+126,Is it warm blooded,partial overlap,animal,False,"animal physiology split, correlated with mammal/bird"
+127,Is it organic,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+128,Is it a herbivore,partial overlap,animal,False,dietary animal subtype
+129,Does it have a spine,partial overlap,animal,False,vertebrate split
+130,Does it have roots,genuinely useful new question,roots,True,adds a broad classic-20Q split missing from Pam
+131,Does it have paws,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+132,Is it living,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+133,Does it need love,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+134,Is it spotted,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+135,Is it a nocturnal animal,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+136,Does it hop,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+137,Would you like to be one,poor fit for Pam's broader concept universe,,False,"subjective, culturally dated, purchase-dependent, or weakly defined"
+138,Is it intelligent,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+139,Is it cold blooded,partial overlap,animal,False,"physiology split, inverse-correlated with mammal/bird"
+140,Can it use tools,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+141,Can you wear it on your head,partial overlap,clothing,False,headwear subtype
+142,Is it a scavenger,partial overlap,animal,False,behavioural subtype
+143,Can you touch it,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+144,Is it a farm animal,partial overlap,domesticated,False,farm animal is a narrower domestication signal
+145,Is it a type of fish,semantic equivalent,fish,True,same fish subtype
+146,Does it have a shell,genuinely useful new question,shell,True,adds a broad classic-20Q split missing from Pam
+147,Is it an insect,exact equivalent,insect,True,same question
+148,Is it combustible,poor fit for Pam's broader concept universe,,False,"useful in an object-only classic game but not stable enough across people, places, media, events, organizations, and abstract concepts"
+149,Does it have feathers,genuinely useful new question,feathers,True,adds a broad classic-20Q split missing from Pam
+150,Can it jump,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+151,Is it a root vegetable,partial overlap,vegetable_food,False,narrow subtype of Pam's common-use vegetable question
+152,Is it a mammal,exact equivalent,mammal,True,same question
+153,Does it have wings,genuinely useful new question,wings,True,adds a broad classic-20Q split missing from Pam
+154,Does it have feet,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
+155,Does it have hooves,redundant,,False,"too narrow, highly correlated, or low incremental information across Pam's universe"
