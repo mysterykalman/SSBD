@@ -62,13 +62,17 @@ function compileQualityProfile(profile){
  for(const key of profile.no||[])apply(key,2);
  return states;
 }
+function buildModel(profiles){
+ const modelTargets=[...targets,...profiles.map(p=>p.name)];
+ const modelWeights=Buffer.alloc(questions.length*modelTargets.length);
+ for(let q=0;q<questions.length;q++)weights.copy(modelWeights,q*modelTargets.length,q*targets.length,(q+1)*targets.length);
+ for(let e=0;e<profiles.length;e++){const states=compileQualityProfile(profiles[e]);const targetIndex=targets.length+e;for(let q=0;q<questions.length;q++)modelWeights[q*modelTargets.length+targetIndex]=states[q];}
+ return{modelTargets,modelWeights};
+}
 
 const qualitySeen=new Set(targets.map(name=>String(name).trim().toLowerCase()));
 for(const profile of qualityProfiles){const key=String(profile.name).trim().toLowerCase();assert.ok(!qualitySeen.has(key),`quality target duplicates existing target exactly: ${profile.name}`);qualitySeen.add(key);}
-const qualityTargets=[...targets,...qualityProfiles.map(p=>p.name)];
-const qualityWeights=Buffer.alloc(questions.length*qualityTargets.length);
-for(let q=0;q<questions.length;q++)weights.copy(qualityWeights,q*qualityTargets.length,q*targets.length,(q+1)*targets.length);
-for(let e=0;e<qualityProfiles.length;e++){const states=compileQualityProfile(qualityProfiles[e]);const targetIndex=targets.length+e;for(let q=0;q<questions.length;q++)qualityWeights[q*qualityTargets.length+targetIndex]=states[q];}
+const {modelTargets:qualityTargets,modelWeights:qualityWeights}=buildModel(qualityProfiles);
 const BaselineEngine=await makeEngine(targets,weights,'quality-baseline');
 const QualityEngine=await makeEngine(qualityTargets,qualityWeights,'quality-375');
 
@@ -82,9 +86,24 @@ test('375 quality candidates achieve exact full-model self-play',()=>{
  console.log(`PAM_QUALITY_375_EXACT=${exact}/${qualityProfiles.length}`);if(failures.length)console.log('PAM_QUALITY_375_MISSES='+JSON.stringify(failures));assert.equal(exact,qualityProfiles.length,`375 quality batch has ${failures.length} full-model self-play misses`);
 });
 
-test('adding the 375 candidates does not change deterministic baseline guesses',()=>{
+test('adding the 375 candidates does not change deterministic baseline guesses',async()=>{
  const changed=[];for(let index=0;index<targets.length;index++){const before=playWith(BaselineEngine,weights,targets,index);const after=playWith(QualityEngine,qualityWeights,qualityTargets,index);if(before.label!==after.label)changed.push({target:targets[index],before:before.label,after:after.label});}
- console.log(`PAM_QUALITY_375_BASELINE_CHANGED=${changed.length}/${targets.length}`);if(changed.length)console.log('PAM_QUALITY_375_BASELINE_CHANGES='+JSON.stringify(changed));assert.equal(changed.length,0,`375 quality batch changes ${changed.length} existing deterministic guesses`);
+ console.log(`PAM_QUALITY_375_BASELINE_CHANGED=${changed.length}/${targets.length}`);if(changed.length)console.log('PAM_QUALITY_375_BASELINE_CHANGES='+JSON.stringify(changed));
+ if(changed.some(x=>x.target==='a laptop stand')){
+  const suspects=['keyboard','cellphone','photocopier','answering machine','touchpad','computer screen','webcam','internet','projector','tape recorder','stereo','pager'];
+  const restored=[];
+  const baselineIndex=targets.indexOf('a laptop stand');
+  for(const suspect of suspects){
+   if(!qualityProfiles.some(p=>p.name.toLowerCase()===suspect))continue;
+   const filtered=qualityProfiles.filter(p=>p.name.toLowerCase()!==suspect);
+   const {modelTargets,modelWeights}=buildModel(filtered);
+   const engine=await makeEngine(modelTargets,modelWeights,`diag-${suspect.replace(/\W+/g,'-')}`);
+   const guess=playWith(engine,modelWeights,modelTargets,baselineIndex);
+   if(guess.label==='a laptop stand')restored.push(suspect);
+  }
+  console.log('PAM_LAPTOP_STAND_SINGLE_REMOVALS='+JSON.stringify(restored));
+ }
+ assert.equal(changed.length,0,`375 quality batch changes ${changed.length} existing deterministic guesses`);
 });
 
 test('375 quality candidates remain robust to one softened yes and one softened no',()=>{
