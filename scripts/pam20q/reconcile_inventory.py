@@ -2,8 +2,10 @@
 """Reconcile authoritative Pam SQLite concepts against the fallback CSV.
 
 The SQLite database is authoritative. Distinct concept IDs are never collapsed merely
-because their display names normalize to the same string. The report is deterministic
-and is designed to explain the known 53,092 vs 52,640 inventory discrepancy.
+because their display names normalize to the same string. The fallback is parsed with
+the same identity semantics as the Pam20Q inventory loader: blank rows are skipped and
+duplicate concept IDs keep their first occurrence. This yields the established 52,640
+fallback identities from 52,648 physical CSV rows.
 """
 from __future__ import annotations
 
@@ -22,8 +24,7 @@ DEFAULT_OUT = ROOT / ".dev-data/pam20q/inventory-reconciliation"
 
 
 def norm(text: str) -> str:
-    text = str(text or "").strip().casefold()
-    text = text.replace("_", " ")
+    text = str(text or "").strip().casefold().replace("_", " ")
     text = re.sub(r"[^\w\s'-]+", " ", text, flags=re.UNICODE)
     return " ".join(text.split())
 
@@ -49,11 +50,23 @@ def split_aliases(value: str) -> list[str]:
 
 def load_fallback(path: Path):
     rows = []
+    seen_ids = set()
+    physical_rows = 0
+    duplicate_identity_rows = 0
+    skipped_blank_rows = 0
     with path.open(newline="", encoding="utf-8-sig") as fh:
         reader = csv.DictReader(fh)
         for i, row in enumerate(reader, 1):
-            cid = str(row.get("concept_id") or row.get("id") or row.get("key") or "").strip()
-            name = str(row.get("name") or row.get("concept") or row.get("label") or cid).strip()
+            physical_rows += 1
+            cid = str(row.get("concept_id") or row.get("id") or row.get("name") or "").strip()
+            name = str(row.get("name") or row.get("concept") or cid).strip()
+            if not cid or not name:
+                skipped_blank_rows += 1
+                continue
+            if cid in seen_ids:
+                duplicate_identity_rows += 1
+                continue
+            seen_ids.add(cid)
             rank_raw = row.get("rank") or row.get("row_id") or i
             try:
                 rank = int(float(rank_raw))
@@ -64,7 +77,12 @@ def load_fallback(path: Path):
                 aliases.extend(split_aliases(row.get(key, "")))
             qid = str(row.get("qid") or "").strip() or qid_from_id(cid)
             rows.append({"concept_id": cid, "name": name, "norm": norm(name), "rank": rank, "qid": qid, "aliases": aliases})
-    return rows
+    return rows, {
+        "physical_csv_rows": physical_rows,
+        "parsed_unique_identities": len(rows),
+        "duplicate_identity_rows_skipped": duplicate_identity_rows,
+        "blank_rows_skipped": skipped_blank_rows,
+    }
 
 
 def load_sqlite(path: Path):
@@ -98,8 +116,8 @@ def main() -> None:
         p.error(f"missing fallback inventory: {a.fallback}")
 
     source = load_sqlite(a.database)
-    fallback = load_fallback(a.fallback)
-    by_id = {r["concept_id"]: r for r in fallback if r["concept_id"]}
+    fallback, fallback_parse = load_fallback(a.fallback)
+    by_id = {r["concept_id"]: r for r in fallback}
     by_norm = defaultdict(list)
     by_qid = defaultdict(list)
     alias_norm = defaultdict(list)
@@ -139,6 +157,7 @@ def main() -> None:
             "sqlite_concept_identifier": cid,
             "sqlite_row_id": row["row_id"],
             "qid": qid,
+            "normalized_name": nname,
             "exists_under_other_normalized_name_or_alias": bool(alternate),
             "alternate_fallback_matches": [
                 {"concept_id": x["concept_id"], "name": x["name"], "qid": x["qid"], "rank": x["rank"]}
@@ -154,7 +173,7 @@ def main() -> None:
     csv_path = a.out / "missing-concepts.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as fh:
         fieldnames = [
-            "concept_name", "sqlite_concept_identifier", "sqlite_row_id", "qid",
+            "concept_name", "sqlite_concept_identifier", "sqlite_row_id", "qid", "normalized_name",
             "exists_under_other_normalized_name_or_alias", "reason_missing_from_fallback",
             "retain_in_pam20q", "alternate_fallback_matches",
         ]
@@ -168,6 +187,7 @@ def main() -> None:
     summary = {
         "authoritative_sqlite_concepts": len(source),
         "fallback_inventory_rows": len(fallback),
+        "fallback_parse": fallback_parse,
         "sqlite_concepts_not_matched_by_same_identity": len(missing),
         "expected_authoritative_count": 53092,
         "expected_fallback_count": 52640,
