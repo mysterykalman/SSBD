@@ -6,7 +6,7 @@ export const ODD_ONE_IN_CHARACTERS = Object.freeze({
     difficulty: "Easy",
     relationship: "Already has an idea.",
     core: "We’ll figure it out.",
-    picker: "Nobody has shown him the words yet.",
+    picker: "It’s probably one of the words.",
     image: "/odd-one-in/owen.png",
     accent: "orange",
     lines: Object.freeze({
@@ -31,7 +31,7 @@ export const ODD_ONE_IN_CHARACTERS = Object.freeze({
     difficulty: "Medium",
     relationship: "Can spot a trap from across the room.",
     core: "The puzzle is trying something. Don’t make it easy for it.",
-    picker: "Will still let you touch it.",
+    picker: "Usually after saying, “Wait…”",
     image: "/odd-one-in/zoe.png",
     accent: "teal",
     lines: Object.freeze({
@@ -56,7 +56,7 @@ export const ODD_ONE_IN_CHARACTERS = Object.freeze({
     difficulty: "Hard",
     relationship: "Does the weekend crossword.",
     core: "Yes. That’s more or less what I had.",
-    picker: "Please act surprised when he tells you.",
+    picker: "Has been waiting all week for this.",
     image: "/odd-one-in/martin.png",
     accent: "coral",
     lines: Object.freeze({
@@ -81,7 +81,7 @@ export const ODD_ONE_IN_CHARACTERS = Object.freeze({
     difficulty: "Very Hard",
     relationship: "Believes mistakes are educational.",
     core: "You can solve this. Please stop wasting good reasoning on bad assumptions.",
-    picker: "This is excellent news for you.",
+    picker: "Conveniently, there may be several.",
     image: "/odd-one-in/professor-braine.png",
     accent: "purple",
     lines: Object.freeze({
