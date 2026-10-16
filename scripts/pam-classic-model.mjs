@@ -47,6 +47,122 @@ const KIND=Object.freeze({
   sports_ball:{category:'other',yes:['manufactured','buy','touch','game','round','roll']}
 });
 
+// Curated differentiators use only ordinary-human properties from the existing 156 questions.
+// They exist specifically to separate concepts that otherwise have the same broad profile.
+const DISTINCTIVE=Object.freeze({
+  'an aye-aye':{yes:['nocturnal','climb','longTail','forest']},
+  'a goblin shark':{yes:['dangerous','saltWater'],weakYes:['veryLarge']},
+  'a leafy sea dragon':{yes:['green','saltWater'],weakYes:['colorful','smallBread']},
+  'a proboscis monkey':{yes:['longTail','climb','forest','groups'],weakYes:['herbivore']},
+  'a slow loris':{yes:['nocturnal','climb','forest']},
+  'a binturong':{yes:['longTail','climb','forest','nocturnal']},
+  'a dik-dik':{yes:['brown'],weakYes:['forest']},
+  'a gerenuk':{yes:['tall','brown']},
+  'a markhor':{yes:['climb','brown']},
+  'a takin':{yes:['heavy','brown']},
+  'a musk ox':{yes:['heavy','fluffy','cold']},
+  'a harpy eagle':{yes:['forest','dangerous']},
+  'a secretary bird':{yes:['tall']},
+  'an albatross':{yes:['veryLarge','saltWater']},
+  'a Tasmanian devil':{yes:['growl','nocturnal','dangerous']},
+  'a caracal':{yes:['jump','climb']},
+  'a serval':{yes:['spotted','jump']},
+  'a snow leopard':{yes:['spotted','cold','climb']},
+  'a clouded leopard':{yes:['spotted','forest','climb']},
+  'an arctic fox':{yes:['white','cold']},
+  'a honey badger':{yes:['dangerous'],weakYes:['black']},
+  'a raccoon dog':{yes:['nocturnal','forest']},
+  'a gelada':{yes:['groups','herbivore']},
+  'a mandrill':{yes:['colorful','forest','groups']},
+  'a bonobo':{yes:['intelligent','groups','forest']},
+  'a vicuña':{yes:['fluffy'],weakYes:['brown']},
+  'a guanaco':{yes:['tall','brown'],weakYes:['heavy']},
+  'a sun bear':{yes:['black','climb','forest']},
+
+  'pho':{yes:['hot','clear'],weakYes:['white']},
+  'pad thai':{yes:['hot'],weakYes:['brown','crunchy']},
+  'shawarma':{yes:['hot','hold'],weakYes:['brown']},
+  'a kebab':{yes:['hot','hold'],weakYes:['brown','sharp']},
+  'a brownie':{yes:['brown','sweet','hold']},
+  'a dumpling':{yes:['hot','hold'],weakYes:['white']},
+  'a spring roll':{yes:['hot','hold','crunchy'],weakYes:['brown']},
+  'a samosa':{yes:['hot','hold','crunchy','brown']},
+  'curry':{yes:['hot'],weakYes:['colorful']},
+  'lasagna':{yes:['hot'],weakYes:['red','flat','box']},
+  'risotto':{yes:['hot'],weakYes:['white']},
+  'gnocchi':{yes:['hot','white']},
+  'pesto':{yes:['green']},
+  'oatmeal':{yes:['hot'],weakYes:['brown']},
+  'parmesan cheese':{yes:['white'],weakYes:['goodSmell','crunchy']},
+  'guacamole':{yes:['green'],weakYes:['cold']},
+  'salsa':{yes:['red'],weakYes:['cold']},
+  'kimchi':{yes:['red'],weakYes:['crunchy','cold']},
+  'sauerkraut':{yes:['white'],weakYes:['crunchy','cold']},
+  'edamame':{yes:['green'],weakYes:['hold']},
+  'miso soup':{yes:['hot'],weakYes:['brown']},
+  'tempura':{yes:['hot','crunchy'],weakYes:['brown']},
+  'teriyaki chicken':{yes:['hot','brown']},
+  'sweet potato fries':{yes:['hot','crunchy','sweet'],weakYes:['hold']},
+  'onion rings':{yes:['hot','crunchy','round','hole','hold']},
+  'mozzarella sticks':{yes:['hot','crunchy','white','hold']},
+  'a grilled cheese sandwich':{yes:['hot','hold'],weakYes:['brown']},
+  'a jam sandwich':{yes:['sweet','hold'],weakYes:['red']},
+  'avocado toast':{yes:['green','hold'],weakYes:['crunchy']},
+  'a Caesar salad':{yes:['green'],weakYes:['cold','crunchy']},
+
+  'a streaming stick':{yes:['smallBread','pocket','computer']},
+  'a smart speaker':{yes:['heard','noise','communicate'],weakYes:['household']},
+  'an e-reader':{yes:['flat','hold','storeInfo'],weakYes:['computer']},
+  'a fitness tracker':{yes:['wear','smallBread','storeInfo'],weakYes:['pocket']},
+  'an electric pressure cooker':{yes:['hot','heavy'],weakYes:['round']},
+  'a hoverboard':{yes:['roll','motorized']},
+  'a 3D printer':{yes:['bigMicrowave','mechanical'],weakYes:['move']},
+  'a wireless charger':{yes:['flat','smallBread'],weakYes:['pocket']},
+  'a smart thermostat':{yes:['household','flat'],weakYes:['warm']},
+  'a key fob':{yes:['pocket','buttons','smallBread']},
+  'a contactless payment card':{yes:['flat','pocket','smallBread']},
+  'a portable projector':{yes:['produceLight','bright'],weakYes:['computer']},
+  'a portable game console':{yes:['game','buttons','hold','storeInfo']},
+  'a water flosser':{yes:['water','refill']},
+  'a curling iron':{yes:['hot','round','hold']},
+  'an induction cooktop':{yes:['flat','hot'],weakYes:['heavy']},
+  'an espresso machine':{yes:['hot','goodSmell','refill'],weakYes:['heavy']},
+  'a food processor':{yes:['spin','sharp','noise']},
+  'a stand mixer':{yes:['spin','noise','heavy']},
+  'a rice cooker':{yes:['hot','round'],weakYes:['heavy']},
+  'a slow cooker':{yes:['hot','round','heavy'],weakYes:['warm']},
+  'a toaster oven':{yes:['hot','bigMicrowave'],weakYes:['heavy']},
+  'a coffee grinder':{yes:['spin','noise','goodSmell'],weakYes:['hold']},
+  'a digital kitchen scale':{yes:['flat'],weakYes:['household']},
+  'a garlic press':{yes:['mechanical','hold']},
+  'a whisk':{yes:['hold'],weakYes:['stretch']},
+  'kitchen tongs':{yes:['hold','mechanical'],weakYes:['pairs']},
+  'an ice pack':{yes:['cold'],weakYes:['soft']},
+  'a laundry hamper':{yes:['household','bigMicrowave'],weakYes:['soft']},
+  'a stud finder':{yes:['household','buttons','smallBread'],weakYes:['pocket']},
+  'a socket wrench':{yes:['mechanical','hold']},
+  'a zip tie':{yes:['stretch','smallBread']},
+  'duct tape':{yes:['roll','stretch'],weakYes:['household']},
+  'a bungee cord':{yes:['stretch'],weakYes:['longTail']},
+  'a camping lantern':{yes:['bright','produceLight'],weakYes:['household']},
+  'a trekking pole':{yes:['tall','hold']},
+  'a resistance band':{yes:['stretch','soft']},
+  'a dumbbell':{yes:['lift','heavy'],weakYes:['pairs']},
+  'a reusable shopping bag':{yes:['stretch','soft','carryThings']},
+  'a tote bag':{yes:['soft','carryThings'],weakYes:['wear']},
+  'a fanny pack':{yes:['wear','carryThings'],weakYes:['pocket']},
+  'a screen protector':{yes:['flat','seeThrough'],weakYes:['fragile']},
+  'a magnetic phone mount':{yes:['smallBread','mechanical'],weakYes:['household']},
+  'a foldable phone':{yes:['flat','pocket','buttons','storeInfo','computer']},
+  'a smart ring':{yes:['wear','smallGolf','storeInfo'],weakYes:['pocket']},
+  'a USB-C hub':{yes:['smallBread','computer'],weakYes:['pocket']},
+  'a portable monitor':{yes:['flat','computer','storeInfo'],weakYes:['hold']},
+  'a mesh Wi-Fi router':{yes:['computer','lights'],weakYes:['household']},
+  'a solar power bank':{yes:['pocket','smallBread'],weakYes:['refill']},
+  'a dash cam':{yes:['storeInfo','smallBread'],weakYes:['computer']},
+  'a balance bike':{yes:['roll','transport','carryPeople'],no:['motorized']}
+});
+
 const CATEGORY_INDEX=Object.freeze({animal:0,vegetable:1,mineral:2,other:3});
 
 async function findPinnedModel(){
@@ -78,6 +194,10 @@ function compileProfile(profile,questionCount){
   for(const key of profile.yes||[])applyTrait(states,key,3);
   for(const key of profile.weakYes||[])applyTrait(states,key,1);
   for(const key of profile.no||[])applyTrait(states,key,2);
+  const extra=DISTINCTIVE[profile.name];
+  for(const key of extra?.yes||[])applyTrait(states,key,3);
+  for(const key of extra?.weakYes||[])applyTrait(states,key,1);
+  for(const key of extra?.no||[])applyTrait(states,key,2);
   return states;
 }
 
