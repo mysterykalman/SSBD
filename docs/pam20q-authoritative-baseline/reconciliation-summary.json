@@ -1,0 +1,28 @@
+{
+  "authoritative_sqlite_concepts": 53092,
+  "fallback_inventory_rows": 52640,
+  "fallback_parse": {
+    "physical_csv_rows": 52648,
+    "parsed_unique_identities": 52640,
+    "duplicate_identity_rows_skipped": 8,
+    "blank_rows_skipped": 0
+  },
+  "row_level_discrepancy_count": 452,
+  "sqlite_rows_with_concept_id_absent_from_fallback": 444,
+  "additional_sqlite_rows_reusing_a_fallback_concept_id": 8,
+  "expected_authoritative_count": 53092,
+  "expected_fallback_count": 52640,
+  "expected_discrepancy": 452,
+  "count_checks": {
+    "authoritative": true,
+    "fallback": true,
+    "discrepancy": true
+  },
+  "ambiguous_or_alternate_identity_matches": 10,
+  "retained": 452,
+  "excluded": 0,
+  "outputs": {
+    "json": ".dev-data/pam20q/inventory-reconciliation/missing-concepts.json",
+    "csv": ".dev-data/pam20q/inventory-reconciliation/missing-concepts.csv"
+  }
+}

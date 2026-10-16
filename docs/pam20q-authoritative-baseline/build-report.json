@@ -1,0 +1,47 @@
+{
+  "total_concepts": 53092,
+  "canonical_question_count": 150,
+  "total_concept_question_cells": 7963800,
+  "cells_seeded_from_accepted_pam_data": 269302,
+  "cells_seeded_from_curated_pam_evidence": 0,
+  "cells_supported_by_external_sources": 0,
+  "cells_seeded_from_public_20q": 38202,
+  "cells_inferred_from_hierarchy": 83,
+  "cells_estimated_by_ai": 0,
+  "unresolved_cells": 7656213,
+  "contradiction_count": 78,
+  "compiled_artifact_size_bytes": 145109,
+  "compiled_raw_matrix_bytes": 7963816,
+  "compiled_sha256": "d1d81cbd13baa0cc153e76831822d99a241be800c6fa0f91ad210404dce4a529",
+  "public_20q_import": {
+    "targets": 1200,
+    "safe_targets": 995,
+    "cells": 38275
+  },
+  "ai_enrichment_ran": false,
+  "authoritative_source": {
+    "path": ".dev-data/pam20q/authoritative-input/pam-films-v6.sqlite",
+    "sha256": "174ddee278356be17df88fb49627c1a10e668cb4c16ec8baf30cf2f212ac6506",
+    "concepts": 53092,
+    "source_questions": 1065,
+    "mapped_canonical_questions": 122,
+    "answer_rows_seen": 381768,
+    "accepted_cells_loaded": 269302,
+    "answer_rows_skipped_unmapped_question": 112282,
+    "duplicate_source_concept_ids": 8,
+    "additional_rows_using_duplicate_source_ids": 8,
+    "duplicate_source_id_counts": {
+      "wd:Q25872": 2,
+      "wd:Q108316": 2,
+      "wd:Q123098": 2,
+      "wd:Q320150": 2,
+      "wd:Q231708": 2,
+      "wd:Q42827": 2,
+      "wd:Q133063": 2,
+      "wd:Q57327": 2
+    }
+  },
+  "populated_cells": 307587,
+  "populated_percentage": 0.03862314472990281,
+  "unresolved_percentage": 0.9613768552700972
+}
