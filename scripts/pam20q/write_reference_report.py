@@ -17,6 +17,7 @@ def main():
     build=json.loads(BUILD.read_text())
     prov=json.loads(PROV.read_text())
     qc=ev['question_classification_counts']; mc=ev['target_mapping_counts']; rb=ev['reference_representation_benchmark']
+    poor_key="poor fit for Pam's broader concept universe"
     fallback_total=build['total_concept_question_cells']; fallback_unknown=build['unresolved_cells']
     unknown_rate=fallback_unknown/fallback_total if fallback_total else 1
     auth_cells=53092*ev['proposed_final_question_count']
@@ -42,7 +43,7 @@ def main():
         f"- Partial overlaps: {qc.get('partial overlap',0)}",
         f"- Genuinely useful public additions: {qc.get('genuinely useful new question',0)}",
         f"- Redundant public questions: {qc.get('redundant',0)}",
-        f"- Poor-fit public questions: {qc.get('poor fit for Pam\'s broader concept universe',0)}",
+        f"- Poor-fit public questions: {qc.get(poor_key,0)}",
         f"- Proposed final Pam vocabulary: {ev['proposed_final_question_count']}",
         f"- Pam questions retained without a useful public equivalent: {ev['pam_questions_without_public_equivalent_count']}",'',
         'The final vocabulary keeps Pam’s named-entity/media questions and adds only broad classic physical/common-sense splits. The complete 156-row classification is in `docs/pam20q-public-reference/question-comparison.csv`.','',
