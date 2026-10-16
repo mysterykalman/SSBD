@@ -1,6 +1,6 @@
 // Device-local game sound and music system.
-// The intro plays once per browser session. Background music starts when a mode is selected
-// and then loops for the rest of that session. Existing game SFX stay on their own volume channel.
+// Intro music is offered once per browser session and only begins after the player chooses Play intro.
+// Background music starts when a mode is selected and then loops for the rest of that session.
 
 const STORAGE_KEY = "ssbd.audio.v1";
 const INTRO_SESSION_KEY = "ssbd.audio.intro-played.v1";
@@ -71,7 +71,6 @@ let lastPhaseSignature = "";
 let winSequenceTimer = null;
 let introAudio = null;
 let gameMusicAudio = null;
-let introUnlockArmed = false;
 let musicUnlockArmed = false;
 
 function saveSettings() {
@@ -115,81 +114,57 @@ function updateLiveMusicVolume() {
   if (gameMusicAudio && !gameMusicAudio.paused && !gameMusicAudio.__ssbdFading) gameMusicAudio.volume = target;
 }
 
-function removeIntroSkip() {
-  document.getElementById("audioIntroSkip")?.remove();
-}
-
-function showIntroSkip() {
-  if (document.getElementById("audioIntroSkip")) return;
-  const button = document.createElement("button");
-  button.id = "audioIntroSkip";
-  button.type = "button";
-  button.className = "btn small ghost";
-  button.textContent = "Skip intro";
-  button.setAttribute("aria-label", "Skip intro music");
-  Object.assign(button.style, {
-    position: "fixed", right: "18px", bottom: "18px", zIndex: "80",
-    maxWidth: "calc(100vw - 36px)", boxShadow: "0 8px 24px rgba(60,38,26,.18)"
-  });
-  button.addEventListener("click", () => stopIntro({markPlayed: true}));
-  document.body.append(button);
+function introFinished() {
+  sessionSet(INTRO_SESSION_KEY);
+  introAudio = null;
+  document.dispatchEvent(new CustomEvent("ssbd:intro-ended"));
 }
 
 function stopIntro({markPlayed = false} = {}) {
   if (markPlayed) sessionSet(INTRO_SESSION_KEY);
-  removeIntroSkip();
   const audio = introAudio;
   introAudio = null;
   if (audio) fadeOut(audio, INTRO_FADE_MS);
 }
 
-function armIntroUnlock() {
-  if (introUnlockArmed) return;
-  introUnlockArmed = true;
-  const retry = () => {
-    introUnlockArmed = false;
-    document.removeEventListener("pointerdown", retry, true);
-    document.removeEventListener("keydown", retry, true);
-    if (!sessionGet(INTRO_SESSION_KEY) && !sessionGet(GAME_MUSIC_SESSION_KEY)) playIntroOnce();
-  };
-  document.addEventListener("pointerdown", retry, true);
-  document.addEventListener("keydown", retry, true);
-}
-
-function playIntroOnce() {
-  if (!settings.enabled || musicTarget() <= 0 || sessionGet(INTRO_SESSION_KEY) || sessionGet(GAME_MUSIC_SESSION_KEY)) return;
-  if (location.pathname !== "/" && location.pathname !== "/index.html") return;
-  if (introAudio && !introAudio.paused) return;
+async function playIntroOnce() {
+  if (!settings.enabled || musicTarget() <= 0 || sessionGet(INTRO_SESSION_KEY) || sessionGet(GAME_MUSIC_SESSION_KEY)) return false;
+  if (location.pathname !== "/" && location.pathname !== "/index.html") return false;
+  if (introAudio && !introAudio.paused) return true;
 
   const audio = new Audio(INTRO_URL);
   introAudio = audio;
   audio.preload = "auto";
   audio.volume = 0;
-  audio.addEventListener("error", () => { if (introAudio === audio) introAudio = null; removeIntroSkip(); }, {once: true});
-  audio.addEventListener("ended", () => {
-    sessionSet(INTRO_SESSION_KEY);
+  audio.addEventListener("error", () => {
     if (introAudio === audio) introAudio = null;
-    removeIntroSkip();
+  }, {once: true});
+  audio.addEventListener("ended", () => {
+    if (introAudio === audio) introFinished();
   }, {once: true});
   audio.addEventListener("timeupdate", () => {
     if (!Number.isFinite(audio.duration) || audio.__ssbdFading) return;
     const fadeBeforeEnd = INTRO_END_TRIM_SECONDS + INTRO_FADE_MS / 1000 + 0.04;
     if (audio.duration - audio.currentTime <= fadeBeforeEnd) {
       fadeOut(audio, INTRO_FADE_MS, {reset: false, onDone: () => {
-        sessionSet(INTRO_SESSION_KEY);
-        if (introAudio === audio) introAudio = null;
-        removeIntroSkip();
+        if (introAudio === audio) introFinished();
       }});
     }
   });
-  showIntroSkip();
-  audio.play().then(() => {
-    sessionSet(INTRO_SESSION_KEY);
+
+  try {
+    await audio.play();
     ramp(audio, 0, musicTarget(), INTRO_FADE_MS);
-  }).catch(() => {
+    return true;
+  } catch {
     if (introAudio === audio) introAudio = null;
-    armIntroUnlock();
-  });
+    return false;
+  }
+}
+
+function skipIntro() {
+  stopIntro({markPlayed: true});
+  document.dispatchEvent(new CustomEvent("ssbd:intro-ended"));
 }
 
 function armMusicUnlock() {
@@ -235,8 +210,13 @@ function isGameRoute() {
 function syncBackgroundMusic() {
   if (!settings.enabled) { pauseBackgroundMusic(); return; }
   if (isGameRoute() || sessionGet(GAME_MUSIC_SESSION_KEY)) startGameMusic();
-  else playIntroOnce();
 }
+
+window.SSBDAudio = Object.freeze({
+  playIntro: playIntroOnce,
+  skipIntro,
+  startGameMusic
+});
 
 function scheduleFade(audio, spec) {
   const fadeMs = spec.fadeOut ?? 180;
