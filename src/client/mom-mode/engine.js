@@ -14,11 +14,12 @@ const polarity=s=>s&1;
 const strength=s=>(s&2)?2:1;
 const CATEGORY_Q=Object.freeze({animal:0,vegetable:1,mineral:2,other:3});
 const REGULAR_ANSWERS=new Set(['yes','probably','maybe','unknown','doubtful','probably_not','no']);
+const HUNCH_COOLDOWN_QUESTIONS=4;
 
 function cleanTarget(value){return String(value||'').replace(/\s+/g,' ').trim();}
 function guessText(value){return `Are you thinking of ${cleanTarget(value)}?`;}
 function createGame(opts={}){
- return{scores:new Float64Array(N),asked:new Set(),history:[],turn:0,budget:opts.budget||20,minGuessQuestions:opts.minGuessQuestions??7,continuePrice:opts.continuePrice??2,continueCost:0,deferGuessOnce:false,status:'playing',category:null,lastQuestion:null};
+ return{scores:new Float64Array(N),asked:new Set(),history:[],turn:0,budget:opts.budget||20,minGuessQuestions:opts.minGuessQuestions??7,continuePrice:opts.continuePrice??0,continueCost:0,hunchCooldown:0,status:'playing',category:null,lastQuestion:null};
 }
 function rank(game,limit=N){const indexes=Array.from({length:N},(_,i)=>i);indexes.sort((a,b)=>game.scores[b]-game.scores[a]||a-b);return indexes.slice(0,limit);}
 function confidence(game){
@@ -60,7 +61,9 @@ function answer(game,question,answerValue){
  const profile=responseProfile(answer);
  if(profile)applyPolarity(game,q,profile.yes,profile.power);
  else if(answer==='maybe')applyMaybe(game,q);
- game.turn+=1;game.history.push({kind:'question',turn:game.turn,id:`q${q}`,text:QUESTIONS[q],answer});
+ game.turn+=1;
+ if(game.hunchCooldown>0)game.hunchCooldown-=1;
+ game.history.push({kind:'question',turn:game.turn,id:`q${q}`,text:QUESTIONS[q],answer});
  return choose(game);
 }
 function candidatePool(game){
@@ -83,7 +86,7 @@ function bestQuestion(game){
  return bestQ==null?null:{index:bestQ,gain:bestScore};
 }
 function shouldHunch(game){
- if(game.deferGuessOnce){game.deferGuessOnce=false;return false;}
+ if(game.hunchCooldown>0)return false;
  if(game.turn<game.minGuessQuestions)return false;
  const leaders=rank(game,3);if(leaders.length<2)return true;
  const margin=game.scores[leaders[0]]-game.scores[leaders[1]];
@@ -100,18 +103,18 @@ function choose(game){
  if(game.status!=='playing')throw new Error('game finished');
  if(game.turn===0)return{kind:'category',number:1,text:'First things first. What kind of thing is it?',options:Object.keys(CATEGORY_Q),questionsAsked:0,maxQuestions:game.budget};
  if(game.turn>=game.budget)return makeGuess(game,'question_limit');
- if(shouldHunch(game))return{kind:'hunch',index:top(game).index,confidence:top(game).p,reason:'confidence',questionsAsked:game.turn,maxQuestions:game.budget,continuePrice:game.continuePrice,continueCost:game.continueCost};
+ if(shouldHunch(game))return{kind:'hunch',index:top(game).index,confidence:top(game).p,reason:'confidence',questionsAsked:game.turn,maxQuestions:game.budget,continuePrice:game.continuePrice,continueCost:game.continueCost,forcedQuestions:HUNCH_COOLDOWN_QUESTIONS};
  const next=bestQuestion(game);if(!next)return makeGuess(game,'no_questions');
  return{kind:'question',index:next.index,id:`q${next.index}`,text:QUESTIONS[next.index],gain:next.gain,confidence:top(game).p};
 }
 function commitGuess(game,hunch){if(!hunch||hunch.kind!=='hunch')throw new Error('guess requires a hunch');return makeGuess(game,'confidence');}
-function deferGuess(game,hunch){if(!hunch||hunch.kind!=='hunch')throw new Error('continue requires a hunch');game.continueCost+=game.continuePrice;game.deferGuessOnce=true;game.history.push({kind:'decision',decision:'continue',cost:game.continuePrice});return choose(game);}
+function deferGuess(game,hunch){if(!hunch||hunch.kind!=='hunch')throw new Error('continue requires a hunch');game.hunchCooldown=HUNCH_COOLDOWN_QUESTIONS;game.history.push({kind:'decision',decision:'continue',forcedQuestions:HUNCH_COOLDOWN_QUESTIONS});return choose(game);}
 function scoreFor(questionCount,correct,continueCost=0){const base=Math.min(Math.max(Number(questionCount)||0,0),20);return Math.max(0,base+(correct?0:10)-Math.max(0,Number(continueCost)||0));}
 function confirm(game,guess,correct){
  if(!guess||guess.kind!=='guess')throw new Error('No Pam guess to confirm');game.status='finished';
  return{kind:'result',winner:correct?'pam':'player',correct:Boolean(correct),turns:game.turn,guess:guess.label,reason:guess.reason,continueCost:game.continueCost,score:scoreFor(game.turn,Boolean(correct),game.continueCost)};
 }
-function debugSnapshot(game,limit=5){return{runtime:{mode:'frozen-classic-20q',concepts:N,questions:F,offline:true,baseConcepts:model.baseTargets||1200,extensionConcepts:model.extensionTargets||Math.max(0,N-1200)},topCandidates:rank(game,limit).map(i=>({name:TARGETS[i],score:game.scores[i],confidence:i===rank(game,1)[0]?confidence(game):null})),turn:game.turn,category:game.category};}
+function debugSnapshot(game,limit=5){return{runtime:{mode:'frozen-classic-20q',concepts:N,questions:F,offline:true,baseConcepts:model.baseTargets||1200,extensionConcepts:model.extensionTargets||Math.max(0,N-1200)},topCandidates:rank(game,limit).map(i=>({name:TARGETS[i],score:game.scores[i],confidence:i===rank(game,1)[0]?confidence(game):null})),turn:game.turn,category:game.category,hunchCooldown:game.hunchCooldown};}
 
 global.PamClassic20Q=Object.freeze({N,F,QUESTIONS,TARGETS,createGame,choose,answer,setCategory,commitGuess,deferGuess,confirm,top,debugSnapshot});
 })(window);
