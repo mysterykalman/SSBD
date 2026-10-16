@@ -67,32 +67,30 @@ function findCard(grid,kind){
   return null;
 }
 
-function copyLines(card){
-  const copy=card?.querySelector(":scope > .mode-body > .start-copy");
-  return copy?[...copy.querySelectorAll(":scope > p")].map(p=>p.textContent):[];
-}
-function sameLines(a,b){return a.length===b.length&&a.every((line,index)=>line===b[index]);}
 function paragraph(text){const p=document.createElement("p");p.textContent=text;return p;}
-function replaceCopy(card,lines){
+function currentParagraphs(copy){return copy?[...copy.querySelectorAll(":scope > p")].map(p=>p.textContent):[];}
+function sameLines(a,b){return a.length===b.length&&a.every((line,index)=>line===b[index]);}
+
+function ensureCopy(card,lines,{preserveControls=false}={}){
   const body=card?.querySelector(":scope > .mode-body");
-  if(!body)return;
-  if(sameLines(copyLines(card),lines))return;
+  if(!body)return null;
   let copy=body.querySelector(":scope > .start-copy");
   if(!copy){
     copy=document.createElement("div");
     copy.className="start-copy home-copy-refined";
-    const title=body.querySelector(":scope > h2");
-    title?.after(copy);
+    body.querySelector(":scope > h2")?.after(copy);
   }
-  copy.replaceChildren(...lines.map(paragraph));
+  const controls=preserveControls?[...copy.querySelectorAll(":scope > button, :scope > a")]:[];
+  if(!sameLines(currentParagraphs(copy),lines))copy.replaceChildren(...lines.map(paragraph),...controls);
   [...body.querySelectorAll(":scope > p")].forEach(p=>p.remove());
+  return copy;
 }
 
 function refinePam(card){
   if(!card)return;
   const title=card.querySelector("h2");
   if(title&&title.textContent!=="Don’t Tell Me")title.textContent="Don’t Tell Me";
-  replaceCopy(card,[
+  ensureCopy(card,[
     "Pick a word. Pam will take it from there.",
     "She’ll ask the questions and narrow it down before you get too pleased with yourself.",
     "Good luck with that."
@@ -102,20 +100,20 @@ function refinePam(card){
 function refineTogether(card){
   if(!card)return;
   const unavailable=card.classList.contains("is-unavailable");
-  replaceCopy(card,unavailable?[
+  ensureCopy(card,unavailable?[
     "Grab a friend and see if your brains make the same strange choices.",
     "Right now this mode is taking a short break. Solo still works."
   ]:[
     "Grab a friend and see if your brains make the same strange choices.",
     "Start a game or join one already in progress."
-  ]);
+  ],{preserveControls:unavailable});
 }
 
 function refineConnections(card){
   if(!card)return;
   const title=card.querySelector("h2");
   if(title&&title.textContent!=="Odd One In")title.textContent="Odd One In";
-  replaceCopy(card,[
+  ensureCopy(card,[
     "Some words belong together.",
     "Some are just being difficult.",
     "Pick a challenge and sort out the troublemaker."
