@@ -95,7 +95,7 @@ const RUNTIME_MOM_JS = ["copy.js", "app.js", "debug.js"];
 const MOM_JS = hasMomRuntime ? RUNTIME_MOM_JS : LEGACY_MOM_JS;
 const MOM_CSS = ["styles.css", "character.css"];
 const MOM_STATIC = ["pam.webp", "pam-v2.webp"];
-const legacyMomScriptChain = '<script src="./knowledge.js" defer></script><script src="./knowledge.general.js" defer></script><script src="./facets.js" defer></script><script src="./engine.js" defer></script><script src="./deduction.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
+const legacyMomScriptChain = '<script src="./knowledge.js" defer></script><script src="./knowledge.general.js" defer></script><script src="./knowledge.generated.js" defer></script><script src="./facets.js" defer></script><script src="./engine.js" defer></script><script src="./deduction.js" defer></script><script src="./copy.js" defer></script><script src="./adapter.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
 const runtimeMomScriptChain = '<script src="./knowledge.runtime.js" defer></script><script src="./runtime-entry.js" defer></script><script src="./copy.js" defer></script><script src="./app.js" defer></script><script src="./debug.js" defer></script>';
 let momIndex = await readFile(src("client/mom-mode/index.html"), "utf8");
 if (hasMomRuntime) {
