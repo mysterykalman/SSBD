@@ -6,8 +6,10 @@ import {pathToFileURL} from 'node:url';
 
 const ROOT=process.cwd();
 const MODEL_DIR=path.join(ROOT,'data','pam20q','reference','classic');
-const questions=JSON.parse(fs.readFileSync(path.join(MODEL_DIR,'questions.json'),'utf8'));
-const targets=JSON.parse(fs.readFileSync(path.join(MODEL_DIR,'targets.json'),'utf8'));
+const questionDoc=JSON.parse(fs.readFileSync(path.join(MODEL_DIR,'questions.json'),'utf8'));
+const targetDoc=JSON.parse(fs.readFileSync(path.join(MODEL_DIR,'targets.json'),'utf8'));
+const questions=Array.isArray(questionDoc)?questionDoc:questionDoc.questions;
+const targets=Array.isArray(targetDoc)?targetDoc:targetDoc.targets;
 const weights=fs.readFileSync(path.join(MODEL_DIR,'weights.u2states.bin'));
 
 global.window={PAM_CLASSIC_MODEL:{questions,targets,weightsB64:weights.toString('base64'),layout:'question-major',states:4}};
@@ -64,7 +66,7 @@ test('Pam exposes the classic response flow deterministically',()=>{
  if(a.kind==='question'){assert.equal(a.index,b.index);assert.equal(a.text,b.text);}
 });
 
-test('representative model targets resolve to a model guess within the 20-question budget',()=>{
+test('representative model targets produce a model guess within the 20-question budget',()=>{
  const samples=['a dog','a car','a chair','the Sun','water','a book','a piano','a blue whale'];
  let checked=0;
  for(const name of samples){
