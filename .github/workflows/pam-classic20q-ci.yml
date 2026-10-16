@@ -1,0 +1,37 @@
+name: Pam Classic 20Q CI
+
+on:
+  push:
+    branches:
+      - feature/pam-classic20q
+  pull_request:
+    paths:
+      - 'data/pam20q/reference/classic/**'
+      - 'src/client/mom-mode/**'
+      - 'scripts/build-pam-classic.mjs'
+      - 'test/pam-classic20q.test.mjs'
+      - 'test/e2e/mom-mode.test.mjs'
+      - 'package.json'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Validate frozen model and engine
+        run: node --test test/pam-classic20q.test.mjs
+      - name: Build offline game bundle
+        run: npm run build
+      - name: Verify classic assets are shipped
+        run: |
+          test -f dist/mom-mode/knowledge.generated.js
+          test -f dist/mom-mode/engine.js
+          grep -q 'PAM_CLASSIC_MODEL' dist/mom-mode/knowledge.generated.js
+          grep -q 'frozen-classic-20q' dist/mom-mode/engine.js
+          ! grep -R -n -i 'david-ar' dist/mom-mode dist/mom || exit 1
