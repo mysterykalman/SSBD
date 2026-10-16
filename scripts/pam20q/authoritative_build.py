@@ -4,6 +4,9 @@
 This is a thin authoritative-input adapter around the existing Pam20Q pipeline. It
 uses the accepted concepts/questions/answers schema directly, then applies the same
 external, public-20Q, hierarchy, compile and reporting functions from build.py.
+Distinct SQLite rows are preserved even when a small number reuse the same source
+concept_id. The first row retains the source ID; later rows receive a deterministic
+row-qualified internal ID while retaining the original SQLite ID in provenance.
 """
 from __future__ import annotations
 
@@ -12,6 +15,7 @@ import hashlib
 import importlib.util
 import json
 import sqlite3
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,21 +49,28 @@ def load_authoritative_sqlite(d, path: Path) -> dict:
     concepts = list(s.execute('SELECT row_id, concept_id, name FROM concepts ORDER BY row_id'))
     if len(concepts) != 53092:
         raise SystemExit(f'expected 53092 authoritative concepts, got {len(concepts)}')
+    source_id_counts = Counter(str(r['concept_id'] or '').strip() for r in concepts)
+    duplicate_source_ids = {cid: count for cid, count in source_id_counts.items() if cid and count > 1}
+    seen = Counter()
+    internal_by_row = {}
     for r in concepts:
-        cid = str(r['concept_id'] or '').strip()
+        source_cid = str(r['concept_id'] or '').strip()
         name = str(r['name'] or '').strip()
-        if not cid or not name:
+        if not source_cid or not name:
             raise SystemExit(f'blank authoritative concept at row {r["row_id"]}')
-        d.execute('INSERT INTO concepts(concept_id,name,rank) VALUES(?,?,?)', (cid, name, int(r['row_id'])))
+        seen[source_cid] += 1
+        internal_cid = source_cid if seen[source_cid] == 1 else f'{source_cid}::sqlite-row-{int(r["row_id"])}'
+        internal_by_row[int(r['row_id'])] = internal_cid
+        d.execute('INSERT INTO concepts(concept_id,name,rank) VALUES(?,?,?)', (internal_cid, name, int(r['row_id'])))
     d.commit()
+    if d.execute('SELECT COUNT(*) FROM concepts').fetchone()[0] != 53092:
+        raise SystemExit('failed to preserve all 53092 authoritative row identities')
 
     question_rows = list(s.execute('SELECT question_index, question_id, wording FROM questions ORDER BY question_index'))
     mapped_question_ids = set()
-    accepted_rows_seen = 0
-    accepted_cells_loaded = 0
-    skipped_unmapped = 0
+    accepted_rows_seen = accepted_cells_loaded = skipped_unmapped = 0
     query = '''
-      SELECT c.concept_id, q.question_id, a.answer
+      SELECT c.row_id AS concept_row_id, c.concept_id AS source_concept_id, q.question_id, a.answer
       FROM answers a
       JOIN concepts c ON c.row_id = a.concept_row_id
       JOIN questions q ON q.question_index = a.question_index
@@ -77,8 +88,10 @@ def load_authoritative_sqlite(d, path: Path) -> dict:
             skipped_unmapped += 1
             continue
         mapped_question_ids.add(canonical_qid)
-        if build.put(d, str(r['concept_id']), canonical_qid, probability, confidence, 'accepted', f'sqlite:answers:{qid}'):
-            build.add_evidence(d, str(r['concept_id']), canonical_qid, probability, confidence, 'accepted', f'sqlite:answers:{qid}', accepted=1)
+        internal_cid = internal_by_row[int(r['concept_row_id'])]
+        ref = f'sqlite:answers:{qid}:row={int(r["concept_row_id"])}'
+        if build.put(d, internal_cid, canonical_qid, probability, confidence, 'accepted', ref):
+            build.add_evidence(d, internal_cid, canonical_qid, probability, confidence, 'accepted', ref, accepted=1)
             accepted_cells_loaded += 1
     d.commit()
     s.close()
@@ -89,6 +102,9 @@ def load_authoritative_sqlite(d, path: Path) -> dict:
         'answer_rows_seen': accepted_rows_seen,
         'accepted_cells_loaded': accepted_cells_loaded,
         'answer_rows_skipped_unmapped_question': skipped_unmapped,
+        'duplicate_source_concept_ids': len(duplicate_source_ids),
+        'additional_rows_using_duplicate_source_ids': sum(v - 1 for v in duplicate_source_ids.values()),
+        'duplicate_source_id_counts': duplicate_source_ids,
     }
 
 
@@ -101,13 +117,11 @@ def main():
     p.add_argument('--public-reference', type=Path, default=ROOT / 'data/pam20q/reference/david-ar-20q')
     p.add_argument('--reset', action='store_true')
     a = p.parse_args()
-    if not a.source_db.is_file():
-        p.error(f'missing authoritative SQLite: {a.source_db}')
+    if not a.source_db.is_file(): p.error(f'missing authoritative SQLite: {a.source_db}')
 
     a.work_dir.mkdir(parents=True, exist_ok=True)
     db_path = a.work_dir / 'build.sqlite'
-    if a.reset and db_path.exists():
-        db_path.unlink()
+    if a.reset and db_path.exists(): db_path.unlink()
     d = build.db_connect(db_path)
     build.load_questions(d, a.questions)
     source = load_authoritative_sqlite(d, a.source_db)
@@ -118,11 +132,7 @@ def main():
     build.write_report(d, compiled, a.work_dir / 'report.json', public_summary)
 
     report = json.loads((a.work_dir / 'report.json').read_text())
-    report['authoritative_source'] = {
-        'path': str(a.source_db),
-        'sha256': file_sha256(a.source_db),
-        **source,
-    }
+    report['authoritative_source'] = {'path': str(a.source_db), 'sha256': file_sha256(a.source_db), **source}
     report['populated_cells'] = report['total_concept_question_cells'] - report['unresolved_cells']
     report['populated_percentage'] = report['populated_cells'] / report['total_concept_question_cells']
     report['unresolved_percentage'] = report['unresolved_cells'] / report['total_concept_question_cells']
@@ -131,5 +141,4 @@ def main():
     print(json.dumps(report, indent=2))
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == '__main__': main()
