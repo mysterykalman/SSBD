@@ -25,9 +25,11 @@ const source=await findPinnedModel();
 const [questionsRaw,targetsRaw,weights,previous,baseStyles,classicStyles]=await Promise.all([
   readFile(source.q,'utf8'),readFile(source.t,'utf8'),readFile(source.w),readFile(generatedPath,'utf8'),readFile(stylesPath,'utf8'),readFile(classicStylesPath,'utf8')
 ]);
-const questions=JSON.parse(questionsRaw),targets=JSON.parse(targetsRaw);
-if(questions.length!==156)throw new Error(`Expected 156 Pam questions, found ${questions.length}`);
-if(targets.length!==1200)throw new Error(`Expected 1200 Pam targets, found ${targets.length}`);
+const questionDoc=JSON.parse(questionsRaw),targetDoc=JSON.parse(targetsRaw);
+const questions=Array.isArray(questionDoc)?questionDoc:questionDoc.questions;
+const targets=Array.isArray(targetDoc)?targetDoc:targetDoc.targets;
+if(!Array.isArray(questions)||questions.length!==156)throw new Error(`Expected 156 Pam questions, found ${questions?.length??'invalid'}`);
+if(!Array.isArray(targets)||targets.length!==1200)throw new Error(`Expected 1200 Pam targets, found ${targets?.length??'invalid'}`);
 if(weights.length!==questions.length*targets.length)throw new Error(`Pam weight matrix has ${weights.length} cells; expected ${questions.length*targets.length}`);
 for(const value of weights)if(value>3)throw new Error(`Pam weight matrix contains invalid state ${value}`);
 
