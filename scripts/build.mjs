@@ -69,7 +69,12 @@ const padded = [...new Set(feltSkins.skins.filter(skin => skin.fill !== false).f
 const inner = "(var(--felt-h, 48px) * (1 - var(--skin-bt) - var(--skin-bb)) - 1lh) / 2";
 feltCss.push(`${padded.join(",")}{min-height:var(--felt-h, 48px);padding-top:calc(${inner} + var(--felt-h, 48px) * var(--skin-bt))!important;padding-bottom:calc(${inner} + var(--felt-h, 48px) * var(--skin-bb))!important}`);
 // Every processed felt image ships: the stretchable pieces plus the round badges (felt/badge-*.webp).
-const FELT = [...new Set([...Object.keys(feltSlices).map(name => `/felt/${name}.webp`), ...(await readdir(src("client/felt"))).filter(name => name.endsWith(".webp")).map(name => `/felt/${name}`)])];
+const FELT = [...new Set([
+  ...Object.keys(feltSlices).map(name => `/felt/${name}.webp`),
+  ...(await readdir(src("client/felt")))
+    .filter(name => name.endsWith(".webp") || name.endsWith(".png"))
+    .map(name => `/felt/${name}`)
+])];
 const felt = Object.fromEntries(await Promise.all(FELT.map(async path => [path, await readFile(src(`client${path}`))])));
 const FONT_WEIGHTS = [700, 800, 900];
 const fonts = Object.fromEntries(await Promise.all(FONT_WEIGHTS.map(async w => [`/fonts/nunito-${w}.woff2`, await readFile(join(root, "node_modules", "@fontsource", "nunito", "files", `nunito-latin-${w}-normal.woff2`))])));
