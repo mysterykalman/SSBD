@@ -1,0 +1,50 @@
+name: Pam20Q AI enrichment preflight
+
+on:
+  push:
+    branches:
+      - feature/pam-pretrained-20q-model
+    paths:
+      - '.github/workflows/pam20q-ai-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify OpenAI credential and configured model access
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PAM20Q_MODEL: gpt-6-astra
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo 'OPENAI_API_KEY is not configured for this repository.' >&2
+            exit 42
+          fi
+          code=$(curl -sS -o /tmp/model.json -w '%{http_code}' \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            "https://api.openai.com/v1/models/$PAM20Q_MODEL")
+          if [ "$code" != "200" ]; then
+            echo "Configured API credential cannot access $PAM20Q_MODEL (HTTP $code)." >&2
+            python3 - <<'PY'
+import json
+try:
+    x=json.load(open('/tmp/model.json'))
+    err=x.get('error',{})
+    print({'type':err.get('type'),'code':err.get('code'),'message':err.get('message')})
+except Exception:
+    pass
+PY
+            exit 43
+          fi
+          python3 - <<'PY'
+import json
+x=json.load(open('/tmp/model.json'))
+print({'model':x.get('id'),'object':x.get('object'),'access':'ok'})
+PY
