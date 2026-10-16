@@ -5,22 +5,22 @@ const STORAGE_KEY = "ssbd.connections.v2";
 const GROUP_COLORS = ["yellow", "green", "blue", "purple"];
 
 const styleText = `
-.conn-launch{display:grid;gap:12px}.conn-launch .conn-mini{font-size:.86rem;color:var(--ink-soft)}
-.conn-launch-cast{display:flex;align-items:flex-end;gap:0;margin:-4px 0 0}.conn-launch-face{width:54px;height:54px;border-radius:50%;object-fit:cover;object-position:50% 20%;border:3px solid var(--panel);box-shadow:0 3px 8px rgba(82,52,31,.16);margin-right:-8px;background:var(--cream)}
+.conn-launch{display:grid;gap:12px}.conn-launch .beta-badge,.conn-launch-badges{display:none!important}
+.conn-launch-cast{display:flex;align-items:flex-end;gap:7px;margin:-2px 0 2px}.conn-launch-face{width:64px;height:78px;border-radius:22px;object-fit:cover;object-position:50% 18%;border:4px solid #fff7ea;outline:1px solid #d9ba8f;outline-offset:-2px;box-shadow:0 3px 8px rgba(82,52,31,.16);background:var(--cream)}
 .conn-overlay{position:fixed;inset:0;z-index:10000;background:var(--grain),radial-gradient(900px 420px at 20% -10%,#fffaf2,transparent 60%),var(--page);color:var(--ink);overflow:auto;font-family:var(--font)}
 .conn-shell{width:min(940px,calc(100% - 28px));margin:0 auto;padding:18px 0 44px}
 .conn-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.conn-title-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.conn-title{font-weight:900;font-size:clamp(1.7rem,5vw,2.55rem);line-height:1;margin:0}
 .conn-intro{text-align:center;display:grid;gap:10px;padding:14px 4px 6px}.conn-intro h2{font-size:clamp(1.55rem,5vw,2.25rem)}.conn-intro>p{max-width:660px;margin:0 auto;color:var(--ink-soft);font-weight:800}
 .conn-tiers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}.conn-tier{position:relative;overflow:hidden;padding:0;display:grid;grid-template-columns:145px 1fr;gap:0;align-items:stretch;text-align:left;min-height:184px;transition:transform .12s ease}.conn-tier:hover{transform:translateY(-2px)}
-.conn-tier-portrait{position:relative;min-height:184px;background:var(--cream);overflow:hidden}.conn-tier-portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 18%}.conn-tier-portrait::after{content:"";position:absolute;inset:0;box-shadow:inset -12px 0 18px -18px rgba(60,36,20,.6)}
+.conn-tier-portrait{position:relative;min-height:184px;background:var(--cream);overflow:hidden;border-radius:24px 0 0 24px}.conn-tier-portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 18%}.conn-tier-portrait::after{content:"";position:absolute;inset:0;box-shadow:inset -12px 0 18px -18px rgba(60,36,20,.6)}
 .conn-tier-copy{padding:17px 18px 16px;display:grid;align-content:center;gap:7px}.conn-tier-copy strong{font-size:1.24rem;font-weight:900}.conn-tier-copy .difficulty{justify-self:start}.conn-tier-copy .relationship{font-size:.9rem;font-weight:900}.conn-tier-copy .picker{font-size:.86rem;color:var(--ink-soft);font-weight:800;line-height:1.34}
 .conn-game-head{display:grid;grid-template-columns:112px 1fr;gap:14px;align-items:end;margin-bottom:10px}.conn-speaker{display:grid;gap:7px;justify-items:center}.conn-speaker-portrait{width:108px;height:108px;object-fit:cover;object-position:50% 18%;border-radius:26px;background:var(--cream);border:4px solid var(--panel);box-shadow:var(--shadow-panel)}.conn-speaker .pill{white-space:nowrap;max-width:130px}.conn-bubble{--felt-h:118px;min-height:94px;display:flex;align-items:center;font-size:1rem;text-align:left}
 .conn-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0 12px;flex-wrap:wrap}.conn-meta-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.conn-mistakes{display:flex;align-items:center;gap:7px;font-weight:900}.conn-dot{width:13px;height:13px;border-radius:50%;background:var(--coral);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 1px 1px rgba(80,40,20,.18)}.conn-dot.used{opacity:.18}
 .conn-solved{display:grid;gap:9px;margin-bottom:10px}.conn-group{display:grid;gap:6px;padding:10px 12px 12px;text-align:center}.conn-group .pill{justify-self:center}.conn-group-words{font-weight:900;font-size:.9rem;letter-spacing:.01em}
 .conn-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.conn-tile{--felt-h:78px;width:100%;min-width:0;padding:10px 12px 18px;font-size:clamp(.72rem,2.15vw,1rem);line-height:1.05;border:0;cursor:pointer;transition:transform .12s ease,filter .12s ease}.conn-tile:hover{transform:translateY(-1px);filter:brightness(1.03)}.conn-tile[aria-pressed=true]{transform:translateY(2px) scale(.985);filter:saturate(1.12) brightness(.94)}
-.conn-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin:16px 0 6px}.conn-actions .btn{min-width:130px}.conn-end{display:grid;gap:12px;text-align:center;margin-top:18px;padding:20px}.conn-end .conn-actions{margin-top:4px}.conn-reveal{display:grid;gap:8px;margin-top:4px}.conn-launch-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2px}
+.conn-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin:16px 0 6px}.conn-actions .btn{min-width:130px}.conn-end{display:grid;gap:12px;text-align:center;margin-top:18px;padding:20px}.conn-end .conn-actions{margin-top:4px}.conn-reveal{display:grid;gap:8px;margin-top:4px}
 @keyframes conn-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}.conn-shake{animation:conn-shake .22s linear 2}
-@media(max-width:680px){.conn-shell{width:min(100% - 14px,940px);padding-top:10px}.conn-tiers{grid-template-columns:1fr}.conn-tier{grid-template-columns:112px 1fr;min-height:154px}.conn-tier-portrait{min-height:154px}.conn-tier-copy{padding:14px}.conn-board{gap:6px}.conn-tile{--felt-h:68px;padding:8px 6px 16px;font-size:clamp(.67rem,3vw,.9rem)}.conn-game-head{grid-template-columns:82px 1fr;gap:8px}.conn-speaker-portrait{width:80px;height:80px;border-radius:21px}.conn-speaker .pill{font-size:.7rem}.conn-bubble{--felt-h:108px;font-size:.9rem}.conn-actions .btn{min-width:0}.conn-launch-face{width:48px;height:48px}}
+@media(max-width:680px){.conn-shell{width:min(100% - 14px,940px);padding-top:10px}.conn-tiers{grid-template-columns:1fr}.conn-tier{grid-template-columns:112px 1fr;min-height:154px}.conn-tier-portrait{min-height:154px}.conn-tier-copy{padding:14px}.conn-board{gap:6px}.conn-tile{--felt-h:68px;padding:8px 6px 16px;font-size:clamp(.67rem,3vw,.9rem)}.conn-game-head{grid-template-columns:82px 1fr;gap:8px}.conn-speaker-portrait{width:80px;height:80px;border-radius:21px}.conn-speaker .pill{font-size:.7rem}.conn-bubble{--felt-h:108px;font-size:.9rem}.conn-actions .btn{min-width:0}.conn-launch-face{width:56px;height:68px;border-radius:19px}}
 @media(max-width:430px){.conn-tier{grid-template-columns:92px 1fr}.conn-tier-portrait{min-height:146px}.conn-tier-copy .picker{display:none}.conn-board{grid-template-columns:repeat(2,minmax(0,1fr))}.conn-tile{--felt-h:62px}.conn-game-head{grid-template-columns:72px 1fr}.conn-speaker-portrait{width:70px;height:70px}}
 @media(prefers-reduced-motion:reduce){.conn-tier,.conn-tile,.conn-shake{animation:none!important;transition:none!important}}
 `;
@@ -193,11 +193,11 @@ function makeLauncher() {
   const cast=el("div", {class:"conn-launch-cast", "aria-hidden":"true"}, ...Object.values(ODD_ONE_IN_CHARACTERS).map(character=>portrait(character,"conn-launch-face",false)));
   return el("section", {class:"card mode-card start conn-launch", "data-mode":"connections", "aria-labelledby":"connectionsTitle"},
     el("div", {class:"mode-body"},
-      el("div", {class:"conn-launch-badges"}, el("span", {class:"pill sm orange"}, "NEW"), el("span", {class:"pill sm"}, "4 characters")),
       cast,
       el("h2", {id:"connectionsTitle"}, "Odd One In"),
-      el("p", {}, "Sort sixteen words into four groups. Easy enough. Probably."),
-      el("p", {class:"conn-mini"}, "Owen helps. Zoe teases. Martin competes. Professor Braine takes notes."),
+      el("p", {}, "Some words belong together."),
+      el("p", {}, "Some are just being difficult."),
+      el("p", {}, "Pick someone to make sense of it."),
       el("button", {class:"btn big go", type:"button", onclick:openMode}, "Choose your challenge")));
 }
 function mountLauncher() {
