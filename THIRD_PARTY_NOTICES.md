@@ -2,15 +2,13 @@
 
 ## Frozen Twenty Questions model
 
-SSBD includes vocabulary and model weights derived from the public `david-ar/20q` model distributed under the MIT License.
+SSBD includes vocabulary and model weights derived from the public `david-ar/20q` model. The upstream model repository declares the model under the MIT License.
 
 Source: https://huggingface.co/david-ar/20q
 
-The source identifier is retained here only for license attribution. It is not used in the shipped UI, runtime identifiers, asset names, or product copy.
+The source identifier is retained here only for third-party attribution and provenance. It is not used in the shipped UI, runtime identifiers, asset names, or product copy.
 
 MIT License
-
-Copyright (c) the original model contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
