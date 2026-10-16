@@ -148,6 +148,24 @@ function installStyles() {
       #audioIntroWelcome .intro-actions { width: min(330px, 90vw); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       #audioIntroWelcome .intro-actions .btn { min-width: 0; width: 100%; padding-inline: 18px; }
     }
+
+    /* Final positioning overrides */
+    #audioIntroWelcome .intro-kicker {
+      position: relative !important;
+      top: 10px !important;
+      transform: none !important;
+    }
+
+    #audioIntroWelcome .intro-note {
+      position: relative !important;
+      top: -25px !important;
+      transform: none !important;
+    }
+
+    #audioIntroWelcome .intro-logo {
+      position: relative !important;
+      top: -5px !important;
+    }
   `;
   document.head.append(style);
 }

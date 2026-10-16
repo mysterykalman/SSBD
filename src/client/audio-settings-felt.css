@@ -1,0 +1,9 @@
+
+.audio-global-actions {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 80;
+  display: flex;
+  gap: 8px;
+}

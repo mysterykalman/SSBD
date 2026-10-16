@@ -115,9 +115,11 @@ function updateLiveMusicVolume() {
 }
 
 function introFinished() {
+  const resumeGameMusic = Boolean(introAudio?.__ssbdResumeGameMusic);
   sessionSet(INTRO_SESSION_KEY);
   introAudio = null;
   document.dispatchEvent(new CustomEvent("ssbd:intro-ended"));
+  if (resumeGameMusic) startGameMusic();
 }
 
 function stopIntro({markPlayed = false} = {}) {
@@ -127,9 +129,10 @@ function stopIntro({markPlayed = false} = {}) {
   if (audio) fadeOut(audio, INTRO_FADE_MS);
 }
 
-async function playIntroOnce() {
-  if (!settings.enabled || musicTarget() <= 0 || sessionGet(INTRO_SESSION_KEY) || sessionGet(GAME_MUSIC_SESSION_KEY)) return false;
-  if (location.pathname !== "/" && location.pathname !== "/index.html") return false;
+async function playIntroOnce({force = false} = {}) {
+  if (!settings.enabled || musicTarget() <= 0) return false;
+  if (!force && (sessionGet(INTRO_SESSION_KEY) || sessionGet(GAME_MUSIC_SESSION_KEY))) return false;
+  if (!force && location.pathname !== "/" && location.pathname !== "/index.html") return false;
   if (introAudio && !introAudio.paused) return true;
 
   const audio = new Audio(INTRO_URL);
@@ -160,6 +163,30 @@ async function playIntroOnce() {
     if (introAudio === audio) introAudio = null;
     return false;
   }
+}
+
+async function replayIntro() {
+  if (!settings.enabled || musicTarget() <= 0) return false;
+
+  const resumeGameMusic =
+    Boolean(gameMusicAudio && !gameMusicAudio.paused) ||
+    sessionGet(GAME_MUSIC_SESSION_KEY);
+
+  if (gameMusicAudio && !gameMusicAudio.paused) {
+    fadeOut(gameMusicAudio, 140, {reset: false});
+  }
+
+  stopIntro();
+
+  const played = await playIntroOnce({force: true});
+
+  if (played && introAudio) {
+    introAudio.__ssbdResumeGameMusic = resumeGameMusic;
+  } else if (resumeGameMusic) {
+    startGameMusic();
+  }
+
+  return played;
 }
 
 function skipIntro() {
@@ -214,6 +241,7 @@ function syncBackgroundMusic() {
 
 window.SSBDAudio = Object.freeze({
   playIntro: playIntroOnce,
+  replayIntro,
   skipIntro,
   startGameMusic
 });
@@ -354,29 +382,53 @@ function scheduleProfileEnhance() {
 }
 
 function installStandaloneAudioSettings() {
-  if (document.getElementById("profileBtn") || document.getElementById("audioSettingsBtn")) return;
-  const actions = document.querySelector(".top-actions");
-  if (!actions || !/^\/mom(?:-mode)?(?:\/|$)/.test(location.pathname)) return;
+  if (document.getElementById("audioSettingsBtn")) return;
+
+  let actions = document.querySelector(".top-actions");
+
+  if (!actions) {
+    actions = document.createElement("div");
+    actions.className = "top-actions audio-global-actions";
+    document.body.prepend(actions);
+  }
+
   const button = document.createElement("button");
   button.id = "audioSettingsBtn";
   button.type = "button";
   button.className = "btn small ghost";
   button.textContent = lang() === "fr" ? "Son" : "Sound";
+  button.setAttribute("aria-label", lang() === "fr" ? "Préférences audio" : "Sound preferences");
+
   button.addEventListener("click", () => {
     document.getElementById("audioSettingsDialog")?.remove();
+
     const dialog = document.createElement("dialog");
     dialog.id = "audioSettingsDialog";
     dialog.className = "dialog";
+
     const body = document.createElement("div");
     body.className = "dialog-body";
     body.append(buildAudioPanel());
-    const row = document.createElement("div"); row.className = "row end";
-    const close = document.createElement("button"); close.type = "button"; close.className = "btn ghost"; close.textContent = copy[lang()].close;
+
+    const row = document.createElement("div");
+    row.className = "row end";
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "btn ghost";
+    close.textContent = copy[lang()].close;
     close.addEventListener("click", () => dialog.close());
-    row.append(close); body.append(row); dialog.append(body); document.body.append(dialog);
+
+    row.append(close);
+    body.append(row);
+    dialog.append(body);
+    document.body.append(dialog);
+
     dialog.addEventListener("close", () => dialog.remove(), {once: true});
-    dialog.showModal(); close.focus();
+    dialog.showModal();
+    close.focus();
   });
+
   actions.append(button);
 }
 
