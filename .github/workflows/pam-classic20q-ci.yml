@@ -5,14 +5,17 @@ on:
     branches:
       - feature/pam-classic20q
       - feature/pam-expand-200
+      - feature/pam-finish-375
   pull_request:
     paths:
       - 'data/pam20q/reference/classic/**'
       - 'data/pam20q/extensions/**'
+      - 'data/pam20q/quality/**'
       - 'src/client/mom-mode/**'
       - 'scripts/build-pam-classic.mjs'
       - 'scripts/pam-classic-model.mjs'
       - 'test/pam-classic20q.test.mjs'
+      - 'test/pam-quality375.test.mjs'
       - 'test/e2e/mom-mode.test.mjs'
       - 'package.json'
 
@@ -28,7 +31,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Validate frozen model and engine
-        run: node --test test/pam-classic20q.test.mjs
+        run: node --test test/pam-classic20q.test.mjs test/pam-quality375.test.mjs
       - name: Build offline game bundle
         run: npm run build
       - name: Verify classic assets are shipped
