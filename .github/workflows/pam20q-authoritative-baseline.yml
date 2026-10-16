@@ -1,0 +1,165 @@
+name: Pam 20Q authoritative no-AI baseline
+
+on:
+  push:
+    branches:
+      - feature/pam-pretrained-20q-model
+    paths:
+      - 'scripts/pam20q/authoritative_build.py'
+      - 'scripts/pam20q/benchmark_seeded.py'
+      - 'scripts/pam20q/export_benchmark_fixture.mjs'
+      - 'scripts/pam20q/write_authoritative_report.py'
+      - 'scripts/pam20q/reconcile_inventory.py'
+      - '.github/workflows/pam20q-authoritative-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pam20q-authoritative-baseline-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  authoritative:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASELINE_SHA256: 174ddee278356be17df88fb49627c1a10e668cb4c16ec8baf30cf2f212ac6506
+      BASELINE_DIR: .dev-data/pam20q/authoritative-input
+      BASELINE_DB: .dev-data/pam20q/authoritative-input/pam-films-v6.sqlite
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download immutable accepted SQLite baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$BASELINE_DIR"
+          gh release download pam-baseline-v1 \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'pam-films-v6.sqlite' \
+            --dir "$BASELINE_DIR" \
+            --clobber
+          echo "$BASELINE_SHA256  $BASELINE_DB" | sha256sum -c -
+          chmod 444 "$BASELINE_DB"
+          sha256sum "$BASELINE_DB" > .dev-data/pam20q/sqlite-before.sha256
+
+      - name: Validate tooling and final 150-question vocabulary
+        run: |
+          python3 -m py_compile scripts/pam20q/*.py
+          python3 scripts/pam20q/build_final_questions.py
+          node --test test/pam20q-pretrained-model.test.mjs
+
+      - name: Reconcile authoritative inventory against fallback
+        run: |
+          python3 scripts/pam20q/reconcile_inventory.py \
+            --database "$BASELINE_DB" \
+            --fallback docs/pam-knowledge-fill/all-concepts.csv \
+            --out .dev-data/pam20q/inventory-reconciliation
+
+      - name: Export existing verified Pam evidence
+        run: python3 scripts/pam20q/export-runtime-evidence.py
+
+      - name: Build authoritative seeded uint8 matrix with AI disabled
+        run: |
+          unset OPENAI_API_KEY || true
+          python3 scripts/pam20q/authoritative_build.py \
+            --source-db "$BASELINE_DB" \
+            --external .dev-data/pam20q/existing-runtime-evidence.csv \
+            --reset
+          cp .dev-data/pam20q/report.json .dev-data/pam20q/report.first.json
+          cp .dev-data/pam20q/compiled/pam20q.v1.bin.gz .dev-data/pam20q/compiled/pam20q.first.bin.gz
+
+      - name: Verify deterministic byte-for-byte recompilation
+        run: |
+          set -euo pipefail
+          first=$(sha256sum .dev-data/pam20q/compiled/pam20q.first.bin.gz | awk '{print $1}')
+          unset OPENAI_API_KEY || true
+          python3 scripts/pam20q/authoritative_build.py \
+            --source-db "$BASELINE_DB" \
+            --external .dev-data/pam20q/existing-runtime-evidence.csv \
+            --reset
+          second=$(sha256sum .dev-data/pam20q/compiled/pam20q.v1.bin.gz | awk '{print $1}')
+          test "$first" = "$second"
+          echo "$first" > .dev-data/pam20q/deterministic-artifact.sha256
+
+      - name: Run existing 1,081-concept deterministic gameplay fixture
+        run: |
+          node scripts/pam20q/export_benchmark_fixture.mjs .dev-data/pam20q/benchmark-fixture.json
+          python3 scripts/pam20q/benchmark_seeded.py \
+            --database .dev-data/pam20q/build.sqlite \
+            --fixture .dev-data/pam20q/benchmark-fixture.json \
+            --out .dev-data/pam20q/benchmark.json
+
+      - name: Verify authoritative invariants
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          root=pathlib.Path('.dev-data/pam20q')
+          report=json.loads((root/'report.json').read_text())
+          rec=json.loads((root/'inventory-reconciliation/summary.json').read_text())
+          assert report['total_concepts'] == 53092, report
+          assert report['canonical_question_count'] == 150, report
+          assert report['total_concept_question_cells'] == 53092 * 150 == 7963800, report
+          assert report['cells_estimated_by_ai'] == 0, report
+          assert report['ai_enrichment_ran'] is False, report
+          assert report['compiled_raw_matrix_bytes'] == 7963816, report
+          assert report['authoritative_source']['sha256'] == '174ddee278356be17df88fb49627c1a10e668cb4c16ec8baf30cf2f212ac6506', report
+          assert rec['authoritative_sqlite_concepts'] == 53092, rec
+          assert rec['fallback_inventory_rows'] == 52640, rec
+          assert rec['sqlite_concepts_not_matched_by_same_identity'] == 452, rec
+          assert rec['retained'] == 452 and rec['excluded'] == 0, rec
+          print(json.dumps({'report': report, 'reconciliation': rec}, indent=2))
+          PY
+
+      - name: Verify SQLite unchanged and production files untouched
+        run: |
+          set -euo pipefail
+          sha256sum "$BASELINE_DB" > .dev-data/pam20q/sqlite-after.sha256
+          diff -u .dev-data/pam20q/sqlite-before.sha256 .dev-data/pam20q/sqlite-after.sha256
+          git diff --exit-code -- src/client/mom-mode src/shared/mom-runtime-game.js
+
+      - name: Write compact authoritative reports
+        run: python3 scripts/pam20q/write_authoritative_report.py
+
+      - name: Upload frozen local build outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam20q-authoritative-pre-ai-baseline
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            .dev-data/pam20q/compiled/pam20q.v1.bin.gz
+            .dev-data/pam20q/compiled/pam20q.v1.manifest.json
+            .dev-data/pam20q/report.json
+            .dev-data/pam20q/benchmark.json
+            .dev-data/pam20q/inventory-reconciliation/missing-concepts.csv
+            .dev-data/pam20q/inventory-reconciliation/missing-concepts.json
+            .dev-data/pam20q/inventory-reconciliation/summary.json
+            .dev-data/pam20q/deterministic-artifact.sha256
+
+      - name: Commit compact authoritative reports
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/pam20q-authoritative-baseline
+          if git diff --cached --quiet; then
+            echo 'Authoritative reports already current.'
+          else
+            git commit -m 'Record authoritative Pam20Q pre-AI baseline [skip ci]'
+            git push origin HEAD:${{ github.ref_name }}
+          fi
