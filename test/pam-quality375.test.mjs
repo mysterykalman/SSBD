@@ -52,7 +52,8 @@ function playWith(engine,modelWeights,modelTargets,targetIndex,{noise=false}={})
  throw new Error('Pam did not produce a guess');
 }
 function compileQualityProfile(profile){
- const states=new Uint8Array(questions.length);states.fill(2);
+ const states=new Uint8Array(questions.length);
+ states.fill(0);
  const categoryIndex={animal:0,vegetable:1,mineral:2,other:3}[profile.category];
  if(categoryIndex==null)throw new Error(`Unknown quality category ${profile.category} for ${profile.name}`);
  for(let q=0;q<4;q++)states[q]=q===categoryIndex?3:2;
@@ -86,23 +87,9 @@ test('375 quality candidates achieve exact full-model self-play',()=>{
  console.log(`PAM_QUALITY_375_EXACT=${exact}/${qualityProfiles.length}`);if(failures.length)console.log('PAM_QUALITY_375_MISSES='+JSON.stringify(failures));assert.equal(exact,qualityProfiles.length,`375 quality batch has ${failures.length} full-model self-play misses`);
 });
 
-test('adding the 375 candidates does not change deterministic baseline guesses',async()=>{
+test('adding the 375 candidates does not change deterministic baseline guesses',()=>{
  const changed=[];for(let index=0;index<targets.length;index++){const before=playWith(BaselineEngine,weights,targets,index);const after=playWith(QualityEngine,qualityWeights,qualityTargets,index);if(before.label!==after.label)changed.push({target:targets[index],before:before.label,after:after.label});}
  console.log(`PAM_QUALITY_375_BASELINE_CHANGED=${changed.length}/${targets.length}`);if(changed.length)console.log('PAM_QUALITY_375_BASELINE_CHANGES='+JSON.stringify(changed));
- if(changed.some(x=>x.target==='a laptop stand')){
-  const suspects=['keyboard','cellphone','photocopier','answering machine','touchpad','computer screen','webcam','internet','projector','tape recorder','stereo','pager'];
-  const restored=[];
-  const baselineIndex=targets.indexOf('a laptop stand');
-  for(const suspect of suspects){
-   if(!qualityProfiles.some(p=>p.name.toLowerCase()===suspect))continue;
-   const filtered=qualityProfiles.filter(p=>p.name.toLowerCase()!==suspect);
-   const {modelTargets,modelWeights}=buildModel(filtered);
-   const engine=await makeEngine(modelTargets,modelWeights,`diag-${suspect.replace(/\W+/g,'-')}`);
-   const guess=playWith(engine,modelWeights,modelTargets,baselineIndex);
-   if(guess.label==='a laptop stand')restored.push(suspect);
-  }
-  console.log('PAM_LAPTOP_STAND_SINGLE_REMOVALS='+JSON.stringify(restored));
- }
  assert.equal(changed.length,0,`375 quality batch changes ${changed.length} existing deterministic guesses`);
 });
 
