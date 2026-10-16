@@ -89,8 +89,8 @@ function characterButton(character) {
 function renderPicker() {
   overlay.replaceChildren(shell(
     el("section", {class:"conn-intro"},
-      el("h2", {}, "Who do you want in your corner?"),
-      el("p", {}, "The difficulty changes, but so does the company. Pick your person, then sort sixteen words into four groups."),
+      el("h2", {}, "Who are we getting involved in this?"),
+      el("p", {}, "Sixteen words. Four groups. A completely unnecessary number of opinions."),
       el("div", {class:"conn-tiers"}, ...Object.values(ODD_ONE_IN_CHARACTERS).map(characterButton)))));
   overlay.querySelector(".conn-tier")?.focus();
 }
