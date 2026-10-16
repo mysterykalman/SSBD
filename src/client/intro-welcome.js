@@ -16,7 +16,7 @@ function closeWelcome() {
   setTimeout(() => {
     if (dlg.open) dlg.close();
     dlg.remove();
-  }, 180);
+  }, 220);
 }
 
 function installStyles() {
@@ -25,94 +25,128 @@ function installStyles() {
   style.id = "audioIntroWelcomeStyles";
   style.textContent = `
     #audioIntroWelcome {
-      width: min(620px, calc(100vw - 32px));
-      max-width: 620px;
+      width: min(660px, calc(100vw - 28px));
+      max-width: 660px;
       padding: 0;
       border: 0;
-      border-radius: 24px;
-      background: #fffdf8;
+      background: transparent;
       color: var(--ink);
-      box-shadow: 0 24px 70px rgba(60, 38, 26, .22);
+      box-shadow: none;
       overflow: visible;
       opacity: 0;
-      transform: translateY(18px) rotate(-.5deg) scale(.965);
-      animation: ssbdIntroCardIn .52s cubic-bezier(.2,.9,.2,1.08) forwards;
+      transform: translateY(34px) scale(.82) rotate(-2deg);
+      animation: ssbdIntroPop .78s var(--ease-pop, cubic-bezier(.2,1.5,.4,1)) forwards;
     }
     #audioIntroWelcome::backdrop {
-      background: rgba(54, 39, 28, .22);
-      backdrop-filter: blur(2px);
-      animation: ssbdIntroBackdropIn .3s ease both;
+      background: rgba(66, 49, 38, .16);
+      -webkit-backdrop-filter: blur(9px) saturate(.92);
+      backdrop-filter: blur(9px) saturate(.92);
+      animation: ssbdIntroBackdropIn .24s ease both;
     }
     #audioIntroWelcome.is-leaving {
-      animation: ssbdIntroCardOut .18s ease forwards;
+      animation: ssbdIntroOut .22s ease forwards;
     }
     #audioIntroWelcome .intro-shell {
       display: grid;
-      gap: 18px;
-      padding: 30px;
+      justify-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 8px;
       text-align: center;
     }
     #audioIntroWelcome .intro-bubble {
-      --felt-h: 190px;
+      --felt-h: 272px;
       display: grid;
+      grid-template-rows: auto 1fr auto;
       justify-items: center;
-      gap: 10px;
+      align-items: center;
+      gap: 8px;
       width: 100%;
-      min-height: 190px;
-      padding: 30px 46px 42px !important;
+      min-height: 272px;
+      padding: 36px 54px 66px !important;
       text-align: center;
-      animation: ssbdIntroBubbleSettle .65s .08s cubic-bezier(.2,.9,.2,1.1) both;
+      transform-origin: 44% 88%;
+      animation: ssbdBubbleWobble .82s .12s cubic-bezier(.16,1,.3,1) both;
     }
     #audioIntroWelcome .intro-kicker {
+      align-self: start;
       margin: 0;
       color: var(--ink-soft);
       font-size: .78rem;
       font-weight: 900;
-      letter-spacing: .14em;
+      letter-spacing: .17em;
+      line-height: 1;
     }
     #audioIntroWelcome .intro-logo {
       display: block;
-      width: min(260px, 64vw);
+      width: min(238px, 55vw);
       height: auto;
+      margin: -2px auto 0;
     }
     #audioIntroWelcome .intro-note {
-      margin: 2px 0 0;
+      align-self: end;
+      max-width: 430px;
+      margin: 0;
+      padding-inline: 10px;
+      font-size: clamp(.92rem, 2.5vw, 1.02rem);
       font-weight: 900;
-      line-height: 1.35;
+      line-height: 1.24;
+      text-wrap: balance;
     }
     #audioIntroWelcome .intro-actions {
       display: flex;
       justify-content: center;
       gap: 12px;
       flex-wrap: wrap;
+      animation: ssbdActionsIn .4s .46s ease-out both;
     }
     #audioIntroWelcome .intro-actions .btn {
-      min-width: 150px;
+      min-width: 154px;
     }
-    @keyframes ssbdIntroCardIn {
-      0% { opacity: 0; transform: translateY(18px) rotate(-.5deg) scale(.965); }
-      72% { opacity: 1; transform: translateY(-2px) rotate(.18deg) scale(1.006); }
-      100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+    @keyframes ssbdIntroPop {
+      0% { opacity: 0; transform: translateY(34px) scale(.82) rotate(-2deg); }
+      48% { opacity: 1; transform: translateY(-12px) scale(1.06) rotate(1.2deg); }
+      70% { transform: translateY(5px) scale(.985) rotate(-.5deg); }
+      86% { transform: translateY(-2px) scale(1.012) rotate(.18deg); }
+      100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
     }
-    @keyframes ssbdIntroCardOut {
-      to { opacity: 0; transform: translateY(8px) scale(.985); }
+    @keyframes ssbdBubbleWobble {
+      0% { opacity: 0; transform: rotate(-3.5deg) scale(.9); }
+      52% { opacity: 1; transform: rotate(2.2deg) scale(1.025); }
+      72% { transform: rotate(-1deg) scale(.994); }
+      88% { transform: rotate(.35deg) scale(1.004); }
+      100% { opacity: 1; transform: rotate(0) scale(1); }
+    }
+    @keyframes ssbdActionsIn {
+      from { opacity: 0; transform: translateY(10px) scale(.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes ssbdIntroOut {
+      to { opacity: 0; transform: translateY(12px) scale(.96) rotate(.5deg); }
     }
     @keyframes ssbdIntroBackdropIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes ssbdIntroBubbleSettle {
-      0% { opacity: 0; transform: translateY(8px) rotate(.4deg); }
-      100% { opacity: 1; transform: translateY(0) rotate(0); }
-    }
     @media (prefers-reduced-motion: reduce) {
       #audioIntroWelcome,
       #audioIntroWelcome.is-leaving,
       #audioIntroWelcome .intro-bubble,
-      #audioIntroWelcome::backdrop { animation: none; opacity: 1; transform: none; }
+      #audioIntroWelcome .intro-actions,
+      #audioIntroWelcome::backdrop {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
     }
     @media (max-width: 520px) {
-      #audioIntroWelcome .intro-shell { padding: 20px; }
-      #audioIntroWelcome .intro-bubble { --felt-h: 170px; padding: 26px 30px 38px !important; }
-      #audioIntroWelcome .intro-actions { display: grid; }
-      #audioIntroWelcome .intro-actions .btn { width: 100%; }
+      #audioIntroWelcome { width: min(96vw, 660px); }
+      #audioIntroWelcome .intro-shell { padding: 2px; }
+      #audioIntroWelcome .intro-bubble {
+        --felt-h: 246px;
+        min-height: 246px;
+        padding: 32px 34px 62px !important;
+      }
+      #audioIntroWelcome .intro-logo { width: min(210px, 58vw); }
+      #audioIntroWelcome .intro-actions { width: min(330px, 90vw); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      #audioIntroWelcome .intro-actions .btn { min-width: 0; width: 100%; padding-inline: 18px; }
     }
   `;
   document.head.append(style);
@@ -157,13 +191,13 @@ function buildWelcome() {
   const play = document.createElement("button");
   play.id = "audioIntroPlay";
   play.type = "button";
-  play.className = "btn";
+  play.className = "btn sage";
   play.textContent = "Play intro";
 
   const skip = document.createElement("button");
   skip.id = "audioIntroSkip";
   skip.type = "button";
-  skip.className = "btn ghost";
+  skip.className = "btn danger";
   skip.textContent = "Skip intro";
 
   play.addEventListener("click", async () => {
