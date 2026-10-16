@@ -60,44 +60,24 @@ async function findPinnedModel(){
   throw new Error('Pinned Pam classic 20Q model files were not found under data/pam20q/reference');
 }
 
-function desiredTraits(profile){
+function applyTrait(states,key,value){
+  const index=TRAIT_INDEX[key];
+  if(index==null)throw new Error(`Unknown Pam extension trait: ${key}`);
+  states[index]=value;
+}
+
+function compileProfile(profile,questionCount){
   const template=KIND[profile.kind];
   if(!template)throw new Error(`Unknown Pam extension kind: ${profile.kind}`);
-  const desired=new Map();
-  const selected=CATEGORY_INDEX[template.category];
-  for(let q=0;q<4;q++)desired.set(q,{yes:q===selected,power:3});
-  for(const key of template.yes||[])desired.set(TRAIT_INDEX[key],{yes:true,power:3});
-  for(const key of template.weakYes||[])desired.set(TRAIT_INDEX[key],{yes:true,power:1});
-  for(const key of profile.yes||[])desired.set(TRAIT_INDEX[key],{yes:true,power:3});
-  for(const key of profile.weakYes||[])desired.set(TRAIT_INDEX[key],{yes:true,power:1});
-  for(const key of profile.no||[])desired.set(TRAIT_INDEX[key],{yes:false,power:3});
-  for(const [q] of desired)if(q==null)throw new Error(`Pam extension contains an unknown trait in ${profile.name}`);
-  return desired;
-}
-
-function choosePrototype(profile,baseWeights,baseCount,questionCount,used){
-  const desired=desiredTraits(profile);
-  let best=-1,bestScore=-Infinity;
-  for(let t=0;t<baseCount;t++){
-    let score=used.has(t)?-1.75:0;
-    for(const [q,want] of desired){
-      const state=baseWeights[q*baseCount+t],isYes=(state&1)===1,strong=(state&2)===2;
-      const importance=q<4?7:(want.power===3?2.5:1);
-      score+=(isYes===want.yes?1:-2.25)*importance*(strong?1.15:0.85);
-    }
-    if(score>bestScore){bestScore=score;best=t;}
-  }
-  return best;
-}
-
-function compileProfile(profile,questionCount,baseWeights,baseCount,usedPrototypes){
-  const prototype=choosePrototype(profile,baseWeights,baseCount,questionCount,usedPrototypes);
-  usedPrototypes.add(prototype);
   const states=new Uint8Array(questionCount);
-  for(let q=0;q<questionCount;q++)states[q]=(baseWeights[q*baseCount+prototype]&1)?1:0;
-  const desired=desiredTraits(profile);
-  for(const [q,want] of desired)states[q]=want.yes?(want.power===3?3:1):(want.power===3?2:0);
-  return{states,prototype};
+  const selected=CATEGORY_INDEX[template.category];
+  for(let q=0;q<4;q++)states[q]=q===selected?3:2;
+  for(const key of template.yes||[])applyTrait(states,key,3);
+  for(const key of template.weakYes||[])applyTrait(states,key,1);
+  for(const key of profile.yes||[])applyTrait(states,key,3);
+  for(const key of profile.weakYes||[])applyTrait(states,key,1);
+  for(const key of profile.no||[])applyTrait(states,key,2);
+  return states;
 }
 
 export async function loadPamClassicModel(){
@@ -144,16 +124,16 @@ export async function loadPamClassicModel(){
 
   const targets=[...baseTargets,...profiles.map(p=>p.name)];
   const weights=Buffer.alloc(questions.length*targets.length);
-  for(let q=0;q<questions.length;q++)baseWeightsRaw.copy(weights,q*targets.length,q*baseTargets.length,(q+1)*baseTargets.length);
-  const usedPrototypes=new Set(),prototypeNames=[];
+  for(let q=0;q<questions.length;q++){
+    baseWeightsRaw.copy(weights,q*targets.length,q*baseTargets.length,(q+1)*baseTargets.length);
+  }
   for(let e=0;e<profiles.length;e++){
-    const {states,prototype}=compileProfile(profiles[e],questions.length,baseWeightsRaw,baseTargets.length,usedPrototypes);
-    prototypeNames.push(baseTargets[prototype]);
+    const states=compileProfile(profiles[e],questions.length);
     const targetIndex=baseTargets.length+e;
     for(let q=0;q<questions.length;q++)weights[q*targets.length+targetIndex]=states[q];
   }
   for(const value of weights)if(value>3)throw new Error(`Pam matrix contains invalid state ${value}`);
-  return{questions,targets,weights,baseTargetCount:baseTargets.length,extensionCount:profiles.length,skippedBaseDuplicates,reserveCandidates:Math.max(0,accepted.length-profiles.length),prototypeNames};
+  return{questions,targets,weights,baseTargetCount:baseTargets.length,extensionCount:profiles.length,skippedBaseDuplicates,reserveCandidates:Math.max(0,accepted.length-profiles.length)};
 }
 
 export const pamTraitIndex=TRAIT_INDEX;
