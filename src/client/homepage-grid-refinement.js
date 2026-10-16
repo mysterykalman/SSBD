@@ -67,10 +67,16 @@ function findCard(grid,kind){
   return null;
 }
 
+function copyLines(card){
+  const copy=card?.querySelector(":scope > .mode-body > .start-copy");
+  return copy?[...copy.querySelectorAll(":scope > p")].map(p=>p.textContent):[];
+}
+function sameLines(a,b){return a.length===b.length&&a.every((line,index)=>line===b[index]);}
 function paragraph(text){const p=document.createElement("p");p.textContent=text;return p;}
 function replaceCopy(card,lines){
   const body=card?.querySelector(":scope > .mode-body");
   if(!body)return;
+  if(sameLines(copyLines(card),lines))return;
   let copy=body.querySelector(":scope > .start-copy");
   if(!copy){
     copy=document.createElement("div");
@@ -85,7 +91,7 @@ function replaceCopy(card,lines){
 function refinePam(card){
   if(!card)return;
   const title=card.querySelector("h2");
-  if(title)title.textContent="Don’t Tell Me";
+  if(title&&title.textContent!=="Don’t Tell Me")title.textContent="Don’t Tell Me";
   replaceCopy(card,[
     "Pick a word. Pam will take it from there.",
     "She’ll ask the questions and narrow it down before you get too pleased with yourself.",
@@ -108,37 +114,30 @@ function refineTogether(card){
 function refineConnections(card){
   if(!card)return;
   const title=card.querySelector("h2");
-  if(title)title.textContent="Odd One In";
+  if(title&&title.textContent!=="Odd One In")title.textContent="Odd One In";
   replaceCopy(card,[
     "Some words belong together.",
     "Some are just being difficult.",
     "Pick a challenge and sort out the troublemaker."
   ]);
-  const button=card.querySelector(".mode-actions .go, .mode-actions button, .mode-body > button");
-  if(button)button.childNodes.length===1?button.textContent="Choose your challenge":null;
   const standees=[...card.querySelectorAll(".conn-launch-standee")];
   const labels=["OWEN","ZOE","MARTIN","PROF. BRAINE"];
-  standees.forEach((standee,index)=>{if(labels[index])standee.dataset.name=labels[index];});
+  standees.forEach((standee,index)=>{if(labels[index]&&standee.dataset.name!==labels[index])standee.dataset.name=labels[index];});
 }
 
 function reorder(grid){
-  const solo=findCard(grid,"solo");
-  const together=findCard(grid,"together");
-  const pam=findCard(grid,"pam");
-  const connections=findCard(grid,"connections");
-  [solo,together,pam,connections].filter(Boolean).forEach(card=>grid.append(card));
+  const wanted=[findCard(grid,"solo"),findCard(grid,"together"),findCard(grid,"pam"),findCard(grid,"connections")].filter(Boolean);
+  const current=[...grid.querySelectorAll(":scope > .mode-card")].filter(card=>wanted.includes(card));
+  if(wanted.length!==current.length||wanted.some((card,index)=>card!==current[index]))wanted.forEach(card=>grid.append(card));
 }
 
 function applyHomepageRefinement(){
   installStyles();
   const grid=document.querySelector(".home-grid.start-grid");
   if(!grid)return;
-  const together=findCard(grid,"together");
-  const pam=findCard(grid,"pam");
-  const connections=findCard(grid,"connections");
-  refineTogether(together);
-  refinePam(pam);
-  refineConnections(connections);
+  refineTogether(findCard(grid,"together"));
+  refinePam(findCard(grid,"pam"));
+  refineConnections(findCard(grid,"connections"));
   reorder(grid);
 }
 
