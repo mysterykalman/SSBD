@@ -47,7 +47,17 @@ body.conn-mode-open .top-actions{grid-column:auto!important;grid-row:auto!import
 
 .conn-launch .conn-launch-stage{justify-content:space-evenly!important;gap:10px!important;padding-inline:20px!important}
 .conn-launch .conn-launch-standee.standee{width:82px!important;height:100px!important;margin-bottom:26px!important}
-.conn-launch .conn-launch-standee::after{width:82px!important;min-width:82px!important;max-width:82px!important}
+.conn-launch .conn-launch-standee::after{
+  width:82px!important;
+  min-width:82px!important;
+  max-width:82px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 5px 3px!important;
+  line-height:1!important;
+  text-align:center!important;
+}
 
 @media(max-width:680px){
   .home-grid.start-grid{grid-template-columns:minmax(0,1fr)!important;grid-auto-rows:auto;gap:18px}
@@ -107,6 +117,11 @@ function ensureCopy(card,lines,{preserveControls=false}={}){
   return copy;
 }
 
+function refineSolo(card){
+  if(!card)return;
+  card.querySelectorAll(".beta-badge").forEach(badge=>badge.remove());
+}
+
 function refinePam(card){
   if(!card)return;
   const title=card.querySelector("h2");
@@ -154,6 +169,7 @@ function applyHomepageRefinement(){
   installStyles();
   const grid=document.querySelector(".home-grid.start-grid");
   if(!grid)return;
+  refineSolo(findCard(grid,"solo"));
   refineTogether(findCard(grid,"together"));
   refinePam(findCard(grid,"pam"));
   refineConnections(findCard(grid,"connections"));
