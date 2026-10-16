@@ -34,6 +34,7 @@ test("Mom Mode loads the frozen offline runtime, richer answers, portrait and ru
  const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.goto(`${server.url}/mom/`);
  await page.waitForSelector('#start-btn');
+ if(await page.locator('#pam-intro-dialog[open]').count())await page.click('#pam-intro-play');
  const scriptPaths=await page.locator('script[src]').evaluateAll(nodes=>nodes.map(node=>new URL(node.src).pathname));
  assertMomRuntimeAssets(scriptPaths);
  const stylePaths=await page.locator('link[rel="stylesheet"]').evaluateAll(nodes=>nodes.map(node=>new URL(node.href).pathname));
