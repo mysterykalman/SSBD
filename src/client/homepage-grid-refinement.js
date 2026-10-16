@@ -27,6 +27,24 @@ const css = `
 .home-grid.start-grid>.mode-card .mode-actions{margin-top:auto;padding-top:18px}
 .games{margin-top:40px!important}
 
+body.conn-mode-open .topbar{
+  display:flex!important;
+  grid-template-columns:none!important;
+  grid-template-rows:none!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  padding:max(16px,env(safe-area-inset-top)) 0 8px!important;
+}
+body.conn-mode-open .brand{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  align-self:auto!important;
+  margin:0!important;
+}
+body.conn-mode-open .brand-logo{width:132px!important}
+body.conn-mode-open .top-actions{grid-column:auto!important;grid-row:auto!important;justify-self:auto!important}
+
 .conn-launch .conn-launch-stage{justify-content:space-evenly!important;gap:10px!important;padding-inline:20px!important}
 .conn-launch .conn-launch-standee.standee{width:82px!important;height:100px!important;margin-bottom:26px!important}
 .conn-launch .conn-launch-standee::after{width:82px!important;min-width:82px!important;max-width:82px!important}
@@ -41,11 +59,14 @@ const css = `
   .conn-launch .conn-launch-stage{padding-inline:12px!important;gap:8px!important}
   .conn-launch .conn-launch-standee.standee{width:68px!important;height:84px!important;margin-bottom:24px!important}
   .conn-launch .conn-launch-standee::after{width:70px!important;min-width:70px!important;max-width:70px!important}
+  body.conn-mode-open .topbar{flex-wrap:wrap}
+  body.conn-mode-open .top-actions{margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 }
 @media(max-width:420px){
   .conn-launch .conn-launch-stage{padding-inline:7px!important;gap:5px!important}
   .conn-launch .conn-launch-standee.standee{width:62px!important;height:78px!important}
   .conn-launch .conn-launch-standee::after{width:64px!important;min-width:64px!important;max-width:64px!important}
+  body.conn-mode-open .brand-logo{width:112px!important}
 }
 `;
 
