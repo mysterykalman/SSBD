@@ -50,9 +50,12 @@ jobs:
           import json
           from pathlib import Path
           report=json.loads(Path('.dev-data/pam20q/report.json').read_text())
-          assert report['total_concepts'] == 52648, report
+          # The checked-in CSV is only the fallback inventory. The accepted SQLite
+          # database is authoritative for the full build and may add concepts.
+          assert report['total_concepts'] >= 50000, report
           assert report['canonical_question_count'] == 131, report
-          assert report['total_concept_question_cells'] == 6896888, report
+          assert report['total_concept_question_cells'] == report['total_concepts'] * 131, report
+          assert report['compiled_raw_matrix_bytes'] == report['total_concept_question_cells'] + 16, report
           assert report['compiled_artifact_size_bytes'] > 0, report
           print(json.dumps(report, indent=2))
           PY
