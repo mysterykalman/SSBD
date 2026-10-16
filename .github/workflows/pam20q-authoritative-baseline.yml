@@ -48,11 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$BASELINE_DIR"
-          gh release download pam-baseline-v1 \
-            --repo "$GITHUB_REPOSITORY" \
-            --pattern 'pam-films-v6.sqlite' \
-            --dir "$BASELINE_DIR" \
-            --clobber
+          gh release download pam-baseline-v1 --repo "$GITHUB_REPOSITORY" --pattern 'pam-films-v6.sqlite' --dir "$BASELINE_DIR" --clobber
           echo "$BASELINE_SHA256  $BASELINE_DB" | sha256sum -c -
           chmod 444 "$BASELINE_DB"
           sha256sum "$BASELINE_DB" > .dev-data/pam20q/sqlite-before.sha256
@@ -65,10 +61,7 @@ jobs:
 
       - name: Reconcile authoritative inventory against fallback
         run: |
-          python3 scripts/pam20q/reconcile_inventory.py \
-            --database "$BASELINE_DB" \
-            --fallback docs/pam-knowledge-fill/all-concepts.csv \
-            --out .dev-data/pam20q/inventory-reconciliation
+          python3 scripts/pam20q/reconcile_inventory.py --database "$BASELINE_DB" --fallback docs/pam-knowledge-fill/all-concepts.csv --out .dev-data/pam20q/inventory-reconciliation
 
       - name: Export existing verified Pam evidence
         run: python3 scripts/pam20q/export-runtime-evidence.py
@@ -76,10 +69,7 @@ jobs:
       - name: Build authoritative seeded uint8 matrix with AI disabled
         run: |
           unset OPENAI_API_KEY || true
-          python3 scripts/pam20q/authoritative_build.py \
-            --source-db "$BASELINE_DB" \
-            --external .dev-data/pam20q/existing-runtime-evidence.csv \
-            --reset
+          python3 scripts/pam20q/authoritative_build.py --source-db "$BASELINE_DB" --external .dev-data/pam20q/existing-runtime-evidence.csv --reset
           cp .dev-data/pam20q/report.json .dev-data/pam20q/report.first.json
           cp .dev-data/pam20q/compiled/pam20q.v1.bin.gz .dev-data/pam20q/compiled/pam20q.first.bin.gz
 
@@ -88,10 +78,7 @@ jobs:
           set -euo pipefail
           first=$(sha256sum .dev-data/pam20q/compiled/pam20q.first.bin.gz | awk '{print $1}')
           unset OPENAI_API_KEY || true
-          python3 scripts/pam20q/authoritative_build.py \
-            --source-db "$BASELINE_DB" \
-            --external .dev-data/pam20q/existing-runtime-evidence.csv \
-            --reset
+          python3 scripts/pam20q/authoritative_build.py --source-db "$BASELINE_DB" --external .dev-data/pam20q/existing-runtime-evidence.csv --reset
           second=$(sha256sum .dev-data/pam20q/compiled/pam20q.v1.bin.gz | awk '{print $1}')
           test "$first" = "$second"
           echo "$first" > .dev-data/pam20q/deterministic-artifact.sha256
@@ -99,15 +86,12 @@ jobs:
       - name: Run existing 1,081-concept deterministic gameplay fixture
         run: |
           node scripts/pam20q/export_benchmark_fixture.mjs .dev-data/pam20q/benchmark-fixture.json
-          python3 scripts/pam20q/benchmark_seeded.py \
-            --database .dev-data/pam20q/build.sqlite \
-            --fixture .dev-data/pam20q/benchmark-fixture.json \
-            --out .dev-data/pam20q/benchmark.json
+          python3 scripts/pam20q/benchmark_seeded.py --database .dev-data/pam20q/build.sqlite --fixture .dev-data/pam20q/benchmark-fixture.json --out .dev-data/pam20q/benchmark.json
 
       - name: Verify authoritative invariants
         run: |
           python3 - <<'PY'
-          import hashlib, json, pathlib
+          import json, pathlib
           root=pathlib.Path('.dev-data/pam20q')
           report=json.loads((root/'report.json').read_text())
           rec=json.loads((root/'inventory-reconciliation/summary.json').read_text())
@@ -120,8 +104,11 @@ jobs:
           assert report['authoritative_source']['sha256'] == '174ddee278356be17df88fb49627c1a10e668cb4c16ec8baf30cf2f212ac6506', report
           assert rec['authoritative_sqlite_concepts'] == 53092, rec
           assert rec['fallback_inventory_rows'] == 52640, rec
-          assert rec['sqlite_concepts_not_matched_by_same_identity'] == 452, rec
+          assert rec['row_level_discrepancy_count'] == 452, rec
+          assert rec['sqlite_rows_with_concept_id_absent_from_fallback'] == 444, rec
+          assert rec['additional_sqlite_rows_reusing_a_fallback_concept_id'] == 8, rec
           assert rec['retained'] == 452 and rec['excluded'] == 0, rec
+          assert report['authoritative_source']['additional_rows_using_duplicate_source_ids'] == 8, report
           print(json.dumps({'report': report, 'reconciliation': rec}, indent=2))
           PY
 
