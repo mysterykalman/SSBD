@@ -29,18 +29,24 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Syntax-check Pam20Q build tools
+        run: python3 -m py_compile scripts/pam20q/*.py
+
+      - name: Build final canonical vocabulary
+        run: python3 scripts/pam20q/build_final_questions.py
+
       - name: Validate canonical question invariants
         run: node --test test/pam20q-pretrained-model.test.mjs
 
       - name: Compile deterministic no-AI structural model
-        run: python3 scripts/pam20q/build.py --skip-ai --reset
+        run: python3 scripts/pam20q/build.py --skip-ai --no-public-reference --reset
 
       - name: Verify deterministic compilation
         shell: bash
         run: |
           set -euo pipefail
           first=$(shasum -a 256 .dev-data/pam20q/compiled/pam20q.v1.bin.gz | awk '{print $1}')
-          python3 scripts/pam20q/build.py --skip-ai
+          python3 scripts/pam20q/build.py --skip-ai --no-public-reference
           second=$(shasum -a 256 .dev-data/pam20q/compiled/pam20q.v1.bin.gz | awk '{print $1}')
           test "$first" = "$second"
 
@@ -50,12 +56,12 @@ jobs:
           import json
           from pathlib import Path
           report=json.loads(Path('.dev-data/pam20q/report.json').read_text())
-          # The checked-in CSV is only the fallback inventory. The accepted SQLite
-          # database is authoritative for the full build and may add concepts.
           assert report['total_concepts'] >= 50000, report
-          assert report['canonical_question_count'] == 131, report
-          assert report['total_concept_question_cells'] == report['total_concepts'] * 131, report
+          assert report['canonical_question_count'] == 150, report
+          assert report['total_concept_question_cells'] == report['total_concepts'] * 150, report
           assert report['compiled_raw_matrix_bytes'] == report['total_concept_question_cells'] + 16, report
           assert report['compiled_artifact_size_bytes'] > 0, report
+          assert report['cells_estimated_by_ai'] == 0, report
+          assert report['ai_enrichment_ran'] is False, report
           print(json.dumps(report, indent=2))
           PY
