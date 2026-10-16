@@ -6,7 +6,7 @@ const GROUP_COLORS = ["yellow", "green", "blue", "purple"];
 
 const styleText = `
 .conn-launch{display:grid;gap:12px}.conn-launch .beta-badge,.conn-launch-badges{display:none!important}
-.conn-launch-cast{display:flex;align-items:flex-end;gap:7px;margin:-2px 0 2px}.conn-launch-face{width:64px;height:78px;border-radius:22px;object-fit:cover;object-position:50% 18%;border:4px solid #fff7ea;outline:1px solid #d9ba8f;outline-offset:-2px;box-shadow:0 3px 8px rgba(82,52,31,.16);background:var(--cream)}
+.conn-launch-cast{display:flex;align-items:flex-end;gap:10px;margin:-2px 0 10px;padding-top:4px}.conn-launch-standee.standee{width:72px;height:88px;margin-bottom:14px;border-radius:38px 38px 14px 14px}.conn-launch-standee>img{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;object-fit:cover;object-position:50% 0}.conn-launch-standee::after{--felt-h:26px;bottom:-13px;min-height:26px;padding:2px 10px 6px;font-size:.55rem;letter-spacing:.07em}
 .conn-overlay{position:fixed;inset:0;z-index:10000;background:var(--grain),radial-gradient(900px 420px at 20% -10%,#fffaf2,transparent 60%),var(--page);color:var(--ink);overflow:auto;font-family:var(--font)}
 .conn-shell{width:min(940px,calc(100% - 28px));margin:0 auto;padding:18px 0 44px}
 .conn-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.conn-title-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.conn-title{font-weight:900;font-size:clamp(1.7rem,5vw,2.55rem);line-height:1;margin:0}
@@ -20,7 +20,7 @@ const styleText = `
 .conn-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.conn-tile{--felt-h:78px;width:100%;min-width:0;padding:10px 12px 18px;font-size:clamp(.72rem,2.15vw,1rem);line-height:1.05;border:0;cursor:pointer;transition:transform .12s ease,filter .12s ease}.conn-tile:hover{transform:translateY(-1px);filter:brightness(1.03)}.conn-tile[aria-pressed=true]{transform:translateY(2px) scale(.985);filter:saturate(1.12) brightness(.94)}
 .conn-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin:16px 0 6px}.conn-actions .btn{min-width:130px}.conn-end{display:grid;gap:12px;text-align:center;margin-top:18px;padding:20px}.conn-end .conn-actions{margin-top:4px}.conn-reveal{display:grid;gap:8px;margin-top:4px}
 @keyframes conn-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}.conn-shake{animation:conn-shake .22s linear 2}
-@media(max-width:680px){.conn-shell{width:min(100% - 14px,940px);padding-top:10px}.conn-tiers{grid-template-columns:1fr}.conn-tier{grid-template-columns:112px 1fr;min-height:154px}.conn-tier-portrait{min-height:154px}.conn-tier-copy{padding:14px}.conn-board{gap:6px}.conn-tile{--felt-h:68px;padding:8px 6px 16px;font-size:clamp(.67rem,3vw,.9rem)}.conn-game-head{grid-template-columns:82px 1fr;gap:8px}.conn-speaker-portrait{width:80px;height:80px;border-radius:21px}.conn-speaker .pill{font-size:.7rem}.conn-bubble{--felt-h:108px;font-size:.9rem}.conn-actions .btn{min-width:0}.conn-launch-face{width:56px;height:68px;border-radius:19px}}
+@media(max-width:680px){.conn-shell{width:min(100% - 14px,940px);padding-top:10px}.conn-tiers{grid-template-columns:1fr}.conn-tier{grid-template-columns:112px 1fr;min-height:154px}.conn-tier-portrait{min-height:154px}.conn-tier-copy{padding:14px}.conn-board{gap:6px}.conn-tile{--felt-h:68px;padding:8px 6px 16px;font-size:clamp(.67rem,3vw,.9rem)}.conn-game-head{grid-template-columns:82px 1fr;gap:8px}.conn-speaker-portrait{width:80px;height:80px;border-radius:21px}.conn-speaker .pill{font-size:.7rem}.conn-bubble{--felt-h:108px;font-size:.9rem}.conn-actions .btn{min-width:0}.conn-launch-standee.standee{width:64px;height:78px;border-radius:34px 34px 13px 13px}.conn-launch-standee::after{--felt-h:24px;bottom:-12px;font-size:.5rem;padding:2px 8px 6px}}
 @media(max-width:430px){.conn-tier{grid-template-columns:92px 1fr}.conn-tier-portrait{min-height:146px}.conn-tier-copy .picker{display:none}.conn-board{grid-template-columns:repeat(2,minmax(0,1fr))}.conn-tile{--felt-h:62px}.conn-game-head{grid-template-columns:72px 1fr}.conn-speaker-portrait{width:70px;height:70px}}
 @media(prefers-reduced-motion:reduce){.conn-tier,.conn-tile,.conn-shake{animation:none!important;transition:none!important}}
 `;
@@ -190,7 +190,7 @@ function renderGame(shake=false) {
 }
 
 function makeLauncher() {
-  const cast=el("div", {class:"conn-launch-cast", "aria-hidden":"true"}, ...Object.values(ODD_ONE_IN_CHARACTERS).map(character=>portrait(character,"conn-launch-face",false)));
+  const cast=el("div", {class:"conn-launch-cast", "aria-hidden":"true"}, ...Object.values(ODD_ONE_IN_CHARACTERS).map(character=>el("span", {class:"standee conn-launch-standee", "data-name":character.name}, portrait(character,"",false))));
   return el("section", {class:"card mode-card start conn-launch", "data-mode":"connections", "aria-labelledby":"connectionsTitle"},
     el("div", {class:"mode-body"},
       cast,
