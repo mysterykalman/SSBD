@@ -1,18 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {loadPamClassicModel} from '../scripts/pam-classic-model.mjs';
 
 const ROOT=process.cwd();
-const MODEL_DIR=path.join(ROOT,'data','pam20q','reference','classic');
-const questionDoc=JSON.parse(fs.readFileSync(path.join(MODEL_DIR,'questions.json'),'utf8'));
-const targetDoc=JSON.parse(fs.readFileSync(path.join(MODEL_DIR,'targets.json'),'utf8'));
-const questions=Array.isArray(questionDoc)?questionDoc:questionDoc.questions;
-const targets=Array.isArray(targetDoc)?targetDoc:targetDoc.targets;
-const weights=fs.readFileSync(path.join(MODEL_DIR,'weights.u2states.bin'));
+const {questions,targets,weights,baseTargetCount,extensionCount}=await loadPamClassicModel();
 
-global.window={PAM_CLASSIC_MODEL:{questions,targets,weightsB64:weights.toString('base64'),layout:'question-major',states:4}};
+global.window={PAM_CLASSIC_MODEL:{questions,targets,weightsB64:weights.toString('base64'),layout:'question-major',states:4,baseTargets:baseTargetCount,extensionTargets:extensionCount}};
 if(!global.atob)global.atob=value=>Buffer.from(value,'base64').toString('binary');
 await import(`${pathToFileURL(path.join(ROOT,'src','client','mom-mode','engine.js')).href}?classic-test=1`);
 const Engine=window.PamClassic20Q;
@@ -26,13 +21,13 @@ function categoryFor(targetIndex){
  }
  return best;
 }
-function oracleAnswer(q,targetIndex){return (stateAt(q,targetIndex)&1)?'yes':'no';}
+function oracleAnswer(q,targetIndex){const state=stateAt(q,targetIndex);return (state&1)?((state&2)?'yes':'probably'):((state&2)?'no':'doubtful');}
 function playTarget(targetIndex){
  const game=Engine.createGame({budget:20,minGuessQuestions:7});
  let next=Engine.choose(game);
  assert.equal(next.kind,'category');
  next=Engine.setCategory(game,categoryFor(targetIndex));
- for(let guard=0;guard<40;guard++){
+ for(let guard=0;guard<50;guard++){
   if(next.kind==='question'){next=Engine.answer(game,next,oracleAnswer(next.index,targetIndex));continue;}
   if(next.kind==='hunch'){
    if(next.index===targetIndex)next=Engine.commitGuess(game,next);
@@ -45,11 +40,14 @@ function playTarget(targetIndex){
  throw new Error('Pam did not produce a guess');
 }
 
-test('frozen Pam model has the expected self-contained shape',()=>{
- assert.equal(Engine.N,1200);
+test('frozen Pam model includes the first 200-target expansion',()=>{
+ assert.equal(baseTargetCount,1200);
+ assert.equal(extensionCount,200);
+ assert.equal(Engine.N,1400);
  assert.equal(Engine.F,156);
- assert.equal(weights.length,187200);
+ assert.equal(weights.length,218400);
  assert.ok([...weights].every(value=>value>=0&&value<=3));
+ assert.equal(new Set(targets.map(name=>name.toLowerCase())).size,targets.length);
  assert.equal(Engine.createGame().budget,20);
 });
 
@@ -66,7 +64,7 @@ test('Pam exposes the classic response flow deterministically',()=>{
  if(a.kind==='question'){assert.equal(a.index,b.index);assert.equal(a.text,b.text);}
 });
 
-test('representative model targets produce a model guess within the 20-question budget',()=>{
+test('representative original targets still produce a model guess within the 20-question budget',()=>{
  const samples=['a dog','a car','a chair','the Sun','water','a book','a piano','a blue whale'];
  let checked=0;
  for(const name of samples){
@@ -78,4 +76,18 @@ test('representative model targets produce a model guess within the 20-question 
   checked++;
  }
  assert.ok(checked>=5);
+});
+
+test('200-target expansion is playable and reports deterministic self-play quality',()=>{
+ let exact=0;
+ const failures=[];
+ for(let index=baseTargetCount;index<targets.length;index++){
+  const guess=playTarget(index);
+  if(guess.index===index)exact++;
+  else failures.push({target:targets[index],guess:guess.label});
+ }
+ const rate=exact/extensionCount;
+ console.log(`Pam expansion self-play: ${exact}/${extensionCount} exact (${(rate*100).toFixed(1)}%)`);
+ if(failures.length)console.log('Sample misses:',failures.slice(0,12));
+ assert.ok(rate>=0.20,`Expansion self-play exact rate ${(rate*100).toFixed(1)}% is below 20%`);
 });
