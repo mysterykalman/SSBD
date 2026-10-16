@@ -9,6 +9,7 @@ const DEFAULTS = Object.freeze({enabled: true, music: 0.42, game: 0.7});
 const INTRO_URL = "/audio/intro.mp3";
 const GAME_MUSIC_URL = "/audio/game-music.mp3";
 const INTRO_FADE_MS = 300;
+const INTRO_END_TRIM_SECONDS = 0.5;
 const GAME_MUSIC_FADE_MS = 90;
 const BASE = "https://raw.githubusercontent.com/Mcamento8/open-game-sfx-index/main/audio/music-jingles";
 const FUN_BASE = "https://raw.githubusercontent.com/jonjonsson/SoundMonster/main/Public%20domain";
@@ -172,7 +173,14 @@ function playIntroOnce() {
   }, {once: true});
   audio.addEventListener("timeupdate", () => {
     if (!Number.isFinite(audio.duration) || audio.__ssbdFading) return;
-    if (audio.duration - audio.currentTime <= INTRO_FADE_MS / 1000 + 0.04) fadeOut(audio, INTRO_FADE_MS, {reset: false});
+    const fadeBeforeEnd = INTRO_END_TRIM_SECONDS + INTRO_FADE_MS / 1000 + 0.04;
+    if (audio.duration - audio.currentTime <= fadeBeforeEnd) {
+      fadeOut(audio, INTRO_FADE_MS, {reset: false, onDone: () => {
+        sessionSet(INTRO_SESSION_KEY);
+        if (introAudio === audio) introAudio = null;
+        removeIntroSkip();
+      }});
+    }
   });
   showIntroSkip();
   audio.play().then(() => {
