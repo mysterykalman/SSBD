@@ -4,19 +4,31 @@ on:
   push:
     branches:
       - feature/pam-classic20q
-  pull_request:
+      - feature/homepage-4-mode-grid
     paths:
-      - 'data/pam20q/reference/classic/**'
+      - 'data/pam20q/**'
       - 'src/client/mom-mode/**'
       - 'scripts/build-pam-classic.mjs'
+      - 'scripts/pam-classic-model.mjs'
       - 'test/pam-classic20q.test.mjs'
+      - 'test/pam-quality375.test.mjs'
+      - 'test/e2e/mom-mode.test.mjs'
+      - 'package.json'
+  pull_request:
+    paths:
+      - 'data/pam20q/**'
+      - 'src/client/mom-mode/**'
+      - 'scripts/build-pam-classic.mjs'
+      - 'scripts/pam-classic-model.mjs'
+      - 'test/pam-classic20q.test.mjs'
+      - 'test/pam-quality375.test.mjs'
       - 'test/e2e/mom-mode.test.mjs'
       - 'package.json'
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,8 +36,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Validate frozen model and engine
-        run: node --test test/pam-classic20q.test.mjs
+      - name: Validate integrated 1775-target Pam model
+        run: node --test test/pam-classic20q.test.mjs test/pam-quality375.test.mjs
       - name: Build offline game bundle
         run: npm run build
       - name: Verify classic assets are shipped
