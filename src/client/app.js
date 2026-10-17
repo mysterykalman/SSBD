@@ -550,9 +550,11 @@ function gameListItems() {
       open: () => navigate(`/games/${g.id}`)
     });
   }
-  items.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  if (!items.length) return [h("li", {class: "empty"}, h("span", {class: "empty-art", "aria-hidden": "true"}, h("i"), h("i"), h("i")), h("span", {class: "empty-copy"}, h("span", {class: "empty-line"}, t("gamesEmpty1")), h("span", {class: "empty-line muted"}, t("gamesEmpty2"))))];
-  return items.map(item => {
+  // Completed sessions remain in review logs, not in the resumable games list.
+  const resumable = items.filter(item => !FINISHED.has(item.status) && !["ENDED", "EXPIRED", "ABANDONED", "CANCELLED"].includes(item.status));
+  resumable.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  if (!resumable.length) return [h("li", {class: "empty"}, h("span", {class: "empty-art", "aria-hidden": "true"}, h("i"), h("i"), h("i")), h("span", {class: "empty-copy"}, h("span", {class: "empty-line"}, t("gamesEmpty1")), h("span", {class: "empty-line muted"}, t("gamesEmpty2"))))];
+  return resumable.map(item => {
     const finished = FINISHED.has(item.status);
     const status = item.status === "MATCHED" ? t("statusMatched")
       : item.status === "AGREED" ? t("statusAgreed")
