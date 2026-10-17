@@ -62,6 +62,21 @@ const SAFE_NEGATIVE={
 };
 const FOOD_KINDS=new Set(['meal','dessert','snack','beverage']);
 
+// The validated 375-pack answers almost every question explicitly (135 strong
+// negatives on average). Under-specified profiles cannot compete against it:
+// unknown cells score zero, while confirmed "no" answers earn evidence.
+// Preserve unknown for inherently contextual questions; classify the remaining
+// inapplicable traits as factual negatives rather than leaving every cell blank.
+const SUBJECTIVE='joy love cool annoying lostWithout touchPole beOne seenReal spontaneous';
+const VARIABLE='white black brown colorful red green yellow round flat soft fragile smallBread smallGolf largerButter bigMicrowave heavierDuck heavy veryLarge tall warm hot cold wet bright specificColor dangerous seeThrough clear colorless hole breakDrop';
+const CONTEXTUAL={
+ animal:SUBJECTIVE+' '+VARIABLE+' forest nocturnal water saltWater swim climb jump spotted striped furry fluffy longTail groups growl scavenger communicate',
+ vegetable:SUBJECTIVE+' '+VARIABLE+' smell sweet goodSmell smellSweet tasty crunchy garden forest leaves roots seeds',
+ food:SUBJECTIVE+' '+VARIABLE+' smell smellSweet goodSmell crunchy sweet hold old burn delivered',
+ object:SUBJECTIVE+' '+VARIABLE+' noise heard roll spin pocket lift open buttons lights household shade carryThings plastic stone smell goodSmell',
+};
+
+
 function parseEntry(raw){
  const [name,...flags]=raw.split('|').map(s=>s.trim());
  if(!name||!name.match(/[a-z]/i))throw new Error('Empty catalogue target');
@@ -87,6 +102,10 @@ function compile(group,entry){
     if(!p.no.includes('hot'))p.no.push('hot');
   }
  }
+ const unknown=words(FOOD_KINDS.has(group.kind)?CONTEXTUAL.food:template.category==='animal'?CONTEXTUAL.animal:template.category==='vegetable'?CONTEXTUAL.vegetable:CONTEXTUAL.object);
+ const uncertain=new Set(unknown);
+ const categorized=new Set([...p.yes,...p.weakYes,...p.no]);
+ for(const trait of Object.keys(pamTraitIndex))if(!categorized.has(trait)&&!uncertain.has(trait))p.no.push(trait);
  for(const bucket of ['yes','weakYes','no'])p[bucket]=uniqueStrings(p[bucket]).sort();
  if(p.yes.length+p.weakYes.length+p.no.length<9)throw new Error('Too few profile answers: '+p.name);
  return p;
@@ -127,4 +146,6 @@ while(selected.length<BATCH_SIZE){
 }
 const doc={version:1,count:BATCH_SIZE,source:'Curated, deterministic Pam 500 expansion catalogue',profiles:selected};
 await writeFile(targetPath,JSON.stringify(doc,null,2)+'\n');
+const mean=key=>Math.round(selected.reduce((n,p)=>n+p[key].length,0)/selected.length);
+console.log('PAM_500_PROFILE_DENSITY='+JSON.stringify({yes:mean('yes'),no:mean('no'),weakYes:mean('weakYes'),unknown:152-mean('yes')-mean('no')-mean('weakYes')}));
 console.log('PAM_500_GENERATED='+selected.length+' candidatesSkipped='+skipped+' identicalProfilesRejected='+indistinguishable+' groups='+JSON.stringify(byGroup));
