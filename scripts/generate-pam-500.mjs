@@ -89,7 +89,12 @@ function compile(group,entry){
  const p={name:entry.name,category:template.category,yes:words(template.yes),weakYes:words(template.weakYes),no:words(template.no)};
  const defaults=FOOD_KINDS.has(group.kind)?SAFE_NEGATIVE.other:template.category==='other'?words(OBJECT_NO):SAFE_NEGATIVE[template.category];
  for(const key of defaults)if(!p.yes.includes(key)&&!p.weakYes.includes(key)&&!p.no.includes(key))p.no.push(key);
- if(template.category==='animal')p.yes.push('move');
+ if(template.category==='animal'){
+   p.yes.push('move');
+   // Habitat refers to living IN water, not merely swimming or frequenting it.
+   // Marine and freshwater animal entries override these terrestrial defaults.
+   if(!['fish','shellfish'].includes(group.kind))p.no.push('water','saltWater');
+ }
  if(group.kind==='bird')p.yes.push('noise','heard');
  if(group.kind==='tree')p.yes.push('shade','seeds','touch');
  if(FOOD_KINDS.has(group.kind))p.yes.push('touch','smell','lift');
