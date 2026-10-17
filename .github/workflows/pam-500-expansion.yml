@@ -99,7 +99,7 @@ jobs:
       - name: Lint and typecheck expanded runtime
         run: npm run lint && npm run typecheck
       - name: Verify unchanged 1775 knowledge and 500 matrix append
-        run: node --test test/pam-1775-integration.test.mjs test/pam-500-expansion-integrity.test.mjs
+        run: node --test test/pam-1775-integration.test.mjs test/pam-500-expansion-integrity.test.mjs test/pam-500-release-gate.test.mjs
       - name: Build complete production artifact without deployment
         run: npm run build
       - name: Prove shipped Pam payload contains 2275 targets
