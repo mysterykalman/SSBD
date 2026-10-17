@@ -3,17 +3,17 @@ const STYLE_ID = "oddOneInHomePolish";
 const css = `
 /* Final homepage treatment for Odd One In. Keep this after the generic homepage refinement. */
 [data-mode="connections"] .mode-actions .btn{
-  --skin-img:url("/felt/btn-blue.webp")!important;
-  --skin-slice:51 99 68 87 fill!important;
-  --skin-wt:.3669!important;
-  --skin-wr:.7122!important;
-  --skin-wb:.4892!important;
-  --skin-wl:.6259!important;
-  --skin-bt:.0144!important;
-  --skin-bb:.1223!important;
-  --skin-bl:.0144!important;
-  --skin-br:.0144!important;
-  --skin-center:#85b1e0!important;
+  --skin-img:url("/felt/btn-positive.webp")!important;
+  --skin-slice:51 98 57 92 fill!important;
+  --skin-wt:.3984!important;
+  --skin-wr:.7656!important;
+  --skin-wb:.4453!important;
+  --skin-wl:.7188!important;
+  --skin-bt:.0156!important;
+  --skin-bb:.0469!important;
+  --skin-bl:.0156!important;
+  --skin-br:.0234!important;
+  --skin-center:#7a9e73!important;
   --skin-repeat:round stretch!important;
 }
 
@@ -67,6 +67,7 @@ function polish(){
   standees.forEach((standee,index)=>{
     if(labels[index]&&standee.dataset.name!==labels[index])standee.dataset.name=labels[index];
   });
+  card.querySelector('.mode-actions .btn')?.classList.add('sage');
 }
 
 let queued=false;
