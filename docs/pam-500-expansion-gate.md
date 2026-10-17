@@ -39,7 +39,7 @@ The isolated deep-dive CI run [39079300718](https://github.com/mysterykalman/SSB
 | Average explicit strong yes / strong no / unknown cells | 10 / 87 / 55 |
 | Animal / vegetable / mineral / other candidates | 176 / 96 / **0** / 228 |
 
-A *separating known question* means both profiles explicitly know an answer to the same question and have opposing polarity. Having zero such questions is a serious evidence gap, **not** a formal proof that any pair can never receive different scores when one or both profiles have unknown cells. The count is computed across all 156 traits with the exact category/known-mask semantics of the runtime. The audit lives in `scripts/audit-pam-500-separability.mjs`; JSON results plus a prioritized, 2,767-prompt factual review queue (CSV and JSON) are published as the `pam-500-separability` GitHub Actions artifact. Each prompt identifies a missing answer that *could* distinguish several targets; it must be fact-checked before assigning any new state.
+A *separating known question* means both profiles explicitly know an answer to the same question and have opposing polarity. Having zero such questions is a serious evidence gap, **not** a formal proof that any pair can never receive different scores when one or both profiles have unknown cells. The count is computed across all 156 traits with the exact category/known-mask semantics of the runtime. The audit lives in `scripts/audit-pam-500-separability.mjs`; JSON results plus a prioritized factual review queue (CSV and JSON) are published as the `pam-500-separability` GitHub Actions artifact. Each prompt identifies a missing answer that *could* distinguish several targets; it must be fact-checked before assigning any new state.
 
 The main failure is distinguishability **within the proposed 500**. Adding more similar species, berries, utensils or wearables with generic family traits does not supply the missing facts. Adjustments that improved new-target accuracy have previously caused existing-target regressions, so any question-ranking changes must meet both gates rather than trade one cohort for the other.
 
@@ -58,3 +58,20 @@ The main failure is distinguishability **within the proposed 500**. Adding more 
 ### Controlled build evidence
 
 On [run 39079810874](https://github.com/mysterykalman/SSBD/actions/runs/39079810874), the independent `compile` job passed candidate generation, scoped lint, 1,775-target data-integrity and release-safety tests, and a compiled bundle check proving **156 questions and 2,275 targets**. This establishes technical integration, not factual or gameplay approval. The project-wide lint/typecheck checks separately surfaced existing errors in unrelated Connections and audit code; those must be addressed before claiming an entirely green repository-wide check.
+
+### Most recent controlled iteration
+
+[Deep-dive CI run 39080289212](https://github.com/mysterykalman/SSBD/actions/runs/39080289212) is a fuller follow-up to the initial diagnosis. It distinguishes terrestrial from aquatic animal habitats, corrects shoreline/swimming category mistakes, introduces conservative size implications and separates harvested leafy/root produce from seed-bearing fruit.
+
+| Metric | Initial diagnostic run | Latest controlled iteration |
+| --- | ---: | ---: |
+| New targets correctly guessed with exact answers | 134/500 | **146/500** |
+| New targets correctly guessed with softened answers | 141/500 | **154/500** |
+| New targets with no known opposing answer against at least one peer in the new 500 | 431 | **408** |
+| Existing-target correctness regressions | 0/1,775 | **0/1,775** |
+| Source-catalogue conservative non-overlapping subset (heuristic, not guaranteed optimum) | ~140–145 | **160** |
+| Review prompts generated | — | **2,599** |
+
+The model still does **not** meet the 500/500 exact + softened release gates. Increasing the confidence of the existing answers is not a substitute for missing differentiating facts. The latest controlled build/compile job passed; overall GitHub Actions fails at the strict gameplay gate as intended.
+
+**Next required work:** Curate and verify substantially more target-specific facts and select far more diverse, familiar target types. In particular, review the 408 overlapping new targets through the generated `review-queue.csv` / `review-queue.json`, consider expansion of the question ontology only through a separately tested compatibility plan, and protect the 1,775-target baseline throughout.
