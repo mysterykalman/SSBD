@@ -16,7 +16,8 @@
     "mom:runtime": "node scripts/build-mom-runtime-knowledge.mjs",
     "mom:audit": "node scripts/mom-knowledge-repair.mjs",
     "mom:cskg": "python3 scripts/extract-cskg-traits.py",
-    "mom:wordnet": "python3 scripts/extract-wordnet-traits.py"
+    "mom:wordnet": "python3 scripts/extract-wordnet-traits.py",
+    "test:pwa": "node --test --test-concurrency=1 test/e2e/pwa-install.test.mjs test/e2e/pwa-hardening.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
