@@ -74,7 +74,10 @@ function applyPolarity(game,q,wantYes,responseStrength){
  for(let t=0;t<N;t++){
   if(!knownAt(q,t))continue;
   const state=stateAt(q,t),match=polarity(state)===(wantYes?1:0);
-  game.scores[t]+=(match?1:-1)*strength(state)*responseStrength;
+  // Sparse new profiles should not be silently underweighted relative to the
+  // previous packs, which answer nearly every trait. Keep legacy unchanged.
+  const confidenceFactor=N===2275&&t>=1775&&q>=4?1.4:1;
+  game.scores[t]+=(match?1:-1)*strength(state)*responseStrength*confidenceFactor;
  }
 }
 function applyMaybe(game,q){
