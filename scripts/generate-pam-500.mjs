@@ -22,8 +22,10 @@ const T={
  shellfish:{category:'animal',yes:'alive living organic coldBlood water shell swim',no:'mammal fish feathers spine hooves'},
  fruit:{category:'vegetable',yes:'eat tasty organic seeds',no:'mammal fish feathers electronic mechanical'},
  berry:{category:'vegetable',yes:'eat tasty organic seeds smallBread smallGolf',no:'mammal fish feathers electronic mechanical'},
- vegetable:{category:'vegetable',yes:'eat tasty organic',no:'mammal fish feathers electronic mechanical'},
- root:{category:'vegetable',yes:'eat tasty organic roots rootVeg',no:'mammal fish feathers electronic mechanical'},
+ // Here 'vegetable' refers to the harvested edible greens/shoots, not a mature seed-producing plant.
+ vegetable:{category:'vegetable',yes:'eat tasty organic',no:'mammal fish feathers electronic mechanical seeds sweet'},
+ // Root targets are harvested storage organs; they are not seed-bearing fruit.
+ root:{category:'vegetable',yes:'eat tasty organic roots rootVeg',no:'mammal fish feathers electronic mechanical seeds'},
  herb:{category:'vegetable',yes:'eat organic green leaves goodSmell',no:'mammal fish electronic mechanical'},
  nut:{category:'vegetable',yes:'eat tasty organic smallBread smallGolf',no:'mammal fish feathers electronic mechanical'},
  plant:{category:'vegetable',yes:'alive living organic green leaves roots',no:'mammal fish feathers electronic mechanical'},
