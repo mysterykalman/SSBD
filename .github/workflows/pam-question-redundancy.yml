@@ -1,0 +1,35 @@
+name: Pam Question Redundancy Audit
+
+on:
+  push:
+    branches:
+      - feature/pam-question-redundancy
+    paths:
+      - 'data/pam20q/**'
+      - 'src/client/mom-mode/engine.js'
+      - 'scripts/pam-classic-model.mjs'
+      - 'scripts/pam-quality-model.mjs'
+      - 'scripts/audit-pam-question-redundancy.mjs'
+      - 'test/pam-*.test.mjs'
+      - '.github/workflows/pam-question-redundancy.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Audit Pam question redundancy across all 1775 targets
+        run: node scripts/audit-pam-question-redundancy.mjs
+      - name: Upload redundancy audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-question-redundancy-baseline
+          path: artifacts/pam-question-redundancy/
+          if-no-files-found: error
+          retention-days: 30
