@@ -36,6 +36,15 @@ jobs:
         run: npm ci
       - name: Rebuild exactly 500 curated profiles
         run: node scripts/generate-pam-500.mjs
+      - name: Preserve 500 candidate profiles on feature branch (not production)
+        run: |
+          git config user.name "SSBD Pam Quality CI"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/pam20q/quality/quality-500.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: stage Pam 500 candidates for strict validation"
+            git push origin HEAD:feature/pam-500-quality-expansion
+          fi
       - name: Prove no original profile changed
         run: node --test test/pam-500-expansion-integrity.test.mjs
       - name: Simulate new targets and old baseline
