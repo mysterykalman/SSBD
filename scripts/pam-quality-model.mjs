@@ -19,20 +19,26 @@ async function loadQualityProfiles(){
 }
 
 function compileQualityProfile(profile,questionCount){
-  // State 0 is weak/uncertain no. Unspecified facts stay uncertain rather than becoming definite No.
-  const states=new Uint8Array(questionCount);states.fill(0);
+  // Four-state answer semantics are retained for known cells. Unknown cells are
+  // carried separately in knownMask so they contribute zero evidence in-engine.
+  const states=new Uint8Array(questionCount);
+  const known=new Uint8Array(questionCount);
   const categoryIndex={animal:0,vegetable:1,mineral:2,other:3}[profile.category];
   if(categoryIndex==null)throw new Error(`Unknown Pam quality category ${profile.category} for ${profile.name}`);
-  for(let q=0;q<4;q++)states[q]=q===categoryIndex?3:2;
+  for(let q=0;q<4;q++){
+    states[q]=q===categoryIndex?3:2;
+    known[q]=1;
+  }
   const apply=(key,value)=>{
     const index=pamTraitIndex[key];
     if(index==null)throw new Error(`Unknown Pam quality trait ${key} for ${profile.name}`);
     states[index]=value;
+    known[index]=1;
   };
   for(const key of profile.yes||[])apply(key,3);
   for(const key of profile.weakYes||[])apply(key,1);
   for(const key of profile.no||[])apply(key,2);
-  return states;
+  return{states,known};
 }
 
 export async function appendPamQuality375(model){
@@ -47,13 +53,17 @@ export async function appendPamQuality375(model){
 
   const targets=[...model.targets,...profiles.map(p=>p.name)];
   const weights=Buffer.alloc(model.questions.length*targets.length);
+  const knownMask=Buffer.alloc(model.questions.length*targets.length,1);
   for(let q=0;q<model.questions.length;q++){
     model.weights.copy(weights,q*targets.length,q*model.targets.length,(q+1)*model.targets.length);
   }
   for(let e=0;e<profiles.length;e++){
-    const states=compileQualityProfile(profiles[e],model.questions.length);
+    const {states,known}=compileQualityProfile(profiles[e],model.questions.length);
     const targetIndex=model.targets.length+e;
-    for(let q=0;q<model.questions.length;q++)weights[q*targets.length+targetIndex]=states[q];
+    for(let q=0;q<model.questions.length;q++){
+      weights[q*targets.length+targetIndex]=states[q];
+      knownMask[q*targets.length+targetIndex]=known[q];
+    }
   }
   for(const value of weights)if(value>3)throw new Error(`Pam 1775 matrix contains invalid state ${value}`);
 
@@ -61,6 +71,7 @@ export async function appendPamQuality375(model){
     ...model,
     targets,
     weights,
+    knownMask,
     qualityCount:profiles.length,
     totalExtensionCount:(model.extensionCount||0)+profiles.length
   };
