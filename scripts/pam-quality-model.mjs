@@ -95,7 +95,8 @@ export async function loadPamExpandedModel(loadBaseModel){
   const doc=JSON.parse(await readFile(nextBatchPath,'utf8'));
   // Candidate files must never silently become playable in a preview build.
   // Explicit test opt-in is local to the CI jobs; production requires review.
-  if(doc.review_status!=='approved'&&process.env.PAM_ALLOW_UNREVIEWED_500!=='1')return baseline;
+  const candidateOverride=process.env.PAM_ALLOW_UNREVIEWED_500==='1'&&process.env.VERCEL_ENV!=='production';
+  if(doc.review_status!=='approved'&&!candidateOverride)return baseline;
   if(doc.count!==NEXT_BATCH_TARGETS||!Array.isArray(doc.profiles)||doc.profiles.length!==NEXT_BATCH_TARGETS){
     throw new Error('Pam expansion requires exactly 500 reviewed quality profiles');
   }
