@@ -68,12 +68,12 @@ const FOOD_KINDS=new Set(['meal','dessert','snack','beverage']);
 // Preserve unknown for inherently contextual questions; classify the remaining
 // inapplicable traits as factual negatives rather than leaving every cell blank.
 const SUBJECTIVE='joy love cool annoying lostWithout touchPole beOne seenReal spontaneous';
-const VARIABLE='white black brown colorful red green yellow round flat soft fragile smallBread smallGolf largerButter bigMicrowave heavierDuck heavy veryLarge tall warm hot cold wet bright specificColor dangerous seeThrough clear colorless hole breakDrop';
+const VARIABLE='white black brown colorful red green yellow round flat soft fragile smallBread smallGolf largerButter bigMicrowave heavierDuck heavy veryLarge tall warm hot cold wet bright specificColor dangerous seeThrough clear colorless hole breakDrop burn combustible old';
 const CONTEXTUAL={
- animal:SUBJECTIVE+' '+VARIABLE+' forest nocturnal water saltWater swim climb jump spotted striped furry fluffy longTail groups growl scavenger communicate',
+ animal:SUBJECTIVE+' '+VARIABLE+' forest nocturnal water saltWater swim climb jump spotted striped furry fluffy longTail groups growl scavenger communicate intelligent noise heard vegetarian',
  vegetable:SUBJECTIVE+' '+VARIABLE+' smell sweet goodSmell smellSweet tasty crunchy garden forest leaves roots seeds',
- food:SUBJECTIVE+' '+VARIABLE+' smell smellSweet goodSmell crunchy sweet hold old burn delivered',
- object:SUBJECTIVE+' '+VARIABLE+' noise heard roll spin pocket lift open buttons lights household shade carryThings plastic stone smell goodSmell',
+ food:SUBJECTIVE+' '+VARIABLE+' smell smellSweet goodSmell crunchy sweet hold old burn delivered organic',
+ object:SUBJECTIVE+' '+VARIABLE+' noise heard roll spin pocket lift open buttons lights household shade carryThings plastic stone smell goodSmell organic hold',
 };
 
 
@@ -87,6 +87,11 @@ function compile(group,entry){
  const p={name:entry.name,category:template.category,yes:words(template.yes),weakYes:words(template.weakYes),no:words(template.no)};
  const defaults=FOOD_KINDS.has(group.kind)?SAFE_NEGATIVE.other:template.category==='other'?words(OBJECT_NO):SAFE_NEGATIVE[template.category];
  for(const key of defaults)if(!p.yes.includes(key)&&!p.weakYes.includes(key)&&!p.no.includes(key))p.no.push(key);
+ if(template.category==='animal')p.yes.push('move');
+ if(group.kind==='bird')p.yes.push('noise','heard');
+ if(group.kind==='tree')p.yes.push('shade','seeds','touch');
+ if(FOOD_KINDS.has(group.kind))p.yes.push('touch','smell','lift');
+ if(['fruit','berry','vegetable','root','herb','nut'].includes(group.kind))p.yes.push('touch','lift');
  const flags=[...words(group.flags),...entry.flags];
  for(const flag of flags){
   const op=flag[0],trait=flag.slice(1);
@@ -102,6 +107,14 @@ function compile(group,entry){
     if(!p.no.includes('hot'))p.no.push('hot');
   }
  }
+ if(p.yes.includes('hot')){
+   p.yes=p.yes.filter(x=>x!=='cold');p.weakYes=p.weakYes.filter(x=>x!=='cold');
+   p.yes.push('warm');p.no=p.no.filter(x=>!['warm','hot'].includes(x));
+ }
+ if(p.yes.includes('hold')){
+   p.yes.push('lift');p.no=p.no.filter(x=>x!=='lift');p.weakYes=p.weakYes.filter(x=>x!=='lift');
+ }
+ if(template.category==='animal'&&p.yes.includes('herbivore')&&!p.no.includes('vegetarian'))p.yes.push('vegetarian');
  const unknown=words(FOOD_KINDS.has(group.kind)?CONTEXTUAL.food:template.category==='animal'?CONTEXTUAL.animal:template.category==='vegetable'?CONTEXTUAL.vegetable:CONTEXTUAL.object);
  const uncertain=new Set(unknown);
  const categorized=new Set([...p.yes,...p.weakYes,...p.no]);
