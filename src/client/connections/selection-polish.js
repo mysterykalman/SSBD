@@ -25,6 +25,12 @@ if (!document.getElementById(STYLE_ID)) {
       outline: none !important;
       filter: brightness(1.025) saturate(1.04) drop-shadow(0 8px 7px rgba(65,42,25,.22)) !important;
     }
+
+    @media (max-width: 390px) {
+      .conn-tier-copy .picker {
+        display: block !important;
+      }
+    }
   `;
   document.head.append(style);
 }
