@@ -2,7 +2,7 @@
 // A prefix + means confidently yes, ~ means probably, - means confidently no.
 export const pam500Catalogue=[
 {kind:'mammal',flags:'+furry +paws +carnivore',entries:`
-a fishing cat|+water +swim +spotted
+a fishing cat|-water +swim +spotted
 a rusty-spotted cat|+spotted +forest
 a sand cat|+brown +nocturnal
 a black-footed cat|+spotted +nocturnal
@@ -62,7 +62,7 @@ a bushbuck|+forest +striped +brown
 a sambar deer|+forest +brown +tall
 a muntjac|+forest +brown +smallBread
 a pudu|+forest +brown
-a water deer|+water +swim +brown
+a water deer|-water +swim +brown
 a marsh deer|+water +swim +brown
 a barasingha|+water +brown
 a hog deer|+forest +brown
