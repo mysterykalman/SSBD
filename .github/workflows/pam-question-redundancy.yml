@@ -11,6 +11,7 @@ on:
       - 'scripts/pam-quality-model.mjs'
       - 'scripts/audit-pam-question-redundancy.mjs'
       - 'scripts/audit-pam-question-relations.mjs'
+      - 'scripts/experiment-pam-question-selection.mjs'
       - 'test/pam-*.test.mjs'
       - '.github/workflows/pam-question-redundancy.yml'
   workflow_dispatch:
@@ -18,7 +19,7 @@ on:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,6 +29,8 @@ jobs:
         run: node scripts/audit-pam-question-redundancy.mjs
       - name: Audit Pam semantic and logical question relations
         run: node scripts/audit-pam-question-relations.mjs
+      - name: Compare redundancy-aware selector variants
+        run: node scripts/experiment-pam-question-selection.mjs
       - name: Upload redundancy audit
         if: always()
         uses: actions/upload-artifact@v4
