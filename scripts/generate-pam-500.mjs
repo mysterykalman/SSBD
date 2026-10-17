@@ -21,11 +21,11 @@ const T={
  invert:{category:'animal',yes:'alive living organic coldBlood',no:'mammal fish feathers spine hooves'},
  shellfish:{category:'animal',yes:'alive living organic coldBlood water shell swim',no:'mammal fish feathers spine hooves'},
  fruit:{category:'vegetable',yes:'eat tasty organic seeds',no:'mammal fish feathers electronic mechanical'},
- berry:{category:'vegetable',yes:'eat tasty organic seeds smallBread',no:'mammal fish feathers electronic mechanical'},
+ berry:{category:'vegetable',yes:'eat tasty organic seeds smallBread smallGolf',no:'mammal fish feathers electronic mechanical'},
  vegetable:{category:'vegetable',yes:'eat tasty organic',no:'mammal fish feathers electronic mechanical'},
  root:{category:'vegetable',yes:'eat tasty organic roots rootVeg',no:'mammal fish feathers electronic mechanical'},
  herb:{category:'vegetable',yes:'eat organic green leaves goodSmell',no:'mammal fish electronic mechanical'},
- nut:{category:'vegetable',yes:'eat tasty organic smallBread',no:'mammal fish feathers electronic mechanical'},
+ nut:{category:'vegetable',yes:'eat tasty organic smallBread smallGolf',no:'mammal fish feathers electronic mechanical'},
  plant:{category:'vegetable',yes:'alive living organic green leaves roots',no:'mammal fish feathers electronic mechanical'},
  tree:{category:'vegetable',yes:'alive living organic green leaves roots tall trunk',no:'mammal fish feathers electronic mechanical'},
  meal:{category:'other',yes:'eat tasty buy',weakYes:'delivered goodSmell',no:'living mammal fish insect electronic'},
@@ -115,6 +115,21 @@ function compile(group,entry){
    p.yes.push('lift');p.no=p.no.filter(x=>x!=='lift');p.weakYes=p.weakYes.filter(x=>x!=='lift');
  }
  if(template.category==='animal'&&p.yes.includes('herbivore')&&!p.no.includes('vegetarian'))p.yes.push('vegetarian');
+
+ // Strict size implications are physical constraints, not fabricated colors
+ // or subjective properties. Explicit facts always win; incoherent size
+ // combinations fail rather than silently becoming fake knowledge.
+ const yesSize=new Set(p.yes);
+ const impossiblePairs=[['smallGolf','veryLarge'],['smallBread','veryLarge'],['smallBread','bigMicrowave'],['smallGolf','bigMicrowave'],['smallGolf','bigSofa'],['smallBread','bigSofa']];
+ for(const [a,b] of impossiblePairs)if(yesSize.has(a)&&yesSize.has(b))throw new Error('Contradictory size evidence '+a+'/'+b+' for '+p.name);
+ const inferredNo=new Set();
+ if(yesSize.has('smallGolf')||yesSize.has('smallBread'))for(const x of ['veryLarge','bigSofa','bigMicrowave'])inferredNo.add(x);
+ if(yesSize.has('veryLarge')||yesSize.has('bigSofa')||yesSize.has('bigMicrowave'))for(const x of ['smallGolf','smallBread','pocket'])inferredNo.add(x);
+ if(yesSize.has('tall'))inferredNo.add('smallGolf');
+ for(const trait of inferredNo){
+   if(!p.yes.includes(trait)&&!p.weakYes.includes(trait)&&!p.no.includes(trait))p.no.push(trait);
+ }
+
  const unknown=words(FOOD_KINDS.has(group.kind)?CONTEXTUAL.food:template.category==='animal'?CONTEXTUAL.animal:template.category==='vegetable'?CONTEXTUAL.vegetable:CONTEXTUAL.object);
  const uncertain=new Set(unknown);
  const categorized=new Set([...p.yes,...p.weakYes,...p.no]);
@@ -244,8 +259,9 @@ while(selected.length<BATCH_SIZE){
   const count=byGroup[candidate.kind]||0;
   // Spread across concept domains, so the game does not acquire 200 nearly
   // identical animals or foods. Enforce meaningful distance from prior targets.
+  const overlapPenalty=candidate.selectionDistance===0?25:candidate.selectionDistance===1?8:0;
   const score=candidate.baselineDistance*3+Math.min(10,candidate.selectionDistance)*2
-    -Math.max(0,count-22)*0.45 +Math.min(4,candidate.profile.yes.length)*0.05;
+    -overlapPenalty-Math.max(0,count-22)*0.45+Math.min(4,candidate.profile.yes.length)*0.05;
   if(score>bestScore){bestScore=score;best=candidate;}
  }
  if(!best)throw new Error('Could not assemble 500 candidates');
