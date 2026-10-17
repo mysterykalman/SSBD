@@ -73,7 +73,8 @@ for(const [groupId,group] of pam500Catalogue.entries()){
  if(names.length<8)throw new Error('Small catalogue group '+groupId);
  options.push({groupId,group,names});
 }
-const selected=[],taken=new Set(),byGroup={};
+const selected=[],taken=new Set(),signatures=new Set(),byGroup={};
+let indistinguishable=0;
 let index=0;
 while(selected.length<BATCH_SIZE){
  let progressed=false;
@@ -82,7 +83,10 @@ while(selected.length<BATCH_SIZE){
   progressed=true;
   const name=entry.name.toLowerCase();
   if(previous.has(name)||taken.has(name)){skipped++;continue;}
-  taken.add(name);selected.push(compile(option.group,entry));
+  const profile=compile(option.group,entry);
+  const signature=[profile.category,...['yes','weakYes','no'].map(key=>profile[key].join(','))].join('|');
+  if(signatures.has(signature)){indistinguishable++;continue;}
+  signatures.add(signature);taken.add(name);selected.push(profile);
   byGroup[option.group.kind]=(byGroup[option.group.kind]||0)+1;
   if(selected.length===BATCH_SIZE)break;
  }
@@ -91,4 +95,4 @@ while(selected.length<BATCH_SIZE){
 }
 const doc={version:1,count:BATCH_SIZE,source:'Curated, deterministic Pam 500 expansion catalogue',profiles:selected};
 await writeFile(targetPath,JSON.stringify(doc,null,2)+'\n');
-console.log('PAM_500_GENERATED='+selected.length+' candidatesSkipped='+skipped+' groups='+JSON.stringify(byGroup));
+console.log('PAM_500_GENERATED='+selected.length+' candidatesSkipped='+skipped+' identicalProfilesRejected='+indistinguishable+' groups='+JSON.stringify(byGroup));
