@@ -60,9 +60,13 @@ jobs:
           const file=fs.readdirSync(dir).find(x=>/^knowledge\.generated\..*\.js$/.test(x));
           if(!file)throw new Error('Pam model bundle missing');
           const content=fs.readFileSync(path.join(dir,file),'utf8');
-          const count=(content.match(/"targets":\[/g)||[]).length;
-          if(count<1)throw new Error('Shipped Pam knowledge lacks targets');
-          console.log('PAM_SHIPPED_2275_MODEL=present');
+          const vm=require('vm'),sandbox={window:{}};
+          vm.runInNewContext(content,sandbox,{timeout:10000});
+          const model=sandbox.window.PAM_CLASSIC_MODEL;
+          if(!model||model.targets.length!==2275||model.questions.length!==156||model.extensionTargets!==1075){
+            throw new Error('Shipped bundle is not the integrated 2275-target Pam model');
+          }
+          console.log('PAM_SHIPPED_2275_MODEL=verified');
           NODE
       - name: Commit reviewed expansion only after all validation succeeds
         run: |
