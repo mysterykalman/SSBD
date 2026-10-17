@@ -95,7 +95,7 @@ test("offline music cache honours 206 byte ranges and never includes API respons
   },null,{timeout:30000});
   await context.setOffline(true);
   const result=await page.evaluate(async()=>{
-    const response=await fetch("/audio/intro.mp3",{headers:{Range:"bytes=64-191"}});
+    const response=await fetch("/audio/intro.mp3?offline-range-check=1",{headers:{Range:"bytes=64-191"},cache:"no-store"});
     return {status:response.status,range:response.headers.get("Content-Range"),
       length:(await response.arrayBuffer()).byteLength,
       cached:(await caches.keys()).filter(key=>key.startsWith("audio-")).length,
