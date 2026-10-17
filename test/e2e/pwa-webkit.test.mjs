@@ -22,7 +22,7 @@ test("WebKit install sheet, phone/tablet/desktop navigation and rotation layouts
   const exceptions=[];
   page.on("pageerror",error=>exceptions.push(error.message));
   for(const route of ["/","/mom/"]){
-    await page.goto(server.url+route);
+    await page.goto(server.url+route,{waitUntil:"domcontentloaded"});
     await page.waitForSelector("#pwaInstallBtn");
     await page.evaluate(()=>document.querySelectorAll("dialog[open]").forEach(d=>d.close()));
     const geometry=await page.evaluate(()=>({
@@ -54,7 +54,7 @@ test("WebKit installed mode opens with no install action on Home or Pam",async()
     userAgent:devices[0].ua});
   await context.addInitScript(()=>Object.defineProperty(navigator,"standalone",{configurable:true,value:true}));
   const page=await context.newPage();
-  await page.goto(server.url+route);
+  await page.goto(server.url+route,{waitUntil:"domcontentloaded"});
   assert.equal(await page.locator("#pwaInstallBtn").isHidden(),true,route);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),route);
   await context.close();
