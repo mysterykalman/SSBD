@@ -29,9 +29,12 @@ const standaloneParts = [
   "audio-ui-polish.js",
   "audio-shell-recovery.js"
 ];
-const standaloneAudio = (await Promise.all(
+const standaloneSources = await Promise.all(
   standaloneParts.map(name => readFile(join(clientDir, name), "utf8"))
-)).join("\n;\n");
+);
+const standaloneAudio = standaloneSources
+  .map(source => `(() => {\n${source}\n})();`)
+  .join("\n;\n");
 await writeFile(join(root, "dist", "audio-settings.js"), standaloneAudio, "utf8");
 
 // The tactile audio settings panel uses this existing felt patch as its surface.
