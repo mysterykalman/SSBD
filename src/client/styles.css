@@ -628,3 +628,15 @@ main:focus { outline: none; }
 .duo-confetti .c1 { --badge: var(--badge-coral); } .duo-confetti .c2 { --badge: var(--badge-teal); } .duo-confetti .c3 { --badge: var(--badge-yellow); }
 .duo-confetti .c4 { --badge: var(--badge-purple); } .duo-confetti .c5 { --badge: var(--badge-orange); width: 12px; height: 12px; } .duo-confetti .c6 { --badge: var(--badge-green); width: 12px; height: 12px; }
 .pam-standee > img { object-fit: cover; object-position: 50% 0; padding: 0; }
+
+/* Responsive safeguards: keep saved-game actions and dialogs usable on narrow screens. */
+.game-item { min-width: 0; }
+.game-item .btn { max-width: 100%; }
+.game-info, .game-meta { min-width: 0; }
+@media (max-width: 420px) {
+  .game-item { grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; }
+  .game-item > .btn { grid-column: 2; justify-self: start; }
+  .games { padding-inline: 12px; }
+  .dialog-body { min-width: 0; max-width: 100%; }
+  .dialog-body .btn { max-width: 100%; }
+}
