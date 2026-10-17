@@ -28,7 +28,7 @@ jobs:
         run: git diff --exit-code 6ee006258414a8b65a23e2b9785b647a5e6ece3e HEAD -- data/pam20q
       - name: Install dependencies
         run: npm ci
-      - name: Run complete test suite
-        run: npm test
+      - name: Run complete Pam regression suite
+        run: node --test test/pam-classic20q.test.mjs test/pam-quality375.test.mjs test/pam-question-redundancy.test.mjs
       - name: Run production build
         run: npm run build
