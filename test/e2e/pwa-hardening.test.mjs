@@ -134,3 +134,27 @@ test("offline played audio can be requested fully, and invalid byte ranges fail 
   assert.match(result.invalidRange,/^bytes \*\/\d+$/);
   await context.close();
 });
+
+test("Pam survives a cold offline reopen after clearing HTTP browser cache", async () => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const errors = [];
+  page.on("requestfailed", request => errors.push(new URL(request.url()).pathname));
+  await page.goto(server.url + "/mom/");
+  await page.evaluate(async () => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  const precached = await page.evaluate(async () => {
+    const shell = (await caches.keys()).find(key => key.startsWith("shell-"));
+    return (await (await caches.open(shell)).keys()).map(req => new URL(req.url).pathname);
+  });
+  for (const path of ["/mom-resume.js", "/audio-settings.js", "/mom/"]) assert.ok(precached.includes(path), path);
+  const devtools = await context.newCDPSession(page);
+  await devtools.send("Network.clearBrowserCache");
+  await context.setOffline(true);
+  await page.goto(server.url + "/mom/");
+  await page.waitForSelector("#start-btn");
+  await page.waitForSelector("#audioSettingsBtn");
+  assert.equal(await page.locator("#pwaInstallBtn").count(), 1);
+  assert.deepEqual(errors, [], "Pam's critical scripts should not need network access");
+  await context.close();
+});

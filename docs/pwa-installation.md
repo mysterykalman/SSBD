@@ -41,3 +41,6 @@ Real-device sign-off is still required for OS-level Add to Home Screen, Safari
 Add to Dock, background/audio interruptions, device orientation/keyboard
 behaviour and standalone launches. WebKit/Chromium emulation is meaningful
 regression coverage but is not a physical-device certification.
+
+Pam's audio settings script and resume helper are also explicitly precached to avoid
+relying on incidental browser HTTP-cache hits during a cold offline launch.
