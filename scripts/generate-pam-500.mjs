@@ -137,26 +137,98 @@ for(const [groupId,group] of pam500Catalogue.entries()){
  if(names.length<8)throw new Error('Small catalogue group '+groupId);
  options.push({groupId,group,names});
 }
-const selected=[],taken=new Set(),signatures=new Set(),byGroup={};
+// Select factually distinguishable candidates, not merely names with different
+// spellings. The 156-question vocabulary has finite information capacity.
+const candidateProfiles=[],candidateSignatures=new Set(),candidateNames=new Set();
 let indistinguishable=0;
-let index=0;
-while(selected.length<BATCH_SIZE){
- let progressed=false;
- for(const option of options){
-  const entry=option.names[index];if(!entry)continue;
-  progressed=true;
-  const name=entry.name.toLowerCase();
-  if(previous.has(name)||taken.has(name)){skipped++;continue;}
+for(const option of options){
+ for(const entry of option.names){
+  const key=entry.name.trim().toLowerCase();
+  if(previous.has(key)||candidateNames.has(key)){skipped++;continue;}
   const profile=compile(option.group,entry);
-  const signature=[profile.category,...['yes','weakYes','no'].map(key=>profile[key].join(','))].join('|');
-  if(signatures.has(signature)){indistinguishable++;continue;}
-  signatures.add(signature);taken.add(name);selected.push(profile);
-  byGroup[option.group.kind]=(byGroup[option.group.kind]||0)+1;
-  if(selected.length===BATCH_SIZE)break;
+  const signature=[profile.category,...['yes','weakYes','no'].map(x=>profile[x].join(','))].join('|');
+  if(candidateSignatures.has(signature)){indistinguishable++;continue;}
+  candidateSignatures.add(signature);candidateNames.add(key);
+  candidateProfiles.push({profile,kind:option.group.kind,groupId:option.groupId});
  }
- if(!progressed)throw new Error('Only '+selected.length+' unique nonbaseline candidates from catalogue');
- index++;
 }
+if(candidateProfiles.length<BATCH_SIZE)throw new Error('Insufficient distinct factual candidate profiles '+candidateProfiles.length);
+
+// Bitsets let us consider all 1775 existing targets when comparing proposed
+// answers. Unknown values do not count as factual contradictions.
+const WORDS=Math.ceil(baseline.questions.length/32);
+function bitsForProfile(profile){
+ const yes=new Uint32Array(WORDS),known=new Uint32Array(WORDS);
+ for(const key of [...profile.yes,...profile.weakYes,...profile.no]){
+  const q=pamTraitIndex[key],slot=q>>>5,bit=1<<(q&31);known[slot]|=bit;
+ }
+ for(const key of [...profile.yes,...profile.weakYes]){
+  const q=pamTraitIndex[key];yes[q>>>5]|=1<<(q&31);
+ }
+ for(let q=0;q<4;q++){
+  const bit=1<<q;known[0]|=bit;
+  if(['animal','vegetable','mineral','other'][q]===profile.category)yes[0]|=bit;
+ }
+ return{yes,known};
+}
+function popcount(v){
+ v-=(v>>>1)&0x55555555;
+ v=(v&0x33333333)+((v>>>2)&0x33333333);
+ return (((v+(v>>>4))&0x0f0f0f0f)*0x01010101)>>>24;
+}
+function distance(a,b){
+ let n=0;
+ for(let w=0;w<WORDS;w++)n+=popcount((a.yes[w]^b.yes[w])&a.known[w]&b.known[w]);
+ return n;
+}
+const existing=Array.from({length:baseline.targets.length},(_,t)=>{
+ const yes=new Uint32Array(WORDS),known=new Uint32Array(WORDS);
+ for(let q=0;q<baseline.questions.length;q++){
+  const i=q*baseline.targets.length+t,bit=1<<(q&31),slot=q>>>5;
+  if(baseline.knownMask[i])known[slot]|=bit;
+  if(baseline.weights[i]&1)yes[slot]|=bit;
+ }
+ return{yes,known};
+});
+for(const candidate of candidateProfiles){
+ candidate.bits=bitsForProfile(candidate.profile);
+ let nearest=Infinity;
+ for(const prior of existing){
+  const d=distance(candidate.bits,prior);
+  if(d<nearest)nearest=d;
+  if(nearest===0)break;
+ }
+ candidate.baselineDistance=nearest;
+ candidate.selectionDistance=Infinity;
+}
+const selected=[],byGroup={},picked=[];
+while(selected.length<BATCH_SIZE){
+ let best=null,bestScore=-Infinity;
+ for(const candidate of candidateProfiles){
+  if(candidate.picked)continue;
+  const count=byGroup[candidate.kind]||0;
+  // Spread across concept domains, so the game does not acquire 200 nearly
+  // identical animals or foods. Enforce meaningful distance from prior targets.
+  const score=candidate.baselineDistance*3+Math.min(10,candidate.selectionDistance)*2
+    -Math.max(0,count-22)*0.45 +Math.min(4,candidate.profile.yes.length)*0.05;
+  if(score>bestScore){bestScore=score;best=candidate;}
+ }
+ if(!best)throw new Error('Could not assemble 500 candidates');
+ best.picked=true;selected.push(best.profile);picked.push(best);
+ byGroup[best.kind]=(byGroup[best.kind]||0)+1;
+ for(const candidate of candidateProfiles){
+  if(candidate.picked)continue;
+  const d=distance(candidate.bits,best.bits);
+  if(d<candidate.selectionDistance)candidate.selectionDistance=d;
+ }
+}
+console.log('PAM_500_SELECTION='+JSON.stringify({
+ sourceCandidates:candidateProfiles.length,
+ minimumBaselineDistance:Math.min(...picked.map(p=>p.baselineDistance)),
+ medianBaselineDistance:[...picked.map(p=>p.baselineDistance)].sort((a,b)=>a-b)[250],
+ minPeerDistance:Math.min(...picked.slice(1).map(p=>p.selectionDistance)),
+ comparedToAllExisting:baseline.targets.length
+}));
 const doc={version:1,count:BATCH_SIZE,source:'Curated, deterministic Pam 500 expansion catalogue',profiles:selected};
 await writeFile(targetPath,JSON.stringify(doc,null,2)+'\n');
 const mean=key=>Math.round(selected.reduce((n,p)=>n+p[key].length,0)/selected.length);
