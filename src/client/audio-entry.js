@@ -8,6 +8,7 @@ import "./intro-welcome.js";
 import "./audio-shell-recovery.js";
 import "./endgame-fix.js";
 import "./mom-review-hook.js";
+import "./mode-persistence.js";
 import "./connections/native-platform.js";
 import "./connections/selection-polish.js";
 import "./odd-one-in-review-log.js";
