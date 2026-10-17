@@ -27,7 +27,8 @@ async function capture(page,mode,scenario,step,notes=""){
   const issues=await page.evaluate(()=>{
     const w=document.documentElement.clientWidth;
     const visible=el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none"&&!el.closest("[hidden],[inert]");};
-    const els=[...document.querySelectorAll('button,a,input,textarea,[role="button"]')].filter(visible);
+    const openDialog=document.querySelector('dialog[open]');
+    const els=[...document.querySelectorAll('button,a,input,textarea,[role="button"]')].filter(e=>visible(e)&&(!openDialog||openDialog.contains(e)));
     const offscreen=els.filter(e=>{const r=e.getBoundingClientRect();return r.left < -2||r.right>w+2}).map(e=>e.id||e.textContent?.trim().slice(0,28)).slice(0,12);
     const overlaps=[];
     for(let i=0;i<els.length;i++)for(let j=i+1;j<els.length;j++){
@@ -116,16 +117,17 @@ async function odd(page,tier){
   await capture(page,"odd-one-in","tier-"+tier,"board");
   for(let n=0;n<4;n++)await page.locator(".conn-tile").nth(n).click();
   await capture(page,"odd-one-in","tier-"+tier,"four-selected");
-  await page.getByRole("button",{name:"Submit"}).click();
+  await page.locator(".conn-check").click();
   await capture(page,"odd-one-in","tier-"+tier,"submitted");
   // No test-only puzzle solution exposure: do not falsely label this as solved.
-  if(await page.getByRole("button",{name:"Deselect all"}).isEnabled())await page.getByRole("button",{name:"Deselect all"}).click();
+  if(await page.getByRole("button",{name:"Clear picks"}).isEnabled())await page.getByRole("button",{name:"Clear picks"}).click();
   await capture(page,"odd-one-in","tier-"+tier,"after-selection");
 }
 async function together(page){
   await capture(page,"together","entry","home");
   await page.locator("#createFamily").click();
   await capture(page,"together","entry","name-dialog");
+  await page.locator("#nameInput").waitFor({state:"visible",timeout:2500}).catch(()=>{throw Error("Room creation needs a functioning local API/database; name dialog did not appear");});
   await page.locator("#nameInput").fill("Audit Host");
   await page.locator('dialog button[type="submit"]').click();
   await page.locator("#joinCode").waitFor({timeout:7000});
