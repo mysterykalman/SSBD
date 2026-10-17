@@ -8,10 +8,14 @@ const baseline=await loadPam1775Model(loadPamClassicModel);
 const expanded=await loadPamExpandedModel(loadPamClassicModel);
 const count=expanded.targets.length;
 const batchPresent=existsSync('data/pam20q/quality/quality-500.json');
+const approved=batchPresent&&process.env.PAM_ALLOW_UNREVIEWED_500!=='1'
+  ?(await import('node:fs/promises')).readFile('data/pam20q/quality/quality-500.json','utf8').then(s=>JSON.parse(s).review_status==='approved')
+  :Promise.resolve(false);
+const enabled=batchPresent&&(process.env.PAM_ALLOW_UNREVIEWED_500==='1'||await approved);
 
 test('500-target expansion never modifies existing 1775 target names or answer cells',()=>{
   assert.deepEqual(expanded.targets.slice(0,1775),baseline.targets);
-  assert.equal(count,batchPresent?2275:1775);
+  assert.equal(count,enabled?2275:1775);
   assert.equal(expanded.weights.length,156*count);
   assert.equal(expanded.knownMask.length,156*count);
   for(let q=0;q<156;q++)for(let t=0;t<1775;t++){
@@ -22,5 +26,5 @@ test('500-target expansion never modifies existing 1775 target names or answer c
 
 test('all targets are unique and the 500 batch is explicitly gated',()=>{
   assert.equal(new Set(expanded.targets.map(x=>x.toLowerCase())).size,count);
-  assert.equal(expanded.newQualityCount||0,batchPresent?500:0);
+  assert.equal(expanded.newQualityCount||0,enabled?500:0);
 });
