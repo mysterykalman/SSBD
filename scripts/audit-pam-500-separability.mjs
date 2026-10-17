@@ -61,6 +61,54 @@ const report={
 };
 await mkdir('.dev-data/pam-500',{recursive:true});
 await writeFile('.dev-data/pam-500/separability-report.json',JSON.stringify(report,null,2)+'\n');
+
+// The review queue identifies the unanswered question cells with the greatest
+// potential to separate collided targets. It NEVER infers a factual answer:
+// a reviewer must decide whether any proposed yes/no is actually true.
+const reviewQueue=[],reviewCsv=[
+ ['target','category','ambiguous_peers','question_index','question','known_yes_peers','known_no_peers','example_yes_peer','example_no_peer']
+];
+for(let t=B;t<N;t++){
+ const peers=[];
+ for(let j=B;j<N;j++){
+  if(j===t)continue;
+  if(categories.findIndex((_,q)=>yes(q,t))!==categories.findIndex((_,q)=>yes(q,j)))continue;
+  if(compare(t,j).contradictions===0)peers.push(j);
+ }
+ if(!peers.length)continue;
+ const opportunities=[];
+ for(let q=4;q<F;q++){
+  if(known(q,t))continue;
+  const yesPeers=peers.filter(j=>known(q,j)&&yes(q,j));
+  const noPeers=peers.filter(j=>known(q,j)&&!yes(q,j));
+  const opportunity=Math.max(yesPeers.length,noPeers.length);
+  if(opportunity===0)continue;
+  opportunities.push({
+   questionIndex:q,question:baseline.questions[q],potentialPeers:opportunity,
+   knownYesPeers:yesPeers.length,knownNoPeers:noPeers.length,
+   exampleYes:yesPeers.length?expanded.targets[yesPeers[0]]:null,
+   exampleNo:noPeers.length?expanded.targets[noPeers[0]]:null
+  });
+ }
+ opportunities.sort((a,b)=>b.potentialPeers-a.potentialPeers||a.questionIndex-b.questionIndex);
+ const top=opportunities.slice(0,8);
+ const category=categories.find((_,q)=>yes(q,t));
+ reviewQueue.push({target:expanded.targets[t],category,ambiguousPeers:peers.length,reviewQuestions:top});
+ for(const rec of top)reviewCsv.push([
+  expanded.targets[t],category,String(peers.length),String(rec.questionIndex),rec.question,
+  String(rec.knownYesPeers),String(rec.knownNoPeers),rec.exampleYes||'',rec.exampleNo||''
+ ]);
+}
+reviewQueue.sort((a,b)=>b.ambiguousPeers-a.ambiguousPeers||a.target.localeCompare(b.target));
+const csvCell=s=>'"'+String(s).replaceAll('"','""')+'"';
+await writeFile('.dev-data/pam-500/review-queue.csv',reviewCsv.map(row=>row.map(csvCell).join(',')).join('\n')+'\n');
+await writeFile('.dev-data/pam-500/review-queue.json',JSON.stringify({count:reviewQueue.length,records:reviewQueue},null,2)+'\n');
+console.log('PAM_500_REVIEW_QUEUE='+JSON.stringify({
+ affectedTargets:reviewQueue.length,reviewPrompts:reviewCsv.length-1,
+ highestPriority:reviewQueue.slice(0,6).map(x=>({name:x.target,ambiguousPeers:x.ambiguousPeers,
+  topQuestion:x.reviewQuestions[0]?.question||null}))
+}));
+
 console.log('PAM_500_SEPARABILITY='+JSON.stringify(report.summary));
 console.log('PAM_500_WORST='+JSON.stringify(report.worst.slice(0,25)));
 if(process.argv.includes('--strict')){
