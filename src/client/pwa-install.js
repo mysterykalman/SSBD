@@ -1,69 +1,194 @@
-// Shared install button for Home and Pam. User-initiated only; no autoplay or game-state changes.
+// Standalone SSBD installation and Pam's update notice. Browser install prompts are user initiated.
 (() => {
   "use strict";
-  const apple = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const android = () => /Android/i.test(navigator.userAgent);
-  const mac = () => /Macintosh|Mac OS X/i.test(navigator.userAgent) && !apple();
-  const standalone = () => navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
-  let installEvent, button, sheet;
-  function guide() {
-    if (apple()) return ["Make yourself at home.", "On iPhone or iPad, install SSBD using Safari. It will open in its own app window.", ["Open this page in Safari.", "Tap Share (the square with the upward arrow).", "Choose Add to Home Screen, then tap Add."]];
-    if (android()) return ["SSBD has a new home.", "Install SSBD from Chrome to get its own icon and app window.", ["Open this page in Chrome.", "Open the three-dot browser menu.", "Choose Install app or Add to Home screen, then confirm."]];
-    if (mac()) return ["Give SSBD a spot in your Dock.", "On a Mac, SSBD opens separately from your browser.", ["In Safari, choose File, then Add to Dock.", "Confirm the name and select Add.", "Launch SSBD from the Dock, Spotlight or Applications."]];
-    return ["Take SSBD with you.", "Install SSBD as an app on your device.", ["Open your browser's Install app option in its address bar or menu.", "Choose Install and confirm.", "Launch SSBD from your app launcher."]];
-  }
-  function showGuide() {
+  const isAppleMobile = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isAndroid = () => /Android/i.test(navigator.userAgent);
+  const isMac = () => /Macintosh|Mac OS X/i.test(navigator.userAgent) && !isAppleMobile();
+  const isPam = () => /^\/mom(?:-mode)?(?:\/|$)/.test(location.pathname);
+  const isStandalone = () => navigator.standalone === true ||
+    matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches;
+  const COPY = {
+    apple: {
+      title: "Make yourself at home.",
+      description: "Put SSBD on your Home Screen. It opens as its own app, with no browser address bar.",
+      steps: ["Open SSBD in Safari and tap Share (the square with an upward arrow).",
+        "Tap Add to Home Screen. If you see Open as Web App, leave it switched on.",
+        "Tap Add, then launch SSBD from its new icon."],
+      note: "On newer iOS and iPadOS versions, other browsers may also offer Add to Home Screen in their Share menu."
+    },
+    android: {
+      title: "A new home for SSBD.",
+      description: "Give SSBD its own app icon and a window without Chrome's address bar.",
+      steps: ["Open SSBD in Chrome on your Android phone or tablet.",
+        "Open Chrome's three-dot menu and select Install app or Add to Home screen.",
+        "Confirm, then launch SSBD from your apps."],
+      note: "The exact wording varies by browser and Android device."
+    },
+    mac: {
+      title: "Make room in the Dock.",
+      description: "SSBD can live in Applications and open separately from Safari.",
+      steps: ["Open SSBD in Safari, then choose File > Add to Dock.",
+        "Keep the SSBD name and select Add.",
+        "Launch it from your Dock, Spotlight, or Applications."],
+      note: "In Chrome, use the Install icon in the address bar or the browser's menu."
+    },
+    other: {
+      title: "Take SSBD with you.",
+      description: "If your browser supports web apps, SSBD can launch in its own window.",
+      steps: ["Find Install app in your browser's address bar or menu.",
+        "Confirm the installation.",
+        "Open SSBD from your app launcher."],
+      note: "Some browsers only offer a website shortcut; Chrome and Safari provide the best app experience."
+    }
+  };
+  const currentCopy = () => COPY[isAppleMobile() ? "apple" : isAndroid() ? "android" : isMac() ? "mac" : "other"];
+  let promptEvent = null;
+  let installButton = null;
+  let sheet = null;
+  let updateNotice = null;
+
+  function renderInstructions() {
     if (!sheet) {
       sheet = document.createElement("dialog");
       sheet.className = "pwa-install-dialog";
-      sheet.setAttribute("aria-labelledby","pwaInstallTitle");
-      sheet.innerHTML = '<div class="pwa-install-panel"><p class="pwa-install-eyebrow">YOUR GAME. YOUR DEVICE.</p><h2 id="pwaInstallTitle"></h2><p class="pwa-install-lead"></p><ol class="pwa-install-steps"></ol><p class="pwa-install-foot">Open SSBD from its installed icon for the standalone experience.</p><button type="button" class="pwa-install-close">Got it</button></div>';
+      sheet.setAttribute("aria-labelledby", "pwaInstallTitle");
+      sheet.setAttribute("aria-describedby", "pwaInstallLead");
+      sheet.innerHTML = `<div class="pwa-install-panel">
+        <p class="pwa-install-eyebrow">YOUR GAME. YOUR DEVICE.</p>
+        <h2 id="pwaInstallTitle" tabindex="-1"></h2>
+        <p id="pwaInstallLead" class="pwa-install-lead"></p>
+        <ol class="pwa-install-steps"></ol>
+        <p class="pwa-install-foot"></p>
+        <button type="button" class="btn primary big pwa-install-close">Got it</button>
+      </div>`;
       sheet.querySelector("button").addEventListener("click", () => sheet.close());
-      sheet.addEventListener("click", e => { if (e.target === sheet) sheet.close(); });
+      sheet.addEventListener("click", event => { if (event.target === sheet) sheet.close(); });
+      sheet.addEventListener("close", () => {
+        if (installButton && !isStandalone() && installButton.isConnected) installButton.focus({preventScroll: true});
+      });
       document.body.append(sheet);
     }
-    const [title, lead, steps] = guide();
-    sheet.querySelector("h2").textContent = title;
-    sheet.querySelector(".pwa-install-lead").textContent = lead;
-    sheet.querySelector("ol").replaceChildren(...steps.map(value => {
-      const li = document.createElement("li"); li.textContent = value; return li;
+    const copy = currentCopy();
+    sheet.querySelector("h2").textContent = copy.title;
+    sheet.querySelector(".pwa-install-lead").textContent = copy.description;
+    sheet.querySelector("ol").replaceChildren(...copy.steps.map(step => {
+      const item = document.createElement("li");
+      item.textContent = step;
+      return item;
     }));
-    sheet.querySelector(".pwa-install-foot").textContent = mac()
-      ? "Chrome users can use the Install icon in the address bar or the browser menu."
-      : "Open SSBD from its installed icon for the standalone experience.";
-    sheet.showModal();
+    sheet.querySelector(".pwa-install-foot").textContent = copy.note;
+    if (!sheet.open) sheet.showModal();
+    sheet.querySelector("h2").focus({preventScroll: true});
   }
-  async function beginInstall() {
-    if (installEvent) {
-      const event = installEvent;
-      installEvent = null;
+
+  async function requestInstall() {
+    if (promptEvent) {
+      const event = promptEvent;
+      promptEvent = null;
       try {
         await event.prompt();
-        if ((await event.userChoice)?.outcome === "accepted") return;
-      } catch { /* Expired native prompt falls back to browser instructions. */ }
+        const response = await event.userChoice;
+        if (response?.outcome === "accepted") return;
+      } catch { /* Expired native prompts fall back to manual guidance. */ }
     }
-    showGuide();
+    renderInstructions();
   }
-  function sync() {
-    if (button) button.hidden = standalone();
-    if (standalone() && sheet?.open) sheet.close();
+
+  function updateInstallState() {
+    if (installButton) installButton.hidden = isStandalone();
+    if (isStandalone() && sheet?.open) sheet.close();
   }
+
+  function showUpdate(registration) {
+    if (updateNotice?.isConnected) return;
+    updateNotice = document.createElement("div");
+    updateNotice.id = "pwaUpdateNotice";
+    updateNotice.className = "pwa-update-notice";
+    updateNotice.setAttribute("role", "status");
+    const label = document.createElement("span");
+    label.textContent = "Pam has a new version ready.";
+    const apply = document.createElement("button");
+    apply.type = "button";
+    apply.className = "btn small primary";
+    apply.textContent = "Update";
+    apply.addEventListener("click", async () => {
+      apply.disabled = true;
+      const waiting = registration.waiting;
+      if (waiting) {
+        const changed = new Promise(resolve => navigator.serviceWorker.addEventListener("controllerchange", resolve, {once: true}));
+        waiting.postMessage({type: "SKIP_WAITING"});
+        await Promise.race([changed, new Promise(resolve => setTimeout(resolve, 3500))]);
+      }
+      location.reload();
+    });
+    const dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.className = "pwa-update-dismiss";
+    dismiss.setAttribute("aria-label", "Dismiss update notice");
+    dismiss.textContent = "×";
+    dismiss.addEventListener("click", () => updateNotice.remove());
+    updateNotice.append(label, apply, dismiss);
+    document.body.append(updateNotice);
+  }
+
+  function registerPamWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    const version = document.querySelector('meta[name="app-version"]')?.content;
+    navigator.serviceWorker.register("/sw.js", {updateViaCache: "none"}).then(registration => {
+      const check = async () => {
+        if (!version || !navigator.serviceWorker.controller) return;
+        try {
+          const keys = (await caches.keys()).filter(key => key.startsWith("shell-"));
+          if (keys.length && !keys.includes(`shell-${version}`)) showUpdate(registration);
+          else if (registration.waiting) showUpdate(registration);
+        } catch { /* Private modes may restrict Cache Storage. */ }
+      };
+      navigator.serviceWorker.addEventListener("controllerchange", check);
+      registration.addEventListener("updatefound", () => {
+        registration.installing?.addEventListener("statechange", check);
+      });
+      const update = () => registration.update().catch(() => {});
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && navigator.onLine !== false) update();
+      });
+      window.addEventListener("online", update);
+      setInterval(() => {
+        if (!document.hidden && navigator.onLine !== false) update();
+      }, 30 * 60 * 1000);
+      check();
+    }).catch(() => {});
+  }
+
   function init() {
     const actions = document.querySelector(".top-actions");
-    if (!actions || document.querySelector("#pwaInstallBtn")) return;
-    button = document.createElement("button");
-    Object.assign(button,{id:"pwaInstallBtn",type:"button",className:"pwa-install-trigger",textContent:"Install app"});
-    button.setAttribute("aria-label","Install Same Same but Different");
-    button.addEventListener("click",beginInstall);
-    actions.insertBefore(button,actions.querySelector("#profileBtn") || null);
-    sync();
-    // Pam runs in a separate HTML document that does not register the main game's service worker.
-    if (/^\/mom(?:-mode)?(?:\/|$)/.test(location.pathname) && "serviceWorker" in navigator)
-      navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"}).catch(() => {});
+    if (!actions || document.getElementById("pwaInstallBtn")) return;
+    installButton = document.createElement("button");
+    installButton.id = "pwaInstallBtn";
+    installButton.type = "button";
+    installButton.className = "pwa-install-trigger";
+    installButton.setAttribute("aria-label", "Install Same Same but Different as an app");
+    installButton.title = "Install SSBD";
+    installButton.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="18" height="18">
+      <path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="pwa-install-long">Install app</span><span class="pwa-install-short">Install</span>`;
+    installButton.addEventListener("click", requestInstall);
+    actions.insertBefore(installButton, actions.querySelector("#profileBtn") || null);
+    updateInstallState();
+    if (isPam()) registerPamWorker();
   }
-  addEventListener("beforeinstallprompt",event => {event.preventDefault();installEvent = event;});
-  addEventListener("appinstalled",() => {installEvent = null;sync();});
-  matchMedia("(display-mode: standalone)").addEventListener?.("change",sync);
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",init,{once:true});
+
+  window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    promptEvent = event;
+  });
+  window.addEventListener("appinstalled", () => {
+    promptEvent = null;
+    updateInstallState();
+    if (sheet?.open) sheet.close();
+  });
+  matchMedia("(display-mode: standalone)").addEventListener?.("change", updateInstallState);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, {once: true});
   else init();
 })();

@@ -86,9 +86,15 @@ const oddOneInStatic = Object.fromEntries(await Promise.all(ODD_ONE_IN_STATIC.ma
 const ICONS = ["favicon.ico", "favicon-32.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const icons = Object.fromEntries(await Promise.all(ICONS.map(async name => [`/${name}`, await readFile(src(`client/icons/${name}`))])));
 const manifest = await readFile(src("client/manifest.webmanifest"), "utf8");
+const audioVersionHash = createHash("sha256");
+for (const name of ["intro.mp3", "game-music.mp3"]) {
+  audioVersionHash.update(await readFile(src(`client/audio/${name}`)));
+}
+const audioVersion = audioVersionHash.digest("hex").slice(0, 10);
 const pwaInstallJs = await readFile(src("client/pwa-install.js"), "utf8");
 const pwaInstallCss = await readFile(src("client/pwa-install.css"), "utf8");
 const momLaunch = await readFile(src("client/mom-mode/entry-fix.js"), "utf8");
+const momResume = await readFile(src("client/mom-mode/resume-persistence.js"), "utf8");
 
 const runtimeKnowledgePath = src("client/mom-mode/knowledge.runtime.json");
 const hasMomRuntime = existsSync(runtimeKnowledgePath);
@@ -155,12 +161,14 @@ momHash.update(momPage);
 for (const body of Object.values(momJs)) momHash.update(body);
 for (const body of Object.values(momCss)) momHash.update(body);
 for (const body of Object.values(momStatic)) momHash.update(body);
-const version = hash(appJs + audioJs + css + html + momLaunch + cloudSync + account + logo + iconHash.digest("hex") + momHash.digest("hex") + manifest + pwaInstallJs + pwaInstallCss + swTemplate);
+const version = hash(audioVersion + appJs + audioJs + css + html + momLaunch + momResume + cloudSync + account + logo + iconHash.digest("hex") + momHash.digest("hex") + manifest + pwaInstallJs + pwaInstallCss + swTemplate);
 const page = html.replace("%APP_VERSION%", version);
+const versionedMomPage = momPage.replace("%APP_VERSION%", version);
 const momPrecache = ["/mom/", ...momAssetUrls, "/mom/pam.webp", "/mom/pam-v2.webp"];
 const swSource = swTemplate
   .replace("%VERSION%", version)
-  .replace("%PRECACHE%", JSON.stringify(["/", appName, audioName, cssName, "/logo.webp", "/mom-launch.js", "/cloud-sync.js", "/account.js", "/favicon.ico", "/favicon-32.png", "/manifest.webmanifest", "/pwa-install.js", "/pwa-install.css", ...FELT, ...Object.keys(fonts), ...Object.keys(oddOneInStatic), ...momPrecache]));
+  .replace("%AUDIO_VERSION%", audioVersion)
+  .replace("%PRECACHE%", JSON.stringify(["/", appName, audioName, cssName, "/logo.webp", "/mom-launch.js", "/mom-resume.js", "/audio-settings.js", "/cloud-sync.js", "/account.js", "/favicon.ico", "/favicon-32.png", "/manifest.webmanifest", "/pwa-install.js", "/pwa-install.css", ...FELT, ...Object.keys(fonts), ...Object.keys(oddOneInStatic), ...momPrecache]));
 if (swSource.includes("%")) throw new Error("sw.js still has an unfilled %PLACEHOLDER%");
 const sw = (await build({stdin: {contents: swSource, loader: "js"}, minify: true, write: false, format: "iife"})).outputFiles[0].text;
 
@@ -181,8 +189,8 @@ const files = {
   "/manifest.webmanifest": manifest,
   "/pwa-install.js": pwaInstallJs,
   "/pwa-install.css": pwaInstallCss,
-  "/mom/index.html": momPage,
-  "/mom-mode/index.html": momPage,
+  "/mom/index.html": versionedMomPage,
+  "/mom-mode/index.html": versionedMomPage,
   ...momAssetFiles
 };
 for (const [name, body] of Object.entries(momStatic)) {

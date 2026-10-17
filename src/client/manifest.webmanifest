@@ -26,5 +26,20 @@
     "games",
     "entertainment"
   ],
-  "lang": "en"
+  "lang": "en",
+  "shortcuts": [
+    {
+      "name": "Don't Tell Me",
+      "short_name": "Pam",
+      "description": "Challenge Pam in 20 questions.",
+      "url": "/mom/",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
 }
