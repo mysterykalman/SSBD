@@ -8,4 +8,5 @@ import "./connections/native-platform.js";
 import "./connections/selection-polish.js";
 import "./odd-one-in-audio-bridge.js";
 import "./odd-one-in-label-fix.js";
+import "./odd-one-in-home-nav-fix.js";
 import "./homepage-grid-refinement.js";
