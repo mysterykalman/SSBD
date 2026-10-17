@@ -91,7 +91,12 @@ window.addEventListener("pageshow", handleVisibility);
 window.addEventListener("popstate", () => setTimeout(enforcePagePolicy, 0));
 
 if (document.body) {
-  new MutationObserver(enforcePagePolicy).observe(document.body, {attributes: true, attributeFilter: ["class"]});
+  new MutationObserver(enforcePagePolicy).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"],
+    childList: true,
+    subtree: true
+  });
 }
 
 // The intro dialog is built later in the same entry bundle. Attempt autoplay on the
