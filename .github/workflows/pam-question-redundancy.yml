@@ -12,6 +12,7 @@ on:
       - 'scripts/audit-pam-question-redundancy.mjs'
       - 'scripts/audit-pam-question-relations.mjs'
       - 'scripts/experiment-pam-question-selection.mjs'
+      - 'scripts/run-pam-selector-fine-tuning.mjs'
       - 'test/pam-*.test.mjs'
       - '.github/workflows/pam-question-redundancy.yml'
   workflow_dispatch:
@@ -19,7 +20,7 @@ on:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,6 +32,8 @@ jobs:
         run: node scripts/audit-pam-question-relations.mjs
       - name: Compare redundancy-aware selector variants
         run: node scripts/experiment-pam-question-selection.mjs
+      - name: Fine tune safe redundancy-aware selector
+        run: node scripts/run-pam-selector-fine-tuning.mjs
       - name: Upload redundancy audit
         if: always()
         uses: actions/upload-artifact@v4
