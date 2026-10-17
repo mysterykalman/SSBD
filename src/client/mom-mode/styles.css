@@ -146,3 +146,16 @@ main:focus { outline: none; }
   .q-dots i { width: 100%; min-width: 0; }
   .game-top { gap: 8px; }
 }
+
+/* Pam uses six answer choices; ensure the actual six-button layout is responsive. */
+.answers.six { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.answers.six .answer { min-width: 0; width: 100%; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .answers.six { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .answers.six .answer { min-height: 56px; font-size: clamp(.8rem, 3.2vw, 1rem); padding-inline: 6px; }
+}
+@media (max-width: 360px) {
+  .answers.six { gap: 7px; }
+  .pam-card { padding-inline: 12px; }
+  .pam-play { padding-inline: 10px; }
+}
