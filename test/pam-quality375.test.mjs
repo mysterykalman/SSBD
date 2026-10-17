@@ -48,7 +48,9 @@ function categoryFor(modelWeights,modelTargets,targetIndex){
   }
   return best;
 }
-function oracleAnswer(modelWeights,modelTargets,q,targetIndex){
+function oracleAnswer(modelWeights,modelTargets,q,targetIndex,mask=null){
+  const offset=q*modelTargets.length+targetIndex;
+  if(mask && mask[offset]!==1)return 'unknown';
   const state=stateAt(modelWeights,modelTargets,q,targetIndex);
   return (state&1)?((state&2)?'yes':'probably'):((state&2)?'no':'doubtful');
 }
@@ -66,7 +68,7 @@ function playWith(engine,modelWeights,modelTargets,targetIndex,{noise=false}={})
   let softenedYes=false,softenedNo=false;
   for(let guard=0;guard<50;guard++){
     if(next.kind==='question'){
-      let answer=oracleAnswer(modelWeights,modelTargets,next.index,targetIndex);
+      let answer=oracleAnswer(modelWeights,modelTargets,next.index,targetIndex,modelTargets.length===1775?knownMask:null);
       if(noise&&answer==='yes'&&!softenedYes){answer='probably';softenedYes=true;}
       else if(noise&&answer==='no'&&!softenedNo){answer='doubtful';softenedNo=true;}
       next=engine.answer(game,next,answer);
