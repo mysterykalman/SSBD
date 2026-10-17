@@ -10,6 +10,7 @@ const out = "artifacts/responsive-audit";
 await fs.mkdir(out, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const findings = [];
+const gameplay = [];
 try {
   for (const route of routes) {
     for (const width of widths) {
