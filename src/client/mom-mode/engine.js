@@ -9,7 +9,10 @@ if(![1200,1400,1775].includes(N)||F!==156)throw new Error(`Unexpected Pam classi
 function decodeBase64(value){const raw=atob(value);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 const WEIGHTS=decodeBase64(model.weightsB64);
 if(WEIGHTS.length!==N*F)throw new Error(`Pam classic matrix has ${WEIGHTS.length} cells; expected ${N*F}`);
+const KNOWN=model.knownMaskB64?decodeBase64(model.knownMaskB64):null;
+if(KNOWN&&KNOWN.length!==N*F)throw new Error(`Pam known mask has ${KNOWN.length} cells; expected ${N*F}`);
 const stateAt=(q,t)=>WEIGHTS[q*N+t];
+const knownAt=(q,t)=>!KNOWN||KNOWN[q*N+t]===1;
 const polarity=s=>s&1;
 const strength=s=>(s&2)?2:1;
 const CATEGORY_Q=Object.freeze({animal:0,vegetable:1,mineral:2,other:3});
@@ -30,12 +33,16 @@ function confidence(game){
 function top(game){const i=rank(game,1)[0]??0;return{index:i,p:confidence(game),object:{name:TARGETS[i]}};}
 function applyPolarity(game,q,wantYes,responseStrength){
  for(let t=0;t<N;t++){
+  if(!knownAt(q,t))continue;
   const state=stateAt(q,t),match=polarity(state)===(wantYes?1:0);
   game.scores[t]+=(match?1:-1)*strength(state)*responseStrength;
  }
 }
 function applyMaybe(game,q){
- for(let t=0;t<N;t++)game.scores[t]+=(strength(stateAt(q,t))===1?0.5:-0.25);
+ for(let t=0;t<N;t++){
+  if(!knownAt(q,t))continue;
+  game.scores[t]+=(strength(stateAt(q,t))===1?0.5:-0.25);
+ }
 }
 function setCategory(game,value){
  if(game.turn!==0)throw new Error('Category can only be chosen at the start of a Pam round');
@@ -72,12 +79,19 @@ function bestQuestion(game){
  const pool=candidatePool(game);let bestQ=null,bestScore=-Infinity;
  for(let q=4;q<F;q++){
   if(game.asked.has(q))continue;
-  let yes=0,no=0,strong=0;
-  for(const t of pool){const s=stateAt(q,t),w=Math.exp((game.scores[t]-game.scores[pool[0]])/3);if(polarity(s))yes+=w;else no+=w;if(strength(s)===2)strong+=w;}
-  const total=yes+no;if(total<=0)continue;
-  const balance=1-Math.abs(yes-no)/total;
-  const certainty=strong/total;
-  const score=balance*0.9+certainty*0.1;
+  let yes=0,no=0,strong=0,knownTotal=0;
+  for(const t of pool){
+   if(!knownAt(q,t))continue;
+   const s=stateAt(q,t),w=Math.exp((game.scores[t]-game.scores[pool[0]])/3);
+   knownTotal+=w;
+   if(polarity(s))yes+=w;else no+=w;
+   if(strength(s)===2)strong+=w;
+  }
+  if(knownTotal<=0)continue;
+  const balance=1-Math.abs(yes-no)/knownTotal;
+  const certainty=strong/knownTotal;
+  const coverage=knownTotal/pool.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[pool[0]])/3),0);
+  const score=(balance*0.9+certainty*0.1)*coverage;
   if(score>bestScore+1e-12){bestScore=score;bestQ=q;}
  }
  return bestQ==null?null:{index:bestQ,gain:bestScore};
