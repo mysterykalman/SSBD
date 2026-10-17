@@ -1,4 +1,5 @@
-import {writeFile} from 'node:fs/promises';
+import {writeFile,readFile} from 'node:fs/promises';
+import {gunzipSync} from 'node:zlib';
 import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {loadPamClassicModel,pamTraitIndex} from './pam-classic-model.mjs';
@@ -92,6 +93,10 @@ function compile(group,entry){
 }
 
 const baseline=await loadPam1775Model(loadPamClassicModel);
+const referenceParts=await Promise.all([1,2,3,4].map(i=>readFile(join(root,'data','pam20q','quality',`quality-375.part${i}`),'utf8')));
+const referenceDoc=JSON.parse(gunzipSync(Buffer.from(referenceParts.join('').trim(),'base64')).toString('utf8'));
+const avg=(key)=>Math.round(referenceDoc.profiles.reduce((n,p)=>n+(p[key]?.length||0),0)/referenceDoc.profiles.length);
+console.log('PAM_375_REFERENCE_DENSITY='+JSON.stringify({yes:avg('yes'),no:avg('no'),weakYes:avg('weakYes'),example:referenceDoc.profiles[0]}));
 const previous=new Set(baseline.targets.map(x=>x.trim().toLowerCase()));
 const options=[];
 let skipped=0;
