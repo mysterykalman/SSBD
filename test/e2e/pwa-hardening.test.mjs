@@ -94,15 +94,23 @@ test("offline music cache honours 206 byte ranges and never includes API respons
     return Boolean(key && await (await caches.open(key)).match("/audio/intro.mp3"));
   },null,{timeout:30000});
   await context.setOffline(true);
+  const observations = [];
+  page.on("response", response => {
+    if (response.url().includes("offline-range-check")) observations.push({
+      status:response.status(),fromServiceWorker:response.fromServiceWorker(),requestHeaders:response.request().headers()
+    });
+  });
   const result=await page.evaluate(async()=>{
-    const response=await fetch("/audio/intro.mp3?offline-range-check=1",{headers:{Range:"bytes=64-191"},cache:"no-store"});
-    return {status:response.status,range:response.headers.get("Content-Range"),
+    const request=new Request("/audio/intro.mp3?offline-range-check=1",{headers:{Range:"bytes=64-191"},cache:"no-store"});
+    const requestRange=request.headers.get("range");
+    const response=await fetch(request);
+    return {status:response.status,requestRange,range:response.headers.get("Content-Range"),
       length:(await response.arrayBuffer()).byteLength,
       cached:(await caches.keys()).filter(key=>key.startsWith("audio-")).length,
       apiCached:(await Promise.all((await caches.keys()).map(async key =>
         (await (await caches.open(key)).keys()).some(req=>new URL(req.url).pathname.startsWith("/api/"))))).some(Boolean)};
   });
-  assert.equal(result.status,206);
+  assert.equal(result.status,206,JSON.stringify({result,observations}));
   assert.equal(result.length,128);
   assert.match(result.range,/^bytes 64-191\/\d+$/);
   assert.equal(result.cached,1);
