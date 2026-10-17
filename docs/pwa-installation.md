@@ -44,3 +44,9 @@ regression coverage but is not a physical-device certification.
 
 Pam's audio settings script and resume helper are also explicitly precached to avoid
 relying on incidental browser HTTP-cache hits during a cold offline launch.
+
+The automated CI additionally uses Playwright WebKit to check Safari-like responsive
+install controls on iPhone/iPad orientation profiles and a desktop Mac profile.
+This is not a substitute for testing the real OS-level Add to Dock/Home Screen flow.
+On macOS, Safari web apps have separate website data; locally saved Solo rounds
+started in Safari may not automatically transfer into the installed app.
