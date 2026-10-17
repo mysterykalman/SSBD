@@ -10,6 +10,7 @@ on:
       - 'scripts/pam-classic-model.mjs'
       - 'scripts/pam-quality-model.mjs'
       - 'scripts/audit-pam-question-redundancy.mjs'
+      - 'scripts/audit-pam-question-relations.mjs'
       - 'test/pam-*.test.mjs'
       - '.github/workflows/pam-question-redundancy.yml'
   workflow_dispatch:
@@ -25,6 +26,8 @@ jobs:
           node-version: 24
       - name: Audit Pam question redundancy across all 1775 targets
         run: node scripts/audit-pam-question-redundancy.mjs
+      - name: Audit Pam semantic and logical question relations
+        run: node scripts/audit-pam-question-relations.mjs
       - name: Upload redundancy audit
         if: always()
         uses: actions/upload-artifact@v4
