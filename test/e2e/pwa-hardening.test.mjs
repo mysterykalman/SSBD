@@ -158,3 +158,21 @@ test("Pam survives a cold offline reopen after clearing HTTP browser cache", asy
   assert.deepEqual(errors, [], "Pam's critical scripts should not need network access");
   await context.close();
 });
+
+test("short landscape screens avoid a desktop-height homepage hero", async () => {
+  for (const {width,height} of [{width:844,height:390},{width:932,height:430},{width:1024,height:500}]) {
+    const context = await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true});
+    const page = await context.newPage();
+    await page.goto(server.url);
+    await page.evaluate(() => document.querySelectorAll("dialog[open]").forEach(dialog => dialog.close()));
+    const dims = await page.evaluate(() => ({
+      header: document.querySelector(".topbar").getBoundingClientRect().height,
+      hero: document.querySelector("main > .hero").getBoundingClientRect().top,
+      overflow: document.documentElement.scrollWidth > innerWidth
+    }));
+    assert.ok(dims.header < 160, width+"x"+height+" tall header: "+dims.header);
+    assert.ok(dims.hero < 220, width+"x"+height+" hero not reachable");
+    assert.equal(dims.overflow,false,width+"x"+height+" horizontal overflow");
+    await context.close();
+  }
+});

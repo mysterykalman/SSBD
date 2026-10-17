@@ -647,3 +647,37 @@ main:focus { outline: none; }
   .board .end-actions { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: stretch; }
   .board .end-actions .btn { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; white-space: normal; }
 }
+
+/* A landscape phone can be 844px wide but only 390px tall. Treat short landscape
+   screens as compact game windows, not a full-height desktop hero. */
+@media (orientation: landscape) and (min-width: 820px) and (max-height: 540px) {
+  body:has(main > .hero) .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    grid-template: none;
+    padding-bottom: 8px;
+    min-height: 0;
+  }
+  body:has(main > .hero) .brand,
+  body:has(main > .hero) .top-actions {
+    grid-column: auto;
+    grid-row: auto;
+    margin-top: 0;
+  }
+  body:has(main > .hero) .brand-logo {
+    width: 132px;
+    max-height: 106px;
+    object-fit: contain;
+  }
+  body:has(main > .hero) main > .hero {
+    width: min(100%, 680px);
+    max-width: none;
+    min-height: 0;
+    margin: 0 auto 18px;
+    padding: 0;
+    align-content: start;
+    justify-items: start;
+    text-align: left;
+  }
+}
