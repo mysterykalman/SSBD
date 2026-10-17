@@ -27,7 +27,7 @@ const T={
  herb:{category:'vegetable',yes:'eat organic green leaves goodSmell',no:'mammal fish electronic mechanical'},
  nut:{category:'vegetable',yes:'eat tasty organic smallBread',no:'mammal fish feathers electronic mechanical'},
  plant:{category:'vegetable',yes:'alive living organic green leaves roots',no:'mammal fish feathers electronic mechanical'},
- tree:{category:'vegetable',yes:'alive living organic green leaves roots tall',no:'mammal fish feathers electronic mechanical'},
+ tree:{category:'vegetable',yes:'alive living organic green leaves roots tall trunk',no:'mammal fish feathers electronic mechanical'},
  meal:{category:'other',yes:'eat tasty buy',weakYes:'delivered goodSmell',no:'living mammal fish insect electronic'},
  dessert:{category:'other',yes:'eat tasty buy sweet',weakYes:'delivered goodSmell',no:'living mammal fish insect electronic'},
  snack:{category:'other',yes:'eat tasty buy hold',weakYes:'delivered goodSmell',no:'living mammal fish insect electronic'},
@@ -201,6 +201,41 @@ for(const candidate of candidateProfiles){
  candidate.baselineDistance=nearest;
  candidate.selectionDistance=Infinity;
 }
+
+// Approximate how many entries in this source catalogue have at least one
+// mutually known, opposite-polarity answer against every other selected entry.
+// This is a conservative separability yardstick, NOT a claim that an overlap
+// makes self-play mathematically impossible (unknown answers can still matter).
+const conflicts=candidateProfiles.map(()=>[]);
+for(let a=0;a<candidateProfiles.length;a++)for(let b=a+1;b<candidateProfiles.length;b++){
+ if(distance(candidateProfiles[a].bits,candidateProfiles[b].bits)===0){
+  conflicts[a].push(b);conflicts[b].push(a);
+ }
+}
+const orders=[0,1,2,3].map(mode=>candidateProfiles.map((_,i)=>i).sort((a,b)=>{
+ const ca=candidateProfiles[a],cb=candidateProfiles[b];
+ if(mode===0)return conflicts[a].length-conflicts[b].length||cb.baselineDistance-ca.baselineDistance||a-b;
+ if(mode===1)return cb.baselineDistance-ca.baselineDistance||conflicts[a].length-conflicts[b].length||a-b;
+ if(mode===2)return conflicts[a].length-conflicts[b].length||cb.profile.yes.length-ca.profile.yes.length||a-b;
+ return cb.profile.yes.length-ca.profile.yes.length||conflicts[a].length-conflicts[b].length||a-b;
+}));
+const independentCounts=orders.map(order=>{
+ const chosen=new Set(),blocked=new Set();
+ for(const i of order){
+  if(blocked.has(i))continue;
+  chosen.add(i);blocked.add(i);
+  for(const neighbor of conflicts[i])blocked.add(neighbor);
+ }
+ return chosen.size;
+});
+console.log('PAM_500_CANDIDATE_DISTINGUISHABILITY='+JSON.stringify({
+ sourceCandidates:candidateProfiles.length,
+ pairwiseNoContradictionPairs:conflicts.reduce((n,c)=>n+c.length,0)/2,
+ heuristicNonOverlappingSubsetSizes:independentCounts,
+ bestHeuristicSubset:Math.max(...independentCounts),
+ requiresFactualEnrichmentFor500:Math.max(...independentCounts)<BATCH_SIZE
+}));
+
 const selected=[],byGroup={},picked=[];
 while(selected.length<BATCH_SIZE){
  let best=null,bestScore=-Infinity;
