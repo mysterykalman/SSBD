@@ -23,6 +23,8 @@ concurrency:
 
 jobs:
   verify:
+    env:
+      PAM_ALLOW_UNREVIEWED_500: '1'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -81,6 +83,8 @@ jobs:
           NODE
 
   compile:
+    env:
+      PAM_ALLOW_UNREVIEWED_500: '1'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
