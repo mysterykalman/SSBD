@@ -13,4 +13,5 @@ import "./odd-one-in-audio-bridge.js";
 import "./odd-one-in-label-fix.js";
 import "./odd-one-in-home-nav-fix.js";
 import "./homepage-grid-refinement.js";
+import "./odd-one-in-blue-cta.js";
 import "./extra-mode-review.js";
