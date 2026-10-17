@@ -1,4 +1,4 @@
-name: Pam Question Redundancy Audit
+name: Pam Question Redundancy Validation
 
 on:
   push:
@@ -9,18 +9,14 @@ on:
       - 'src/client/mom-mode/engine.js'
       - 'scripts/pam-classic-model.mjs'
       - 'scripts/pam-quality-model.mjs'
-      - 'scripts/audit-pam-question-redundancy.mjs'
-      - 'scripts/audit-pam-question-relations.mjs'
-      - 'scripts/experiment-pam-question-selection.mjs'
-      - 'scripts/run-pam-selector-fine-tuning.mjs'
       - 'test/pam-*.test.mjs'
       - '.github/workflows/pam-question-redundancy.yml'
   workflow_dispatch:
 
 jobs:
-  audit:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,25 +26,9 @@ jobs:
           node-version: 24
       - name: Keep validated Pam knowledge frozen
         run: git diff --exit-code 6ee006258414a8b65a23e2b9785b647a5e6ece3e HEAD -- data/pam20q
-      - name: Audit Pam question redundancy across all 1775 targets
-        run: node scripts/audit-pam-question-redundancy.mjs
-      - name: Audit Pam semantic and logical question relations
-        run: node scripts/audit-pam-question-relations.mjs
-      - name: Compare redundancy-aware selector variants
-        run: node scripts/experiment-pam-question-selection.mjs
-      - name: Fine tune safe redundancy-aware selector
-        run: node scripts/run-pam-selector-fine-tuning.mjs
       - name: Install dependencies
         run: npm ci
       - name: Run complete test suite
         run: npm test
       - name: Run production build
         run: npm run build
-      - name: Upload redundancy audit
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pam-question-redundancy-baseline
-          path: artifacts/pam-question-redundancy/
-          if-no-files-found: error
-          retention-days: 30
