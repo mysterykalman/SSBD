@@ -1,0 +1,17 @@
+.pwa-install-trigger{appearance:none;border:2px solid #29251f;border-radius:999px;background:#fff4df;color:#29251f;padding:9px 14px;min-height:42px;font:800 .85rem/1.1 "Nunito",system-ui,sans-serif;cursor:pointer;white-space:nowrap;box-shadow:2px 3px 0 #29251f}
+.pwa-install-trigger:hover{transform:translateY(-1px)}.pwa-install-trigger:active{transform:translate(1px,2px);box-shadow:1px 1px 0 #29251f}
+.pwa-install-trigger:focus-visible,.pwa-install-close:focus-visible{outline:3px solid #277d9e;outline-offset:3px}
+.pwa-install-trigger[hidden]{display:none!important}
+.pwa-install-dialog{border:0;padding:0;width:min(440px,calc(100% - 28px));max-height:calc(100dvh - 32px);overflow:auto;border-radius:22px;background:#fff4df;color:#29251f;box-shadow:6px 7px 0 #29251f}
+.pwa-install-dialog::backdrop{background:rgba(23,22,24,.66)}
+.pwa-install-panel{padding:clamp(22px,5vw,35px)}
+.pwa-install-eyebrow{font:900 .72rem/1.4 "Nunito",system-ui,sans-serif;letter-spacing:.12em;margin:0 0 12px}
+.pwa-install-panel h2{margin:0 0 13px;font:900 clamp(1.65rem,5vw,2.15rem)/1.13 "Nunito",system-ui,sans-serif}
+.pwa-install-lead{font:700 1rem/1.5 "Nunito",system-ui,sans-serif;margin:0 0 20px}
+.pwa-install-steps{padding-left:23px;margin:0 0 18px}
+.pwa-install-steps li{padding-left:4px;margin-bottom:12px;font:700 .95rem/1.45 "Nunito",system-ui,sans-serif}
+.pwa-install-steps li::marker{font-weight:900}
+.pwa-install-foot{font:700 .85rem/1.45 "Nunito",system-ui,sans-serif;opacity:.75;margin:0 0 20px}
+.pwa-install-close{min-height:48px;width:100%;border:2px solid #29251f;border-radius:13px;background:#f9c64e;color:#29251f;box-shadow:2px 3px 0 #29251f;font:900 1rem/1.2 "Nunito",system-ui,sans-serif;cursor:pointer}
+@media(max-width:420px){.pwa-install-trigger{font-size:.76rem;padding-inline:10px;min-height:39px}}
+@media(prefers-reduced-motion:reduce){.pwa-install-trigger:hover,.pwa-install-trigger:active{transform:none}}
