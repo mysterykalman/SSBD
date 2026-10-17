@@ -166,7 +166,21 @@ function installAudioFeltStyles() {
     }
     .audio-felt-panel.muted .audio-setting-tile,
     .audio-felt-panel.muted .audio-master-felt { filter: saturate(.45); opacity: .72; }
+    /* The percentage badge stays inside its felt tile on all viewport sizes. */
+    .audio-felt-panel .audio-channel.audio-setting-tile { position: relative; }
+    .audio-felt-panel .audio-value { transform: none; position: static; align-self: start; }
     @media (max-width: 560px) {
+      .audio-felt-panel .audio-channel.audio-setting-tile {
+        aspect-ratio: auto;
+        min-height: 190px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "label value" "hint hint" "range range";
+        align-content: center;
+        gap: 8px 10px;
+      }
+      .audio-felt-panel .audio-value { min-width: 62px; padding-inline: 8px; }
+      .audio-felt-panel .audio-range-row { min-width: 0; margin-top: 2px; }
+
       .audio-felt-panel .audio-channel.audio-setting-tile {
         min-height: 0;
         padding: 18px 28px 24px;
