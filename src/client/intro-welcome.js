@@ -149,6 +149,17 @@ function installStyles() {
       #audioIntroWelcome .intro-actions .btn { min-width: 0; width: 100%; padding-inline: 18px; }
     }
 
+    /* Short landscape screens must keep both welcome actions reachable. */
+    @media (orientation: landscape) and (max-height: 420px) {
+      #audioIntroWelcome { max-height: calc(100dvh - 12px); overflow-y: auto; }
+      #audioIntroWelcome .intro-shell { gap: 4px; padding: 2px 8px; }
+      #audioIntroWelcome .intro-bubble { --felt-h: 145px; min-height: 145px; padding: 14px 24px 26px !important; gap: 2px; }
+      #audioIntroWelcome .intro-logo { width: min(116px, 22vw); }
+      #audioIntroWelcome .intro-note { font-size: .78rem; }
+      #audioIntroWelcome .intro-actions { gap: 8px; }
+      #audioIntroWelcome .intro-actions .btn { min-height: 40px; }
+    }
+
     /* Final positioning overrides */
     #audioIntroWelcome .intro-kicker {
       position: relative !important;
