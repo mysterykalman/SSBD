@@ -74,7 +74,12 @@ window.addEventListener("popstate", schedule);
 window.addEventListener("hashchange", schedule);
 window.addEventListener("pageshow", schedule);
 document.addEventListener("visibilitychange", schedule);
-document.addEventListener("click", () => setTimeout(schedule, 0), true);
+document.addEventListener("click", event => {
+  const target = event.target instanceof Element ? event.target : null;
+  const control = target?.closest('[data-mode="connections"] .mode-actions .btn, .conn-tier');
+  if (control) window.SSBDAudio?.startGameMusic?.();
+  setTimeout(schedule, 0);
+}, true);
 
 window.__SSBDAudioTrackedMedia = {
   get gameMusic() { return gameMusic; },
