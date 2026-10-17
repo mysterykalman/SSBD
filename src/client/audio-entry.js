@@ -1,9 +1,11 @@
 import "./hide-player-diagnostics.js";
 import "./solo-beta-removal.js";
 import "./audio-behavior-policy.js";
+import "./audio-media-policy.js";
 import "./audio-settings.js";
 import "./audio-ui-polish.js";
 import "./intro-welcome.js";
+import "./audio-shell-recovery.js";
 import "./endgame-fix.js";
 import "./mom-review-hook.js";
 import "./connections/native-platform.js";
