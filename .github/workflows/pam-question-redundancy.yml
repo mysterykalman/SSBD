@@ -20,12 +20,16 @@ on:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Keep validated Pam knowledge frozen
+        run: git diff --exit-code 6ee006258414a8b65a23e2b9785b647a5e6ece3e HEAD -- data/pam20q
       - name: Audit Pam question redundancy across all 1775 targets
         run: node scripts/audit-pam-question-redundancy.mjs
       - name: Audit Pam semantic and logical question relations
@@ -34,6 +38,12 @@ jobs:
         run: node scripts/experiment-pam-question-selection.mjs
       - name: Fine tune safe redundancy-aware selector
         run: node scripts/run-pam-selector-fine-tuning.mjs
+      - name: Install dependencies
+        run: npm ci
+      - name: Run complete test suite
+        run: npm test
+      - name: Run production build
+        run: npm run build
       - name: Upload redundancy audit
         if: always()
         uses: actions/upload-artifact@v4
