@@ -7,6 +7,16 @@ const INTRO_SESSION_KEY = "ssbd.audio.intro-played.v1";
 const GAME_MUSIC_SESSION_KEY = "ssbd.audio.game-music-started.v1";
 const DEFAULTS = Object.freeze({enabled: true, music: 0.42, game: 0.7});
 const INTRO_URL = "/audio/intro.mp3";
+// Save music for offline installed play only after a track successfully starts;
+// browsers' data-saver preference is respected, and no API traffic is cached.
+function cachePlayedMusic(path) {
+  const installed = navigator.standalone === true ||
+    window.matchMedia?.("(display-mode: standalone)").matches;
+  if (!installed || navigator.connection?.saveData || !navigator.serviceWorker) return;
+  navigator.serviceWorker.ready.then(registration => {
+    (navigator.serviceWorker.controller || registration.active)?.postMessage({type: "CACHE_AUDIO", path});
+  }).catch(() => {});
+}
 const GAME_MUSIC_URL = "/audio/game-music.mp3";
 const INTRO_FADE_MS = 300;
 const INTRO_END_TRIM_SECONDS = 0.5;
@@ -157,6 +167,7 @@ async function playIntroOnce({force = false} = {}) {
 
   try {
     await audio.play();
+    cachePlayedMusic(INTRO_URL);
     ramp(audio, 0, musicTarget(), INTRO_FADE_MS);
     return true;
   } catch {
@@ -222,7 +233,7 @@ function startGameMusic() {
   audio.__ssbdFading = false;
   audio.volume = 0;
   audio.addEventListener("error", () => {}, {once: true});
-  audio.play().then(() => ramp(audio, 0, musicTarget(), GAME_MUSIC_FADE_MS)).catch(armMusicUnlock);
+  audio.play().then(() => { cachePlayedMusic(GAME_MUSIC_URL); return ramp(audio, 0, musicTarget(), GAME_MUSIC_FADE_MS); }).catch(armMusicUnlock);
 }
 
 function pauseBackgroundMusic() {

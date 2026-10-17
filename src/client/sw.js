@@ -18,6 +18,47 @@
 const VERSION = "%VERSION%";
 const CACHE = `shell-${VERSION}`;
 const PRECACHE = %PRECACHE%;
+const AUDIO_CACHE = "audio-%AUDIO_VERSION%";
+const AUDIO_FILES = new Set(["/audio/intro.mp3", "/audio/game-music.mp3"]);
+
+// Music is cached only after the installed app plays it; an ordinary site visit
+// never downloads megabytes of audio just to enable offline Solo.
+async function cacheAudioFile(path) {
+  if (!AUDIO_FILES.has(path)) return;
+  const cache = await caches.open(AUDIO_CACHE);
+  if (await cache.match(path)) return;
+  try {
+    const response = await fetch(new Request(path, {cache: "reload"}));
+    if (response.ok && response.status === 200) await cache.put(path, response);
+  } catch { /* Audio is optional; denied storage or network must never break play. */ }
+}
+
+// HTMLMediaElement usually sends Range requests. A full cached MP3 must respond
+// with the requested bytes or Safari/Chromium can refuse to play offline.
+async function serveAudio(request, path) {
+  const cached = await (await caches.open(AUDIO_CACHE)).match(path);
+  if (!cached) return fetch(request);
+  const header = request.headers.get("range");
+  if (!header) return cached;
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(header.trim());
+  if (!match || (!match[1] && !match[2])) return cached;
+  const buffer = await cached.arrayBuffer();
+  const size = buffer.byteLength;
+  const suffix = !match[1];
+  const start = suffix ? Math.max(0, size - Number(match[2])) : Number(match[1]);
+  const end = suffix ? size - 1 : match[2] ? Math.min(size - 1, Number(match[2])) : size - 1;
+  if (start >= size || start > end) {
+    return new Response(null, {status: 416, headers: {"Content-Range": `bytes */${size}`}});
+  }
+  const body = buffer.slice(start, end + 1);
+  const headers = new Headers(cached.headers);
+  headers.set("Content-Type", "audio/mpeg");
+  headers.set("Accept-Ranges", "bytes");
+  headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
+  headers.set("Content-Length", String(body.byteLength));
+  return new Response(body, {status: 206, headers});
+}
+
 // In-app pages that are all the same shell (kept in step with vercel.json's rewrites).
 const SHELL_ROUTES = /^\/(?:$|index\.html$|games(?:\/|$)|join(?:\/|$)|solo(?:\/|$)|review$)/;
 const MOM_ROUTES = /^\/(?:mom|mom-mode)(?:\/|$)/;
@@ -36,12 +77,15 @@ self.addEventListener("install", event => {
 // Older pages ask a waiting worker to take over; this one never waits, but still answers.
 self.addEventListener("message", event => {
   if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+  if (event.data?.type === "CACHE_AUDIO" && AUDIO_FILES.has(event.data.path)) {
+    event.waitUntil(cacheAudioFile(event.data.path));
+  }
 });
 
 self.addEventListener("activate", event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(key => key.startsWith("shell-") && key !== CACHE).map(key => caches.delete(key)));
+    await Promise.all(keys.filter(key => (key.startsWith("shell-") && key !== CACHE) || (key.startsWith("audio-") && key !== AUDIO_CACHE)).map(key => caches.delete(key)));
     await self.clients.claim();
   })());
 });
@@ -74,6 +118,10 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   // API calls and other origins are never touched (and so never cached).
   if (url.origin !== location.origin || url.pathname.startsWith("/api/") || url.pathname === "/api") return;
+  if (AUDIO_FILES.has(url.pathname)) {
+    event.respondWith(serveAudio(request, url.pathname));
+    return;
+  }
   if (request.mode === "navigate") {
     if (SHELL_ROUTES.test(url.pathname)) event.respondWith(navigate(request, "/"));
     else if (MOM_ROUTES.test(url.pathname)) event.respondWith(navigate(request, "/mom/"));
