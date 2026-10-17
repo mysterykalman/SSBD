@@ -128,7 +128,7 @@ body.conn-mode-open #app > :not(.conn-page){display:none!important}
   .conn-playing .conn-playmat{gap:9px;padding:9px;border-radius:17px}
   .conn-playing .conn-board{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .conn-playing .conn-tile{--felt-h:clamp(58px,17vw,72px);min-width:0;padding:6px 3px 12px;font-size:clamp(.61rem,2.55vw,.83rem);line-height:1.1;overflow-wrap:anywhere;hyphens:auto}
-  .conn-playing .conn-tile[aria-pressed=true]{transform:translateY(-3px) scale(1.015);outline:3px solid var(--teal);outline-offset:0;filter:brightness(1.07) saturate(1.12)}
+  .conn-playing .conn-tile[aria-pressed=true]{transform:none;outline:3px solid var(--teal);outline-offset:0;filter:brightness(1.07) saturate(1.12)}
   .conn-playing .conn-board.ready .conn-tile[aria-pressed=true]{outline-color:var(--orange)}
   .conn-playing .conn-board-note{display:none}
   .conn-playing .conn-actions{grid-template-columns:1fr 1fr 1.3fr;gap:6px}
