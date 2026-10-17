@@ -5,18 +5,20 @@ import {readFile} from 'node:fs/promises';
 import {gunzipSync} from 'node:zlib';
 import {pathToFileURL} from 'node:url';
 import {loadPamClassicModel} from '../scripts/pam-classic-model.mjs';
+import {loadPam1775Model} from '../scripts/pam-quality-model.mjs';
 
 const ROOT=process.cwd();
 const parts=await Promise.all([1,2,3,4].map(i=>readFile(path.join(ROOT,'data','pam20q','quality',`quality-375.part${i}`),'utf8')));
 const qualityDoc=JSON.parse(gunzipSync(Buffer.from(parts.join('').trim(),'base64')).toString('utf8'));
-const model=await loadPamClassicModel();
-const {questions,targets,weights,baseTargetCount,extensionCount}=model;
+const model=await loadPam1775Model(loadPamClassicModel);
+const {questions,targets,weights,baseTargetCount,extensionCount,qualityCount}=model;
 
 assert.equal(qualityDoc.count,375);
 assert.equal(qualityDoc.profiles.length,375);
 assert.equal(targets.length,1775);
 assert.equal(baseTargetCount,1200);
-assert.equal(extensionCount,575);
+assert.equal(extensionCount,200);
+assert.equal(qualityCount,375);
 
 const QUALITY_COUNT=375;
 const LEGACY_COUNT=1400;
