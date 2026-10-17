@@ -102,6 +102,50 @@ body.conn-mode-open #app > :not(.conn-page){display:none!important}
   .conn-launch-stage{height:172px;padding:0 10px;gap:7px}.conn-launch-standee.standee{width:66px;height:82px;margin-bottom:24px;border-radius:35px 35px 13px 13px}.conn-launch-standee::after{--felt-h:25px;width:68px;min-width:68px;max-width:68px;bottom:-12px;font-size:.44rem;padding-inline:4px}
 }
 @media(max-width:390px){.conn-tier{grid-template-columns:96px minmax(0,1fr)}.conn-tier-copy .picker{display:none}.conn-launch-stage{padding-inline:5px;gap:4px}.conn-launch-standee.standee{width:60px;height:76px}.conn-launch-standee::after{width:62px;min-width:62px;max-width:62px;font-size:.4rem;letter-spacing:.02em}}
+
+/* Mobile gameplay: the four-column puzzle takes priority over page furniture.
+   Picker, desktop layout and puzzle logic remain unchanged. */
+@media(max-width:520px){
+  .conn-page.conn-playing{gap:10px;padding:0 0 28px}
+  .conn-playing .conn-mode-heading{display:none}
+  .conn-playing .conn-host{grid-template-columns:64px minmax(0,1fr);gap:10px;padding:9px 11px;border-radius:18px;align-items:center}
+  .conn-playing .conn-host-profile{align-self:center;gap:2px}
+  .conn-playing .conn-host-standee.standee{width:52px;height:62px;margin-bottom:9px;border-radius:26px 26px 10px 10px}
+  .conn-playing .conn-host-meta{display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
+  .conn-playing .conn-host-name{font-size:.76rem}
+  .conn-playing .conn-host-difficulty{--felt-h:22px;font-size:.52rem}
+  .conn-playing .conn-host-state{display:none}
+  .conn-playing .conn-host-talk{min-width:0}
+  .conn-playing .conn-bubble{--felt-h:65px;min-height:54px;padding:8px 12px;font-size:.82rem;line-height:1.25}
+  .conn-playing .conn-status{min-height:27px;justify-content:center}
+  .conn-playing .conn-mistakes{gap:6px}
+  .conn-playing .conn-mistakes>span:first-child{font-size:.77rem}
+  .conn-playing .conn-mistake.badge{width:23px;height:23px;font-size:.67rem}
+  .conn-playing .conn-solved{gap:5px}
+  .conn-playing .conn-group{padding:7px 10px 9px;gap:2px;border-radius:13px}
+  .conn-playing .conn-group .pill{--felt-h:22px;font-size:.66rem}
+  .conn-playing .conn-group-words{font-size:.72rem;line-height:1.2;overflow-wrap:anywhere}
+  .conn-playing .conn-playmat{gap:9px;padding:9px;border-radius:17px}
+  .conn-playing .conn-board{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .conn-playing .conn-tile{--felt-h:clamp(58px,17vw,72px);min-width:0;padding:6px 3px 12px;font-size:clamp(.61rem,2.55vw,.83rem);line-height:1.1;overflow-wrap:anywhere;hyphens:auto}
+  .conn-playing .conn-tile[aria-pressed=true]{transform:translateY(-3px) scale(1.015);outline:3px solid var(--teal);outline-offset:0;filter:brightness(1.07) saturate(1.12)}
+  .conn-playing .conn-board.ready .conn-tile[aria-pressed=true]{outline-color:var(--orange)}
+  .conn-playing .conn-board-note{display:none}
+  .conn-playing .conn-actions{grid-template-columns:1fr 1fr 1.3fr;gap:6px}
+  .conn-playing .conn-actions .btn{min-width:0;min-height:44px;padding:8px 4px;font-size:.78rem;line-height:1.12;white-space:normal}
+  .conn-playing .conn-check{grid-column:auto;grid-row:auto}
+}
+@media(max-width:350px){
+  .conn-playing .conn-playmat{padding:6px}
+  .conn-playing .conn-board{gap:4px}
+  .conn-playing .conn-tile{font-size:.61rem;padding-inline:2px}
+  .conn-playing .conn-actions .btn{font-size:.72rem}
+}
+@media(max-height:700px) and (max-width:520px){
+  .conn-playing .conn-host{padding-block:6px}
+  .conn-playing .conn-playmat{gap:6px}
+  .conn-playing .conn-tile{--felt-h:54px}
+}
 @media(prefers-reduced-motion:reduce){.conn-tier,.conn-tile,.conn-group-new,.conn-shake{animation:none!important;transition:none!important}}
 `;
 
@@ -223,6 +267,7 @@ function renderPicker() {
   clearTimeout(hostTimer);
   game = null;
   attempts = 0;
+  page.classList.remove("conn-playing");
   page.replaceChildren(
     pageHeading("Who are we getting involved in this?", "Sixteen words. Four groups. Pick someone who thinks they can make sense of it."),
     el("div", {class: "conn-picker"}, el("div", {class: "conn-tiers"}, ...Object.values(ODD_ONE_IN_CHARACTERS).map(characterButton))));
@@ -361,11 +406,13 @@ function renderGame(shake = false) {
   const lost = game.mistakes >= 4 && !won;
 
   if (won || lost) {
+    page.classList.remove("conn-playing");
     page.replaceChildren(pageHeading("Odd One In", won ? "Four groups. No loose ends." : "Four mistakes. Time to see what the puzzle was hiding."), hostPanel(), endState(won));
     window.scrollTo({top: 0, behavior: "smooth"});
     return;
   }
 
+  page.classList.add("conn-playing");
   const board = el("div", {class: `conn-board ${game.selected.size === 4 ? "ready" : ""} ${shake ? "conn-shake" : ""}`, "aria-label": "Word board"},
     ...game.board.map(word => el("button", {class: "tile conn-tile", type: "button", "aria-pressed": game.selected.has(word) ? "true" : "false", onclick: () => chooseWord(word)}, word)));
 
