@@ -37,6 +37,13 @@ const standaloneAudio = standaloneSources
   .join("\n;\n");
 await writeFile(join(root, "dist", "audio-settings.js"), standaloneAudio, "utf8");
 
+// Stable helper used by the separate Don’t Tell Me document to reconstruct an
+// unfinished local round when the Home dashboard sends the player back to it.
+await copyFile(
+  join(clientDir, "mom-mode", "resume-persistence.js"),
+  join(root, "dist", "mom-resume.js")
+);
+
 // The tactile audio settings panel uses this existing felt patch as its surface.
 const feltDir = join(root, "dist", "felt");
 await mkdir(feltDir, {recursive: true});
