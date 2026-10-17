@@ -141,12 +141,13 @@ try{
     await run("pam","complete-round",viewport,pam);
     for(const character of ["gary","milo"])await run("solo",character,viewport,p=>solo(p,character));
     for(let tier=1;tier<=4;tier++)await run("odd-one-in","tier-"+tier,viewport,p=>odd(p,tier));
-    await run("together","room-creation",viewport,together);
+    // Play Together needs hosted services; deliberately excluded from localhost audit.
     console.log(`Completed ${viewport.join("x")}`);
   }
 }finally{await browser.close();}
 await fs.writeFile(path.join(out,"report.json"),JSON.stringify({origin,sha,generatedAt:new Date().toISOString(),results:report},null,2));
 const totals=Object.fromEntries(["PASS","FAIL","BLOCKED"].map(k=>[k,report.filter(x=>x.status===k).length]));
+totals.SKIPPED_HOSTED=1;
 const escape=s=>String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll('"',"&quot;");
 const cards=report.map(x=>`<article class="${x.status.toLowerCase()}"><h3>${escape(x.mode)} / ${escape(x.scenario)} / ${escape(x.step||"error")}</h3><p>${escape(x.status)} · ${x.viewport.width}×${x.viewport.height}</p>${x.screenshot?`<a href="${escape(x.screenshot)}"><img loading="lazy" src="${escape(x.screenshot)}"></a>`:""}<pre>${escape(JSON.stringify(x.issues||x.error||x.errors||{},null,2))}</pre></article>`).join("");
 await fs.writeFile(path.join(out,"index.html"),`<!doctype html><html><meta charset="utf-8"><title>SSBD full audit</title><style>body{font:15px system-ui;background:#eee;padding:24px}main{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}article{background:white;padding:12px;border-radius:12px;min-width:0}img{width:100%}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}.fail{border:3px solid #c44}.blocked{border:3px solid #d90}</style><h1>SSBD audit ${escape(sha)}</h1><p>${escape(JSON.stringify(totals))}</p><main>${cards}</main></html>`);
