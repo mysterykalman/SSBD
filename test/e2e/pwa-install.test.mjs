@@ -2,7 +2,7 @@ import {test,before,after} from "node:test";
 import assert from "node:assert/strict";
 import {launch,startServer} from "./helpers.mjs";
 let server,browser;
-before(async()=>{server=await startServer();browser=await launch();});
+before(async()=>{server=await startServer({database:false});browser=await launch();});
 after(async()=>{await browser?.close();await server?.stop();});
 test("standalone manifest and Apple installation metadata exist in both shells",async()=>{
  const context=await browser.newContext();const page=await context.newPage();
@@ -19,6 +19,7 @@ test("standalone manifest and Apple installation metadata exist in both shells",
 });
 test("install instructions open, close and support Escape",async()=>{
  const c=await browser.newContext();const p=await c.newPage();await p.goto(server.url);
+ await p.evaluate(() => document.querySelector("#audioIntroWelcome")?.close());
  await p.locator("#pwaInstallBtn").click();
  assert.equal(await p.locator(".pwa-install-dialog").isVisible(),true);
  await p.getByRole("button",{name:"Got it"}).click();
