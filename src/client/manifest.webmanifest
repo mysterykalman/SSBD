@@ -1,12 +1,12 @@
 {
   "id": "/",
   "name": "Same Same but Different",
-  "short_name": "Same Same",
+  "short_name": "SSBD",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#fff4df",
-  "theme_color": "#fff4df",
+  "background_color": "#f3e6d2",
+  "theme_color": "#f3e6d2",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -20,5 +20,11 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "description": "A ridiculous word game for people who think they know each other.",
+  "categories": [
+    "games",
+    "entertainment"
+  ],
+  "lang": "en"
 }

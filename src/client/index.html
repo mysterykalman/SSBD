@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#f3e6d2">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="SSBD"><meta name="mobile-web-app-capable" content="yes">
 <meta name="app-version" content="%APP_VERSION%">
 <title>Same Same but Different</title>
 <meta name="description" content="A ridiculous word game for people who think they know each other.">
@@ -21,7 +22,7 @@
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="%STYLES_CSS%">
+<link rel="stylesheet" href="%STYLES_CSS%"><link rel="stylesheet" href="/pwa-install.css">
 </head>
 <body>
 <a class="skip" href="#app">Skip to game</a>
@@ -41,7 +42,7 @@
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <dialog id="dialog" class="dialog"></dialog>
 <noscript><p class="boot">This game needs JavaScript turned on.</p></noscript>
-<script type="module" src="%APP_JS%"></script>
+<script src="/pwa-install.js" defer></script><script type="module" src="%APP_JS%"></script>
 <script type="module" src="%AUDIO_JS%"></script>
 <script type="module" src="/cloud-sync.js"></script>
 <script type="module" src="/account.js"></script>
