@@ -10,7 +10,7 @@ const generatedPath=join(momDir,'knowledge.generated.js');
 const stylesPath=join(momDir,'styles.css');
 const classicStylesPath=join(momDir,'classic.css');
 
-const [{questions,targets,weights,baseTargetCount,extensionCount,qualityCount,totalExtensionCount},previous,baseStyles,classicStyles]=await Promise.all([
+const [{questions,targets,weights,knownMask,baseTargetCount,extensionCount,qualityCount,totalExtensionCount},previous,baseStyles,classicStyles]=await Promise.all([
   loadPam1775Model(loadPamClassicModel),
   readFile(generatedPath,'utf8'),
   readFile(stylesPath,'utf8'),
@@ -23,8 +23,9 @@ if(baseTargetCount!==1200)throw new Error(`Expected 1200 base Pam targets, found
 if(extensionCount!==200)throw new Error(`Expected 200 first-wave Pam extension targets, found ${extensionCount}`);
 if(qualityCount!==375)throw new Error(`Expected 375 quality Pam targets, found ${qualityCount}`);
 if(weights.length!==questions.length*targets.length)throw new Error(`Pam weight matrix has ${weights.length} cells; expected ${questions.length*targets.length}`);
+if(knownMask.length!==weights.length)throw new Error(`Pam known mask has ${knownMask.length} cells; expected ${weights.length}`);
 
-const payload=`window.PAM_CLASSIC_MODEL=Object.freeze({questions:${JSON.stringify(questions)},targets:${JSON.stringify(targets)},weightsB64:${JSON.stringify(weights.toString('base64'))},layout:'question-major',states:4,baseTargets:${baseTargetCount},extensionTargets:${totalExtensionCount}});\n`;
+const payload=`window.PAM_CLASSIC_MODEL=Object.freeze({questions:${JSON.stringify(questions)},targets:${JSON.stringify(targets)},weightsB64:${JSON.stringify(weights.toString('base64'))},knownMaskB64:${JSON.stringify(knownMask.toString('base64'))},layout:'question-major',states:4,baseTargets:${baseTargetCount},extensionTargets:${totalExtensionCount}});\n`;
 try{
   await Promise.all([
     writeFile(generatedPath,payload,'utf8'),
