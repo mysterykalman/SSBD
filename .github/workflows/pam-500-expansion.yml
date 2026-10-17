@@ -1,0 +1,75 @@
+name: Pam 500 expansion validation
+on:
+  push:
+    branches:
+      - feature/pam-500-quality-expansion
+    paths:
+      - .github/workflows/pam-500-expansion.yml
+      - data/pam20q/quality/**
+      - scripts/generate-pam-500.mjs
+      - scripts/pam-quality-model.mjs
+      - scripts/build-pam-classic.mjs
+      - src/client/mom-mode/engine.js
+      - test/pam-500-expansion-*.test.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pam-500-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Rebuild exactly 500 curated profiles
+        run: node scripts/generate-pam-500.mjs
+      - name: Prove no original profile changed
+        run: node --test test/pam-500-expansion-integrity.test.mjs
+      - name: Simulate new targets and old baseline
+        run: node --test --test-concurrency=1 test/pam-500-expansion-gameplay.test.mjs
+      - name: Lint and type-check
+        run: npm run lint && npm run typecheck
+      - name: Run complete unit suite
+        run: npm test
+      - name: Compile production bundle
+        run: npm run build
+      - name: Verify Pam model shipped in production bundle
+        run: |
+          test -d dist/mom/assets
+          MODEL_ASSET="$(find dist/mom/assets -maxdepth 1 -type f -name 'knowledge.generated.*.js' -print -quit)"
+          test -n "$MODEL_ASSET"
+          grep -q 'PAM_CLASSIC_MODEL' "$MODEL_ASSET"
+          grep -q 'extensionTargets:1075' "$MODEL_ASSET"
+          node - <<'NODE'
+          const fs=require('fs');
+          const path=require('path');
+          const dir='dist/mom/assets';
+          const file=fs.readdirSync(dir).find(x=>/^knowledge\.generated\..*\.js$/.test(x));
+          if(!file)throw new Error('Pam model bundle missing');
+          const content=fs.readFileSync(path.join(dir,file),'utf8');
+          const count=(content.match(/"targets":\[/g)||[]).length;
+          if(count<1)throw new Error('Shipped Pam knowledge lacks targets');
+          console.log('PAM_SHIPPED_2275_MODEL=present');
+          NODE
+      - name: Commit reviewed expansion only after all validation succeeds
+        run: |
+          git config user.name "SSBD Pam Quality CI"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/pam20q/quality/quality-500.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: add validated 500 Pam knowledge profiles"
+            git push origin HEAD:feature/pam-500-quality-expansion
+          fi
