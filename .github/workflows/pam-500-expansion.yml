@@ -2,11 +2,12 @@ name: Pam 500 expansion validation
 on:
   push:
     branches:
-      - feature/pam-500-quality-expansion
+      - feature/pam-500-deep-dive
     paths:
       - .github/workflows/pam-500-expansion.yml
       - data/pam20q/quality/**
       - scripts/generate-pam-500.mjs
+      - scripts/audit-pam-500-separability.mjs
       - scripts/pam-quality-model.mjs
       - scripts/build-pam-classic.mjs
       - src/client/mom-mode/engine.js
@@ -14,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: pam-500-${{ github.ref }}
@@ -36,15 +37,16 @@ jobs:
         run: npm ci
       - name: Rebuild exactly 500 curated profiles
         run: node scripts/generate-pam-500.mjs
-      - name: Preserve 500 candidate profiles on feature branch (not production)
-        run: |
-          git config user.name "SSBD Pam Quality CI"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/pam20q/quality/quality-500.json
-          if ! git diff --cached --quiet; then
-            git commit -m "data: stage Pam 500 candidates for strict validation"
-            git push origin HEAD:feature/pam-500-quality-expansion
-          fi
+      - name: Audit candidate separability
+        run: node scripts/audit-pam-500-separability.mjs
+      - name: Publish the diagnostic dataset
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-500-separability
+          path: .dev-data/pam-500/separability-report.json
+          retention-days: 30
+          if-no-files-found: ignore
       - name: Prove no original profile changed
         run: node --test test/pam-500-expansion-integrity.test.mjs
       - name: Simulate new targets and old baseline
@@ -77,12 +79,3 @@ jobs:
           }
           console.log('PAM_SHIPPED_2275_MODEL=verified');
           NODE
-      - name: Commit reviewed expansion only after all validation succeeds
-        run: |
-          git config user.name "SSBD Pam Quality CI"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/pam20q/quality/quality-500.json
-          if ! git diff --cached --quiet; then
-            git commit -m "data: add validated 500 Pam knowledge profiles"
-            git push origin HEAD:feature/pam-500-quality-expansion
-          fi
