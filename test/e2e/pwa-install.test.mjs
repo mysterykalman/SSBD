@@ -47,3 +47,37 @@ test("offline app retains installation help without caching API",async()=>{
  await c.setOffline(true);await p.reload();await p.locator("#pwaInstallBtn").click();
  assert.equal(await p.locator(".pwa-install-dialog").isVisible(),true);await c.close();
 });
+
+test("native install event is used rather than showing manual instructions",async()=>{
+ const c=await browser.newContext();const p=await c.newPage();await p.goto(server.url);
+ await p.evaluate(()=>{
+   document.querySelector("#audioIntroWelcome")?.close();
+   const event=new Event("beforeinstallprompt",{cancelable:true});
+   event.prompt=async()=>{window.__pwaPromptWasUsed=true;};
+   event.userChoice=Promise.resolve({outcome:"accepted"});
+   window.dispatchEvent(event);
+ });
+ await p.locator("#pwaInstallBtn").click();
+ assert.equal(await p.evaluate(()=>window.__pwaPromptWasUsed),true);
+ assert.equal(await p.locator(".pwa-install-dialog").count(),0);
+ await c.close();
+});
+test("five device profiles receive correct guidance without horizontal overflow",async()=>{
+ const profiles=[
+  {name:"iPhone",ua:"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1",width:375,expected:/Safari/},
+  {name:"iPad",ua:"Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1",width:820,expected:/Safari/},
+  {name:"Android phone",ua:"Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/155.0.0.0 Mobile Safari/537.36",width:360,expected:/Chrome/},
+  {name:"Android tablet",ua:"Mozilla/5.0 (Linux; Android 15; Tablet) AppleWebKit/537.36 Chrome/155.0.0.0 Safari/537.36",width:800,expected:/Chrome/},
+  {name:"Mac",ua:"Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15",width:1280,expected:/Dock/}
+ ];
+ for(const profile of profiles){
+   const c=await browser.newContext({viewport:{width:profile.width,height:850},userAgent:profile.ua});
+   const p=await c.newPage();await p.goto(server.url);
+   await p.evaluate(()=>document.querySelector("#audioIntroWelcome")?.close());
+   await p.locator("#pwaInstallBtn").click();
+   assert.match(await p.locator(".pwa-install-panel").innerText(),profile.expected,profile.name);
+   const dimensions=await p.evaluate(()=>({inner:window.innerWidth,scroll:document.documentElement.scrollWidth}));
+   assert.ok(dimensions.scroll<=dimensions.inner,profile.name+" overflow");
+   await c.close();
+ }
+});
