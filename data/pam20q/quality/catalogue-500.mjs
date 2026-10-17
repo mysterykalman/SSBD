@@ -727,7 +727,7 @@ a mushroom risotto|+hot +brown
 {kind:'meal',flags:'+hot +goodSmell',entries:`
 bibimbap|+hot +colorful +round
 japchae|+hot +brown
-tteokbokki|+hot +red +spicy
+tteokbokki|+hot +red +hot
 kimchi fried rice|+hot +red
 bulgogi|+hot +brown
 galbi|+hot +brown
@@ -952,3 +952,499 @@ a Shirley Temple|+red +cold +sweet
 a lime rickey|+green +cold
 a sparkling lemonade|+yellow +cold +sweet
 `},
+
+{kind:'kitchen',flags:'+household +useful',entries:`
+a citrus zester|+hold +sharp +smallBread
+a microplane grater|+hold +sharp +smallBread
+a mandoline slicer|+sharp +flat +dangerous
+a potato ricer|+hold +mechanical
+a salad spinner|+round +spin +mechanical
+an egg separator|+hold +smallBread
+an egg slicer|+hold +mechanical +sharp
+an egg coddler|+round +hot
+an apple corer|+hold +sharp
+a cherry pitter|+hold +mechanical
+an avocado slicer|+hold +sharp
+a melon baller|+hold +round
+a pastry brush|+hold +soft
+a pastry cutter|+hold +sharp
+a bench scraper|+hold +flat +sharp
+a dough docker|+roll +sharp
+a rolling pin|+roll +round +hold
+a tortilla press|+flat +mechanical +heavy
+a garlic rocker|+hold +mechanical
+a mortar and pestle|+heavy +stone +round
+a nutcracker tool|+hold +mechanical
+a can punch|+hold +sharp
+a jar opener|+hold +mechanical
+a vacuum sealer|+electronic +buttons
+a sous vide wand|+electronic +hot +water
+a milk frother|+electronic +spin +noise +hold
+an immersion blender|+electronic +spin +hold +sharp
+a spice mill|+spin +goodSmell
+a pepper grinder|+spin +goodSmell +hold
+a tea infuser|+smallBread +hole +water
+a coffee dripper|+water +round +hold
+a French press|+water +fragile +seeThrough +refill
+a moka pot|+hot +heavy +water
+a stovetop steamer|+hot +water +hole
+a pasta drying rack|+tall +hold
+a bread lame|+hold +sharp +smallBread
+`},
+{kind:'kitchen',flags:'+household +useful',entries:`
+a cake turntable|+round +spin
+a piping bag|+soft +hold +stretch
+a cookie press|+mechanical +hold
+a cookie cutter|+sharp +hold +smallBread
+a pizza peel|+flat +hold +bigMicrowave
+a pizza stone|+stone +hot +round +heavy
+a baking steel|+flat +hot +heavy
+a cast-iron griddle|+flat +hot +heavy
+a Dutch oven pot|+hot +heavy +round
+a double boiler|+hot +water +heavy
+a bain-marie pan|+hot +water
+a soufflé dish|+round +fragile
+a ramekin|+round +fragile +smallBread
+a springform pan|+round +mechanical +open
+a bundt pan|+round +hole
+a loaf tin|+box +heavy
+a muffin tray|+hole +round +flat
+a cooling rack|+flat +hole +heavy
+a splatter screen|+round +flat +hole
+a mesh strainer|+round +hole +hold
+a chinois strainer|+round +hole +hold
+a colander|+round +hole +water
+a bamboo steamer|+round +hole +hot
+a sushi rolling mat|+roll +flat +hold
+a rice paddle|+flat +hold
+a wooden spoon rest|+flat +household
+a spoonula|+soft +hold
+a silicone spatula|+soft +hold +stretch
+a ladle|+round +hold +water
+a gravy separator|+water +seeThrough
+a butter bell|+round +refill
+a butter crock|+round +refill
+an oil mister|+refill +hold +water
+a salad dressing shaker|+refill +round +hold
+a herb stripper|+sharp +hold
+a vegetable spiralizer|+mechanical +spin +sharp
+`},
+{kind:'gadget',flags:'+electronic +buttons +lights',entries:`
+a smart doorbell|+ring +household +smallBread
+a video doorbell|+ring +household +storeInfo
+a baby monitor|+household +storeInfo +noise
+a pet camera|+household +storeInfo
+a digital picture frame|+household +flat +storeInfo
+a Bluetooth tracker tag|+smallBread +pocket +ring
+a wireless presentation clicker|+hold +buttons +smallBread
+a digital voice recorder|+hold +storeInfo +smallBread
+a laser distance meter|+hold +tool +bright
+a laser level|+hold +tool +produceLight
+a thermal imaging camera|+hold +storeInfo
+an infrared thermometer|+hold +buttons
+a smart smoke detector|+household +ring +noise
+a smart leak detector|+household +water +ring
+a smart air-quality sensor|+household +storeInfo
+an electronic stud sensor|+hold +household +tool
+an electronic luggage scale|+hold +tool +smallBread
+a rechargeable hand warmer|+hold +hot +pocket
+an electric bug zapper|+dangerous +bright +noise
+a UV sterilizer wand|+hold +produceLight
+a handheld label maker|+hold +buttons +storeInfo
+a pocket translator|+hold +pocket +communicate
+a digital notepad|+flat +storeInfo +computer
+a smart pen|+hold +storeInfo
+a document scanner|+flat +computer +storeInfo
+a barcode reader|+hold +storeInfo +produceLight
+an RFID reader|+hold +storeInfo
+a receipt printer|+computer +storeInfo +noise
+a portable photo printer|+hold +storeInfo +colorful
+a mini thermal printer|+hold +storeInfo +noise
+a digital photo keychain|+pocket +smallBread
+a wireless microphone transmitter|+hold +noise +communicate
+a USB audio interface|+computer +box +buttons
+a MIDI controller|+computer +buttons +played
+a stream deck controller|+computer +buttons +lights
+a haptic feedback vest|+wear +game +noise
+`},
+{kind:'gadget',flags:'+electronic +buy',entries:`
+a robotic lawn mower|+motorized +move +garden +sharp
+a robot window cleaner|+motorized +move +household +wet
+a robot pool cleaner|+motorized +move +water +swim
+a robotic pet feeder|+household +refill +mechanical
+an automatic litter box|+household +motorized +mechanical
+a smart bird feeder|+household +storeInfo +refill
+a solar garden light|+garden +produceLight +bright
+a motion sensor light|+household +produceLight +bright
+an LED strip light|+household +produceLight +bright +stretch
+a smart light bulb|+household +produceLight +bright +round
+a sunrise alarm clock|+household +produceLight +ring
+a white-noise machine|+household +noise +heard
+an aroma diffuser|+household +refill +goodSmell
+an electric blanket|+household +soft +warm +wear
+a heated mattress pad|+household +soft +warm
+an electric foot warmer|+household +warm +soft
+a heated lunch box|+household +hot +box
+a portable induction burner|+household +hot +flat
+an electric griddle|+household +hot +flat
+a sandwich press|+household +hot +flat
+a waffle cone maker|+household +hot +round
+an electric crepe maker|+household +hot +round
+a popcorn popper|+household +hot +noise
+a cotton candy machine|+household +spin +hot
+a snow cone maker|+household +spin +cold
+a slushie machine|+household +spin +cold
+a yogurt maker|+household +warm +refill
+a bread proofer|+household +warm +box
+an electric dehydrator|+household +hot +refill
+a vacuum food marinator|+household +mechanical +refill
+a soda carbonator|+household +refill +noise
+an automatic soap dispenser|+household +refill +wet
+an electric toothbrush sanitizer|+household +produceLight
+a UV nail lamp|+household +produceLight +bright
+a heated eyelash curler|+household +hot +hold
+a beard trimmer|+hold +sharp +noise
+`},
+{kind:'tool',flags:'+tool +useful +manufactured',entries:`
+a torque wrench|+hold +mechanical +heavy
+a ratcheting screwdriver|+hold +mechanical +spin
+a hex key set|+hold +smallBread +heavy
+a Torx driver|+hold +smallBread +spin
+a countersink bit|+sharp +spin +smallBread
+a hole saw|+sharp +hole +spin
+a spade drill bit|+sharp +spin
+a Forstner drill bit|+sharp +spin +round
+a router bit|+sharp +spin +smallBread
+a wood rasp|+sharp +hold
+a cabinet scraper|+sharp +flat +hold
+a block plane|+sharp +hold +heavy
+a spokeshave|+sharp +hold
+a drawknife|+sharp +hold +dangerous
+a coping saw|+sharp +hold
+a Japanese pull saw|+sharp +hold
+a dovetail saw|+sharp +hold
+a flush-cut saw|+sharp +hold
+a jeweler's saw|+sharp +hold
+a fret saw|+sharp +hold
+a rivet gun|+mechanical +hold +noise
+a caulking gun|+mechanical +hold +refill
+a grease gun|+mechanical +hold +refill
+a soldering iron|+hot +hold +dangerous
+a desoldering pump|+hold +mechanical
+a wire stripper|+sharp +hold
+a crimping tool|+mechanical +hold
+a multimeter|+electronic +buttons +storeInfo
+a clamp meter|+electronic +buttons +hold
+a non-contact voltage tester|+electronic +produceLight +hold
+a fish tape reel|+roll +stretch +hold
+a chalk line reel|+roll +refill +hold
+a plumb bob|+heavy +heavy +hold
+a feeler gauge|+smallBread +flat +heavy
+a thread gauge|+smallBread +heavy
+a dial caliper|+mechanical +hold +smallBread
+`},
+{kind:'tool',flags:'+tool +useful +hold',entries:`
+a garden dibber|+sharp +garden +hold
+a soil auger|+spin +garden +sharp
+a bulb planter|+garden +sharp +hold
+a hand cultivator|+garden +sharp +hold
+a soil scoop|+garden +hold
+a hori hori knife|+garden +sharp +dangerous
+a weeding fork|+garden +sharp +hold
+a dandelion weeder|+garden +sharp +hold
+a seed spreader|+garden +refill +mechanical
+a hose nozzle|+garden +water +refill +hold
+a watering wand|+garden +water +hold
+a rain gauge|+garden +water +clear
+a compost thermometer|+garden +hold +tool
+a grafting knife|+garden +sharp +hold
+a grafting tape roll|+garden +roll +stretch
+a bonsai shear|+garden +sharp +hold
+a bonsai wire cutter|+garden +sharp +hold
+a branch lopper|+garden +sharp +mechanical
+a pole pruner|+garden +sharp +tall
+a bow saw|+garden +sharp +hold
+a fruit picker basket|+garden +tall +carryThings
+a berry rake|+garden +hold
+a mushroom knife|+sharp +hold +smallBread
+a foraging basket|+garden +carryThings
+a pruning saw|+garden +sharp +hold
+a pruning snip|+garden +sharp +hold
+a grafting tool|+garden +sharp +hold
+a spading fork|+garden +sharp +tall
+a digging bar|+garden +heavy +tall
+a rock pick|+stone +sharp +hold
+a geologist's hammer|+stone +heavy +hold
+a hand lens|+seeThrough +smallBread
+a magnifying loupe|+seeThrough +smallBread
+a specimen jar|+clear +refill +open
+a petri dish|+clear +round +fragile
+a pipette|+water +hold +smallBread
+`},
+{kind:'object',flags:'+touch +buy',entries:`
+a paper lantern|+soft +produceLight +shade
+a snow globe|+round +fragile +seeThrough
+a music box|+box +open +songs +noise
+a wind chime|+heard +ring +noise +heavy
+a dreamcatcher|+round +hole +wearHead
+a decorative terrarium|+clear +seeThrough +garden
+a glass cloche|+clear +seeThrough +fragile
+a ceramic figurine|+fragile +smallBread
+a porcelain vase|+fragile +refill +hold
+a decorative urn|+fragile +refill +round
+a candle snuffer|+hold +heavy
+a candlestick holder|+hold +household
+a tealight holder|+smallBread +round
+a wax seal stamp|+hold +smallBread
+a sealing wax stick|+burn +hold
+a fountain pen|+hold +refill +smallBread
+a dip pen|+hold +refill +smallBread
+a calligraphy brush|+hold +soft
+an ink blotter|+flat +hold
+a leather journal|+open +storeInfo +brown
+a travel sketchbook|+open +storeInfo +flat
+a bookmark tassel|+soft +smallBread
+a bookplate sticker|+flat +smallBread
+a page holder|+hold +smallBread
+a reading stand|+flat +hold
+a letter opener|+hold +sharp
+a paperweight|+heavy +smallBread
+a desk organizer|+carryThings +household
+a document tray|+flat +carryThings
+a corkboard|+flat +household +brown
+a bulletin pin|+sharp +smallGolf
+a binder clip|+mechanical +smallBread
+a bulldog clip|+mechanical +smallBread
+a hole punch|+mechanical +hold +hole
+an embossing stamp|+mechanical +hold
+a wax crayon set|+colorful +hold
+`},
+{kind:'object',flags:'+touch +manufactured',entries:`
+a foldable picnic table|+flat +legs +carryThings
+a camping cot|+flat +legs +soft +soft
+a collapsible bucket|+refill +carryThings +water
+a dry bag|+water +carryThings +open
+a waterproof phone pouch|+water +carryThings +seeThrough
+a carabiner clip|+smallBread +mechanical
+a paracord bracelet|+wear +stretch +smallBread
+a campfire tripod|+legs +hot +tall
+a fire steel striker|+hold +burn +smallBread
+a ferro rod|+hold +burn +smallBread
+a camping spork|+hold +smallBread
+a collapsible cup|+refill +water +hold
+a travel cutlery kit|+hold +box
+a picnic blanket|+flat +soft +bigMicrowave
+a beach umbrella|+shade +tall +open
+a sun shelter|+shade +open +veryLarge
+a portable hammock|+soft +stretch +hold
+a hammock strap|+stretch +heavy
+a camping pillow|+soft +smallBread
+an inflatable sleeping pad|+soft +blowUp +flat
+a foam sleeping pad|+soft +flat
+a camp stool|+legs +hold
+a portable camp shower|+water +refill
+a solar shower bag|+water +hot +refill
+a water purification straw|+water +hold +smallBread
+a water purification tablet|+water +smallGolf
+a camping water filter|+water +refill +hold
+a hydration bladder|+water +carryThings +refill
+a folding water jug|+water +refill +carryThings
+a collapsible cooler|+cold +carryThings
+a dry box|+water +box +open
+a bug net|+hole +stretch +soft
+a mosquito head net|+wearHead +hole +soft
+a tent peg|+sharp +hold
+a guyline tensioner|+mechanical +stretch +smallBread
+a lantern hanger|+hold +mechanical
+`},
+{kind:'wear',flags:'+wear +sizes +manufactured',entries:`
+a rain poncho|+water +soft +open
+a packable windbreaker|+soft +water +pocket
+a neck gaiter|+soft +wearHead +stretch
+a balaclava|+soft +wearHead +cold
+a sun visor|+shade +wearHead
+a bucket hat|+shade +wearHead +soft
+a boonie hat|+shade +wearHead +soft
+a beanie hat|+soft +wearHead +cold
+a beret|+soft +wearHead
+a newsboy cap|+soft +wearHead
+a flat cap|+soft +wearHead
+a trilby hat|+wearHead +shade
+a fascinator hat|+wearHead +colorful
+a mortarboard cap|+wearHead +flat
+a chef's toque|+wearHead +white
+a shower cap|+wearHead +water +soft
+a swim cap|+wearHead +water +soft
+a cycling cap|+wearHead +soft
+a welding mask|+wearHead +dangerous
+a face shield|+wearHead +seeThrough
+a sleep mask|+wearHead +soft
+a neck pillow|+soft +wear +stretch
+a wrist sweatband|+wear +soft +stretch
+a compression sleeve|+wear +soft +stretch
+an arm warmer|+wear +soft +warm
+a leg warmer|+wear +soft +warm
+a knee brace|+wear +mechanical
+a wrist brace|+wear +mechanical
+a posture corrector|+wear +stretch
+a reflective safety vest|+wear +bright +colorful
+a fishing vest|+wear +pocket +water
+a utility belt|+wear +carryThings
+a climbing harness|+wear +carryPeople
+a life vest|+wear +water +float
+a flotation belt|+wear +water +float
+a weighted vest|+wear +heavy
+`},
+{kind:'soft',flags:'+soft +touch',entries:`
+a weighted blanket|+heavy +soft +household
+a cooling blanket|+cold +soft +household
+a heated throw blanket|+warm +soft +household
+a fleece throw|+warm +soft +household
+a quilted bedspread|+flat +soft +household
+a duvet insert|+fluffy +soft +household
+a bolster pillow|+round +soft
+a body pillow|+soft +bigMicrowave
+a lumbar pillow|+soft +smallBread
+a pregnancy pillow|+soft +round
+a travel neck pillow|+soft +round
+a memory foam topper|+soft +flat +bigMicrowave
+a mattress protector|+flat +soft +water
+a fitted sheet|+flat +soft +stretch
+a pillow sham|+soft +flat
+a silk pillowcase|+soft +flat
+a linen napkin|+flat +soft +household
+a table runner|+flat +soft +household
+a woven placemat|+flat +soft +household
+a bath mat|+flat +wet +soft
+a microfiber towel|+soft +wet +household
+a waffle-weave towel|+soft +wet +household
+a hand towel|+soft +wet +household
+a Turkish bath towel|+soft +wet
+a beach towel|+soft +wet +bigMicrowave
+a face cloth|+soft +wet +smallBread
+a dishcloth|+soft +wet +household
+a linen tea towel|+soft +wet +household
+a reusable makeup pad|+soft +wet +smallBread
+a wash mitt|+soft +wet +wear
+an oven mitt|+soft +hot +wear
+a silicone potholder|+soft +hot +hold
+a pot handle sleeve|+soft +hot +wear
+a heated eye mask|+soft +warm +wearHead
+a reusable ice sleeve|+soft +cold +wear
+a fabric storage cube|+soft +box +carryThings
+`},
+{kind:'sport',flags:'+game +buy',entries:`
+a pickleball paddle|+hold +flat +game
+a padel racket|+hold +flat +game
+a squash racket|+hold +flat +game
+a badminton shuttlecock|+smallBread +feathers +game
+a table tennis paddle|+hold +flat +game
+a table tennis ball|+round +roll +smallBread
+a lacrosse stick|+hold +tall +game
+a field hockey stick|+hold +tall +game
+a floorball stick|+hold +tall +game
+a cricket bat|+hold +flat +game
+a cricket wicket|+tall +game
+a cricket ball|+round +roll +game
+a bocce ball|+round +roll +heavy
+a pétanque ball|+round +roll +heavy
+a curling stone|+round +heavy +stone
+a curling broom|+tall +hold +game
+a lawn bowling ball|+round +roll +heavy
+a disc golf disc|+round +flat +game
+an ultimate frisbee|+round +flat +game
+a flying ring toy|+round +hole +game
+a diabolo toy|+spin +game +round
+a kendama|+round +hold +game
+a yo-yo|+round +spin +roll +game
+a juggling club|+hold +game +spin
+a juggling ring|+round +hole +game
+a juggling beanbag|+soft +hold +game
+a hacky sack|+soft +smallBread +game
+a slackline|+stretch +game
+a balance board|+flat +game
+a wobble board|+round +game +flat
+a foam roller|+roll +round +game
+a Pilates ring|+round +hole +stretch
+a grip strengthener|+hold +mechanical
+a jump rope|+hold +stretch +game
+a battle rope|+heavy +stretch +game
+a speed ladder|+flat +game
+`},
+{kind:'vehicle',flags:'+transport +carryPeople +move',entries:`
+a recumbent bicycle|+roll +mechanical -motorized
+a tandem bicycle|+roll +mechanical -motorized
+a cargo bicycle|+roll +carryThings -motorized
+a folding bicycle|+roll +mechanical -motorized
+a fat-tire bicycle|+roll +mechanical -motorized
+a balance tricycle|+roll +mechanical -motorized
+a handcycle|+roll +mechanical -motorized
+an electric unicycle|+roll +motorized
+a kick scooter|+roll -motorized
+an electric kick scooter|+roll +motorized
+a sit-down scooter|+roll +motorized
+a golf cart|+roll +motorized +game
+a go-kart|+roll +motorized +game
+a pedal go-kart|+roll -motorized +game
+a dune buggy|+roll +motorized
+a side-by-side ATV|+roll +motorized
+a snowmobile|+motorized +cold
+a snowcat vehicle|+motorized +cold +heavy
+an airboat|+motorized +water +float
+a hovercraft|+motorized +water +float
+a jet ski|+motorized +water +float
+a stand-up paddleboard|+water +float -motorized
+an outrigger canoe|+water +float -motorized
+an inflatable kayak|+water +float -motorized
+a pedal boat|+water +float -motorized
+a rowboat|+water +float -motorized
+a coracle|+water +float -motorized
+a catamaran|+water +float +veryLarge
+a trimaran|+water +float +veryLarge
+a gondola boat|+water +float -motorized
+a water taxi|+water +float +motorized
+a river ferry|+water +float +veryLarge
+a funicular carriage|+roll +motorized
+a cable car gondola|+motorized +tall
+a chairlift|+motorized +carryPeople
+a monorail train|+motorized +veryLarge
+`},
+{kind:'instrument',flags:'+played +noise +heard',entries:`
+a kalimba|+hold +smallBread +heavy
+a mbira|+hold +heavy
+a hang drum|+round +heavy +hold
+a steel tongue drum|+round +heavy +hold
+a djembe drum|+round +hold
+a cajón|+box +hold
+a conga drum|+round +heavy
+a bongo drum|+round +smallBread
+a talking drum|+round +hold
+a frame drum|+round +flat +hold
+a bodhrán|+round +flat +hold
+a tambourine|+round +hole +hold
+a rainstick|+tall +hold
+an ocean drum|+round +hold
+a thunder tube|+hold +noise
+a guiro|+hold +brown
+a cabasa|+round +hold
+a shekere|+round +hold
+a maraca|+round +hold
+a castanet|+smallBread +hold
+a wood block instrument|+brown +hold
+a temple block|+brown +hold
+a cowbell|+ring +heavy +hold
+a handbell|+ring +heavy +hold
+a triangle instrument|+ring +heavy +hold
+a finger cymbal|+ring +heavy +smallBread
+a singing bowl|+round +heavy +ring
+a tuning fork|+heavy +hold +ring
+a harmonica|+hold +smallBread +pocket
+an ocarina|+hold +smallBread +hole
+a tin whistle|+hold +smallBread +heavy
+a pan flute|+hold +hole
+a melodica|+hold +buttons +blowUp
+a concertina|+hold +buttons +stretch
+an autoharp|+hold +buttons
+a hammered dulcimer|+heavy +box
+`},
+];
