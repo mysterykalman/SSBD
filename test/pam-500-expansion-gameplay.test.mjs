@@ -16,7 +16,6 @@ assert.equal(count,2275,'500-target file MUST be integrated in complete runtime 
 assert.equal(doc.count,500);
 assert.equal(doc.profiles.length,500);
 
-const known=full.knownMask;
 function response(model,q,t){
  const index=q*model.targets.length+t;
  if(model.knownMask&&model.knownMask[index]!==1)return'unknown';
