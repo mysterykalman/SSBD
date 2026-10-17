@@ -39,6 +39,12 @@ jobs:
         run: npm ci
       - name: Rebuild exactly 500 curated profiles
         run: node scripts/generate-pam-500.mjs
+      - name: Preserve the generated unreviewed 500-target JSON as a review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-500-candidate-profiles
+          path: data/pam20q/quality/quality-500.json
+          retention-days: 30
       - name: Audit candidate separability
         run: node scripts/audit-pam-500-separability.mjs
       - name: Publish the diagnostic dataset
