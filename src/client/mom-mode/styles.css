@@ -159,3 +159,14 @@ main:focus { outline: none; }
   .pam-card { padding-inline: 12px; }
   .pam-play { padding-inline: 10px; }
 }
+
+
+/* Six-choice question grid must not inherit named areas from the old five-choice layout.
+   Those global area assignments stacked Yes/No/Doubtful over other buttons and blocked taps. */
+.answers.six { grid-template-areas: none; }
+.answers.six .answer.yes,
+.answers.six .answer.no,
+.answers.six .answer.probably,
+.answers.six .answer.probably-not,
+.answers.six .answer.unknown { grid-area: auto; }
+.answers.six .answer { position: relative; min-width: 0; }
