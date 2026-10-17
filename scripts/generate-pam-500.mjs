@@ -280,7 +280,7 @@ console.log('PAM_500_SELECTION='+JSON.stringify({
  minPeerDistance:Math.min(...picked.slice(1).map(p=>p.selectionDistance)),
  comparedToAllExisting:baseline.targets.length
 }));
-const doc={version:1,count:BATCH_SIZE,source:'Curated, deterministic Pam 500 expansion catalogue',profiles:selected};
+const doc={version:1,count:BATCH_SIZE,review_status:'candidate_unreviewed',source:'Deterministic candidate catalogue; semantic and gameplay verification pending',profiles:selected};
 await writeFile(targetPath,JSON.stringify(doc,null,2)+'\n');
 const mean=key=>Math.round(selected.reduce((n,p)=>n+p[key].length,0)/selected.length);
 console.log('PAM_500_PROFILE_DENSITY='+JSON.stringify({yes:mean('yes'),no:mean('no'),weakYes:mean('weakYes'),unknown:152-mean('yes')-mean('no')-mean('weakYes')}));
