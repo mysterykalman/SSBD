@@ -39,7 +39,9 @@ try {
     firstHomepageVisit = localStorage.getItem(INTRO_EVER_KEY) !== "1";
 
     if (firstHomepageVisit) {
-      localStorage.setItem(INTRO_EVER_KEY, "1");
+      // Do not mark the intro as seen until the welcome actually renders. If a
+      // build/runtime problem prevents the popup, the next homepage visit gets
+      // another chance instead of permanently losing the intro.
       sessionStorage.removeItem(INTRO_SESSION_KEY);
     } else {
       sessionStorage.setItem(INTRO_SESSION_KEY, "1");
