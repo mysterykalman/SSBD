@@ -1,3 +1,4 @@
+import "./audio-behavior-policy.js";
 import "./audio-settings.js";
 import "./audio-ui-polish.js";
 import "./intro-welcome.js";
@@ -6,4 +7,5 @@ import "./mom-review-hook.js";
 import "./connections/native-platform.js";
 import "./connections/selection-polish.js";
 import "./odd-one-in-audio-bridge.js";
+import "./odd-one-in-label-fix.js";
 import "./homepage-grid-refinement.js";
