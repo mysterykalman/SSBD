@@ -17,7 +17,7 @@
     "mom:audit": "node scripts/mom-knowledge-repair.mjs",
     "mom:cskg": "python3 scripts/extract-cskg-traits.py",
     "mom:wordnet": "python3 scripts/extract-wordnet-traits.py",
-    "test:pwa": "node --test --test-concurrency=1 test/e2e/pwa-install.test.mjs test/e2e/pwa-hardening.test.mjs",
+    "test:pwa": "node --test test/pwa-service-worker.test.mjs && node --test --test-concurrency=1 test/e2e/pwa-install.test.mjs test/e2e/pwa-hardening.test.mjs",
     "test:pwa:webkit": "node --test --test-concurrency=1 test/e2e/pwa-webkit.test.mjs"
   },
   "devDependencies": {
