@@ -329,7 +329,7 @@ an orchid mantis|+white +colorful +carnivore
 a giant water bug|+water +swim +carnivore
 a water strider|+water +legs
 a diving beetle|+water +swim
-a rhinoceros beetle|+brown +heavy
+a rhinoceros beetle|+brown
 a stag beetle|+brown
 a jewel beetle|+colorful +green
 a firefly|+produceLight +wings
@@ -986,7 +986,7 @@ a pepper grinder|+spin +goodSmell +hold
 a tea infuser|+smallBread +hole +water
 a coffee dripper|+water +round +hold
 a French press|+water +fragile +seeThrough +refill
-a moka pot|+hot +heavy +water
+a moka pot|+hot +water
 a stovetop steamer|+hot +water +hole
 a pasta drying rack|+tall +hold
 a bread lame|+hold +sharp +smallBread
@@ -1007,9 +1007,9 @@ a soufflé dish|+round +fragile
 a ramekin|+round +fragile +smallBread
 a springform pan|+round +mechanical +open
 a bundt pan|+round +hole
-a loaf tin|+box +heavy
+a loaf tin|+box
 a muffin tray|+hole +round +flat
-a cooling rack|+flat +hole +heavy
+a cooling rack|+flat +hole
 a splatter screen|+round +flat +hole
 a mesh strainer|+round +hole +hold
 a chinois strainer|+round +hole +hold
@@ -1108,7 +1108,7 @@ a beard trimmer|+hold +sharp +noise
 {kind:'tool',flags:'+tool +useful +manufactured',entries:`
 a torque wrench|+hold +mechanical +heavy
 a ratcheting screwdriver|+hold +mechanical +spin
-a hex key set|+hold +smallBread +heavy
+a hex key set|+hold +smallBread
 a Torx driver|+hold +smallBread +spin
 a countersink bit|+sharp +spin +smallBread
 a hole saw|+sharp +hole +spin
@@ -1138,9 +1138,9 @@ a clamp meter|+electronic +buttons +hold
 a non-contact voltage tester|+electronic +produceLight +hold
 a fish tape reel|+roll +stretch +hold
 a chalk line reel|+roll +refill +hold
-a plumb bob|+heavy +heavy +hold
-a feeler gauge|+smallBread +flat +heavy
-a thread gauge|+smallBread +heavy
+a plumb bob|+heavy +hold
+a feeler gauge|+smallBread +flat
+a thread gauge|+smallBread
 a dial caliper|+mechanical +hold +smallBread
 `},
 {kind:'tool',flags:'+tool +useful +hold',entries:`
@@ -1185,14 +1185,14 @@ a pipette|+water +hold +smallBread
 a paper lantern|+soft +produceLight +shade
 a snow globe|+round +fragile +seeThrough
 a music box|+box +open +songs +noise
-a wind chime|+heard +ring +noise +heavy
+a wind chime|+heard +ring +noise
 a dreamcatcher|+round +hole +wearHead
 a decorative terrarium|+clear +seeThrough +garden
 a glass cloche|+clear +seeThrough +fragile
 a ceramic figurine|+fragile +smallBread
 a porcelain vase|+fragile +refill +hold
 a decorative urn|+fragile +refill +round
-a candle snuffer|+hold +heavy
+a candle snuffer|+hold
 a candlestick holder|+hold +household
 a tealight holder|+smallBread +round
 a wax seal stamp|+hold +smallBread
@@ -1410,8 +1410,8 @@ a chairlift|+motorized +carryPeople
 a monorail train|+motorized +veryLarge
 `},
 {kind:'instrument',flags:'+played +noise +heard',entries:`
-a kalimba|+hold +smallBread +heavy
-a mbira|+hold +heavy
+a kalimba|+hold +smallBread
+a mbira|+hold
 a hang drum|+round +heavy +hold
 a steel tongue drum|+round +heavy +hold
 a djembe drum|+round +hold
@@ -1432,15 +1432,15 @@ a maraca|+round +hold
 a castanet|+smallBread +hold
 a wood block instrument|+brown +hold
 a temple block|+brown +hold
-a cowbell|+ring +heavy +hold
-a handbell|+ring +heavy +hold
-a triangle instrument|+ring +heavy +hold
-a finger cymbal|+ring +heavy +smallBread
+a cowbell|+ring +hold
+a handbell|+ring +hold
+a triangle instrument|+ring +hold
+a finger cymbal|+ring +smallBread
 a singing bowl|+round +heavy +ring
-a tuning fork|+heavy +hold +ring
+a tuning fork|+hold +ring
 a harmonica|+hold +smallBread +pocket
 an ocarina|+hold +smallBread +hole
-a tin whistle|+hold +smallBread +heavy
+a tin whistle|+hold +smallBread
 a pan flute|+hold +hole
 a melodica|+hold +buttons +blowUp
 a concertina|+hold +buttons +stretch
