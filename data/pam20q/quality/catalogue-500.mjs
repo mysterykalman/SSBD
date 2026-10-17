@@ -44,7 +44,7 @@ a stone marten|+climb +nocturnal +longTail
 a saiga antelope|+brown +groups
 a sable antelope|+brown +groups
 a roan antelope|+brown +groups
-a waterbuck|+water +swim +brown
+a waterbuck|+swim +brown
 a sitatunga|+water +swim +brown
 a nyala|+striped +brown +forest
 a greater kudu|+striped +tall +brown
@@ -121,7 +121,7 @@ a frogmouth|+nocturnal +forest +brown
 a nightjar|+nocturnal +brown
 a hoopoe|+colorful +brown
 a bee-eater|+colorful +forest +insect
-a kingfisher|+colorful +water +carnivore
+a kingfisher|+colorful +carnivore
 a roller bird|+colorful +forest
 a hornbill|+forest +colorful +tall
 a toucanet|+forest +colorful
@@ -394,7 +394,7 @@ a sugar apple|+green +sweet
 a custard apple|+green +sweet
 a breadfruit|+green +round
 a jackfruit|+green +veryLarge +heavy
-a durian|+green +heavy +goodSmell
+a durian|+green +heavy +smell
 a rambutan|+red +sweet
 a longan|+brown +sweet
 a langsat|+yellow +sweet
@@ -610,7 +610,7 @@ a cumin seed|+brown +goodSmell
 a cardamom pod|+green +goodSmell
 a star anise pod|+brown +goodSmell
 `},
-{kind:'tree',flags:'+tall +forest +leaves +roots',entries:`
+{kind:'tree',flags:'+tall +leaves +roots',entries:`
 a baobab tree|+heavy +veryLarge
 a kapok tree|+veryLarge +tall
 a banyan tree|+veryLarge +tall
