@@ -110,17 +110,6 @@ function answer(game,question,answerValue){
  return choose(game);
 }
 function candidatePool(game){
- if(N===2275){
-  // The legacy top-96 pool is insertion-order biased: after the category
-  // question it excludes all newly appended targets that have tied scores.
-  // Stratify tied/plausible candidates across the whole model.
-  const ranked=rank(game,N),best=game.scores[ranked[0]??0];
-  const close=ranked.filter(i=>game.scores[i]>=best-8);
-  const pool=close.length>=24?close:ranked;
-  const size=Math.min(192,pool.length);
-  if(pool.length<=size)return pool;
-  return Array.from({length:size},(_,i)=>pool[Math.floor((i+0.5)*pool.length/size)]);
- }
  const ranked=rank(game,96),best=game.scores[ranked[0]??0];
  const close=ranked.filter(i=>game.scores[i]>=best-8);
  return close.length>=24?close:ranked.slice(0,Math.min(48,ranked.length));
