@@ -39,7 +39,7 @@ The isolated deep-dive CI run [39079300718](https://github.com/mysterykalman/SSB
 | Average explicit strong yes / strong no / unknown cells | 10 / 87 / 55 |
 | Animal / vegetable / mineral / other candidates | 176 / 96 / **0** / 228 |
 
-A *separating known question* means both profiles explicitly know an answer to the same question and have opposing polarity. Having zero such questions is a serious evidence gap, **not** a formal proof that any pair can never receive different scores when one or both profiles have unknown cells. The count is computed across all 156 traits with the exact category/known-mask semantics of the runtime. The audit lives in `scripts/audit-pam-500-separability.mjs`; JSON results are saved as the `pam-500-separability` GitHub Actions artifact.
+A *separating known question* means both profiles explicitly know an answer to the same question and have opposing polarity. Having zero such questions is a serious evidence gap, **not** a formal proof that any pair can never receive different scores when one or both profiles have unknown cells. The count is computed across all 156 traits with the exact category/known-mask semantics of the runtime. The audit lives in `scripts/audit-pam-500-separability.mjs`; JSON results plus a prioritized, 2,767-prompt factual review queue (CSV and JSON) are published as the `pam-500-separability` GitHub Actions artifact. Each prompt identifies a missing answer that *could* distinguish several targets; it must be fact-checked before assigning any new state.
 
 The main failure is distinguishability **within the proposed 500**. Adding more similar species, berries, utensils or wearables with generic family traits does not supply the missing facts. Adjustments that improved new-target accuracy have previously caused existing-target regressions, so any question-ranking changes must meet both gates rather than trade one cohort for the other.
 
@@ -53,4 +53,8 @@ The main failure is distinguishability **within the proposed 500**. Adding more 
 
 ### Release safety
 
-`scripts/generate-pam-500.mjs` emits `review_status: "candidate_unreviewed"`. The normal loader refuses to append unreviewed candidates to default builds; a controlled CI job can set `PAM_ALLOW_UNREVIEWED_500=1` for experimentation. Only a separately approved artifact may be included in a normal 2,275-target build. Do not set this opt-in in the production deployment environment. The isolated branch is `feature/pam-500-deep-dive`; the original `feature/pam-500-quality-expansion` branch remains separate.
+`scripts/generate-pam-500.mjs` emits `review_status: "candidate_unreviewed"`. The normal loader refuses to append unreviewed candidates to default builds; a controlled CI job can set `PAM_ALLOW_UNREVIEWED_500=1` for experimentation. Only a separately approved artifact may be included in a normal 2,275-target build. The loader additionally ignores this testing opt-in when `VERCEL_ENV=production`, verified by a dedicated release-safety test. Do not set the opt-in in the production deployment environment. The isolated branch is `feature/pam-500-deep-dive`; the original `feature/pam-500-quality-expansion` branch remains separate.
+
+### Controlled build evidence
+
+On [run 39079810874](https://github.com/mysterykalman/SSBD/actions/runs/39079810874), the independent `compile` job passed candidate generation, scoped lint, 1,775-target data-integrity and release-safety tests, and a compiled bundle check proving **156 questions and 2,275 targets**. This establishes technical integration, not factual or gameplay approval. The project-wide lint/typecheck checks separately surfaced existing errors in unrelated Connections and audit code; those must be addressed before claiming an entirely green repository-wide check.
