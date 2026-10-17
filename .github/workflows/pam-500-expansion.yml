@@ -46,7 +46,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pam-500-separability
-          path: .dev-data/pam-500/separability-report.json
+          path: |
+            .dev-data/pam-500/separability-report.json
+            .dev-data/pam-500/review-queue.csv
+            .dev-data/pam-500/review-queue.json
           retention-days: 30
           if-no-files-found: ignore
       - name: Prove no original profile changed
