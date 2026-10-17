@@ -4,5 +4,6 @@ import "./intro-welcome.js";
 import "./endgame-fix.js";
 import "./mom-review-hook.js";
 import "./connections/native-platform.js";
+import "./connections/selection-polish.js";
 import "./odd-one-in-audio-bridge.js";
 import "./homepage-grid-refinement.js";
