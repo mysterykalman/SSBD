@@ -1,3 +1,4 @@
+import "./hide-player-diagnostics.js";
 import "./audio-behavior-policy.js";
 import "./audio-settings.js";
 import "./audio-ui-polish.js";
