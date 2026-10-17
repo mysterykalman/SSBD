@@ -18,6 +18,45 @@ const strength=s=>(s&2)?2:1;
 const CATEGORY_Q=Object.freeze({animal:0,vegetable:1,mineral:2,other:3});
 const REGULAR_ANSWERS=new Set(['yes','probably','maybe','unknown','doubtful','probably_not','no']);
 
+const REDUNDANCY_SCORE_FLOOR=0.99;
+const FAMILY_RECENCY_FACTORS=Object.freeze({1:0.8,2:0.9,3:0.96});
+const PAIR_RECENCY_FACTORS=Object.freeze({1:0.5,2:0.7,3:0.85,4:0.94});
+const QUESTION_FAMILIES=Object.freeze([
+ Object.freeze([8,12,22,24,43,57]),
+ Object.freeze([30,32,79,111]),
+ Object.freeze([97,126,129,132,152]),
+ Object.freeze([94,100,120,145]),
+ Object.freeze([48,51,65,92]),
+ Object.freeze([69,141]),
+ Object.freeze([56,116]),
+ Object.freeze([20,101,125]),
+ Object.freeze([149,153]),
+ Object.freeze([85,86,117]),
+ Object.freeze([115,119,128,142]),
+ Object.freeze([6,9,13,27,71,74,87,108]),
+ Object.freeze([62,154])
+]);
+const SEMANTIC_PAIRS=Object.freeze([
+ Object.freeze([97,132]),
+ Object.freeze([30,32]),
+ Object.freeze([85,117]),
+ Object.freeze([126,152]),
+ Object.freeze([62,154]),
+ Object.freeze([149,153]),
+ Object.freeze([56,116]),
+ Object.freeze([100,120]),
+ Object.freeze([119,128]),
+ Object.freeze([42,148]),
+ Object.freeze([69,141]),
+ Object.freeze([101,125])
+]);
+const FAMILY_IDS_BY_QUESTION=Array.from({length:F},()=>[]);
+for(let familyId=0;familyId<QUESTION_FAMILIES.length;familyId++){
+ for(const q of QUESTION_FAMILIES[familyId])FAMILY_IDS_BY_QUESTION[q].push(familyId);
+}
+const SEMANTIC_PARTNERS_BY_QUESTION=Array.from({length:F},()=>[]);
+for(const [a,b] of SEMANTIC_PAIRS){SEMANTIC_PARTNERS_BY_QUESTION[a].push(b);SEMANTIC_PARTNERS_BY_QUESTION[b].push(a);}
+
 function cleanTarget(value){return String(value||'').replace(/\s+/g,' ').trim();}
 function guessText(value){return `Are you thinking of ${cleanTarget(value)}?`;}
 function createGame(opts={}){
@@ -75,14 +114,45 @@ function candidatePool(game){
  const close=ranked.filter(i=>game.scores[i]>=best-8);
  return close.length>=24?close:ranked.slice(0,Math.min(48,ranked.length));
 }
+function recentQuestionGap(game,q){
+ let gap=0;
+ for(let i=game.history.length-1;i>=0;i--){
+  const event=game.history[i];
+  if(event.kind!=='question')continue;
+  gap+=1;
+  if(event.id===`q${q}`)return gap;
+ }
+ return null;
+}
+function redundancyFactor(game,q){
+ let factor=1;
+ for(const familyId of FAMILY_IDS_BY_QUESTION[q]){
+  let closest=null;
+  for(const priorQ of QUESTION_FAMILIES[familyId]){
+   if(priorQ===q||!game.asked.has(priorQ))continue;
+   const gap=recentQuestionGap(game,priorQ);
+   if(gap!=null&&(closest==null||gap<closest))closest=gap;
+  }
+  if(closest!=null)factor=Math.min(factor,FAMILY_RECENCY_FACTORS[closest]??1);
+ }
+ for(const priorQ of SEMANTIC_PARTNERS_BY_QUESTION[q]){
+  if(!game.asked.has(priorQ))continue;
+  const gap=recentQuestionGap(game,priorQ);
+  if(gap!=null)factor=Math.min(factor,PAIR_RECENCY_FACTORS[gap]??1);
+ }
+ return factor;
+}
 function bestQuestion(game){
- const pool=candidatePool(game);let bestQ=null,bestScore=-Infinity;
+ const pool=candidatePool(game),poolTop=pool[0];
+ const denom=pool.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[poolTop])/3),0);
+ const candidates=[];
+ let bestBase=-Infinity,baselineQ=null;
  for(let q=4;q<F;q++){
   if(game.asked.has(q))continue;
   let yes=0,no=0,strong=0,knownTotal=0;
   for(const t of pool){
    if(!knownAt(q,t))continue;
-   const s=stateAt(q,t),w=Math.exp((game.scores[t]-game.scores[pool[0]])/3);
+   const s=stateAt(q,t),w=Math.exp((game.scores[t]-game.scores[poolTop])/3);
    knownTotal+=w;
    if(polarity(s))yes+=w;else no+=w;
    if(strength(s)===2)strong+=w;
@@ -90,11 +160,21 @@ function bestQuestion(game){
   if(knownTotal<=0)continue;
   const balance=1-Math.abs(yes-no)/knownTotal;
   const certainty=strong/knownTotal;
-  const coverage=knownTotal/pool.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[pool[0]])/3),0);
-  const score=(balance*0.9+certainty*0.1)*coverage;
-  if(score>bestScore+1e-12){bestScore=score;bestQ=q;}
+  const coverage=knownTotal/denom;
+  const base=(balance*0.9+certainty*0.1)*coverage;
+  candidates.push({q,base});
+  if(base>bestBase+1e-12){bestBase=base;baselineQ=q;}
  }
- return bestQ==null?null:{index:bestQ,gain:bestScore};
+ if(baselineQ==null)return null;
+ let selectedQ=baselineQ,selectedBase=bestBase,bestAdjusted=-Infinity;
+ for(const candidate of candidates){
+  if(candidate.base+1e-12<bestBase*REDUNDANCY_SCORE_FLOOR)continue;
+  const adjusted=candidate.base*redundancyFactor(game,candidate.q);
+  if(adjusted>bestAdjusted+1e-12||(Math.abs(adjusted-bestAdjusted)<=1e-12&&candidate.base>selectedBase+1e-12)){
+   selectedQ=candidate.q;selectedBase=candidate.base;bestAdjusted=adjusted;
+  }
+ }
+ return{index:selectedQ,gain:selectedBase};
 }
 function shouldHunch(game){
  if(game.deferGuessOnce){game.deferGuessOnce=false;return false;}
