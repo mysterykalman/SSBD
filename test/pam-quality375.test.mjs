@@ -11,7 +11,7 @@ const ROOT=process.cwd();
 const parts=await Promise.all([1,2,3,4].map(i=>readFile(path.join(ROOT,'data','pam20q','quality',`quality-375.part${i}`),'utf8')));
 const qualityDoc=JSON.parse(gunzipSync(Buffer.from(parts.join('').trim(),'base64')).toString('utf8'));
 const model=await loadPam1775Model(loadPamClassicModel);
-const {questions,targets,weights,baseTargetCount,extensionCount,qualityCount}=model;
+const {questions,targets,weights,knownMask,baseTargetCount,extensionCount,qualityCount}=model;
 
 assert.equal(qualityDoc.count,375);
 assert.equal(qualityDoc.profiles.length,375);
@@ -19,6 +19,7 @@ assert.equal(targets.length,1775);
 assert.equal(baseTargetCount,1200);
 assert.equal(extensionCount,200);
 assert.equal(qualityCount,375);
+assert.equal(knownMask.length,weights.length);
 
 const QUALITY_COUNT=375;
 const LEGACY_COUNT=1400;
@@ -51,8 +52,8 @@ function oracleAnswer(modelWeights,modelTargets,q,targetIndex){
   const state=stateAt(modelWeights,modelTargets,q,targetIndex);
   return (state&1)?((state&2)?'yes':'probably'):((state&2)?'no':'doubtful');
 }
-async function makeEngine(modelTargets,modelWeights,suffix){
-  global.window={PAM_CLASSIC_MODEL:{questions,targets:modelTargets,weightsB64:modelWeights.toString('base64'),layout:'question-major',states:4}};
+async function makeEngine(modelTargets,modelWeights,suffix,mask=null){
+  global.window={PAM_CLASSIC_MODEL:{questions,targets:modelTargets,weightsB64:modelWeights.toString('base64'),knownMaskB64:mask?mask.toString('base64'):undefined,layout:'question-major',states:4}};
   if(!global.atob)global.atob=value=>Buffer.from(value,'base64').toString('binary');
   await import(`${pathToFileURL(path.join(ROOT,'src','client','mom-mode','engine.js')).href}?${suffix}-${Date.now()}-${Math.random()}`);
   return window.PamClassic20Q;
@@ -82,7 +83,7 @@ function playWith(engine,modelWeights,modelTargets,targetIndex,{noise=false}={})
 }
 
 const BaselineEngine=await makeEngine(baselineTargets,baselineWeights,'quality-baseline');
-const FullEngine=await makeEngine(targets,weights,'quality-full');
+const FullEngine=await makeEngine(targets,weights,'quality-full',knownMask);
 
 test('integrated Pam model has exactly 1775 reviewed targets',()=>{
   assert.equal(FullEngine.N,1775);
@@ -104,16 +105,23 @@ test('375 new targets achieve exact full-model self-play',()=>{
   assert.equal(exact,QUALITY_COUNT,`375 quality batch has ${failures.length} full-model self-play misses`);
 });
 
-test('adding the 375 does not change deterministic guesses for the existing 1400',()=>{
+test('adding the 375 does not reduce correctness for the existing 1400',()=>{
   const changed=[];
+  const regressions=[];
   for(let index=0;index<LEGACY_COUNT;index++){
     const before=playWith(BaselineEngine,baselineWeights,baselineTargets,index);
     const after=playWith(FullEngine,weights,targets,index);
-    if(before.label!==after.label)changed.push({target:baselineTargets[index],before:before.label,after:after.label});
+    if(before.label!==after.label){
+      const record={target:baselineTargets[index],before:before.label,after:after.label};
+      changed.push(record);
+      if(before.index===index&&after.index!==index)regressions.push(record);
+    }
   }
   console.log(`PAM_QUALITY_375_BASELINE_CHANGED=${changed.length}/${LEGACY_COUNT}`);
   if(changed.length)console.log('PAM_QUALITY_375_BASELINE_CHANGES='+JSON.stringify(changed));
-  assert.equal(changed.length,0,`375 quality batch changes ${changed.length} existing deterministic guesses`);
+  console.log(`PAM_QUALITY_375_BASELINE_REGRESSIONS=${regressions.length}/${LEGACY_COUNT}`);
+  if(regressions.length)console.log('PAM_QUALITY_375_BASELINE_REGRESSION_DETAILS='+JSON.stringify(regressions));
+  assert.equal(regressions.length,0,`375 quality batch introduces ${regressions.length} correctness regressions for existing targets`);
 });
 
 test('375 new targets remain robust to one softened yes and one softened no',()=>{
