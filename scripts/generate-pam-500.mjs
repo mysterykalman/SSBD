@@ -44,6 +44,23 @@ const T={
 };
 function words(s){return s?s.split(/\s+/).filter(Boolean):[];}
 function uniqueStrings(list){return [...new Set(list)];}
+
+// Category-safe negative evidence. These are answers to literal questions,
+// not statistical guesses. Unlisted/contextual questions remain unknown.
+// The per-target catalogue can override a negative with directly curated fact.
+const BIO_NO='abstract bodyPart box buttons computer electronic game invented mechanical manufactured motorized plastic refill storeInfo tool wear wearHead';
+const ANIMAL_NO='stone roots leaves rootVeg seeds vegetarian'; // individual animals can consume plants; do not infer from diet
+const PLANT_NO='bodyPart carryPeople carnivore coldBlood dogType eggs feathers feet fish furry growl herbivore hooves insect jump longTail mammal nocturnal paws scavenger shell spine swim warmBlood wings';
+const FOOD_NO='alive abstract bodyPart buttons carryPeople carnivore climb coldBlood communicate computer dogType electronic eggs farm feathers fish forest furry garden growl herbivore hooves insect intelligent jump legs living longTail mammal mechanical motorized nocturnal paws produceLight roots rootVeg scavenger shell spine storeInfo swim tool tools transport warmBlood water wear wearHead wings';
+const OBJECT_NO='abstract alive beOne bodyPart carnivore coldBlood dogType eat eggs farm feathers fish forest furry garden growl herbivore hooves insect living longTail mammal needLove nocturnal organic paws rootVeg roots scavenger seeds spine vegetarian warmBlood water';
+const SAFE_NEGATIVE={
+ animal:words(BIO_NO+' '+ANIMAL_NO),
+ vegetable:words(BIO_NO+' '+PLANT_NO),
+ other:words(FOOD_NO),
+ mineral:words(PLANT_NO)
+};
+const FOOD_KINDS=new Set(['meal','dessert','snack','beverage']);
+
 function parseEntry(raw){
  const [name,...flags]=raw.split('|').map(s=>s.trim());
  if(!name||!name.match(/[a-z]/i))throw new Error('Empty catalogue target');
@@ -52,12 +69,22 @@ function parseEntry(raw){
 function compile(group,entry){
  const template=T[group.kind];if(!template)throw new Error('Unknown kind: '+group.kind);
  const p={name:entry.name,category:template.category,yes:words(template.yes),weakYes:words(template.weakYes),no:words(template.no)};
+ const defaults=FOOD_KINDS.has(group.kind)?SAFE_NEGATIVE.other:template.category==='other'?words(OBJECT_NO):SAFE_NEGATIVE[template.category];
+ for(const key of defaults)if(!p.yes.includes(key)&&!p.weakYes.includes(key)&&!p.no.includes(key))p.no.push(key);
  const flags=[...words(group.flags),...entry.flags];
  for(const flag of flags){
   const op=flag[0],trait=flag.slice(1);
   if(!['+','~','-'].includes(op)||!(trait in pamTraitIndex))throw new Error('Unknown flag '+flag+' for '+entry.name);
   for(const bucket of ['yes','weakYes','no'])p[bucket]=p[bucket].filter(x=>x!==trait);
   p[op==='+'?'yes':op==='~'?'weakYes':'no'].push(trait);
+  if(op==='+'&&trait==='hot'){
+    p.yes=p.yes.filter(x=>x!=='cold');p.weakYes=p.weakYes.filter(x=>x!=='cold');
+    if(!p.no.includes('cold'))p.no.push('cold');
+  }
+  if(op==='+'&&trait==='cold'){
+    p.yes=p.yes.filter(x=>x!=='hot');p.weakYes=p.weakYes.filter(x=>x!=='hot');
+    if(!p.no.includes('hot'))p.no.push('hot');
+  }
  }
  for(const bucket of ['yes','weakYes','no'])p[bucket]=uniqueStrings(p[bucket]).sort();
  if(p.yes.length+p.weakYes.length+p.no.length<9)throw new Error('Too few profile answers: '+p.name);
