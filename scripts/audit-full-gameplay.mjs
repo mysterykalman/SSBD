@@ -51,7 +51,18 @@ async function run(mode,scenario,viewport,fn){
   page.on("pageerror",e=>errors.push(e.message));
   page.on("response",r=>{if(r.status()>=500)errors.push(`HTTP ${r.status()} ${r.url()}`);});
   page.setDefaultTimeout(6000);
-  try{await page.goto(origin,{waitUntil:"domcontentloaded",timeout:15000});await fn(page);}
+  try{
+    await page.goto(origin,{waitUntil:"domcontentloaded",timeout:15000});
+    // The welcome dialog is intentionally modal. Capture it once per viewport, then
+    // dismiss through the actual UI before testing underlying game controls.
+    const intro=page.locator("#audioIntroWelcome[open]");
+    if(await intro.count()){
+      if(mode==="together")await capture(page,"global","welcome","intro-open");
+      await page.locator("#audioIntroSkip").click();
+      await intro.waitFor({state:"detached",timeout:4000});
+    }
+    await fn(page);
+  }
   catch(e){report.push({mode,scenario,viewport:{width:viewport[0],height:viewport[1]},status:"BLOCKED",error:e.message.slice(0,350)});try{await capture(page,mode,scenario,"blocked");}catch{}}
   if(errors.length)report.push({mode,scenario,viewport,status:"FAIL",errors});
   await context.close();
