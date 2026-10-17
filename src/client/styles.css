@@ -640,3 +640,10 @@ main:focus { outline: none; }
   .dialog-body { min-width: 0; max-width: 100%; }
   .dialog-body .btn { max-width: 100%; }
 }
+
+/* Keep Solo's end-state actions within narrow phone viewports. */
+@media (max-width: 360px) {
+  .board .end, .board .end-actions { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+  .board .end-actions { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: stretch; }
+  .board .end-actions .btn { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; white-space: normal; }
+}
