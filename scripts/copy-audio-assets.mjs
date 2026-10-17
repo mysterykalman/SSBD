@@ -43,6 +43,14 @@ await copyFile(
   join(clientDir, "mom-mode", "resume-persistence.js"),
   join(root, "dist", "mom-resume.js")
 );
+for (const relative of ["mom/index.html", "mom-mode/index.html"]) {
+  const pagePath = join(root, "dist", relative);
+  if (!existsSync(pagePath)) continue;
+  const page = await readFile(pagePath, "utf8");
+  if (!page.includes('/mom-resume.js')) {
+    await writeFile(pagePath, page.replace('</body>', '<script src="/mom-resume.js" defer></script>\n</body>'), "utf8");
+  }
+}
 
 // The tactile audio settings panel uses this existing felt patch as its surface.
 const feltDir = join(root, "dist", "felt");
