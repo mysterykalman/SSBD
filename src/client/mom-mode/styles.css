@@ -133,3 +133,16 @@ main:focus { outline: none; }
 .rule-list > div:nth-child(4)::before { --badge: var(--badge-purple); }
 .portrait-frame { background: radial-gradient(circle at 50% 30%, rgba(239, 230, 251, .9), transparent 62%), #fdf9f3; }
 .portrait { object-fit: cover; object-position: 50% 0; padding: 0; }
+
+/* Mobile Pam: prevent the answer controls and long questions from escaping the card. */
+@media (max-width: 600px) {
+  .game-card, .pam-play, .speech, .answers, .game-top { min-width: 0; max-width: 100%; }
+  .pam-play { padding: 18px 14px 24px; }
+  .speech { height: auto; min-height: 0; overflow-wrap: anywhere; }
+  .question { font-size: clamp(1.3rem, 5.6vw, 1.8rem); line-height: 1.2; text-wrap: pretty; }
+  .answers.five { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "yes no" "py pn" "un un"; gap: 10px; }
+  .answers.five .answer { width: 100%; min-width: 0; min-height: 56px; white-space: normal; overflow-wrap: anywhere; padding-inline: 6px; font-size: clamp(.78rem, 3.4vw, .96rem); }
+  .q-dots { gap: 2px; width: 100%; }
+  .q-dots i { width: 100%; min-width: 0; }
+  .game-top { gap: 8px; }
+}
