@@ -1,0 +1,34 @@
+name: Pam Question Redundancy Validation
+
+on:
+  push:
+    branches:
+      - feature/pam-question-redundancy
+    paths:
+      - 'data/pam20q/**'
+      - 'src/client/mom-mode/engine.js'
+      - 'scripts/pam-classic-model.mjs'
+      - 'scripts/pam-quality-model.mjs'
+      - 'test/pam-*.test.mjs'
+      - '.github/workflows/pam-question-redundancy-validate.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Keep validated Pam knowledge frozen
+        run: git diff --exit-code 6ee006258414a8b65a23e2b9785b647a5e6ece3e HEAD -- data/pam20q
+      - name: Install dependencies
+        run: npm ci
+      - name: Run complete test suite
+        run: npm test
+      - name: Run production build
+        run: npm run build
