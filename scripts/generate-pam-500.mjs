@@ -299,7 +299,7 @@ const independentCounts=orders.map(order=>{
 });
 console.log('PAM_500_CANDIDATE_DISTINGUISHABILITY='+JSON.stringify({
  sourceCandidates:candidateProfiles.length,
- independentPhaseCount,
+
  pairwiseNoContradictionPairs:conflicts.reduce((n,c)=>n+c.length,0)/2,
  heuristicNonOverlappingSubsetSizes:independentCounts,
  bestHeuristicSubset:Math.max(...independentCounts),
