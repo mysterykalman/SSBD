@@ -22,7 +22,7 @@ a citrine crystal|+yellow +seeThrough +smallBread
 a smoky quartz crystal|+brown +seeThrough +smallBread
 a calcite crystal|+white +fragile +smallBread
 a gypsum crystal|+white +fragile +smallBread
-a mica sheet|+flat  +fragile
+a mica sheet|+flat +fragile
 a chalk rock|+white +soft +smallBread
 a piece of coal|+black +burn +combustible +smallBread
 a fossil in stone|+stone +brown +fragile
@@ -42,7 +42,7 @@ a piece of hematite|+brown +heavy +smallBread
 a piece of magnetite|+black +heavy +smallBread
 a sulfur crystal|+yellow +smallBread
 a piece of feldspar|+white +smallBread
-a piece of quartzite|+white  +smallBread
+a piece of quartzite|+white +smallBread
 a piece of gneiss|+striped +heavy
 a piece of schist|+flat +heavy
 a piece of petrified wood|+stone +brown +heavy
@@ -109,45 +109,45 @@ a pile of snow|+white +soft +heavy
 a frozen waterfall|+white +veryLarge
 a snowy mountain peak|+white +veryLarge +tall
 an ice sheet|+white +veryLarge +flat
-a chunk of sea ice|+white +float +saltWater
+a chunk of sea ice|+white +float +wet
 a chunk of lake ice|+clear +float +seeThrough
 `},
 {kind:'landform',flags:'-living -alive +veryLarge +seenReal',entries:`
 a volcano crater|+round +hole +stone
-a limestone cave|+hole +stone 
+a limestone cave|+hole +stone
 a canyon wall|+tall +stone +brown
-a sea cliff|+tall +stone +saltWater
+a sea cliff|+tall +stone +wet
 a sand dune|+brown +tall
 a rocky mountain ridge|+stone +tall +heavy
-a river delta|+water +flat
-a riverbank|+water +brown
+a river delta|+wet +flat
+a riverbank|+wet +brown
 a waterfall|+wet +noise +heard
 a geyser|+hot +wet +noise
-a hot spring|+hot +wet +water
-a tidal pool|+saltWater +wet
-a coral reef|+saltWater +water +colorful
-a rocky coastline|+stone +saltWater +wet
-a sandy beach|+brown +saltWater
+a hot spring|+hot +wet +wet
+a tidal pool|+wet +wet
+a coral reef|+wet +wet +colorful
+a rocky coastline|+stone +wet +wet
+a sandy beach|+brown +wet
 a river rapids|+wet +noise +heard
-a deep ocean trench|+saltWater +veryLarge
+a deep ocean trench|+wet +veryLarge
 a snowy mountain pass|+white +cold +tall
 a deep sinkhole|+round +hole +dangerous
-a rocky island|+stone +water
+a rocky island|+stone +wet
 a natural rock arch|+stone +hole +tall
 a natural stone bridge|+stone +hole +tall
 a stalactite|+stone +tall +sharp
 a stalagmite|+stone +tall +sharp
 a volcanic lava flow|+hot +stone +dangerous
 a river gorge|+stone +hole
-a gravel riverbed|+brown +stone +water
-a marsh|+wet +green +water
-a swamp|+wet +green +water
-a salt flat|+white +flat +saltWater
+a gravel riverbed|+brown +stone +wet
+a marsh|+wet +green +wet
+a swamp|+wet +green +wet
+a salt flat|+white +flat +wet
 a mountain glacier|+cold +white +heavy
 a grassy hillside|+green +tall +organic
 a forest clearing|+forest +flat +green
 a muddy trail|+brown +wet +flat
-a desert oasis|+green +water +wet
+a desert oasis|+green +wet +wet
 a frozen lake|+cold +wet +flat
 `},
 {kind:'weather',flags:'-manufactured -invented -buy -living -alive',entries:`
@@ -156,7 +156,7 @@ a double rainbow|+colorful +round +bright
 a lightning bolt|+bright +produceLight +dangerous
 a thunderclap|+noise +heard +dangerous
 a tornado funnel|+spin +move +dangerous +noise
-a waterspout|+spin +move +dangerous +water
+a waterspout|+spin +move +dangerous +wet
 a dust devil|+spin +move +brown
 a snowstorm|+white +cold +move +wet
 a hailstorm|+cold +noise +wet +dangerous
@@ -189,14 +189,14 @@ a mirage|+seeThrough +hot
 a patch of ground fog|+white +wet +seeThrough
 `},
 {kind:'body',flags:'+bodyPart +organic +touch -manufactured -invented',entries:`
-an eyebrow|+furry +head +smallBread
+an eyebrow|+soft +head +smallBread
 an eyelash|+smallGolf +soft +head
 an earlobe|+soft +head +smallBread
 an eardrum|+fragile +head +smallGolf
 a nostril|+hole +head +smallBread
 a nasal bridge|+head +smallBread
 a cheekbone|+head
-a jawbone| +head
+a jawbone|+head
 a chin|+head +smallBread
 a forehead|+head +flat
 a temple of the head|+head +smallBread
@@ -204,10 +204,10 @@ a tongue|+wet +soft +communicate
 a taste bud|+smallGolf +eat
 a uvula|+soft +wet
 a vocal cord|+communicate +noise +heard
-an elbow|+round +legs
-a kneecap|+round +legs 
-a shinbone| +tall
-a collarbone| +flat
+an elbow|+round +move
+a kneecap|+round +legs
+a shinbone|+tall
+a collarbone|+flat
 a wrist|+smallBread +move
 an ankle|+feet +move
 a heel|+feet +smallBread
@@ -219,8 +219,8 @@ a toenail|+feet +smallBread
 a thumbnail|+hold +smallBread
 a palm of a hand|+flat +hold
 a knuckle|+round +smallBread
-a shoulder blade|+flat 
-a rib bone| +round
+a shoulder blade|+flat
+a rib bone|+round
 a belly button|+hole +round
 a freckle|+spotted +smallGolf
 a birthmark|+colorful +flat
@@ -316,7 +316,7 @@ a cable management tray|+carryThings +computer
 `},
 {kind:'bath',flags:'+household +buy +manufactured +touch',entries:`
 a shower curtain ring|+hole +round +smallBread
-a shower curtain liner|+soft +water +flat
+a shower curtain liner|+soft +wet +flat
 a shower squeegee|+hold +wet +flat +tool
 a soap dish|+wet +round +smallBread
 a refillable soap pump|+refill +mechanical +wet
@@ -330,7 +330,7 @@ a shower sponge|+wet +soft
 a bath pillow|+wet +soft +float
 a bath bomb|+round +wet +goodSmell +smallBread
 a rubber bath duck|+yellow +float +soft +round
-a bath caddy|+carryThings +water +flat
+a bath caddy|+carryThings +wet +flat
 a toilet roll holder|+roll +mechanical
 a toilet paper roll|+roll +round +hole +soft
 a hair claw clip|+mechanical +smallBread +hold
@@ -474,7 +474,7 @@ a Halloween candy bucket|+carryThings +refill +colorful
 `},
 {kind:'toy',flags:'+buy +manufactured +played +game',entries:`
 a toy spinning top|+spin +round +smallBread
-a toy sailboat|+float +water +smallBread
+a toy sailboat|+float +wet +smallBread
 a toy train engine|+roll +mechanical +smallBread
 a toy dump truck|+roll +carryThings +smallBread
 a remote-control helicopter|+motorized +wings +noise
@@ -496,7 +496,7 @@ a paper glider|+flat +soft +hold
 a foam airplane|+soft +wings +hold
 a magnetic building tile|+flat +colorful
 a wooden building block|+brown +round +smallBread
-a miniature dollhouse|+box +open +bigMicrowave
+a miniature dollhouse|+box +open
 a dollhouse kitchen|+smallBread +household
 a toy tea set|+refill +smallBread +fragile
 a wooden train track|+roll +brown
@@ -520,7 +520,7 @@ a hanging flower basket|+garden +carryThings +round
 a terracotta pot|+garden +round +fragile
 a ceramic plant saucer|+garden +round +flat +fragile
 a garden trellis|+garden +tall +hole
-a bird bath|+garden +refill +water +round
+a bird bath|+garden +refill +wet +round
 a bird nesting box|+garden +box +open
 a bird feeder tray|+garden +carryThings +refill
 a birdhouse|+garden +box +open
