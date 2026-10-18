@@ -299,39 +299,60 @@ const independentCounts=orders.map(order=>{
 });
 console.log('PAM_500_CANDIDATE_DISTINGUISHABILITY='+JSON.stringify({
  sourceCandidates:candidateProfiles.length,
+ independentPhaseCount,
  pairwiseNoContradictionPairs:conflicts.reduce((n,c)=>n+c.length,0)/2,
  heuristicNonOverlappingSubsetSizes:independentCounts,
  bestHeuristicSubset:Math.max(...independentCounts),
  requiresFactualEnrichmentFor500:Math.max(...independentCounts)<BATCH_SIZE
 }));
 
+// Phase one: first keep a maximal set with a known contradictory answer
+// against *every* other member. This avoids sacrificing many clean options
+// merely to fit 500 early. Phase two fills exactly 500 with the fewest possible
+// remaining evidence overlaps, marked as editorial work, not approved.
 const selected=[],byGroup={},byCategory={},picked=[];
+function pick(candidate){
+ candidate.picked=true;selected.push(candidate.profile);picked.push(candidate);
+ byGroup[candidate.kind]=(byGroup[candidate.kind]||0)+1;
+ byCategory[candidate.profile.category]=(byCategory[candidate.profile.category]||0)+1;
+ for(const other of candidateProfiles){
+  if(other.picked)continue;
+  const d=distance(other.bits,candidate.bits);
+  if(d<other.selectionDistance)other.selectionDistance=d;
+  if(d===0)other.collisionsSelected++;
+ }
+}
+const independentOrder=[...candidateProfiles.keys()].sort((a,b)=>{
+ const ca=candidateProfiles[a],cb=candidateProfiles[b];
+ const da=conflicts[a].length,db=conflicts[b].length;
+ return da-db||Number(cb.validated100)-Number(ca.validated100)
+  ||cb.baselineDistance-ca.baselineDistance||cb.profile.yes.length-ca.profile.yes.length||a-b;
+});
+for(const id of independentOrder){
+ const c=candidateProfiles[id];
+ if(c.baselineDistance===0||c.selectionDistance===0)continue;
+ if(c.lexical&&c.profile.yes.length<8)continue;
+ pick(c);
+ if(selected.length===BATCH_SIZE)break;
+}
+const independentPhaseCount=selected.length;
 while(selected.length<BATCH_SIZE){
  let best=null,bestScore=-Infinity;
  for(const candidate of candidateProfiles){
   if(candidate.picked||candidate.baselineDistance===0)continue;
   const count=byGroup[candidate.kind]||0;
-  // Spread across concept domains, so the game does not acquire 200 nearly
-  // identical animals or foods. Enforce meaningful distance from prior targets.
-  const overlapPenalty=candidate.selectionDistance===0?25:candidate.selectionDistance===1?8:0;
-  const peerCollisionPenalty=candidate.collisionsSelected*5;
-  const categoryPenalty=candidate.profile.category==='other'?Math.max(0,(byCategory.other||0)-295)*0.17:0;
+  const overlapPenalty=candidate.selectionDistance===0?50:candidate.selectionDistance===1?12:0;
+  const peerCollisionPenalty=candidate.collisionsSelected*18;
+  const categoryPenalty=candidate.profile.category==='other'?Math.max(0,(byCategory.other||0)-260)*3:0;
+  const familyPenalty=Math.max(0,count-24)*4;
   const score=candidate.baselineDistance*3+Math.min(10,candidate.selectionDistance)*2
-    -overlapPenalty-peerCollisionPenalty-categoryPenalty-Math.max(0,count-22)*0.45
+    -overlapPenalty-peerCollisionPenalty-categoryPenalty-familyPenalty
     +Math.min(15,candidate.profile.yes.length)*0.3
-    +(candidate.diverse?20:0)+(candidate.validated100?22:0)-(candidate.lexical?9:0);
+    +(candidate.diverse?15:0)+(candidate.validated100?20:0)-(candidate.lexical?10:0);
   if(score>bestScore){bestScore=score;best=candidate;}
  }
- if(!best)throw new Error('Could not assemble 500 candidates distinguishable from the baseline');
- best.picked=true;selected.push(best.profile);picked.push(best);
- byGroup[best.kind]=(byGroup[best.kind]||0)+1;
- byCategory[best.profile.category]=(byCategory[best.profile.category]||0)+1;
- for(const candidate of candidateProfiles){
-  if(candidate.picked)continue;
-  const d=distance(candidate.bits,best.bits);
-  if(d<candidate.selectionDistance)candidate.selectionDistance=d;
-  if(d===0)candidate.collisionsSelected++;
- }
+ if(!best)throw new Error('Could not assemble 500 candidates distinguishable from original 1775');
+ pick(best);
 }
 console.log('PAM_500_SELECTION='+JSON.stringify({
  sourceCandidates:candidateProfiles.length,
