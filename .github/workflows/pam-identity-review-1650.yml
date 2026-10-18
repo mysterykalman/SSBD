@@ -1,0 +1,67 @@
+name: Pam Complete 1650 Identity Research Queue
+
+on:
+  push:
+    branches:
+      - feature/pam-thematic-1650-knowledge-lab
+    paths:
+      - '.github/workflows/pam-identity-review-1650.yml'
+      - 'scripts/pam-wikidata-review.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  assemble-unreviewed-queue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Download completed 1,100 research lookups
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .dev-data/pam-wikidata-shards
+          gh run download 39154268132 --repo mysterykalman/SSBD \
+            --pattern 'pam-wikidata-shard-*' --dir .dev-data/pam-wikidata-shards
+          find .dev-data/pam-wikidata-shards -name 'wikidata-suggestion-shard-*.json' -print
+      - name: Assemble source-linked review queue with the first 550
+        run: |
+          mapfile -d '' shards < <(find .dev-data/pam-wikidata-shards -type f \
+            -name 'wikidata-suggestion-shard-*.json' -print0 | sort -z)
+          if [ "${#shards[@]}" -ne 3 ]; then
+            echo "Expected three complete research shards, got ${#shards[@]}" >&2
+            exit 1
+          fi
+          node scripts/pam-wikidata-review.mjs "${shards[@]}"
+      - name: Enforce complete research without editorial promotion
+        run: |
+          node --input-type=module <<'EOF'
+          import {readFileSync} from 'node:fs';
+          const data=JSON.parse(readFileSync('data/pam20q/expansion/wikidata-identity-review.json','utf8'));
+          if(data.total_targets!==1650||data.retrieved!==1650||data.missing!==0)
+            throw Error('Research roster has missing or duplicate candidates');
+          if(data.counts.identityApprovals!==0||data.review_status!=='IDENTITY_RESEARCH_ONLY')
+            throw Error('Unapproved search results were incorrectly promoted to facts');
+          if(data.results.some(row=>row.reviewed||row.reviewed_qid))
+            throw Error('Research row contains an unexpected identity approval');
+          const sum=Object.values(data.counts).filter(x=>Number.isInteger(x)).reduce((a,b)=>a+b,0);
+          if(sum!==1650)throw Error('Research counts do not reconcile: '+sum);
+          console.log(JSON.stringify({retrieved:data.retrieved,counts:data.counts,
+            duplicateQidSuggestions:data.duplicateQids.length,editorialApprovals:0},null,2));
+          EOF
+      - name: Archive full editor-facing review queue
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-1650-complete-unreviewed-identity-queue
+          path: |
+            data/pam20q/expansion/wikidata-identity-review.json
+            data/pam20q/expansion/wikidata-identity-review.csv
+          if-no-files-found: warn
+          retention-days: 30
