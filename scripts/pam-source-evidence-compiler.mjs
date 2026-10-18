@@ -81,7 +81,7 @@ function dateThresholdText(prefix,year){
  * Since identity matches are unreviewed, all generated questions are strictly
  * experimental. Evidence needs editorial verification before active use.
  */
-export function compileSourceResearch(model,source,{minYes=2,minNo=2}={}){
+export function compileSourceResearch(model,source,{minYes=2,minNo=0,minTemporalNo=2}={}){
  if(source.review_status!=='research_only_unverified')throw Error('Nonresearch data entered the lab');
  const map=new Map(model.targets.map((t,i)=>[t.id,i]));
  const labelByQid=new Map();
@@ -122,13 +122,17 @@ export function compileSourceResearch(model,source,{minYes=2,minNo=2}={}){
    let yes=0,no=0;
    for(const [idx,facts] of fields){
     const field=facts.get(bucket);if(!field)continue;
-    known[idx]=1;states[idx]=field.value===value?3:2;
-    if(states[idx]===3)yes++;else no++;
+    // Wikidata item-valued fields are open-world. One observed value does
+    // NOT prove another value is false, even if only one value was returned.
+    // Preserve observed positive facts; every other subject stays UNKNOWN.
+    if(field.value===value){known[idx]=1;states[idx]=3;yes++;}
+    // A No needs a separately reviewed explicit negative or a proven
+    // complete single-valued domain. This unreviewed feed provides neither.
    }
    if(yes<minYes||no<minNo)continue;
    questions.push({id:`source_${bucket}_${value}`,field:bucket,value,
     text:rule.text(label),known,states,yes,no,
-    review_status:'SOURCE_RESEARCH_UNVERIFIED'});
+    evidence_scope:'POSITIVE_ONLY_OPEN_WORLD',review_status:'SOURCE_RESEARCH_UNVERIFIED'});
   }
  }
  const thresholds=[1650,1750,1800,1850,1900,1925,1950,1960,1970,1980,1990,2000,2010,2020];
@@ -141,7 +145,10 @@ export function compileSourceResearch(model,source,{minYes=2,minNo=2}={}){
     known[idx]=1;states[idx]=f.value<year?3:2;
     if(states[idx]===3)yes++;else no++;
    }
-   if(yes<minYes||no<minNo)continue;
+   // A precise, nonconflicting observed year supports a comparison with a
+   // threshold. This is a derived answer from positive time evidence, not
+   // a No manufactured from an absent property. Still research-only.
+   if(yes<minYes||no<minTemporalNo)continue;
    questions.push({id:`source_${prefix}_before_${year}`,field:prefix,value:year,
     text:dateThresholdText(prefix,year),known,states,yes,no,
     review_status:'SOURCE_RESEARCH_UNVERIFIED'});
@@ -153,5 +160,6 @@ export function compileSourceResearch(model,source,{minYes=2,minNo=2}={}){
   labelCount:labelByQid.size,newQuestions:questions.length,
   oldQuestions:model.questions.length,totalQuestions:merged.questions.length,
   sourcePositiveClaims:source.subjects.reduce((n,x)=>n+x.claims.length,0),
+  openWorldNegativeInferences:0,
   releaseGate:'BLOCKED: identity and Wikidata claims remain unreviewed; source-generated questions are not approved'}};
 }
