@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {loadPamClassicModel,pamTraitIndex} from './pam-classic-model.mjs';
 import {loadPam1775Model} from './pam-quality-model.mjs';
 import {pam500Catalogue} from '../data/pam20q/quality/catalogue-500.mjs';
+import {pam500DiverseCatalogue} from '../data/pam20q/candidates/diverse-500.mjs';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const targetPath=join(root,'data','pam20q','quality','quality-500.json');
@@ -44,6 +45,21 @@ const T={
  vehicle:{category:'other',yes:'manufactured invented buy transport move carryPeople',weakYes:'mechanical motorized',no:'living mammal fish insect'},
  instrument:{category:'other',yes:'manufactured buy played noise heard',weakYes:'hold',no:'living mammal fish insect'},
  nature:{category:'mineral',yes:'organic seenReal',weakYes:'touch',no:'mammal fish insect electronic'},
+ rock:{category:'mineral',yes:'stone seenReal touch',no:'living alive manufactured invented electronic motorized wear eat'},
+ gem:{category:'mineral',yes:'stone buy touch smallBread',no:'living alive manufactured invented electronic motorized wear'},
+ ice:{category:'mineral',yes:'cold wet touch',no:'living alive electronic motorized wear eat'},
+ landform:{category:'mineral',yes:'veryLarge seenReal touch',no:'living alive manufactured electronic motorized wear eat'},
+ weather:{category:'other',yes:'seenReal',no:'living alive manufactured invented buy electronic motorized tool'},
+ body:{category:'other',yes:'bodyPart organic touch',no:'manufactured invented electronic motorized tool'},
+ abstract:{category:'other',yes:'abstract',no:'manufactured invented buy living alive bodyPart hold lift touch'},
+ office:{category:'other',yes:'manufactured invented buy useful touch',no:'living alive'},
+ bath:{category:'other',yes:'manufactured invented buy household touch useful',no:'living alive'},
+ cleaning:{category:'other',yes:'manufactured invented buy useful household touch',no:'living alive'},
+ craft:{category:'other',yes:'manufactured invented buy hold touch',no:'living alive'},
+ party:{category:'other',yes:'manufactured invented buy',weakYes:'joy',no:'living alive'},
+ toy:{category:'other',yes:'manufactured invented buy played game touch',no:'living alive'},
+ gardenobject:{category:'other',yes:'manufactured invented buy useful touch garden',no:'living alive'},
+ medicine:{category:'other',yes:'manufactured invented buy useful',no:'living alive'},
 };
 function words(s){return s?s.split(/\s+/).filter(Boolean):[];}
 function uniqueStrings(list){return [...new Set(list)];}
@@ -63,6 +79,7 @@ const SAFE_NEGATIVE={
  mineral:words(PLANT_NO)
 };
 const FOOD_KINDS=new Set(['meal','dessert','snack','beverage']);
+const DIVERSE_KINDS=new Set(['rock','gem','ice','landform','weather','body','abstract','office','bath','cleaning','craft','party','toy','gardenobject','medicine']);
 
 // The validated 375-pack answers almost every question explicitly (135 strong
 // negatives on average). Under-specified profiles cannot compete against it:
@@ -89,6 +106,8 @@ function compile(group,entry){
  const p={name:entry.name,category:template.category,yes:words(template.yes),weakYes:words(template.weakYes),no:words(template.no)};
  const defaults=FOOD_KINDS.has(group.kind)?SAFE_NEGATIVE.other:template.category==='other'?words(OBJECT_NO):SAFE_NEGATIVE[template.category];
  for(const key of defaults)if(!p.yes.includes(key)&&!p.weakYes.includes(key)&&!p.no.includes(key))p.no.push(key);
+ if(group.kind==='body')p.no=p.no.filter(t=>!['living','alive'].includes(t));
+ if(group.kind==='weather')p.no=p.no.filter(t=>!['move','wet','smell'].includes(t));
  if(template.category==='animal'){
    p.yes.push('move');
    // Habitat refers to living IN water, not merely swimming or frequenting it.
@@ -154,7 +173,7 @@ console.log('PAM_375_REFERENCE_DENSITY='+JSON.stringify({yes:avg('yes'),no:avg('
 const previous=new Set(baseline.targets.map(x=>x.trim().toLowerCase()));
 const options=[];
 let skipped=0;
-for(const [groupId,group] of pam500Catalogue.entries()){
+for(const [groupId,group] of [...pam500DiverseCatalogue,...pam500Catalogue].entries()){
  const names=group.entries.split('\n').map(s=>s.trim()).filter(Boolean).map(parseEntry);
  if(names.length<8)throw new Error('Small catalogue group '+groupId);
  options.push({groupId,group,names});
@@ -171,7 +190,7 @@ for(const option of options){
   const signature=[profile.category,...['yes','weakYes','no'].map(x=>profile[x].join(','))].join('|');
   if(candidateSignatures.has(signature)){indistinguishable++;continue;}
   candidateSignatures.add(signature);candidateNames.add(key);
-  candidateProfiles.push({profile,kind:option.group.kind,groupId:option.groupId});
+  candidateProfiles.push({profile,kind:option.group.kind,groupId:option.groupId,diverse:DIVERSE_KINDS.has(option.group.kind)});
  }
 }
 if(candidateProfiles.length<BATCH_SIZE)throw new Error('Insufficient distinct factual candidate profiles '+candidateProfiles.length);
@@ -268,7 +287,8 @@ while(selected.length<BATCH_SIZE){
   // identical animals or foods. Enforce meaningful distance from prior targets.
   const overlapPenalty=candidate.selectionDistance===0?25:candidate.selectionDistance===1?8:0;
   const score=candidate.baselineDistance*3+Math.min(10,candidate.selectionDistance)*2
-    -overlapPenalty-Math.max(0,count-22)*0.45+Math.min(4,candidate.profile.yes.length)*0.05;
+    -overlapPenalty-Math.max(0,count-22)*0.45+Math.min(4,candidate.profile.yes.length)*0.05
+    +(candidate.diverse?7:0);
   if(score>bestScore){bestScore=score;best=candidate;}
  }
  if(!best)throw new Error('Could not assemble 500 candidates');
@@ -285,10 +305,11 @@ console.log('PAM_500_SELECTION='+JSON.stringify({
  minimumBaselineDistance:Math.min(...picked.map(p=>p.baselineDistance)),
  medianBaselineDistance:[...picked.map(p=>p.baselineDistance)].sort((a,b)=>a-b)[250],
  minPeerDistance:Math.min(...picked.slice(1).map(p=>p.selectionDistance)),
- comparedToAllExisting:baseline.targets.length
+ comparedToAllExisting:baseline.targets.length,
+ selectedDiverseCount:picked.filter(p=>p.diverse).length
 }));
 const doc={version:1,count:BATCH_SIZE,review_status:'candidate_unreviewed',source:'Deterministic candidate catalogue; semantic and gameplay verification pending',profiles:selected};
 await writeFile(targetPath,JSON.stringify(doc,null,2)+'\n');
 const mean=key=>Math.round(selected.reduce((n,p)=>n+p[key].length,0)/selected.length);
 console.log('PAM_500_PROFILE_DENSITY='+JSON.stringify({yes:mean('yes'),no:mean('no'),weakYes:mean('weakYes'),unknown:152-mean('yes')-mean('no')-mean('weakYes')}));
-console.log('PAM_500_GENERATED='+selected.length+' candidatesSkipped='+skipped+' identicalProfilesRejected='+indistinguishable+' groups='+JSON.stringify(byGroup));
+console.log('PAM_500_GENERATED='+selected.length+' selectedDiverse='+picked.filter(p=>p.diverse).length+' candidatesSkipped='+skipped+' identicalProfilesRejected='+indistinguishable+' groups='+JSON.stringify(byGroup));
