@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {scoreCandidate,searchTerms,rankCandidates,matchSuggestion,wikidataFetch} from '../scripts/pam-wikidata-reconcile.mjs';
+import {scoreCandidate,searchTerms,rankCandidates,matchSuggestion,wikidataFetch,reconcileOne} from '../scripts/pam-wikidata-reconcile.mjs';
 const target=(name,category)=>({name,category});
 test('Wikidata cannot silently substitute a different concept with an identical name',()=>{
  const apple=target('Apple','Brands');
@@ -79,4 +79,64 @@ test('country aliases add searches but never silently approve matching Wikidata 
  assert.ok(searchTerms(t).includes('Turkey'));
  const ranked=rankCandidates(t,[{id:'Q43',label:'Turkey',description:'country in West Asia and Southeast Europe'}]);
  assert.notEqual(matchSuggestion(t,ranked),'approved');
+});
+test('research ranks original musical groups above similarly named discographies',()=>{
+ const t={name:'Spice Girls',category:'Bands & Music Groups',subcategory:'Pop, Dance & Vocal Groups'};
+ const ranked=rankCandidates(t,[
+  {id:'Q674873',label:'Spice Girls discography',description:'Wikimedia band discography'},
+  {id:'Q55641',label:'Spice Girls',description:'British girl group'}
+ ]);
+ assert.equal(ranked[0].qid,'Q55641');
+ assert.equal(matchSuggestion(t,ranked),'single_plausible_not_verified');
+});
+
+test('research recognizes a brand rather than an identically named ingredient',()=>{
+ const t={name:'Chipotle',category:'Brands',subcategory:'Food, Drinks & Restaurants'};
+ const ranked=rankCandidates(t,[
+  {id:'Q860808',label:'chipotle',description:'smoke-dried jalapeño'},
+  {id:'Q465751',label:'Chipotle Mexican Grill',description:'American fast casual Mexican restaurant chain'}
+ ]);
+ assert.equal(ranked[0].qid,'Q465751');
+});
+
+test('research distinguishes a city from an equally named subdistrict',()=>{
+ const t={name:'Chiang Mai',category:'Cities',subcategory:'Asia',context:'Thailand'};
+ const ranked=rankCandidates(t,[
+  {id:'Q13025314',label:'Chiang Mai',description:'subdistrict municipality in Roi Et province, Thailand'},
+  {id:'Q52028',label:'Chiang Mai',description:'city in Chiang Mai province, Thailand'}
+ ]);
+ assert.equal(ranked[0].qid,'Q52028');
+});
+
+test('research rejects a viewing platform as the building itself',()=>{
+ const t={name:'The Shard',category:'Landmarks',subcategory:'Built Landmarks & Attractions',context:'London, United Kingdom'};
+ const ranked=rankCandidates(t,[
+  {id:'Q17062261',label:'The View from The Shard',description:'Observation decks inside the Shard London Bridge, London, UK'},
+  {id:'Q18536',label:'The Shard',description:'skyscraper in London, England'}
+ ]);
+ assert.equal(ranked[0].qid,'Q18536');
+});
+
+test('research distinguishes an original painting from a later tapestry copy',()=>{
+ const t={name:'Guernica',category:'Monuments, Paintings & Sculptures',subcategory:'Paintings',context:'Pablo Picasso'};
+ const ranked=rankCandidates(t,[
+  {id:'Q175036',label:'Guernica',description:'1937 oil painting by Pablo Picasso'},
+  {id:'Q56648800',label:'Guernica',description:'tapestry weaving based on the painting by Picasso'}
+ ]);
+ assert.equal(ranked[0].qid,'Q175036');
+});
+
+test('research attempts a contextual alias when an initial search remains ambiguous',async()=>{
+ const t={name:'The Bedroom (Van Gogh)',category:'Monuments, Paintings & Sculptures',subcategory:'Paintings',context:'Vincent van Gogh'};
+ const terms=[];
+ const result=await reconcileOne(t,{fetchImpl:async(url)=>{
+  const term=new URL(url).searchParams.get('search');terms.push(term);
+  return {ok:true,status:200,json:async()=>({search:term==='Bedroom in Arles'
+   ?[{id:'Q999999',label:'Bedroom in Arles',description:'painting by Vincent van Gogh'}]
+   :[{id:'Q888888',label:'The Bedroom',description:'painting by Edward Ardizzone'},
+     {id:'Q777777',label:'The Bedroom',description:'painting by Pieter de Hooch'}]})};
+ }});
+ assert.ok(terms.includes('Bedroom in Arles'));
+ assert.equal(result.suggested_candidates[0].qid,'Q999999');
+ assert.equal(result.status,'single_plausible_not_verified');
 });
