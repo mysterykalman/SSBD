@@ -24,6 +24,8 @@ on:
       - 'test/pam-reviewed-fact-compiler.test.mjs'
       - 'scripts/pam-wikidata-review.mjs'
       - 'test/pam-wikidata-review.test.mjs'
+      - 'scripts/pam-geography-evidence.mjs'
+      - 'test/pam-geography-evidence.test.mjs'
       - 'scripts/pam-wikidata-facts.mjs'
       - 'test/pam-wikidata-facts.test.mjs'
       - '.github/workflows/pam-thematic-audit.yml'
@@ -49,6 +51,8 @@ on:
       - 'test/pam-reviewed-fact-compiler.test.mjs'
       - 'scripts/pam-wikidata-review.mjs'
       - 'test/pam-wikidata-review.test.mjs'
+      - 'scripts/pam-geography-evidence.mjs'
+      - 'test/pam-geography-evidence.test.mjs'
       - 'scripts/pam-wikidata-facts.mjs'
       - 'test/pam-wikidata-facts.test.mjs'
 
@@ -77,6 +81,8 @@ jobs:
         run: node --test test/pam-source-evidence-compiler.test.mjs
       - name: Generate 66 dialogue transcripts and repetition statistics
         run: node scripts/pam-run-fun-audit.mjs
+      - name: Verify conservative geography source uncertainty
+        run: node --test test/pam-geography-evidence.test.mjs
       - name: Quantify benefit of source-backed questions and 104 gameplay samples
         run: node scripts/pam-run-source-audit.mjs
       - name: Verify provenance-linked Wikidata factual label parsing
