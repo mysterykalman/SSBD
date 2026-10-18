@@ -53,8 +53,9 @@ for(const group of [...pam500DiverseCatalogue,...pam500Catalogue]){
 const order=lexical.sort((a,b)=>a.rank-b.rank);
 for(const item of order){
  // Prefer the uncountable/plural form over ungrammatical guesses like 'a cookies'.
- const plural=/s$/i.test(item.name)&&!/(?:ss|us|is|ous|as|os)$/i.test(item.name);
- const display=plural?item.name:(/^[aeiou]/i.test(item.name)?'an ':'a ')+item.name;
+ const plural=/s$/i.test(item.name)&&!/(?:ss|us|is|ous)$/i.test(item.name);
+ const mass=/\\b(?:juice|milk|soda|tea|coffee|cocoa|water|chowder|custard|kefir|lemonade|noodles|pasta|ice cream)$/i.test(item.name);
+ const display=plural||mass?item.name:(/^[aeiou]/i.test(item.name)?'an ':'a ')+item.name;
  process(display,item.kind,'lexical_52k',item.rank,'');
 }
 const raw=lexical.length+pam500Catalogue.reduce((s,g)=>s+g.entries.trim().split(/\n/).length,0)+pam500DiverseCatalogue.reduce((s,g)=>s+g.entries.trim().split(/\n/).length,0);
