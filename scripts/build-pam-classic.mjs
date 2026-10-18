@@ -26,7 +26,7 @@ if(baseTargetCount!==1200)throw new Error(`Expected 1200 base Pam targets, found
 if(extensionCount!==200)throw new Error(`Expected 200 first-wave Pam extension targets, found ${extensionCount}`);
 if(qualityCount!==375)throw new Error(`Expected 375 quality Pam targets, found ${qualityCount}`);
 if(frozen.weights.length!==frozen.questions.length*frozen.targets.length)throw new Error(`Pam weight matrix has ${frozen.weights.length} cells; expected ${frozen.questions.length*frozen.targets.length}`);
-if(frozen.knownMask.length!==frozen.weights.length)throw new Error(`Pam known mask has ${frozen.knownMask.length} cells; expected ${weights.length}`);
+if(frozen.knownMask.length!==frozen.weights.length)throw new Error(`Pam known mask has ${frozen.knownMask.length} cells; expected ${frozen.weights.length}`);
 
 // Never auto-promote research artifacts into a playable game.
 // Only a deliberately enabled, signed-off release package is accepted.

@@ -8,17 +8,56 @@ import {dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {collectUnreviewedFacts} from './pam-wikidata-facts-batch.mjs';
 import {wikidataFetch} from './pam-wikidata-reconcile.mjs';
+import {loadSourceEvidence550} from './pam-source-evidence-compiler.mjs';
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+/** Reuse the 467 hash-pinned source dossiers already saved in the repository. */
+export function convertSavedSource(row,saved){
+ if(row.qid_suggestion!==saved.qid||row.id!==saved.id||row.name!==saved.name)return null;
+ const claims=[];
+ for(const fact of saved.claims||[]){
+  const p=fact.p||fact.property||String(fact.source||'').match(/#(P\d+)/)?.[1];
+  if(!/^P\d+$/.test(p||'')||!/^https:\/\/www\.wikidata\.org\/wiki\/Q\d+/.test(fact.source||''))continue;
+  if(fact.k==='item'&&/^Q\d+$/.test(fact.v||'')){
+   claims.push({field:fact.f,property:p,kind:'item',value_id:fact.v,claim_id:fact.claim_id||null,
+    rank:'normal',source:fact.source,status:'source_claim_unreviewed'});
+  }else if(fact.k==='time'&&typeof fact.v==='string'){
+   claims.push({field:fact.f,property:p,kind:'time',value_time:fact.v,
+    precision:fact.precision,claim_id:fact.claim_id||null,rank:'normal',
+    source:fact.source,status:'source_claim_unreviewed'});
+  }
+ }
+ if(!claims.length)return null;
+ return{id:row.id,name:row.name,category:row.category,qid:row.qid_suggestion,verified:false,
+  source_status:'wikidata_entity_found_unverified',entity_label:saved.entity_label||null,
+  entity_description:saved.entity_description||null,claims,reusedPinnedSource:true};
+}
+
 export async function collect1352(queue,{output,labelsOutput,fetchImpl=fetch}={}){
  if(!output||!labelsOutput)throw Error('Source and label output files required');
  if(queue?.review_status!=='IDENTITY_RESEARCH_ONLY'||queue.results?.length!==1650)throw Error('Complete research queue required');
  const active=queue.results.filter(x=>x.status==='single_plausible_not_verified');
  if(active.length!==1352)throw Error('Expected 1352 plausible identities');
  await mkdir(dirname(output),{recursive:true});
- const primary=await collectUnreviewedFacts(queue,{outputPath:output,fetchImpl,paceMs:1200,batchSize:20,
-  onProgress:x=>process.stderr.write('Wikidata subject batches '+x.completed+'/'+x.total+'; API errors '+x.errors+'\n')});
- let source=JSON.parse(await readFile(output,'utf8'));
- const combined=new Map(source.subjects.map(x=>[x.id,x]));
+ const saved=await loadSourceEvidence550();
+ const originalRows=new Map(active.map(x=>[x.id,x]));
+ const cached=saved.subjects.map(x=>convertSavedSource(originalRows.get(x.id)||{},x)).filter(Boolean);
+ const combined=new Map(cached.map(x=>[x.id,x]));
+ const needSource=active.filter(x=>!combined.has(x.id));
+ const pending={review_status:'IDENTITY_RESEARCH_ONLY',results:needSource};
+ let primary={requested:0,completed:0,errors:0},source={
+  status:'RESEARCH_CLAIMS_UNREVIEWED',source:'https://www.wikidata.org/',
+  identity_approvals:0,factual_approvals:0,errors:[],subjects:[],completed:0};
+ if(needSource.length){
+  primary=await collectUnreviewedFacts(pending,{outputPath:output+'.fresh.json',fetchImpl,paceMs:1500,batchSize:40,
+   onProgress:x=>process.stderr.write('Fresh Wikidata subject batches '+x.completed+'/'+x.total+'; API errors '+x.errors+'\n')});
+  const fresh=JSON.parse(await readFile(output+'.fresh.json','utf8'));
+  for(const x of fresh.subjects)combined.set(x.id,x);
+  source.errors=fresh.errors;
+ }
+ source.subjects=active.map(x=>combined.get(x.id));
+ source.completed=source.subjects.length;
+ await writeFile(output,JSON.stringify(source)+'\n');
  // Retry only missing source entities, in smaller batches. Every source
  // artifact is checkpointed before moving to labels.
  for(let round=1;round<=2;round++){
@@ -77,7 +116,7 @@ export async function collect1352(queue,{output,labelsOutput,fetchImpl=fetch}={}
   sourceMissing:source.subjects.filter(x=>x.source_status!=='wikidata_entity_found_unverified').length,
   claims:source.subjects.reduce((sum,s)=>sum+(s.claims||[]).length,0),
   relatedQids:qids.length,labeledQids:Object.keys(labels).length,labelFailedBatches:failed.length,
-  identityApprovals:0,factualApprovals:0,researchOnly:true,initial:primary};
+  identityApprovals:0,factualApprovals:0,researchOnly:true,reusedPinnedClaims:cached.length,initial:primary};
  console.log(JSON.stringify(result,null,2));
  return result;
 }
