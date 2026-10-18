@@ -209,7 +209,7 @@ export async function reconcileOne(target,options={}){
  const candidates=new Map();
  for(const term of terms){
   const doc=await wikidataFetch({action:'wbsearchentities',search:term,language:'en',type:'item',limit:8,format:'json',formatversion:2},options);
-  for(const result of doc.search||[])if(/^Q\\d+$/.test(result.id||''))candidates.set(result.id,result);
+  for(const result of doc.search||[])if(/^Q\d+$/.test(result.id||''))candidates.set(result.id,result);
   ranked=rankCandidates(target,[...candidates.values()]);
   // An ambiguous first search must not prevent a contextual alias query.
   if(matchSuggestion(target,ranked)==='single_plausible_not_verified')break;
