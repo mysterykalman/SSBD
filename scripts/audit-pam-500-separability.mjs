@@ -111,6 +111,9 @@ console.log('PAM_500_REVIEW_QUEUE='+JSON.stringify({
 
 console.log('PAM_500_SEPARABILITY='+JSON.stringify(report.summary));
 console.log('PAM_500_WORST='+JSON.stringify(report.worst.slice(0,25)));
+if(process.argv.includes('--strict-existing')&&report.summary.ambiguousWithExisting>0){
+ throw new Error(report.summary.ambiguousWithExisting+' proposed targets have no known separating answer against the previous 1775');
+}
 if(process.argv.includes('--strict')){
  if(report.summary.ambiguousWithEither)throw new Error(report.summary.ambiguousWithEither+' proposed targets have zero separating known questions');
 }
