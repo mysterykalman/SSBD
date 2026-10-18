@@ -5,7 +5,7 @@ if(!model)throw new Error('Pam classic model not loaded');
 // Display-only punctuation: never change question indices or trait semantics.
 const QUESTIONS=Object.freeze([...model.questions].map(value=>{
  const text=String(value).trim();
- return /\\?$/.test(text)?text:text+'?';
+ return text.endsWith('?')?text:text+'?';
 }));
 const TARGETS=Object.freeze([...model.targets]);
 const N=TARGETS.length,F=QUESTIONS.length;
