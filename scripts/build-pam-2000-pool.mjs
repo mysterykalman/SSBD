@@ -10,7 +10,7 @@ import {pam500Catalogue} from '../data/pam20q/quality/catalogue-500.mjs';
 import {pam500DiverseCatalogue} from '../data/pam20q/candidates/diverse-500.mjs';
 import {loadPamLexicalLeads,normalizePamName} from './pam-2000-corpus.mjs';
 
-const root=join(dirname(fileURLToPath(import.meta.url)),'..'),out=join(root,'data','pam20q','candidates','pam-2000-reviewed-pool.json');
+const root=join(dirname(fileURLToPath(import.meta.url)),'..'),out=join(root,'data','pam20q','candidates','pam-2000-preflight-pool.json');
 const baseline=await loadPam1775Model(loadPamClassicModel),lexical=await loadPamLexicalLeads();
 const categoryFor={mammal:'animal',hoof:'animal',bird:'animal',fish:'animal',reptile:'animal',amphibian:'animal',insect:'animal',invert:'animal',shellfish:'animal',
  fruit:'vegetable',berry:'vegetable',vegetable:'vegetable',root:'vegetable',herb:'vegetable',nut:'vegetable',plant:'vegetable',tree:'vegetable',
