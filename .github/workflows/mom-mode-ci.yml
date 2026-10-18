@@ -5,6 +5,7 @@ on:
     branches:
       - integration/all-current-work
       - main
+      - 'feature/pam-*'
   pull_request:
     branches:
       - integration/all-current-work
