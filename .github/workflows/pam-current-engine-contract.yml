@@ -1,0 +1,42 @@
+name: Pam Current Engine Contract CI
+
+on:
+  push:
+    branches:
+      - 'feature/pam-*'
+    paths:
+      - '.github/workflows/pam-current-engine-contract.yml'
+      - 'test/support/pam-current-engine.mjs'
+      - 'test/mom-benchmark-suite.test.mjs'
+      - 'test/mom-deduction*.test.mjs'
+      - 'test/mom-mode-engine.test.mjs'
+      - 'test/mom-mode.test.mjs'
+      - 'test/mom-facets.test.mjs'
+      - 'test/mom-general-knowledge.test.mjs'
+      - 'src/client/mom-mode/engine.js'
+      - 'src/client/mom-mode/adapter.js'
+  pull_request:
+    paths:
+      - '.github/workflows/pam-current-engine-contract.yml'
+      - 'test/support/pam-current-engine.mjs'
+      - 'test/mom-benchmark-suite.test.mjs'
+      - 'test/mom-deduction*.test.mjs'
+      - 'test/mom-mode-engine.test.mjs'
+      - 'test/mom-mode.test.mjs'
+      - 'test/mom-facets.test.mjs'
+      - 'test/mom-general-knowledge.test.mjs'
+      - 'src/client/mom-mode/engine.js'
+      - 'src/client/mom-mode/adapter.js'
+
+jobs:
+  current-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test current 1775 engine and migrated behavioural contracts
+        run: |
+          node --test test/mom-benchmark-suite.test.mjs test/mom-deduction-sequences.test.mjs test/mom-deduction.test.mjs test/mom-facets.test.mjs test/mom-general-knowledge.test.mjs test/mom-mode-engine.test.mjs test/mom-mode.test.mjs
