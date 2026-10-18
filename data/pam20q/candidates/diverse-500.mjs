@@ -52,7 +52,6 @@ a lump of mud|+brown +wet +soft
 a handful of sand|+brown +smallBread
 a pile of gravel|+brown +heavy
 a pinch of sea salt|+white +eat +smallGolf
-a piece of chalk|+white +soft +hold +smallBread
 a clump of dirt|+brown +smallBread
 a mound of soil|+brown +organic
 a lump of peat|+brown +organic +burn
@@ -95,7 +94,6 @@ an icicle|+clear +seeThrough +sharp +fragile +smallBread
 a snowball|+white +round +soft +hold +smallBread
 a snowflake|+white +fragile +smallGolf
 a hailstone|+white +round +smallGolf
-an ice cube|+clear +seeThrough +smallBread +hold
 a sheet of black ice|+flat +slippery +seeThrough
 a patch of frost|+white +fragile +flat
 a snowdrift|+white +soft +bigMicrowave
@@ -140,12 +138,8 @@ a stalagmite|+stone +tall +sharp
 a volcanic lava flow|+hot +stone +dangerous
 a river gorge|+stone +hole
 a gravel riverbed|+brown +stone +wet
-a marsh|+wet +green +wet
-a swamp|+wet +green +wet
 a salt flat|+white +flat +wet
 a mountain glacier|+cold +white +heavy
-a grassy hillside|+green +tall +organic
-a forest clearing|+forest +flat +green
 a muddy trail|+brown +wet +flat
 a desert oasis|+green +wet +wet
 a frozen lake|+cold +wet +flat
@@ -153,7 +147,7 @@ a frozen lake|+cold +wet +flat
 {kind:'weather',flags:'-manufactured -invented -buy -living -alive',entries:`
 a rainbow|+colorful +seeThrough +round +bright
 a double rainbow|+colorful +round +bright
-a lightning bolt|+bright +produceLight +dangerous
+a lightning bolt|+bright +produceLight +dangerous +hot
 a thunderclap|+noise +heard +dangerous
 a tornado funnel|+spin +move +dangerous +noise
 a waterspout|+spin +move +dangerous +wet
@@ -237,12 +231,12 @@ a riddle|+communicate +game
 a nickname|+communicate +storeInfo
 a memory|+storeInfo
 a dream|+spontaneous
-a nightmare|+dangerous
+a nightmare|+spontaneous
 a daydream|+spontaneous
 a coincidence|+spontaneous
-a surprise|+spontaneous +joy
+a surprise|~spontaneous +joy
 a compliment|+communicate +joy
-a warning|+communicate +dangerous
+a warning|+communicate
 a question|+communicate +storeInfo
 an idea|+spontaneous +storeInfo
 a plan|+storeInfo +useful
@@ -252,18 +246,18 @@ a computer virus|+computer +dangerous +storeInfo
 an internet meme|+computer +communicate +joy
 a video game high score|+game +storeInfo
 a birthday wish|+joy +communicate
-a magic trick|+game +joy
+a magic trick|+joy
 a plot twist|+spontaneous +storeInfo
 a lucky break|+joy +spontaneous
 a spelling mistake|+communicate +storeInfo
 a music melody|+heard +songs +noise
-a musical rhythm|+heard +noise
+a musical rhythm|~heard ~noise
 a sound echo|+heard +noise
 a drumbeat|+heard +noise
 an apology|+communicate
 an invitation|+communicate +storeInfo
 a question mark|+storeInfo +communicate
-a bedtime story|+songs +communicate
+a bedtime story|+communicate +storeInfo
 a countdown|+storeInfo +communicate
 `},
 
