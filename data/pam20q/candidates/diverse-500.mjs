@@ -29,14 +29,14 @@ a fossil in stone|+stone +brown +fragile
 a volcanic bomb rock|+brown +round +heavy
 a lava rock|+black +hole +smallBread
 a river pebble|+round +smallBread +brown
-a piece of gravel|+smallGolf +heavy
+a piece of gravel|+smallGolf +round
 a piece of marble stone|+white +heavy +smallBread
 a salt crystal|+white +smallGolf +eat
 a chunk of rock salt|+white +smallBread +eat
 a copper ore rock|+brown +heavy
 an iron ore rock|+brown +heavy
-a gold nugget|+yellow +heavy +smallBread
-a silver nugget|+white +heavy +smallBread
+a gold nugget|+yellow +heavy +smallBread -stone
+a silver nugget|+white +heavy +smallBread -stone
 a chunk of pyrite|+yellow +smallBread
 a piece of hematite|+brown +heavy +smallBread
 a piece of magnetite|+black +heavy +smallBread
@@ -104,7 +104,7 @@ a glacier|+white +veryLarge +heavy
 a block of ice|+clear +seeThrough +heavy
 a frozen puddle|+flat +slippery
 an ice crystal|+clear +smallGolf +fragile
-a layer of sleet|+white +smallBread
+a layer of sleet|+white +flat
 a pile of snow|+white +soft +heavy
 a frozen waterfall|+white +veryLarge
 a snowy mountain peak|+white +veryLarge +tall
@@ -212,12 +212,12 @@ a wrist|+smallBread +move
 an ankle|+feet +move
 a heel|+feet +smallBread
 a big toe|+feet +smallBread
-a pinky finger|+hold +smallBread
-a fingertip|+hold +smallBread
+a pinky finger|+smallBread +touch
+a fingertip|+smallBread +touch
 a fingernail|+sharp +smallBread
 a toenail|+feet +smallBread
-a thumbnail|+hold +smallBread
-a palm of a hand|+flat +hold
+a thumbnail|+smallBread +touch
+a palm of a hand|+flat +touch
 a knuckle|+round +smallBread
 a shoulder blade|+flat
 a rib bone|+round
@@ -246,7 +246,7 @@ a warning|+communicate +dangerous
 a question|+communicate +storeInfo
 an idea|+spontaneous +storeInfo
 a plan|+storeInfo +useful
-a recipe|+storeInfo +useful +eat
+a recipe|+storeInfo +useful
 a password|+storeInfo +useful
 a computer virus|+computer +dangerous +storeInfo
 an internet meme|+computer +communicate +joy
@@ -479,7 +479,7 @@ a toy train engine|+roll +mechanical +smallBread
 a toy dump truck|+roll +carryThings +smallBread
 a remote-control helicopter|+motorized +wings +noise
 a remote-control car|+motorized +roll +noise
-a toy dinosaur|+plastic +smallBread
+a toy dinosaur|+smallBread
 a toy robot|+mechanical +electronic +buttons
 a finger puppet|+soft +wear +smallBread
 a hand puppet|+soft +wear +communicate
@@ -490,7 +490,7 @@ a plush octopus|+soft +fluffy +round
 a plush dinosaur|+soft +fluffy
 a toy bowling pin|+roll +tall
 a toy bowling ball|+round +roll +hole
-a toy parachute|+soft +float +stretch
+a toy parachute|+soft +stretch
 a kite spool|+roll +hold +round
 a paper glider|+flat +soft +hold
 a foam airplane|+soft +wings +hold
