@@ -62,3 +62,24 @@ test('six buttons keep deliberate two-column, three-row order and accessible cli
  assert.deepEqual(matches.map(m=>m[2]),['Person','Place','Animal or Plant','Object','Entertainment','Other']);
  assert.ok(css.includes('.category-answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));
 });
+
+test('Pam rejects replayed questions and cannot exceed the 20-question budget',()=>{
+ const game=Engine.createGame({budget:20});
+ let next=Engine.setOpeningCategory(game,'other');
+ let previous=null;
+ for(let guard=0;guard<40&&next.kind==='question';guard++){
+  assert.ok(game.turn<game.budget);
+  assert.equal(game.asked.has(next.index),false,'question must never repeat');
+  if(previous){
+   assert.throws(()=>Engine.answer(game,previous,'yes'),/repeated/);
+   assert.ok(game.turn<=20);
+  }
+  previous=next;
+  next=Engine.answer(game,next,'unknown');
+ }
+ // An attempted replay after a guess or hunch must not consume another turn.
+ const spent=game.turn;
+ assert.throws(()=>Engine.answer(game,previous,'yes'),/repeated|budget exhausted/);
+ assert.equal(game.turn,spent);
+ assert.ok(game.turn<=20);
+});
