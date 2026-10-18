@@ -21,9 +21,8 @@ export function knownOppositeAudit(model,{limitExamples=12}={}){
   }
   yesSets.push(ys);noSets.push(ns);
  }
- const indexes=Array.from({length:n},(_,i)=>i);
  const byCategory={},unresolved=[];
- let unique=0,unresolvedPairs=0,highest=0,totalUnresolved=0;
+ let unique=0,highest=0,totalUnresolved=0;
  for(let i=0;i<n;i++){
   let separated=0n;
   const bit=1n<<BigInt(i);
@@ -45,7 +44,7 @@ export function knownOppositeAudit(model,{limitExamples=12}={}){
   entry.largestAmbiguitySet=Math.max(entry.largestAmbiguitySet,count);
   if(unresolved.length<limitExamples)unresolved.push({name:targets[i].name,category:cat,ambiguousWith:count,examples});
  }
- unresolvedPairs=totalUnresolved/2;
+ const unresolvedPairs=totalUnresolved/2;
  return {total:n,questions:questions.length,uniquelySeparable:unique,
   unresolvedTargets:n-unique,unresolvedPairs,maxAmbiguousPeers:highest,
   byCategory,examples:unresolved,
