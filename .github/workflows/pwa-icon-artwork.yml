@@ -26,12 +26,12 @@ jobs:
           if [ ! -f src/client/icons/icon-source.png ]; then
             cp src/client/icons/icon-512.png src/client/icons/icon-source.png
           fi
-          python scripts/rebuild-pwa-icons.py
+          python scripts/rebuild-pwa-icons.py --preview
       - name: Commit the generated branded assets to this feature branch
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/client/icons/
+          git add src/client/icons/ docs/pwa-icon-preview.jpg
           if ! git diff --cached --quiet; then
             git commit -m 'art(pwa): remove white launcher backdrops from original felt icons'
             git push origin HEAD:feature/pwa-native-felt-icons-and-controls
