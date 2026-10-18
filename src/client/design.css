@@ -298,3 +298,11 @@ dialog::backdrop { background: rgba(59, 42, 36, .45); backdrop-filter: blur(3px)
 .bubble, .gary-bubble, .speech { padding: calc(var(--felt-h) * .19) calc(var(--felt-h) * .22) calc(var(--felt-h) * .34) calc(var(--felt-h) * .22) !important; }
 .bubble, .gary-bubble { --felt-h: 96px; min-height: 0 !important; }
 .speech { --felt-h: 124px; min-height: 0; }
+
+/* Compact phone header: preserve the felt art while keeping labels inside patches. */
+@media (max-width:560px) {
+  .topbar {gap:6px}
+  .top-actions {gap:4px}
+  .top-actions .btn {font-size:clamp(.7rem,2.7vw,.86rem);gap:4px;padding-inline:12px;white-space:nowrap}
+  .top-actions .icon-btn,.top-actions .avatar,.top-actions .bell {flex-shrink:0}
+}
