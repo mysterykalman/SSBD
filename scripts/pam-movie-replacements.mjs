@@ -13,7 +13,7 @@ import {loadPam1775Model} from './pam-quality-model.mjs';
 const NOMINATIONS=Object.freeze([
  ['The Sting',1973],['Amadeus',1984],['Stand by Me',1986],
  ['Good Will Hunting',1997],['The Big Lebowski',1998],['The Iron Giant',1999],
- ['School of Rock',2003],['Mean Girls',2004],['The Prestige',2006],
+ ['School of Rock',2003],['The King\'s Speech',2010],['The Prestige',2006],
  ['Little Miss Sunshine',2006],['Moana',2016],['Arrival',2016],
  ['La La Land',2016],['Coco',2017],['The Shape of Water',2017]
 ]);
