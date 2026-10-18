@@ -1,4 +1,4 @@
-import {writeFile,readFile} from 'node:fs/promises';
+import {writeFile,readFile,mkdir} from 'node:fs/promises';
 import {gunzipSync} from 'node:zlib';
 import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -207,7 +207,7 @@ const options=poolManifest.candidates.map((item,groupId)=>({
 let skipped=0;
 // Select factually distinguishable candidates, not merely names with different
 // spellings. The 156-question vocabulary has finite information capacity.
-const candidateProfiles=[],candidateSignatures=new Set(),candidateNames=new Set();
+let candidateProfiles=[],candidateSignatures=new Set(),candidateNames=new Set();
 let indistinguishable=0;
 for(const option of options){
  for(const entry of option.names){
@@ -269,6 +269,29 @@ for(const candidate of candidateProfiles){
  candidate.baselineDistance=nearest;
  candidate.selectionDistance=Infinity;
  candidate.collisionsSelected=0;
+}
+
+// Two-step funnel: measure gameplay feasibility *before* constructing a
+// 500-target cohort. No lexical lead qualifies on its name alone.
+const soloDir=join(root,'.dev-data','pam-2000');
+const allCandidatePath=join(soloDir,'compiled-candidates.json');
+if(process.env.PAM_EXPORT_ALL_CANDIDATES==='1'){
+ await mkdir(soloDir,{recursive:true});
+ const exportDoc={count:candidateProfiles.length,sourcePoolCount:poolManifest.candidates.length,
+  baselineCount:baseline.targets.length,questionCount:baseline.questions.length,
+  profiles:candidateProfiles.map(c=>({profile:c.profile,origin:c.origin,kind:c.kind,
+   baselineDistance:c.baselineDistance,priorValidated100:c.validated100}))};
+ await writeFile(allCandidatePath,JSON.stringify(exportDoc)+'\\n');
+ console.log('PAM_2000_COMPILED_PROFILE_POOL='+JSON.stringify({sourceCount:poolManifest.candidates.length,distinctProfileCount:candidateProfiles.length,baselineZeroCandidates:candidateProfiles.filter(c=>c.baselineDistance===0).length}));
+ process.exit(0);
+}
+if(process.env.PAM_USE_SOLO_AUDIT==='1'){
+ const approvedDoc=JSON.parse(await readFile(join(soloDir,'solo-gameplay.json'),'utf8'));
+ const approved=new Set(approvedDoc.eligibleNames||[]);
+ candidateProfiles=candidateProfiles.filter(c=>approved.has(c.profile.name));
+ console.log('PAM_2000_SOLO_FILTER='+JSON.stringify({tested:approvedDoc.totalReviewed,
+  eligible:approved.size,selectedForGroupRanking:candidateProfiles.length}));
+ if(candidateProfiles.length<500)throw new Error('Cannot responsibly select 500 when only '+candidateProfiles.length+' pass individual oracle checks');
 }
 
 // Approximate how many entries in this source catalogue have at least one
