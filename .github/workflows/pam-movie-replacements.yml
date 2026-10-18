@@ -1,0 +1,34 @@
+name: Pam Movie Replacement Identity Research
+on:
+  push:
+    branches: [feature/pam-thematic-1650-knowledge-lab]
+    paths:
+      - '.github/workflows/pam-movie-replacements.yml'
+      - 'scripts/pam-movie-replacements.mjs'
+  workflow_dispatch:
+permissions: {contents: read, actions: read}
+jobs:
+  replacement-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Retrieve preserved complete 1650 candidate queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .dev-data/pam-replacements
+          gh run download 39163517479 --repo mysterykalman/SSBD --pattern pam-1650-complete-unreviewed-identity-queue --dir .dev-data/pam-replacements
+      - name: Validate the proposed fifteen new films and find source identities
+        run: |
+          queue=$(find .dev-data/pam-replacements -name wikidata-identity-review.json -print -quit)
+          node scripts/pam-movie-replacements.mjs "$queue" .dev-data/pam-replacements/film-nominations-and-identity-research.json
+      - name: Archive 15-for-15 replacement candidate dossier
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-movie-franchise-replacement-nominations
+          path: .dev-data/pam-replacements/film-nominations-and-identity-research.json
+          retention-days: 30
