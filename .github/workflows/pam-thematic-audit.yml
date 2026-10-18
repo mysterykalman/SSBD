@@ -9,6 +9,10 @@ on:
       - 'scripts/run-semantic-audit.mjs'
       - 'scripts/pam-expansion-baseline-check.mjs'
       - 'test/pam-thematic-lab.test.mjs'
+      - 'scripts/pam-thematic-reasoner.mjs'
+      - 'scripts/pam-known-opposite-audit.mjs'
+      - 'test/pam-thematic-reasoner.test.mjs'
+      - 'test/pam-known-opposite-audit.test.mjs'
       - 'scripts/pam-reviewed-fact-compiler.mjs'
       - 'test/pam-reviewed-fact-compiler.test.mjs'
       - 'scripts/pam-wikidata-facts.mjs'
@@ -21,6 +25,10 @@ on:
       - 'scripts/run-semantic-audit.mjs'
       - 'scripts/pam-expansion-baseline-check.mjs'
       - 'test/pam-thematic-lab.test.mjs'
+      - 'scripts/pam-thematic-reasoner.mjs'
+      - 'scripts/pam-known-opposite-audit.mjs'
+      - 'test/pam-thematic-reasoner.test.mjs'
+      - 'test/pam-known-opposite-audit.test.mjs'
       - 'scripts/pam-reviewed-fact-compiler.mjs'
       - 'test/pam-reviewed-fact-compiler.test.mjs'
       - 'scripts/pam-wikidata-facts.mjs'
@@ -43,6 +51,10 @@ jobs:
         run: node --test test/pam-reviewed-fact-compiler.test.mjs
       - name: Verify provenance-linked Wikidata factual label parsing
         run: node --test test/pam-wikidata-facts.test.mjs
+      - name: Verify Bayesian 20-turn reasoning and soft-response stability
+        run: node --test test/pam-thematic-reasoner.test.mjs
+      - name: Enforce known-opposite separability instead of pretending unknown means no
+        run: node --test test/pam-known-opposite-audit.test.mjs
       - name: Measure the unapproved question/target collision rate
         run: node scripts/run-semantic-audit.mjs
       - name: Protect frozen original 1,775-answer baseline and compare names
