@@ -155,7 +155,7 @@ function refineConnections(card){
     "Pick a challenge and sort out the troublemaker."
   ]);
   const standees=[...card.querySelectorAll(".conn-launch-standee")];
-  const labels=["OWEN","ZOE","MARTIN","PROF. BRAINE"];
+  const labels=["OWEN","ZOE","MARTIN","DR. JONES"];
   standees.forEach((standee,index)=>{if(labels[index]&&standee.dataset.name!==labels[index])standee.dataset.name=labels[index];});
 }
 
