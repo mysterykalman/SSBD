@@ -53,6 +53,28 @@ const SUBCATEGORY_PROMPTS=Object.freeze({
  'Reality, Competition & Documentary':'Is the TV show reality, competition, or documentary?',
  'Stage Musicals':'Is it a work created for musical theatre?'
 });
+// Shared humanlike routing filters are deliberately based on mutually exclusive
+// answer topics, not the target's spelling. They help Pam narrow naturally
+// without serially asking all eleven category labels.
+const BROAD_ROUTING_QUESTIONS=Object.freeze({
+  'geographic-place':'Is it primarily a specific geographic place or historic site?',
+  'screen-or-stage':'Is it a particular movie, television show, or stage musical?',
+  'real-person':'Is it an individual real person?',
+  'organization':'Is it a commercial brand or car manufacturer?',
+  'artwork':'Is it a particular painting or sculpture?',
+  'music-work':'Is it a band or stage musical?'
+});
+function broadRoutingFlags(t){
+ const c=t.category,sub=t.subcategory;
+ const places=['Cities','Countries','Landmarks'].includes(c)||(c==='Monuments, Paintings & Sculptures'&&sub==='Monuments & Historic Sites');
+ const screen=['Movies','TV Shows','Musicals'].includes(c);
+ const works=c==='Monuments, Paintings & Sculptures'&&['Paintings','Sculptures & Public Art'].includes(sub);
+ const music=['Bands & Music Groups','Musicals'].includes(c);
+ return [places?'geographic-place':null,screen?'screen-or-stage':null,
+   c==='People'?'real-person':null,
+   ['Brands','Car Companies'].includes(c)?'organization':null,
+   works?'artwork':null,music?'music-work':null].filter(Boolean);
+}
 const PERSON_FIELDS=Object.freeze({
   'physics':/\b(physicist|physics|theoretical physicist)\b/i,
   'mathematics':/\b(mathematician|mathematics)\b/i,
@@ -131,6 +153,7 @@ export function traitsFromWorkBook(target){
   }else if(value!=null&&norm(value))facts.set(field,norm(value));
  };
  set('topic',target.category);
+ set('macro_topic',broadRoutingFlags(target));
  set('subtopic',target.subcategory);
  const c=norm(target.context);
  const t=target.category;
@@ -160,7 +183,7 @@ export function traitsFromWorkBook(target){
 
 function isScoped(target,field){
  const t=target.category;
- if(field==='topic')return true;
+ if(field==='topic'||field==='macro_topic')return true;
  if(field==='subtopic')return true;
  if(field==='region')return t==='Cities'||t==='Countries';
  if(field==='city_country')return t==='Cities';
@@ -173,6 +196,7 @@ function isScoped(target,field){
 }
 
 const QUESTION_TEMPLATES={
+ macro_topic:value=>BROAD_ROUTING_QUESTIONS[value],
  topic:v=>`Is it ${CATEGORY_LABELS[v]}?`,
  subtopic:(v)=>SUBCATEGORY_PROMPTS[v],
  region:v=>`Is it associated with ${v}?`,

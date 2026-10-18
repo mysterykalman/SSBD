@@ -58,6 +58,7 @@ test('category question meaning is used and no answer name letters are inspected
  const first=nextThematicDecision(game);
  assert.equal(first.kind,'question');
  assert.ok(first.informationGain>0);
+ assert.equal(first.question.field,'macro_topic','Pam should begin with a conversational broad filter');
  assert.ok(!/letter|spell|start with/i.test(first.question.text));
  const sampleIndices=[0,250,550,750,950,1150,1350,1500,1550,1600];
  for(const idx of sampleIndices){
