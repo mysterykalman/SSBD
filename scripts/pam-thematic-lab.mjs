@@ -142,11 +142,12 @@ export function traitsFromWorkBook(target){
  if(t==='Movies'&&/^(18|19|20)\d{2}$/.test(c)){
   const year=Number(c);
   set('movie_decade',`${Math.floor(year/10)*10}s`);
+  set('movie_year',String(year));
   set('movie_period',year<1980?'before 1980':year<2000?'1980–1999':year<2010?'2000–2009':'2010 or later');
  }
  if(t==='Monuments, Paintings & Sculptures'&&target.subcategory==='Paintings'&&c&&!/\d/.test(c))set('painting_artist',c);
  if(t==='Musicals'&&c){
-  const creators=c.split(/[;/]/g).map(x=>norm(x)).filter(Boolean);
+  const creators=c.split(/[;/]/g).map(x=>norm(x)).filter(x=>x&&!/^(stage adaptation|stage version|adapted from|original cast|book by|songs by|based on)/i.test(x));
   if(creators.length&&creators.every(x=>x.length<90))set('musical_creators',creators);
  }
  if(t==='People'&&c){
@@ -173,11 +174,12 @@ function isScoped(target,field){
 
 const QUESTION_TEMPLATES={
  topic:v=>`Is it ${CATEGORY_LABELS[v]}?`,
- subtopic:(v)=>SUBCATEGORY_PROMPTS[v]||`Is it in the ${v} group?`,
+ subtopic:(v)=>SUBCATEGORY_PROMPTS[v],
  region:v=>`Is it associated with ${v}?`,
  city_country:v=>`Is this city in ${v}?`,
  car_origin:v=>`Is this automaker based in ${v}?`,
  movie_decade:v=>`Was this movie released in the ${v}?`,
+ movie_year:v=>`Was this movie released in ${v}?`,
  movie_period:v=>`Was it released ${v}?`,
  painting_artist:v=>`Was this painting made by ${v}?`,
  musical_creators:v=>`Was ${v} involved in creating this musical?`,
@@ -197,6 +199,7 @@ export function compileThematicModel(targets,{minYes=1,minNo=1}={}){
  for(let i=0;i<targets.length;i++){
   for(const [field,value] of profiles[i]){
    if(!QUESTION_TEMPLATES[field])continue;
+   if(field==='subtopic'&&!SUBCATEGORY_PROMPTS[value])continue;
    const choices=Array.isArray(value)?value:[value];
    for(const part of choices){
     const key=token(field,part);
@@ -255,9 +258,11 @@ export function collisionAudit(model){
 export function selectQuestion(model,remaining,asked=new Set(),recentFamilies=[]){
  if(remaining.length<=1)return null;
  const familyCooldown=new Set(recentFamilies.slice(-2));
+ const askedHasYear=recentFamilies.includes('movie_year');
  let best=null;
  for(const q of model.questions){
   if(asked.has(q.id))continue;
+  if(q.field==='movie_year'&&(remaining.length>28||askedHasYear))continue;
   let yes=0,no=0,unknown=0;
   for(const i of remaining){
    if(!q.known[i])unknown++;

@@ -67,3 +67,17 @@ node scripts/pam-expansion-baseline-check.mjs
 ```
 
 Outputs are `data/pam20q/expansion/semantic-audit.json` and `baseline-comparison.json`. Experimental outputs are not referenced by the live build, so this branch does **not** change production gameplay even if opened accidentally.
+
+## Automated preflight findings — first workbook-only model
+
+The GitHub CI preflight loaded **1,650/1,650** exact names and passed all original 1,775-answer integration tests. The first metadata-only semantic model has fewer than 10% individually distinguishable profiles. An early 293-filter run had 122 unique signatures; after adding explicit year filters and removing vague template questions, the local experimental model generated **345 candidate questions**, but only **147 uniquely distinguishable profiles**. An indicative, evenly spaced 104-name clean-answer simulation correctly isolated **1/104** targets. That is a meaningful failure: it shows how badly the list needs enriched, verified, distinguishing facts, not that the question-selection problem can be solved by changing constants.
+
+The direct/near-label comparison identified **15** possible collisions with baseline names, mostly **homonyms** rather than repeat concepts. Examples include Apple the company versus an apple, Dove the brand versus a dove, The Kiss as several different artworks versus an ordinary kiss, and Alien the film versus an alien. Exact names and descriptions need review; those subjects must be separated through topic questions and never silently dropped.
+
+## Source-backed enrichment research
+
+`pam-wikidata-reconcile.mjs` uses the documented Wikimedia `wbsearchentities` interface to collect possible QIDs, contextual labels and public descriptions with provenance. Identical name strings can identify entirely different subjects, so proposed QIDs are **never automatically approved**. `pam-wikidata-facts.mjs` fetches explicit positive statements and preserves the property ID, claim ID, time precision and source. Missing statements and deprecated claims **do not become negative answers**.
+
+The research pilot is `.github/workflows/pam-thematic-wikidata-pilot.yml`. It can query a balanced sample across all 11 categories and produces review-only artifact files. Wikimedia documentation: https://www.mediawiki.org/wiki/Wikibase/API and https://www.wikidata.org/wiki/Wikidata:Data_formats . These are sources for structured claims, not a blanket certification of entity matches or every real-world trait.
+
+The goal of the next pass is to turn enough **reviewed** facts into discriminating profiles to pass category-level clean/softened 20-turn games. Question count is a consequence of separation and quality, not a quota that justifies making up questions.

@@ -1,0 +1,49 @@
+name: Pam themed Wikidata research pilot
+
+on:
+  push:
+    branches: [feature/pam-thematic-1650-knowledge-lab]
+    paths:
+      - 'scripts/pam-wikidata-reconcile.mjs'
+      - 'test/pam-wikidata-reconcile.test.mjs'
+      - '.github/workflows/pam-thematic-wikidata-pilot.yml'
+  workflow_dispatch:
+    inputs:
+      sample:
+        description: Number of names to sample across the 11 categories (1-1650)
+        required: true
+        default: '11'
+      pace_ms:
+        description: Minimum milliseconds between requests (at least 250)
+        required: true
+        default: '1100'
+
+permissions:
+  contents: read
+jobs:
+  research-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Verify matching cannot falsely approve ambiguous names
+        run: node --test test/pam-wikidata-reconcile.test.mjs test/pam-wikidata-facts.test.mjs
+      - name: Research a category-balanced test sample (never modifies Pam)
+        env:
+          SAMPLE: ${{ github.event.inputs.sample || '11' }}
+          PACE_MS: ${{ github.event.inputs.pace_ms || '1100' }}
+        run: node scripts/pam-wikidata-reconcile.mjs --sample="$SAMPLE" --pace-ms="$PACE_MS"
+      - name: Collect provenance-linked positive claim suggestions
+        run: node scripts/pam-wikidata-facts.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: pam-themed-wikidata-research-candidates
+          path: |
+            data/pam20q/expansion/wikidata-suggestion-sample.json
+            data/pam20q/expansion/wikidata-facts-suggested.json
+          if-no-files-found: warn
+          retention-days: 30
