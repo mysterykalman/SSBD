@@ -11,6 +11,11 @@ on:
       - integration/all-current-work
       - main
 
+# Only the newest commit on the same branch needs the expensive full suite.
+concurrency:
+  group: mom-mode-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   full-check:
     runs-on: ubuntu-latest
