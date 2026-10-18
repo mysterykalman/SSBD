@@ -101,18 +101,20 @@ async function main(){
  const args=process.argv.slice(2);
  const getNum=(prefix,def)=>{const a=args.find(x=>x.startsWith('--'+prefix+'='));return a?Number(a.split('=')[1]):def;};
  const sample=getNum('sample',11),pace=getNum('pace-ms',1100);
+ const offset=getNum('offset',0),count=getNum('count',sample-offset);
  if(!Number.isInteger(sample)||sample<1||sample>1650)throw Error('--sample must be between 1 and 1650');
  if(!Number.isInteger(pace)||pace<250)throw Error('--pace-ms must be at least 250ms');
- const roster=await loadThematicRoster();const selected=sampleAcrossCategories(roster,sample);
+ if(!Number.isInteger(offset)||offset<0||offset>=sample||!Number.isInteger(count)||count<1||offset+count>sample)throw Error('Invalid --offset/--count shard boundaries');
+ const roster=await loadThematicRoster();const selected=sampleAcrossCategories(roster,sample).slice(offset,offset+count);
  const result=[];
  const dir=join(root,'data','pam20q','expansion');await mkdir(dir,{recursive:true});
- const output=join(dir,'wikidata-suggestion-sample.json');
- const snapshot=()=>({generated_at:new Date().toISOString(),source:'https://www.wikidata.org/',status:'research_candidates_only',source_policy:'Wikidata CC0; never auto-approve entity matches, claims or negative facts',selected:sample,total:roster.length,completed:result.length,results:result});
+ const output=join(dir,offset===0&&count===sample?'wikidata-suggestion-sample.json':`wikidata-suggestion-shard-${String(offset).padStart(4,'0')}.json`);
+ const snapshot=()=>({generated_at:new Date().toISOString(),source:'https://www.wikidata.org/',status:'research_candidates_only',source_policy:'Wikidata CC0; never auto-approve entity matches, claims or negative facts',selected:sample,total:roster.length,offset,count,completed:result.length,results:result});
  for(let i=0;i<selected.length;i++){
   const target=selected[i];
   try{result.push(await reconcileOne(target));}
   catch(error){result.push({id:target.id,name:target.name,category:target.category,status:'source_error',error:String(error).slice(0,300),suggested_candidates:[]});}
-  process.stderr.write(`${i+1}/${selected.length} ${target.id} ${result.at(-1).status}\n`);
+  process.stderr.write(`${i+1}/${selected.length} (global=${offset+i+1}) ${target.id} ${result.at(-1).status}\n`);
   if(result.length%25===0||i===selected.length-1)await writeFile(output,JSON.stringify(snapshot(),null,2)+'\n');
   if(i<selected.length-1)await delay(pace);
  }

@@ -1,0 +1,37 @@
+name: Pam 1650 remaining Wikidata research shards
+on:
+  push:
+    branches: [feature/pam-thematic-1650-knowledge-lab]
+    paths: ['.github/workflows/pam-wikidata-shards.yml']
+permissions: {contents: read}
+concurrency:
+  group: pam-wikidata-remaining-research
+  cancel-in-progress: false
+jobs:
+  search:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    strategy:
+      max-parallel: 2
+      fail-fast: false
+      matrix:
+        include:
+          - {offset: 550, count: 367}
+          - {offset: 917, count: 367}
+          - {offset: 1284, count: 366}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '24'}
+      - name: Verify research client and identity guards
+        run: node --test test/pam-wikidata-reconcile.test.mjs test/pam-wikidata-facts.test.mjs
+      - name: Fetch just this shard with Wikimedia-friendly pacing
+        run: node scripts/pam-wikidata-reconcile.mjs --sample=1650 --offset=${{ matrix.offset }} --count=${{ matrix.count }} --pace-ms=2300
+      - name: Retain results even if the research is interrupted
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pam-wikidata-shard-${{ matrix.offset }}
+          path: data/pam20q/expansion/wikidata-suggestion-shard-*.json
+          if-no-files-found: warn
+          retention-days: 30
