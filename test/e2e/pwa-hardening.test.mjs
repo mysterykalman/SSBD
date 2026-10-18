@@ -206,6 +206,8 @@ test("PWA installation controls use SSBD's existing colourful felt pieces on Hom
     assert.equal(await sheet.isVisible(),true);
     const closeSource=await sheet.locator(".pwa-install-close").evaluate(el=>getComputedStyle(el).borderImageSource);
     assert.match(closeSource,/\/felt\/btn-purple\.webp/,route+" must use purple felt button");
+    // Fail with the rendered sheet markup rather than hanging for 30 seconds when an older/stale dialog is shown.
+    assert.equal(await sheet.locator(".pwa-install-eyebrow").count(),1,route+" rendered the wrong PWA sheet: "+(await sheet.evaluate(el=>el.outerHTML)).slice(0,1800));
     const eyebrowSource=await sheet.locator(".pwa-install-eyebrow").evaluate(el=>getComputedStyle(el).borderImageSource);
     assert.match(eyebrowSource,/\/felt\/chip-purple\.webp/,route+" must use original purple felt chip");
     const colors=await sheet.locator(".pwa-install-steps li").evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el,"::before").backgroundImage));
