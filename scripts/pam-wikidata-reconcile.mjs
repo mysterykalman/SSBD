@@ -41,7 +41,15 @@ export function searchTerms(target){
  * Ratings must NOT be treated as verified or used in production without review.
  */
 const QUERY_ALIASES=Object.freeze({
- 'Czechia':['Czech Republic'],'Türkiye':['Turkey'],'Ivory Coast':["Côte d'Ivoire"],'South Korea':['Republic of Korea']
+ 'Czechia':['Czech Republic'],'Türkiye':['Turkey'],'Ivory Coast':["Côte d'Ivoire"],'South Korea':['Republic of Korea'],
+ 'The Bedroom (Van Gogh)':['Bedroom in Arles','Van Gogh bedroom'],
+ 'National War Memorial, Ottawa':['National War Memorial (Canada)','The Response Ottawa'],
+ 'Merlion statue':['Merlion'], 'Seoul N Tower':['N Seoul Tower'],
+ "Bird's Nest Stadium":['Beijing National Stadium'],
+ 'Kremlin of Moscow':['Moscow Kremlin'], 'Ta Prohm Temple':['Ta Prohm'],
+ 'Grand Palace of Bangkok':['Grand Palace'], 'Tepuis of Mount Roraima':['Mount Roraima'],
+ 'Batu Caves temple complex':['Batu Caves'], 'Sigiriya rock fortress':['Sigiriya'],
+ 'Jökulsárlón Glacier Lagoon':['Jökulsárlón'], 'Gullfoss waterfall':['Gullfoss']
 });
 const COUNTRY_ALIASES=Object.freeze({
  'United States':['united states','u.s.','usa','american'],
@@ -98,6 +106,25 @@ function categoryEvidence(target,description){
    if(/\b(painting|song|band|film|building|novel)\b/.test(d))score-=6;
   }
   if(sub==='Built Landmarks & Attractions'&&/\b(bridge|tower|building|monument|stadium|cathedral|temple|castle|museum)\b/.test(d))score+=5;
+ }
+ if(t==='Cities'){
+  if(/\b(city|large city|capital city|major city)\b/.test(d))score+=5;
+  if(/\b(subdistrict|village|province|county|borough|neighbourhood|neighborhood)\b/.test(d))score-=6;
+ }
+ if(t==='Bands & Music Groups'){
+  if(/\b(discography|album discography|record label|episode|webcomic|video game|single by|soundtrack)\b/.test(d))score-=13;
+  if(/\b(girl group|boy band|pop group|rock band|musical duo|hip hop group|vocal pop group|k-pop group)\b/.test(d))score+=7;
+ }
+ if(t==='Brands'){
+  if(/\b(restaurant chain|fast food restaurants|drink brand|energy drink|clothing brand|electronics company|fast casual)\b/.test(d))score+=6;
+  if(/\b(former .*restaurant chain|former .*company|smoke-dried|edible fruit|pepper|software development team)\b/.test(d))score-=7;
+ }
+ if(t==='Landmarks'){
+  if(/\b(observation decks? inside|observation deck at|view from the)\b/.test(d))score-=8;
+  if(/\b(skyscraper|landmark building|tower in|stadium in|bridge in)\b/.test(d))score+=4;
+ }
+ if(t==='Monuments, Paintings & Sculptures'&&sub==='Paintings'){
+  if(/\b(tapestry|reproduction|replica|after the original|weaving)\b/.test(d))score-=12;
  }
  if(t==='People'){
   if(/\b(album|song|film|band|group|submarine|book|podcast|episode)\b/.test(d))score-=6;
@@ -179,10 +206,13 @@ export async function wikidataFetch(params,{fetchImpl=fetch,maxAttempts=4}={}){
 export async function reconcileOne(target,options={}){
  const terms=searchTerms(target);
  let ranked=[];
+ const candidates=new Map();
  for(const term of terms){
   const doc=await wikidataFetch({action:'wbsearchentities',search:term,language:'en',type:'item',limit:8,format:'json',formatversion:2},options);
-  ranked=rankCandidates(target,doc.search);
-  if(ranked.length&&ranked[0].score>=7)break;
+  for(const result of doc.search||[])if(/^Q\\d+$/.test(result.id||''))candidates.set(result.id,result);
+  ranked=rankCandidates(target,[...candidates.values()]);
+  // An ambiguous first search must not prevent a contextual alias query.
+  if(matchSuggestion(target,ranked)==='single_plausible_not_verified')break;
  }
  return {id:target.id,name:target.name,category:target.category,subcategory:target.subcategory,
   source_context:target.context,status:matchSuggestion(target,ranked),suggested_candidates:ranked};
