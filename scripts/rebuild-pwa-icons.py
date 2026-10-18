@@ -50,8 +50,10 @@ def cleaned_icon() -> Image.Image:
     margin=round(w*0.052)
     radius=round(w*0.13)
     ImageDraw.Draw(geometry).rounded_rectangle(
-        [margin,margin,w-margin-1,w-margin-1],radius=radius,fill=255
+        [margin,margin,w-margin-1,w-round(w*0.085)],radius=radius,fill=255
     )
+    # The original source has a diffuse pale photographic glow below the felt.
+    # Clip it, keeping the lower embroidered seam but not the square-shaped halo.
     geometry=geometry.filter(ImageFilter.GaussianBlur(w*0.003))
     alpha=ImageChops.multiply(colours,geometry)
     patch=image.convert("RGBA")
