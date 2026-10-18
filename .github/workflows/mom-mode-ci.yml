@@ -30,6 +30,10 @@ jobs:
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
+      # Unit tests inspect the generated dist/sw.js; build it from this exact SHA
+      # instead of exercising a stale committed artefact.
+      - name: Build generated test artefacts
+        run: npm run build
       - name: Unit tests
         run: npm test
       - name: Race tests
