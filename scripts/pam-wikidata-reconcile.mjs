@@ -173,7 +173,7 @@ export function scoreCandidate(target,result){
  }else if(target.category==='Landmarks'||target.category==='Monuments, Paintings & Sculptures'){
   const tokens=contextualTerms(target.context);
   const matched=tokens.filter(t=>cd.includes(t));
-  score+=Math.min(9,matched.length*3);
+  score+=Math.min(12,matched.length*4);
  }
  return score;
 }
