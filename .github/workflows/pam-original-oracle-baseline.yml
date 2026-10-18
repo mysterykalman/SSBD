@@ -1,6 +1,15 @@
 name: Pam Original 1775 Oracle Baseline
 
 on:
+  push:
+    branches:
+      - 'feature/pam-*'
+    paths:
+      - '.github/workflows/pam-original-oracle-baseline.yml'
+      - 'scripts/pam-1775-oracle-report.mjs'
+      - 'test/support/pam-current-engine.mjs'
+      - 'src/client/mom-mode/engine.js'
+      - 'scripts/pam-quality-model.mjs'
   pull_request:
     paths:
       - 'scripts/pam-1775-oracle-report.mjs'
