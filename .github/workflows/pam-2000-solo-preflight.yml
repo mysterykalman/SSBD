@@ -1,0 +1,35 @@
+name: Pam 2000 individual-playability audit
+on:
+  push:
+    branches: [feature/pam-500-from-2000]
+    paths:
+      - scripts/audit-pam-2000-solo.mjs
+      - .github/workflows/pam-2000-solo-preflight.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Compile every distinct source profile before selecting 500
+        run: PAM_EXPORT_ALL_CANDIDATES=1 node scripts/generate-pam-500.mjs
+      - name: Test each candidate alone against previous 1775 in the real game
+        run: node scripts/audit-pam-2000-solo.mjs
+      - name: Save individually-playable and failed candidates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-2000-individual-playability
+          path: |
+            .dev-data/pam-2000/solo-gameplay.json
+            .dev-data/pam-2000/compiled-candidates.json
+          if-no-files-found: warn
+          retention-days: 30
