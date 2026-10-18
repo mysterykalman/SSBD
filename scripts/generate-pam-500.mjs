@@ -194,13 +194,17 @@ const referenceDoc=JSON.parse(gunzipSync(Buffer.from(referenceParts.join('').tri
 const avg=(key)=>Math.round(referenceDoc.profiles.reduce((n,p)=>n+(p[key]?.length||0),0)/referenceDoc.profiles.length);
 console.log('PAM_375_REFERENCE_DENSITY='+JSON.stringify({yes:avg('yes'),no:avg('no'),weakYes:avg('weakYes'),example:referenceDoc.profiles[0]}));
 const previous=new Set(baseline.targets.map(x=>x.trim().toLowerCase()));
-const options=[];
-let skipped=0;
-for(const [groupId,group] of [...pam500DiverseCatalogue,...pam500Catalogue].entries()){
- const names=group.entries.split('\n').map(s=>s.trim()).filter(Boolean).map(parseEntry);
- if(names.length<8)throw new Error('Small catalogue group '+groupId);
- options.push({groupId,group,names});
+const poolManifest=JSON.parse(await readFile(join(root,'data','pam20q','candidates','pam-2000-preflight-pool.json'),'utf8'));
+if(poolManifest.summary?.eligibleUniqueCandidates<2000||poolManifest.candidates?.length!==poolManifest.summary.eligibleUniqueCandidates){
+ throw new Error('Fresh Pam source pool must contain at least 2000 independently screened names');
 }
+const prior100Doc=JSON.parse(await readFile(join(root,'data','pam20q','candidates','pam-100-provisional.json'),'utf8'));
+const prior100=new Set(prior100Doc.retained.map(p=>p.name.trim().toLowerCase()));
+const options=poolManifest.candidates.map((item,groupId)=>({
+ groupId,group:{kind:item.kind,flags:item.source_flags,entries:item.name},
+ names:[{name:item.name,flags:[]}],origin:item.origin
+}));
+let skipped=0;
 // Select factually distinguishable candidates, not merely names with different
 // spellings. The 156-question vocabulary has finite information capacity.
 const candidateProfiles=[],candidateSignatures=new Set(),candidateNames=new Set();
@@ -213,7 +217,7 @@ for(const option of options){
   const signature=[profile.category,...['yes','weakYes','no'].map(x=>profile[x].join(','))].join('|');
   if(candidateSignatures.has(signature)){indistinguishable++;continue;}
   candidateSignatures.add(signature);candidateNames.add(key);
-  candidateProfiles.push({profile,kind:option.group.kind,groupId:option.groupId,diverse:DIVERSE_KINDS.has(option.group.kind)});
+  candidateProfiles.push({profile,kind:option.group.kind,groupId:option.groupId,diverse:option.origin==='diversified_catalogue',lexical:option.origin==='lexical_52k',origin:option.origin,validated100:prior100.has(key)});
  }
 }
 if(candidateProfiles.length<BATCH_SIZE)throw new Error('Insufficient distinct factual candidate profiles '+candidateProfiles.length);
@@ -315,7 +319,7 @@ while(selected.length<BATCH_SIZE){
   const score=candidate.baselineDistance*3+Math.min(10,candidate.selectionDistance)*2
     -overlapPenalty-peerCollisionPenalty-categoryPenalty-Math.max(0,count-22)*0.45
     +Math.min(15,candidate.profile.yes.length)*0.3
-    +(candidate.diverse?20:0);
+    +(candidate.diverse?20:0)+(candidate.validated100?22:0)-(candidate.lexical?9:0);
   if(score>bestScore){bestScore=score;best=candidate;}
  }
  if(!best)throw new Error('Could not assemble 500 candidates distinguishable from the baseline');
@@ -336,11 +340,15 @@ console.log('PAM_500_SELECTION='+JSON.stringify({
  minPeerDistance:Math.min(...picked.slice(1).map(p=>p.selectionDistance)),
  comparedToAllExisting:baseline.targets.length,
  selectedDiverseCount:picked.filter(p=>p.diverse).length,
+ selectedPriorCulled100:picked.filter(p=>p.validated100).length,
+ selectedLexicalCount:picked.filter(p=>p.lexical).length,
+ poolCount:poolManifest.candidates.length,
+ selectedByOrigin:Object.fromEntries([...new Set(picked.map(p=>p.origin))].map(origin=>[origin,picked.filter(p=>p.origin===origin).length])),
  collidingCandidateJoins:picked.reduce((total,p)=>total+p.collisionsSelected,0),
  baselineZeroCandidatesRejected:candidateProfiles.filter(p=>p.baselineDistance===0).length,
  byCategory
 }));
-const doc={version:1,count:BATCH_SIZE,review_status:'candidate_unreviewed',source:'Deterministic candidate catalogue; semantic and gameplay verification pending',profiles:selected};
+const doc={version:2,count:BATCH_SIZE,review_status:'candidate_unreviewed',source:'Crossreferenced 2399-name preflight pool, factual and gameplay validation pending',pool_size:poolManifest.candidates.length,profiles:selected};
 await writeFile(targetPath,JSON.stringify(doc,null,2)+'\n');
 const mean=key=>Math.round(selected.reduce((n,p)=>n+p[key].length,0)/selected.length);
 console.log('PAM_500_PROFILE_DENSITY='+JSON.stringify({yes:mean('yes'),no:mean('no'),weakYes:mean('weakYes'),unknown:152-mean('yes')-mean('no')-mean('weakYes')}));
