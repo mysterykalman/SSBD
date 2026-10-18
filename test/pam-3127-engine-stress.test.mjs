@@ -33,7 +33,7 @@ test('full 3127-target fixture loads into real browser engine without mutating o
  vm.runInContext(await readFile(new URL('../src/client/mom-mode/engine.js',import.meta.url),'utf8'),ctx);
  const engine=ctx.PamClassic20Q;
  assert.equal(engine.N,3127);assert.equal(engine.F,176);
- assert.deepEqual(engine.TARGETS.slice(0,1775),base.targets);
+ assert.deepEqual(Array.from(engine.TARGETS.slice(0,1775)),base.targets);
  const game=engine.createGame({budget:20});
  let action=engine.setOpeningCategory(game,'entertainment');
  let count=0,sawNewQuestion=false;
@@ -51,6 +51,7 @@ test('full 3127-target fixture loads into real browser engine without mutating o
 test('engine refuses an unapproved 3127-target fixture',async()=>{
  const ctx={console,atob:s=>Buffer.from(s,'base64').toString('binary')};ctx.window=ctx;
  const obj=fixture();obj.expansionReviewed=false;ctx.PAM_CLASSIC_MODEL=obj;
+ const source=await readFile(new URL('../src/client/mom-mode/engine.js',import.meta.url),'utf8');
  vm.createContext(ctx);
- assert.throws(()=>vm.runInContext(await readFile(new URL('../src/client/mom-mode/engine.js',import.meta.url),'utf8'),ctx),/Unexpected Pam classic model shape/);
+ assert.throws(()=>vm.runInContext(source,ctx),/Unexpected Pam classic model shape/);
 });
