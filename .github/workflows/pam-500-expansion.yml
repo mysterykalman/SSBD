@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/pam-500-expansion.yml
       - data/pam20q/quality/**
+      - data/pam20q/candidates/**
       - scripts/generate-pam-500.mjs
       - scripts/audit-pam-500-separability.mjs
       - scripts/pam-quality-model.mjs
@@ -46,7 +47,7 @@ jobs:
           path: data/pam20q/quality/quality-500.json
           retention-days: 30
       - name: Audit candidate separability
-        run: node scripts/audit-pam-500-separability.mjs
+        run: node scripts/audit-pam-500-separability.mjs --strict-existing
       - name: Publish the diagnostic dataset
         if: always()
         uses: actions/upload-artifact@v4
