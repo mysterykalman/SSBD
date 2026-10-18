@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import vm from 'node:vm';
+import {loadCurrentPam,traceCurrentPam} from './support/pam-current-engine.mjs';
 import {
   loadBenchmarkRows,
   SOURCE_ROW_COUNT,
@@ -24,65 +24,26 @@ function normalize(value) {
     .replace(/\s+/g, ' ');
 }
 
-function loadEngine() {
-  const sandbox = { globalThis: null, window: null, console };
-  sandbox.globalThis = sandbox;
-  sandbox.window = sandbox;
-  vm.createContext(sandbox);
-  const scripts = [
-    'src/client/mom-mode/knowledge.generated.js',
-    'src/client/mom-mode/knowledge.general.js',
-    'src/client/mom-mode/knowledge.js',
-  ];
-  const controlled = '.dev-data/mom-controlled-profiles/knowledge.controlled.js';
-  if (fs.existsSync(path.join(ROOT, controlled))) scripts.push(controlled);
-  scripts.push('src/client/mom-mode/engine.js');
-  for (const relPath of scripts) {
-    vm.runInContext(fs.readFileSync(path.join(ROOT, relPath), 'utf8'), sandbox, { filename: relPath });
-  }
-  return sandbox.MomBayes;
+const current=await loadCurrentPam();
+const engine=current.engine;
+function buildIndex(){
+ const map=new Map();
+ current.model.targets.forEach((name,index)=>{
+  const key=normalize(name);
+  if(!map.has(key))map.set(key,{obj:{name},index});
+ });
+ return map;
 }
-
-function buildIndex(engine) {
-  const map = new Map();
-  engine.OBJECTS.forEach((obj, index) => {
-    for (const name of [obj.name, ...(obj.aliases ?? [])].filter(Boolean)) {
-      const key = normalize(name);
-      if (!map.has(key)) map.set(key, { obj, index });
-    }
-  });
-  return map;
-}
-
-function traceSelfPlay(engine, secret) {
-  const game = engine.createGame({ budget: 20 });
-  const path = [];
-  let next = engine.choose(game);
-  while (game.status === 'playing') {
-    if (!next) break;
-    if (next.kind === 'hunch') {
-      path.push({ turn: game.turn + 1, kind: 'hunch', label: next.label, confidence: next.confidence });
-      next = engine.commitGuess(game, next);
-      continue;
-    }
-    if (next.kind === 'guess') {
-      const correct = next.index === secret;
-      path.push({ turn: game.turn + 1, kind: 'guess', label: next.label, answer: correct ? 'yes' : 'no' });
-      const confirmed = engine.confirm(game, next, correct);
-      return {
-        result: { kind: 'result', winner: correct ? 'pam' : 'player', correct, turns: game.turn, guess: next.label, reason: correct ? '' : 'wrong_guess', score: confirmed.score },
-        path,
-      };
-    }
-    if (next.kind === 'stumped') {
-      return { result: { kind: 'result', winner: 'player', correct: false, turns: game.turn, reason: 'stumped' }, path };
-    }
-    assert.equal(next.kind, 'question', `unexpected Mom action: ${next.kind}`);
-    const answer = engine.oracle(secret, next);
-    path.push({ turn: game.turn + 1, kind: 'question', id: next.id, text: next.text, answer });
-    next = engine.answer(game, next, answer);
-  }
-  return { result: { kind: 'result', winner: 'player', correct: false, turns: game.turn, reason: game.status || 'budget' }, path };
+function traceSelfPlay(_engine,secret){
+ const traced=traceCurrentPam(current,secret);
+ const path=traced.path.filter(row=>row.kind==='question').map(row=>({
+  kind:'question',turn:row.turn,id:row.id,text:row.text,answer:row.response
+ }));
+ return{result:{
+  kind:'result',winner:traced.correct?'pam':'player',
+  correct:traced.correct,turns:traced.turns,guess:traced.guess,
+  reason:traced.correct?'':'wrong_guess',score:traced.result.score
+ },path};
 }
 
 function pathFlags(row, path) {
@@ -101,8 +62,7 @@ function pathFlags(row, path) {
 }
 
 const benchmark = loadBenchmarkRows();
-const engine = loadEngine();
-const nameIndex = buildIndex(engine);
+const nameIndex = buildIndex();
 
 function coverageRows(rows = benchmark) {
   return rows.map((row) => {
