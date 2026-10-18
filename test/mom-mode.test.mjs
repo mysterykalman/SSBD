@@ -10,18 +10,18 @@ test("Mom Mode scripts parse and keep the engine isolated",async()=>{
   assert.doesNotThrow(()=>new Script(source,{filename:name}));
  }
  const adapter=await read("adapter.js");
- for(const name of ["connected:true","supportedAnswers","startGame","getNextQuestion","submitAnswer","makeGuess","keepAsking","getProgress","getGuess","confirmGuess","resetGame"])assert.ok(adapter.includes(name),"missing "+name);
+ for(const name of ["connected:true","supportedAnswers","startGame","supportedCategories","submitAnswer","makeGuess","keepAsking","getProgress","getGuess","confirmGuess","resetGame"])assert.ok(adapter.includes(name),"missing "+name);
  assert.doesNotMatch(adapter,/engine not connected/i);
 });
-test("Mom Mode is a live five-answer guessing game with a hunch choice",async()=>{
+test("Mom Mode is a live six-answer guessing game with a hunch choice",async()=>{
  const html=await read("index.html");
  assert.doesNotMatch(html,/DESIGN PREVIEW|Answers here do not affect Pam/);
  assert.match(html,/aria-live="polite"/);
- for(const answer of ["yes","probably","unknown","probably_not","no"])assert.ok(html.includes('data-answer="'+answer+'"'));
+ for(const answer of ["yes","probably","maybe","unknown","doubtful","no"])assert.ok(html.includes('data-answer="'+answer+'"'));
  for(const id of ["pam-score","pam-streak","pam-best","hunch-actions","guess-now-btn","keep-asking-btn","rules-title","rules-btn"])assert.ok(html.includes(`id="${id}"`),id);
  assert.match(html,/20 questions\. One guess\./);
- assert.match(html,/Every question is worth a point\./);
- assert.match(html,/Push your luck\./);
+ assert.match(html,/Yes, no, probably, doubtful, maybe, and don’t know are all fair answers\./);
+ assert.match(html,/Pam always guesses by question 20\./);
  assert.match(html,/How to play/);
  assert.match(html,/pam-v2\.webp/);
  assert.doesNotMatch(html,/YOUR MOM SCORE|A little about Pam|Your Pam Score keeps growing/);
