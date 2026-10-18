@@ -197,7 +197,7 @@ function installDashboardStyles() {
   style.id = 'allModeResumeStyles';
   style.textContent = `
     .game-item.resume-solo{box-shadow:inset 4px 0 0 var(--orange)}
-    .game-item.resume-together{box-shadow:inset 4px 0 0 #d7b994}
+    .game-item.resume-together{box-shadow:inset 4px 0 0 var(--teal)}
     .game-item.resume-mom{box-shadow:inset 4px 0 0 var(--purple)}
     .game-item.resume-odd-one-in{box-shadow:inset 4px 0 0 var(--green)}
     .resume-avatar img{width:100%;height:100%;object-fit:cover}
