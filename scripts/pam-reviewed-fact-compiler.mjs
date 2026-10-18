@@ -34,6 +34,12 @@ export function validateReviewedSubject(record){
  if(!record||!/^PAM-\d{4}$/.test(record.id||''))throw Error('Candidate ID required');
  if(!record.identity_reviewed)throw Error(`Unreviewed identity cannot provide Pam facts: ${record.id}`);
  if(!/^Q\d+$/.test(record.subject_qid||''))throw Error(`Verified subject QID required for ${record.id}`);
+ // An approval bit alone is not an identity audit. Require an accountable,
+ // dated review and a citation bound to this exact Wikidata entity.
+ if(!normalize(record.approved_name)||!normalize(record.reviewer)||!/^20\\d{2}-\\d{2}-\\d{2}$/.test(record.reviewed_at||''))
+  throw Error(`Identity approval requires a name, reviewer and review date: ${record.id}`);
+ if(record.identity_source!==`https://www.wikidata.org/wiki/${record.subject_qid}`)
+  throw Error(`Identity source must match approved Wikidata QID: ${record.id}`);
  if(!Array.isArray(record.facts))throw Error(`Facts array missing for ${record.id}`);
  const stored=new Map();
  for(const f of record.facts){
@@ -62,6 +68,11 @@ export function compileReviewedEvidence(targets,records,questions){
  for(const record of records){
   if(!targetIds.has(record.id))throw Error(`Unknown candidate in verified fact set: ${record.id}`);
   if(byId.has(record.id))throw Error(`Duplicate verified record: ${record.id}`);
+  const target=targets.find(t=>t.id===record.id);
+  if(normalize(target.name).toLocaleLowerCase('en')!==normalize(record.approved_name).toLocaleLowerCase('en'))
+   throw Error(`Reviewed identity name does not match candidate ${record.id}`);
+  if(target.subject_qid&&target.subject_qid!==record.subject_qid)
+   throw Error(`Reviewed identity QID does not match candidate ${record.id}`);
   byId.set(record.id,validateReviewedSubject(record));
  }
  const N=targets.length,F=questions.length;
