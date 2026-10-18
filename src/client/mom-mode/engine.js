@@ -5,7 +5,7 @@ if(!model)throw new Error('Pam classic model not loaded');
 const QUESTIONS=Object.freeze([...model.questions]);
 const TARGETS=Object.freeze([...model.targets]);
 const N=TARGETS.length,F=QUESTIONS.length;
-if(![1200,1400,1775].includes(N)||F!==156)throw new Error(`Unexpected Pam classic model shape ${N}×${F}`);
+if(!(([1200,1400,1775].includes(N)&&F===156)||(model.expansionReviewed===true&&N===3127&&F>156&&F<=1180)))throw new Error(`Unexpected Pam classic model shape ${N}×${F}`);
 function decodeBase64(value){const raw=atob(value);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 const WEIGHTS=decodeBase64(model.weightsB64);
 if(WEIGHTS.length!==N*F)throw new Error(`Pam classic matrix has ${WEIGHTS.length} cells; expected ${N*F}`);
@@ -108,7 +108,7 @@ function setOpeningCategory(game,value){
  const tags=model.openingCategories;
  if(tags!=null&&(!Array.isArray(tags)||tags.length!==N))throw new Error('Invalid opening category metadata');
  for(let t=0;t<N;t++){
-  if(tags){
+  if(tags&&tags[t]!=null){
    const labels=tags[t];
    if(!Array.isArray(labels)||labels.some(label=>!OPENING_CATEGORIES.includes(label)))throw new Error('Invalid opening category labels');
    if(labels.includes(value))game.scores[t]+=2;
