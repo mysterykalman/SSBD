@@ -22,9 +22,9 @@ export function appendReviewedPamExpansion(base,roster,approved,questions,{count
   if(!slot||slot.category!=='Movies'||slot.name!==replacement.original_name)
    throw Error('Replacement slot must preserve a frozen movie candidate and its provenance');
   if(overlays.has(replacement.slot_id))throw Error('Duplicate replacement slot');
-  if(replacement.review_status!=='approved'||!replacement.reviewed_by||!/^20\\d{2}-\\d{2}-\\d{2}$/.test(replacement.reviewed_at||''))
+  if(replacement.review_status!=='approved'||!replacement.reviewed_by||!/^20\d{2}-\d{2}-\d{2}$/.test(replacement.reviewed_at||''))
    throw Error('Individually dated, accountable replacement approval required');
-  if(!replacement.approved_name||!/^Q\\d+$/.test(replacement.subject_qid||'')||
+  if(!replacement.approved_name||!/^Q\d+$/.test(replacement.subject_qid||'')||
     replacement.identity_source!=='https://www.wikidata.org/wiki/'+replacement.subject_qid)
    throw Error('Replacement requires canonical name and approved sourced identity');
   overlays.set(replacement.slot_id,replacement);
