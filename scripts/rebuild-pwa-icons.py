@@ -38,21 +38,21 @@ def cleaned_icon() -> Image.Image:
         for x in range(w):
             r,g,b=inp[x,y]
             warmth=max(r-b,0)
-            darkness=max(0,175-min(r,g,b))
+            darkness=max(0,140-min(r,g,b))
             # Preserve felt and its original soft dark drop shadow.
-            matte=max((warmth-8)*19, darkness*6)
+            matte=max((warmth-13)*24, darkness*6)
             out[x,y]=max(0,min(255,round(matte)))
 
     # The original pillow patch has rounded corners. This only removes the
     # rectangular backdrop OUTSIDE that patch; the embroidered lettering,
     # patch seams, felt shadows and original colours are unchanged.
     geometry = Image.new("L",image.size,0)
-    margin=round(w*0.022)
-    radius=round(w*0.15)
+    margin=round(w*0.052)
+    radius=round(w*0.13)
     ImageDraw.Draw(geometry).rounded_rectangle(
         [margin,margin,w-margin-1,w-margin-1],radius=radius,fill=255
     )
-    geometry=geometry.filter(ImageFilter.GaussianBlur(w*0.005))
+    geometry=geometry.filter(ImageFilter.GaussianBlur(w*0.003))
     alpha=ImageChops.multiply(colours,geometry)
     patch=image.convert("RGBA")
     patch.putalpha(alpha)
