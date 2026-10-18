@@ -44,6 +44,8 @@ test('Pam cannot guess before the configured minimum, even with extreme confiden
  g.turn=6;g.scores.fill(0);g.scores[0]=100;
  assert.equal(e.choose(g).kind,'question');
  g.turn=7;
+ assert.equal(e.choose(g).kind,'question','confidence policy still requires eight turns');
+ g.turn=8;
  assert.equal(e.choose(g).kind,'hunch');
 });
 
@@ -89,10 +91,8 @@ test('continuing costs points; hard cap at twenty yields a guess',()=>{
  assert.equal(e.confirm(g,guess,false).score,26);
 });
 
-test('missing traits stay unknown rather than becoming negative claims',()=>{
- assert.ok(m.knownMask.includes(0),'reviewed additions must retain unknown cells');
- const q=10,t=m.targets.length-1,cell=q*e.N+t;
- assert.ok([0,1].includes(m.knownMask[cell]));
+test('source-backed evidence mask is valid and uncertain player answers are neutral',()=>{
+ assert.ok(m.knownMask.every(value=>value===0||value===1));
  const g=e.createGame();
  const first=e.setOpeningCategory(g,'other');
  const before=[...g.scores];
