@@ -7,6 +7,7 @@ on:
     paths:
       - 'scripts/pam-plausible-batches.mjs'
       - 'scripts/pam-category-review-packets.mjs'
+      - 'scripts/pam-movie-franchise-review.mjs'
       - '.github/workflows/pam-plausible-batches.yml'
   workflow_dispatch:
 
