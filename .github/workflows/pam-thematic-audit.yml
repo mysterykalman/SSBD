@@ -1,0 +1,48 @@
+name: Pam 1650 thematic knowledge laboratory
+
+on:
+  push:
+    branches: [feature/pam-thematic-1650-knowledge-lab]
+    paths:
+      - 'data/pam20q/expansion/**'
+      - 'scripts/pam-thematic-lab.mjs'
+      - 'scripts/run-semantic-audit.mjs'
+      - 'scripts/pam-expansion-baseline-check.mjs'
+      - 'test/pam-thematic-lab.test.mjs'
+      - '.github/workflows/pam-thematic-audit.yml'
+  pull_request:
+    paths:
+      - 'data/pam20q/expansion/**'
+      - 'scripts/pam-thematic-lab.mjs'
+      - 'scripts/run-semantic-audit.mjs'
+      - 'scripts/pam-expansion-baseline-check.mjs'
+      - 'test/pam-thematic-lab.test.mjs'
+
+permissions:
+  contents: read
+jobs:
+  thematic-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Verify exact 1,650-row roster, question contracts and unknown handling
+        run: node --test test/pam-thematic-lab.test.mjs
+      - name: Measure the unapproved question/target collision rate
+        run: node scripts/run-semantic-audit.mjs
+      - name: Protect frozen original 1,775-answer baseline and compare names
+        run: node scripts/pam-expansion-baseline-check.mjs
+      - name: Confirm existing Pam benchmark still passes unchanged
+        run: node --test test/pam-1775-integration.test.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: pam-1650-knowledge-preflight
+          path: |
+            data/pam20q/expansion/semantic-audit.json
+            data/pam20q/expansion/baseline-comparison.json
+          if-no-files-found: warn
+          retention-days: 30
