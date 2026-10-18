@@ -75,3 +75,16 @@ On [run 39079810874](https://github.com/mysterykalman/SSBD/actions/runs/39079810
 The model still does **not** meet the 500/500 exact + softened release gates. Increasing the confidence of the existing answers is not a substitute for missing differentiating facts. The latest controlled build/compile job passed; overall GitHub Actions fails at the strict gameplay gate as intended.
 
 **Next required work:** Curate and verify substantially more target-specific facts and select far more diverse, familiar target types. In particular, review the 408 overlapping new targets through the generated `review-queue.csv` / `review-queue.json`, consider expansion of the question ontology only through a separately tested compatibility plan, and protect the 1,775-target baseline throughout.
+
+### Latest editorial replacement investigation — October 17–18, 2026
+
+The independent diversified-candidate investigation is documented in [pam-500-diversified-replacements.md](./pam-500-diversified-replacements.md), with source, editorial correction history, profile-review queue, artifacts and release safety. **Current complete run: [39083031314](https://github.com/mysterykalman/SSBD/actions/runs/39083031314).**
+
+- 541 diversified candidate nouns across 15 familiar physical and natural concept families, with 266 selected among the 500 proposed new targets.
+- 224/500 exact and 219/500 softened-answer correct guesses; 494/500 exercised both softening cases.
+- 336 new profiles still have no directly contradictory known answer against one or more other new profiles; 1,262 specific follow-up review questions remain.
+- 0/1,775 old-target correctness regressions; 0 new targets without separating evidence against existing targets.
+- Pam compilation, tailored lint, protected-model integrity, curated fact consistency tests and 2,275-target bundle build passed.
+- The full GitHub workflow **fails as designed** on the gameplay quality gate; no candidate approvals, merges or production releases are permitted.
+
+This investigation established technical feasibility and substantial improvement from the initial 146/500 exact, but did not verify 500 production-ready words. The remaining 336 under-separated profiles require additional factual curation or replacement, followed by the complete gates above.
