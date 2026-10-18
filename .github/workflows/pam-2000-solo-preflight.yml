@@ -4,6 +4,7 @@ on:
     branches: [feature/pam-500-from-2000]
     paths:
       - scripts/audit-pam-2000-solo.mjs
+      - scripts/generate-pam-500.mjs
       - .github/workflows/pam-2000-solo-preflight.yml
   workflow_dispatch:
 permissions:
