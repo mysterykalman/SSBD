@@ -5,6 +5,13 @@ on:
     branches: [feature/pam-thematic-1650-knowledge-lab]
     paths:
       - 'data/pam20q/expansion/**'
+      - 'scripts/pam-question-prune.mjs'
+      - 'scripts/pam-source-evidence-compiler.mjs'
+      - 'scripts/pam-run-fun-audit.mjs'
+      - 'scripts/pam-run-source-audit.mjs'
+      - 'test/pam-question-prune.test.mjs'
+      - 'test/pam-source-evidence-compiler.test.mjs'
+      - 'data/pam20q/expansion/first550-source-facts.br.b64'
       - 'scripts/pam-thematic-lab.mjs'
       - 'scripts/run-semantic-audit.mjs'
       - 'scripts/pam-expansion-baseline-check.mjs'
@@ -23,6 +30,13 @@ on:
   pull_request:
     paths:
       - 'data/pam20q/expansion/**'
+      - 'scripts/pam-question-prune.mjs'
+      - 'scripts/pam-source-evidence-compiler.mjs'
+      - 'scripts/pam-run-fun-audit.mjs'
+      - 'scripts/pam-run-source-audit.mjs'
+      - 'test/pam-question-prune.test.mjs'
+      - 'test/pam-source-evidence-compiler.test.mjs'
+      - 'data/pam20q/expansion/first550-source-facts.br.b64'
       - 'scripts/pam-thematic-lab.mjs'
       - 'scripts/run-semantic-audit.mjs'
       - 'scripts/pam-expansion-baseline-check.mjs'
@@ -57,6 +71,14 @@ jobs:
         run: node --test test/pam-wikidata-review.test.mjs
       - name: Generate QID identity review queue without approving candidates
         run: node scripts/pam-wikidata-review.mjs
+      - name: Verify question pruning preserves separability and broad opening filters
+        run: node --test test/pam-question-prune.test.mjs
+      - name: Check unreviewed source facts, known-answer matrix and provenance remain research-only
+        run: node --test test/pam-source-evidence-compiler.test.mjs
+      - name: Generate 66 dialogue transcripts and repetition statistics
+        run: node scripts/pam-run-fun-audit.mjs
+      - name: Quantify benefit of source-backed questions and 104 gameplay samples
+        run: node scripts/pam-run-source-audit.mjs
       - name: Verify provenance-linked Wikidata factual label parsing
         run: node --test test/pam-wikidata-facts.test.mjs
       - name: Verify Bayesian 20-turn reasoning and soft-response stability
@@ -75,6 +97,8 @@ jobs:
           name: pam-1650-knowledge-preflight
           path: |
             data/pam20q/expansion/semantic-audit.json
+            data/pam20q/expansion/fun-audit.json
+            data/pam20q/expansion/source-evidence-audit.json
             data/pam20q/expansion/baseline-comparison.json
             data/pam20q/expansion/wikidata-identity-review.json
             data/pam20q/expansion/wikidata-identity-review.csv
