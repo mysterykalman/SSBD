@@ -28,7 +28,7 @@ jobs:
         run: node --test test/pam-cohort-validation.test.mjs test/pam-wikidata-facts-batch.test.mjs
       - name: Retrieve exact 1650-row original identity review
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p .dev-data/pam-full-cohort
           gh run download 39163517479 --repo mysterykalman/SSBD \
