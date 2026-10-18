@@ -74,13 +74,19 @@ test('new names are unique, category valid and every profile has defensible know
 
 test('500 new targets pass exact and independently softened oracle play, with no false positives',()=>{
  const exactFailures=[],softFailures=[],noiseMissing=[];
+ const byCategory={animal:{n:0,exact:0,softened:0},vegetable:{n:0,exact:0,softened:0},mineral:{n:0,exact:0,softened:0},other:{n:0,exact:0,softened:0}};
  for(let index=1775;index<count;index++){
   const exact=simulate(newEngine,full,index,false);
   const soft=simulate(newEngine,full,index,true);
+  const cat=category(full,index);
+  byCategory[cat].n++;
+  if(exact.right)byCategory[cat].exact++;
+  if(soft.right)byCategory[cat].softened++;
   if(!exact.right)exactFailures.push({target:full.targets[index],guess:exact.guess});
   if(!soft.right)softFailures.push({target:full.targets[index],guess:soft.guess});
   if(!soft.yesSoftened||!soft.noSoftened)noiseMissing.push(full.targets[index]);
  }
+ console.log('PAM_500_EXACT_BY_CATEGORY='+JSON.stringify(byCategory));
  console.log('PAM_500_EXACT='+String(500-exactFailures.length)+'/500');
  console.log('PAM_500_SOFTENED='+String(500-softFailures.length)+'/500');
  console.log('PAM_500_SOFTENED_COVERAGE='+String(500-noiseMissing.length)+'/500');
