@@ -16,6 +16,40 @@ for (const group of CONNECTION_GROUPS) {
   GROUPS_BY_DIFFICULTY.get(group.difficulty).push(group);
 }
 
+
+// A mechanic describes how a player discovers a link, not simply its subject.
+// Semantic groups are split into setting, attribute and taxonomy so easy games
+// do not feel like four interchangeable shopping lists.
+export function connectionMechanic(group) {
+  const theme = group.theme || "";
+  const category = (group.category || "").toLowerCase();
+  if (/anagram|hidden_word|letter_|heteronym|contronym|parts_of_speech|polysemy/.test(theme)) return "wordplay";
+  if (/prefix|suffix|compound|dual_anchor|follow |precede |before |after /.test(theme + " " + category)) return "phrases";
+  if (/silent|palindrome|rhym|letters|vowels|consonants|pronounc|spelled|spelling|word ending|word starting|words beginning|words containing|acronym/.test(category)) return "wordplay";
+  if (/named after|named for|borrowed from|origin|both |shared by|also |second meaning|opposite meaning|same word|double meaning/.test(category)) return "lateral";
+  if (/things (found|used|in|on|at)|found at|on a |in a |at a |equipment|supplies|tools|workplace|used for|used to/.test(category)) return "setting";
+  if (/with |without |have |containing |red and|colours and|shapes and|forms of|types of teeth/.test(category)) return "attribute";
+  if (/^(words meaning|words that mean|ways to|synonyms|meaning |terms for)/.test(category)) return "language";
+  if (theme.startsWith("specialist") || theme === "cultural" || ["history", "literature", "fiction", "film", "television", "science", "mythology", "geography", "music", "arts"].includes(group.topic)) return "knowledge";
+  return "taxonomy";
+}
+
+export function inspectConnectionsBalance(groups, tier) {
+  const mechanics = groups.map(connectionMechanic);
+  const counts = new Map();
+  for (const mechanic of mechanics) counts.set(mechanic, (counts.get(mechanic) || 0) + 1);
+  const distinct = counts.size;
+  const largest = Math.max(0, ...counts.values());
+  const minimum = tier === 1 ? 2 : 3;
+  return Object.freeze({
+    valid: distinct >= minimum && largest <= 2,
+    mechanics: Object.freeze(mechanics),
+    distinct,
+    minimum,
+    largest
+  });
+}
+
 export function shuffleConnections(items, rng = Math.random) {
   const shuffled = [...items];
   for (let index = shuffled.length - 1; index > 0; index--) {
@@ -43,8 +77,6 @@ export function connectionGroupsCompatible(left, right) {
   if (left.difficulty === "easy" && right.difficulty === "easy" && left.topic === right.topic) return false;
   if (left.difficulty === "very_hard" && right.difficulty === "very_hard" && left.theme === right.theme) return false;
 
-  if (left.difficulty === "medium" && right.difficulty === "hard" && left.theme !== "compound_before") return false;
-  if (right.difficulty === "medium" && left.difficulty === "hard" && right.theme !== "compound_before") return false;
 
   return true;
 }
@@ -70,11 +102,12 @@ export function inspectConnectionsBoard(groups, tier) {
   });
 }
 
-export function generateConnectionsGame({tier, recentFamilyIds = [], usedSignatures = [], rng = Math.random, maxAttempts = 12000} = {}) {
+export function generateConnectionsGame({tier = 1, recentFamilyIds = [], seenFamilyIds = [], usedSignatures = [], rng = Math.random, maxAttempts = 12000} = {}) {
   const recipe = CONNECTION_RECIPES[tier];
   if (!recipe) throw new Error(`Unknown Connections tier: ${tier}`);
 
   const recent = new Set(recentFamilyIds);
+  const seen = new Set(seenFamilyIds);
   const used = new Set(usedSignatures);
   const pools = Object.fromEntries([...GROUPS_BY_DIFFICULTY].map(([difficulty, groups]) => [difficulty, shuffleConnections(groups, rng)]));
 
@@ -83,10 +116,20 @@ export function generateConnectionsGame({tier, recentFamilyIds = [], usedSignatu
 
     for (const difficulty of recipe) {
       let candidates = pools[difficulty].filter(candidate => chosen.every(group => connectionGroupsCompatible(group, candidate)));
-      const freshCandidates = candidates.filter(candidate => !recent.has(candidate.familyId));
-      if (freshCandidates.length) candidates = freshCandidates;
+      const neverSeen = candidates.filter(candidate => !seen.has(candidate.familyId));
+      const recentlyUnseen = candidates.filter(candidate => !recent.has(candidate.familyId));
+      if (neverSeen.length) candidates = neverSeen;
+      else if (recentlyUnseen.length) candidates = recentlyUnseen;
       if (!candidates.length) break;
 
+      const balanced = candidates.filter(candidate => {
+        const mechanics = [...chosen, candidate].map(connectionMechanic);
+        const counts = new Map();
+        for (const mechanic of mechanics) counts.set(mechanic, (counts.get(mechanic) || 0) + 1);
+        return Math.max(...counts.values()) <= 2 && (chosen.length !== 3 || inspectConnectionsBalance([...chosen, candidate], tier).valid);
+      });
+      if (balanced.length) candidates = balanced;
+      else if (chosen.length >= 2) break;
       const sampleSize = Math.min(candidates.length, 24);
       const candidate = candidates[Math.floor(rng() * sampleSize)];
       chosen.push(candidate);
@@ -97,7 +140,8 @@ export function generateConnectionsGame({tier, recentFamilyIds = [], usedSignatu
     if (used.has(signature)) continue;
 
     const qa = inspectConnectionsBoard(chosen, tier);
-    if (!qa.valid) continue;
+    const balance = inspectConnectionsBalance(chosen, tier);
+    if (!qa.valid || !balance.valid) continue;
 
     return Object.freeze({
       tier,
@@ -105,6 +149,7 @@ export function generateConnectionsGame({tier, recentFamilyIds = [], usedSignatu
       groups: Object.freeze(shuffleConnections(chosen, rng)),
       board: Object.freeze(shuffleConnections(chosen.flatMap(group => group.words), rng)),
       signature,
+      balance,
       qa
     });
   }

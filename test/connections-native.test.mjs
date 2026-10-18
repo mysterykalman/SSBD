@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {CONNECTION_FAMILIES, CONNECTION_GROUPS} from "../src/shared/connections/library.js";
-import {CONNECTION_RECIPES, connectionGroupsCompatible, generateConnectionsGame, inspectConnectionsBoard} from "../src/shared/connections/generator.js";
+import {CONNECTION_RECIPES, connectionGroupsCompatible, connectionMechanic, generateConnectionsGame, inspectConnectionsBalance, inspectConnectionsBoard} from "../src/shared/connections/generator.js";
+import {ODD_ONE_IN_CHARACTERS} from "../src/client/connections/characters.js";
 
 function seeded(seed) {
   let state = seed >>> 0;
@@ -11,15 +12,19 @@ function seeded(seed) {
   };
 }
 
-test("connections library has 200 families and 800 reusable groups", () => {
-  assert.equal(CONNECTION_FAMILIES.length, 200);
-  assert.equal(CONNECTION_GROUPS.length, 800);
+test("connections library has 600 families and 2400 reusable groups", () => {
+  assert.equal(CONNECTION_FAMILIES.length, 600);
+  assert.equal(CONNECTION_GROUPS.length, 2400);
   const counts = Object.groupBy(CONNECTION_GROUPS, group => group.difficulty);
-  assert.equal(counts.easy.length, 200);
-  assert.equal(counts.medium.length, 200);
-  assert.equal(counts.hard.length, 200);
-  assert.equal(counts.very_hard.length, 200);
-  assert.equal(new Set(CONNECTION_GROUPS.map(group => group.id)).size, 800);
+  assert.equal(counts.easy.length, 600);
+  assert.equal(counts.medium.length, 600);
+  assert.equal(counts.hard.length, 600);
+  assert.equal(counts.very_hard.length, 600);
+  assert.equal(new Set(CONNECTION_GROUPS.map(group => group.id)).size, 2400);
+  assert.equal(new Set(CONNECTION_GROUPS.map(group => [...group.words].sort().join("|"))).size, 2400);
+  assert.equal(new Set(CONNECTION_FAMILIES.map(family => family.i)).size, 600);
+  assert.ok(new Set(CONNECTION_FAMILIES.map(family => family.c)).size > 500);
+  assert.ok(new Set(CONNECTION_FAMILIES.map(family => family.p)).size >= 15);
 });
 
 test("every reusable group contains four unique words", () => {
@@ -34,12 +39,15 @@ test("generated games respect tier recipes and board QA", () => {
     const used = [];
     const recent = [];
     for (let index = 0; index < 50; index++) {
-      const game = generateConnectionsGame({tier, usedSignatures: used, recentFamilyIds: recent, rng: seeded(tier * 10000 + index)});
+      const game = generateConnectionsGame({tier, usedSignatures: used, recentFamilyIds: recent, seenFamilyIds: recent, rng: seeded(tier * 10000 + index)});
       assert.deepEqual(game.recipe, CONNECTION_RECIPES[tier]);
       assert.equal(game.groups.length, 4);
       assert.equal(game.board.length, 16);
       assert.equal(new Set(game.board).size, 16);
       assert.equal(game.qa.valid, true);
+      assert.equal(game.balance.valid, true);
+      assert.equal(inspectConnectionsBalance(game.groups, tier).valid, true);
+      assert.ok(new Set(game.groups.map(connectionMechanic)).size >= (tier === 1 ? 2 : 3));
       assert.equal(game.qa.alternateGroups.length, 0);
       assert.deepEqual(game.groups.map(group => group.difficulty).sort(), [...CONNECTION_RECIPES[tier]].sort());
       for (let left = 0; left < game.groups.length; left++) {
@@ -55,4 +63,32 @@ test("generated games respect tier recipes and board QA", () => {
     }
     assert.equal(new Set(used).size, 50);
   }
+});
+
+
+test("new puzzles avoid previously played families while unused families are available", () => {
+  for (const tier of [1, 2, 3, 4]) {
+    const seen = [];
+    const signatures = [];
+    for (let round = 0; round < 35; round++) {
+      const puzzle = generateConnectionsGame({
+        tier,
+        recentFamilyIds: seen.slice(-48),
+        seenFamilyIds: seen,
+        usedSignatures: signatures,
+        rng: seeded(tier * 1000 + round)
+      });
+      for (const group of puzzle.groups) {
+        assert.ok(!seen.includes(group.familyId), `Repeated family ${group.familyId} on tier ${tier} game ${round}`);
+        seen.push(group.familyId);
+      }
+      signatures.push(puzzle.signature);
+    }
+  }
+});
+
+test("the very hard character is Dr. Jones", () => {
+  assert.equal(ODD_ONE_IN_CHARACTERS[4].name, "Dr. Jones");
+  assert.equal(ODD_ONE_IN_CHARACTERS[4].shortName, "DR. JONES");
+  assert.equal(ODD_ONE_IN_CHARACTERS[4].id, "jones");
 });

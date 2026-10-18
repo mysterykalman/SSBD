@@ -91,9 +91,9 @@ export const ODD_ONE_IN_CHARACTERS = Object.freeze({
   }),
   4: Object.freeze({
     tier: 4,
-    id: "braine",
-    name: "Professor Braine",
-    shortName: "PROF. BRAINE",
+    id: "jones",
+    name: "Dr. Jones",
+    shortName: "DR. JONES",
     difficulty: "Very Hard",
     relationship: "Believes mistakes are educational.",
     state: "Your reasoning is under observation.",

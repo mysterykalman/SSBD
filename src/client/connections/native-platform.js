@@ -166,13 +166,14 @@ function readMemory() {
   try {
     const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     return {
-      recentFamilies: Array.isArray(value.recentFamilies) ? value.recentFamilies.slice(-32) : [],
+      recentFamilies: Array.isArray(value.recentFamilies) ? value.recentFamilies.slice(-48) : [],
+      seenFamilies: Array.isArray(value.seenFamilies) ? value.seenFamilies.slice(-700) : Array.isArray(value.recentFamilies) ? value.recentFamilies.slice(-48) : [],
       signatures: Array.isArray(value.signatures) ? value.signatures.slice(-500) : []
     };
-  } catch { return {recentFamilies: [], signatures: []}; }
+  } catch { return {recentFamilies: [], seenFamilies: [], signatures: []}; }
 }
 function writeMemory(memory) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({recentFamilies: memory.recentFamilies.slice(-32), signatures: memory.signatures.slice(-500)}));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({recentFamilies: memory.recentFamilies.slice(-48), seenFamilies: memory.seenFamilies.slice(-700), signatures: memory.signatures.slice(-500)}));
 }
 
 let page = null;
@@ -220,7 +221,7 @@ function showRules() {
       el("div", {}, el("strong", {}, "Find four that belong together."), el("p", {}, "Pick four words that share a connection, then check your group.")),
       el("div", {}, el("strong", {}, "There are four groups."), el("p", {}, "Every word belongs to exactly one intended group. Some words will try very hard to make that unclear.")),
       el("div", {}, el("strong", {}, "Four mistakes and you’re out."), el("p", {}, "A near miss still costs a mistake, but your character will tell you when you were one word away.")),
-      el("div", {}, el("strong", {}, "The character is part of the game."), el("p", {}, "Owen, Zoe, Martin and Professor Braine each react differently to what you do.")))));
+      el("div", {}, el("strong", {}, "The character is part of the game."), el("p", {}, "Owen, Zoe, Martin and Dr. Jones each react differently to what you do.")))));
   if (!dialog.open) dialog.showModal();
 }
 
@@ -287,9 +288,13 @@ function startGame(tier) {
   const character = ODD_ONE_IN_CHARACTERS[tier] || ODD_ONE_IN_CHARACTERS[1];
   const memory = readMemory();
   try {
-    const generated = generateConnectionsGame({tier, recentFamilyIds: memory.recentFamilies, usedSignatures: memory.signatures});
+    const generated = generateConnectionsGame({tier, recentFamilyIds: memory.recentFamilies, seenFamilyIds: memory.seenFamilies, usedSignatures: memory.signatures});
     memory.signatures.push(generated.signature);
     memory.recentFamilies.push(...generated.groups.map(group => group.familyId));
+    for (const group of generated.groups) {
+      memory.seenFamilies = memory.seenFamilies.filter(id => id !== group.familyId);
+      memory.seenFamilies.push(group.familyId);
+    }
     writeMemory(memory);
     attempts = 0;
     game = {
@@ -332,6 +337,16 @@ function submitSelection() {
     game.lastSolvedId = hit.id;
     game.board = game.board.filter(word => !game.selected.has(word));
     game.selected.clear();
+    // Once three groups are solved, the remaining four words form the final group.
+    // Reveal that group without asking the player to submit an inevitable answer.
+    if (game.solved.length === 3) {
+      const finalGroup = game.groups.find(group => !game.solved.includes(group.id));
+      if (finalGroup) {
+        game.solved.push(finalGroup.id);
+        game.lastSolvedId = finalGroup.id;
+        game.board = [];
+      }
+    }
     const count = game.solved.length;
     if (count === 4) setLine("win");
     else if (count === 3) setLine("correct3");
@@ -388,7 +403,12 @@ function celebration() {
 }
 
 function endState(won) {
-  const allGroups = game.groups;
+  // Keep the solved order, placing the automatically revealed fourth group last.
+  // On a loss, show the remaining groups after the ones the player found.
+  const allGroups = [
+    ...game.solved.map(id => game.groups.find(group => group.id === id)).filter(Boolean),
+    ...game.groups.filter(group => !game.solved.includes(group.id))
+  ];
   return el("section", {class: "card conn-end"},
     won ? celebration() : null,
     el("div", {class: "conn-end-host"}, standee(game.character, "conn-host-standee"), el("h2", {}, won ? "You got all four." : "The puzzle got the last word."), el("div", {class: "bubble conn-bubble", role: "status"}, game.message)),
