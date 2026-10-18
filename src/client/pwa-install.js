@@ -108,9 +108,10 @@
     updateNotice.setAttribute("role", "status");
     const label = document.createElement("span");
     label.textContent = "Pam has a new version ready.";
+    label.className = "pwa-update-label";
     const apply = document.createElement("button");
     apply.type = "button";
-    apply.className = "btn small primary";
+    apply.className = "btn small primary pwa-update-apply";
     apply.textContent = "Update";
     apply.addEventListener("click", async () => {
       apply.disabled = true;

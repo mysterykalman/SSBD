@@ -50,3 +50,21 @@ install controls on iPhone/iPad orientation profiles and a desktop Mac profile.
 This is not a substitute for testing the real OS-level Add to Dock/Home Screen flow.
 On macOS, Safari web apps have separate website data; locally saved Solo rounds
 started in Safari may not automatically transfer into the installed app.
+
+## Visual identity
+
+The app launcher icon is derived from SSBD's **existing** stitched icon artwork,
+not a newly invented illustration. Its pale outer square is removed to preserve
+transparent corners around the original felt patch and embroidered lettering.
+Source artwork remains in `src/client/icons/icon-source.png`, and the versioned
+icon files are reproducible with `scripts/rebuild-pwa-icons.py` (Pillow).
+
+Installation UI uses exactly the same `felt/skins.json` nine-slice assets as
+the rest of the game: aqua Install app, purple confirmation, blue Update, a
+purple embroidered eyebrow, a green update chip, and existing coral, teal, and
+green felt number badges. Coloured text panels use the existing palette tokens.
+No unrelated image-generated patch art was introduced.
+
+Launcher icons are cached aggressively by operating systems. If an already
+installed icon continues showing the older white square after the new build,
+remove and reinstall the Home Screen/Dock app to refresh the artwork.
