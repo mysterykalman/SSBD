@@ -8,7 +8,7 @@ The original 500-candidate group had 408 profiles without a known contradictory 
 
 ## Editorial replacement pool
 
-`data/pam20q/candidates/diverse-500.mjs` adds **548 concrete candidate entries across 15 distinct families**, including rocks and minerals, gemstones, snow and ice, landscapes, atmospheric events, body parts, ideas, office supplies, bathroom items, cleaning tools, crafts, party supplies, toys, gardening products and medical/first-aid items.
+`data/pam20q/candidates/diverse-500.mjs` adds **541 concrete candidate entries across 15 distinct families**, following removal of seven ambiguous or factually misclassified entries, including rocks and minerals, gemstones, snow and ice, landscapes, atmospheric events, body parts, ideas, office supplies, bathroom items, cleaning tools, crafts, party supplies, toys, gardening products and medical/first-aid items.
 
 The user-facing objective is familiar, readily imaginable concepts with real distinguishing traits. The catalogue makes only specific, conservative factual claims; a missing trait remains unknown unless a categorical contradiction can be established. **Candidate inclusion is not factual sign-off.** Names, classifications, sizes and ambiguous use-cases require editorial review before approval.
 
@@ -53,3 +53,9 @@ A missing opposite-polarity trait is an evidence gap, not proof of mathematical 
 - Release guard: `scripts/pam-quality-model.mjs` rejects `candidate_unreviewed` in default builds, including Vercel production even if the test flag is accidentally present.
 
 No release should be triggered based solely on increased source count, reduced collision counts, a successful bundle build or partial gameplay gains.
+
+### Editorial correction log
+
+After the first 548-name staging pool, seven targets were removed because the classification or physical interpretation was not sufficiently defensible in Pam's Animal / Vegetable / Mineral / Other system (for example, a manufactured ice cube or an ecosystem described as a nonliving mineral). Other traits were corrected rather than hardening weak guesses into false facts, including body parts being "held while used," treating a nugget of metal as made of stone, a story as necessarily a song, and asserting that people have seen rare natural phenomena in real life.
+
+The remaining **541** names are *candidates*, not an approved set; the generator continues to choose only 500 from those and the earlier catalogue. The strict 0-collision gate against the validated 1,775 original words is maintained. Factual review remains incomplete.
