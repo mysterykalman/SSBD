@@ -109,11 +109,10 @@ export function compileSourceResearch(model,source,{minYes=2,minNo=0,minTemporal
   if(tf){const year=reliableYear(subject,tf.date_field);if(year)facts.set(tf.prefix,{value:year,label:String(year)});}
   fields.set(idx,facts);
  }
- const proposed=[];
  const questions=[];
  for(const [bucket,rule] of Object.entries(BUCKETS)){
   const values=new Map();
-  for(const [idx,facts] of fields){
+  for(const [,facts] of fields){
    const x=facts.get(bucket);if(!x)continue;
    if(!values.has(x.value))values.set(x.value,x.label);
   }
