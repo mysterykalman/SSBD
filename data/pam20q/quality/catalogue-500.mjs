@@ -359,16 +359,16 @@ a garden orb-weaver| +legs
 a golden silk orb-weaver|+colorful +legs
 a crab spider|+legs +colorful
 a peacock spider|+colorful +jump +legs
-a tarantula hawk wasp|+wings +dangerous
-a paper wasp|+wings +dangerous
-a potter wasp|+wings
-a mud dauber|+wings
-a velvet ant|+dangerous
-a leafcutter ant|+groups
-an army ant|+groups +carnivore
-a trap-jaw ant|+groups +carnivore
-a honeypot ant|+groups +sweet
-a bullet ant|+groups +dangerous
+a tarantula hawk wasp|+wings +dangerous +insect +eggs
+a paper wasp|+wings +dangerous +insect +eggs
+a potter wasp|+wings +insect +eggs
+a mud dauber|+wings +insect +eggs
+a velvet ant|+dangerous +insect +eggs
+a leafcutter ant|+groups +insect +eggs
+an army ant|+groups +carnivore +insect +eggs
+a trap-jaw ant|+groups +carnivore +insect +eggs
+a honeypot ant|+groups +sweet +insect +eggs
+a bullet ant|+groups +dangerous +insect +eggs
 a giant centipede|+legs +dangerous
 a house centipede|+legs +household
 a pill millipede|+legs +round
