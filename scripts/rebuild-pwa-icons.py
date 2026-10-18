@@ -41,6 +41,12 @@ def cleaned_icon() -> Image.Image:
             darkness=max(0,140-min(r,g,b))
             # Preserve felt and its original soft dark drop shadow.
             matte=max((warmth-13)*24, darkness*6)
+            # The lower edge of the source photograph includes a pale halo.
+            # Feather it away below the genuine stitched seam, not into the logo.
+            fade_start=round(w*0.89)
+            fade_end=round(w*0.925)
+            if y>fade_start:
+                matte*=max(0,(fade_end-y)/(fade_end-fade_start))
             out[x,y]=max(0,min(255,round(matte)))
 
     # The original pillow patch has rounded corners. This only removes the
