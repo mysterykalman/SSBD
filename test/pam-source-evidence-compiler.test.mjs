@@ -15,7 +15,7 @@ test('recovered public-source fact dataset is valid, unapproved and has provenan
  assert.ok(source.subjects.every(s=>s.verified===false));
  assert.ok(source.subjects.every(s=>s.claims.every(c=>c.source.startsWith('https://www.wikidata.org/wiki/'))));
  assert.equal(combined.report.sourceSubjects,467);
- assert.equal(combined.report.sourcePositiveClaims,4595);
+ assert.equal(combined.report.sourcePositiveClaims,6038);
  assert.match(combined.report.releaseGate,/BLOCKED/);
 });
 

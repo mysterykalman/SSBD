@@ -1,7 +1,7 @@
 {
-  "source": "GitHub Actions #39115710000 artifact 12131723480",
-  "subjects": 467,
-  "claims": 4595,
-  "sha256": "e830f84449c4198e52a3f79bcd52c9827c5dbc64527a6188f3ae96ec35c063c0",
-  "review_status": "RESEARCH ONLY — NO FACTUAL APPROVAL"
+  "version": 2,
+  "source_subjects": 467,
+  "source_claims": 6038,
+  "sha256": "741fab4e381c9106043bcdab5852aa90e951e09d9b51d36c6cfcd8086e04e9ec",
+  "review_status": "research_only_unverified"
 }
