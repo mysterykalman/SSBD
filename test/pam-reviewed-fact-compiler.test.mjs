@@ -50,3 +50,9 @@ test('identity approval cannot be forged by a boolean flag or mismatched referen
  assert.throws(()=>compileReviewedEvidence(targets,[{...r,approved_name:'Tokyo'}],questions),/identity name/);
  assert.throws(()=>compileReviewedEvidence([{...targets[0],subject_qid:'Q1490'}],[r],questions),/identity QID/);
 });
+
+test('two proposed answers may not silently share a verified Wikidata identity',()=>{
+ const paris=approved('PAM-0001','Q90',[fact('city_present_day_country','France')]);
+ const duplicate=approved('PAM-0002','Q90',[fact('city_present_day_country','France')]);
+ assert.throws(()=>compileReviewedEvidence(targets,[paris,duplicate],questions),/Duplicate verified identity QID/);
+});
