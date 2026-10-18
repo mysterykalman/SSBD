@@ -72,6 +72,7 @@ export function inspectConnectionsBoard(groups, tier) {
 
 /** @param {{tier?:number,recentFamilyIds?:number[],usedSignatures?:string[],rng?:()=>number,maxAttempts?:number}} options */
 export function generateConnectionsGame({tier, recentFamilyIds = [], usedSignatures = [], rng = Math.random, maxAttempts = 12000} = {}) {
+  if (tier == null) throw new Error("Connections tier is required");
   const recipe = CONNECTION_RECIPES[tier];
   if (!recipe) throw new Error(`Unknown Connections tier: ${tier}`);
 
