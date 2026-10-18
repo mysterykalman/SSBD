@@ -8,6 +8,8 @@ on:
       - 'scripts/pam-movie-franchise-review.mjs'
       - 'test/pam-movie-franchise-review.test.mjs'
       - 'test/pam-3127-engine-stress.test.mjs'
+      - 'test/pam-reviewed-expansion.test.mjs'
+      - 'scripts/pam-merge-reviewed-expansion.mjs'
   workflow_dispatch:
 permissions: {contents: read, actions: read}
 jobs:
