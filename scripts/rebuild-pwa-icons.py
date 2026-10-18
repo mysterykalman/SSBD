@@ -66,7 +66,7 @@ def cleaned_icon() -> Image.Image:
     patch.putalpha(alpha)
     return patch
 
-def write_all(make_preview=False):
+def write_all():
     patch=cleaned_icon()
     patch.save(ASSETS/"icon-512.png",optimize=True)
     patch.resize((192,192),Image.Resampling.LANCZOS).save(
@@ -78,10 +78,6 @@ def write_all(make_preview=False):
     tiny=patch.resize((32,32),Image.Resampling.LANCZOS)
     tiny.save(ASSETS/"favicon-32.png",optimize=True)
     patch.save(ASSETS/"favicon.ico",format="ICO",sizes=[(16,16),(32,32),(48,48)])
-    if make_preview:
-        preview=Image.new("RGBA",patch.size,(49,37,105,255))
-        preview.alpha_composite(patch)
-        preview.convert("RGB").save(ROOT/"docs/pwa-icon-preview.jpg",quality=86,optimize=True)
 
 def verify():
     for name,sz in [
@@ -103,7 +99,6 @@ def verify():
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--verify",action="store_true")
-    parser.add_argument("--preview",action="store_true")
     args=parser.parse_args()
-    if not args.verify: write_all(args.preview)
+    if not args.verify: write_all()
     verify()
