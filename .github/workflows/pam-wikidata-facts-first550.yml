@@ -2,7 +2,10 @@ name: Pam Wikidata factual evidence from first 550 (research only)
 on:
   push:
     branches: [feature/pam-thematic-1650-knowledge-lab]
-    paths: ['.github/workflows/pam-wikidata-facts-first550.yml']
+    paths:
+      - '.github/workflows/pam-wikidata-facts-first550.yml'
+      - 'scripts/pam-wikidata-facts.mjs'
+      - 'test/pam-wikidata-facts.test.mjs'
 permissions: {contents: read}
 jobs:
   source-claims:
