@@ -23,7 +23,7 @@ test("connections library has 600 families and 2400 reusable groups", () => {
   assert.equal(new Set(CONNECTION_GROUPS.map(group => group.id)).size, 2400);
   assert.equal(new Set(CONNECTION_GROUPS.map(group => [...group.words].sort().join("|"))).size, 2400);
   assert.equal(new Set(CONNECTION_FAMILIES.map(family => family.i)).size, 600);
-  assert.ok(new Set(CONNECTION_FAMILIES.map(family => family.category)).size > 500);
+  assert.ok(new Set(CONNECTION_FAMILIES.map(family => family.c)).size > 500);
   assert.ok(new Set(CONNECTION_FAMILIES.map(family => family.p)).size >= 15);
 });
 
