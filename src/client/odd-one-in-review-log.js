@@ -92,7 +92,7 @@ function ensureSession() {
   return current;
 }
 
-function recordGuess(words, beforeSolved, beforeMistakes) {
+function recordGuess(words, beforeSolved, _beforeMistakes) {
   const session = ensureSession();
   if (!session || words.length !== 4) return;
   const guess = {number: session.guesses.length + 1, at: new Date().toISOString(), words, outcome: null};

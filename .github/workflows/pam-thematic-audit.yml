@@ -1,0 +1,112 @@
+name: Pam 1650 thematic knowledge laboratory
+
+on:
+  push:
+    branches: [feature/pam-thematic-1650-knowledge-lab]
+    paths:
+      - 'data/pam20q/expansion/**'
+      - 'scripts/pam-question-prune.mjs'
+      - 'scripts/pam-source-evidence-compiler.mjs'
+      - 'scripts/pam-run-fun-audit.mjs'
+      - 'scripts/pam-run-source-audit.mjs'
+      - 'test/pam-question-prune.test.mjs'
+      - 'test/pam-source-evidence-compiler.test.mjs'
+      - 'data/pam20q/expansion/first550-source-facts.br.b64'
+      - 'scripts/pam-thematic-lab.mjs'
+      - 'scripts/run-semantic-audit.mjs'
+      - 'scripts/pam-expansion-baseline-check.mjs'
+      - 'test/pam-thematic-lab.test.mjs'
+      - 'scripts/pam-thematic-reasoner.mjs'
+      - 'scripts/pam-known-opposite-audit.mjs'
+      - 'test/pam-thematic-reasoner.test.mjs'
+      - 'test/pam-known-opposite-audit.test.mjs'
+      - 'scripts/pam-reviewed-fact-compiler.mjs'
+      - 'test/pam-reviewed-fact-compiler.test.mjs'
+      - 'scripts/pam-wikidata-review.mjs'
+      - 'test/pam-wikidata-review.test.mjs'
+      - 'scripts/pam-geography-evidence.mjs'
+      - 'test/pam-geography-evidence.test.mjs'
+      - 'scripts/pam-wikidata-facts.mjs'
+      - 'test/pam-wikidata-facts.test.mjs'
+      - '.github/workflows/pam-thematic-audit.yml'
+  pull_request:
+    paths:
+      - 'data/pam20q/expansion/**'
+      - 'scripts/pam-question-prune.mjs'
+      - 'scripts/pam-source-evidence-compiler.mjs'
+      - 'scripts/pam-run-fun-audit.mjs'
+      - 'scripts/pam-run-source-audit.mjs'
+      - 'test/pam-question-prune.test.mjs'
+      - 'test/pam-source-evidence-compiler.test.mjs'
+      - 'data/pam20q/expansion/first550-source-facts.br.b64'
+      - 'scripts/pam-thematic-lab.mjs'
+      - 'scripts/run-semantic-audit.mjs'
+      - 'scripts/pam-expansion-baseline-check.mjs'
+      - 'test/pam-thematic-lab.test.mjs'
+      - 'scripts/pam-thematic-reasoner.mjs'
+      - 'scripts/pam-known-opposite-audit.mjs'
+      - 'test/pam-thematic-reasoner.test.mjs'
+      - 'test/pam-known-opposite-audit.test.mjs'
+      - 'scripts/pam-reviewed-fact-compiler.mjs'
+      - 'test/pam-reviewed-fact-compiler.test.mjs'
+      - 'scripts/pam-wikidata-review.mjs'
+      - 'test/pam-wikidata-review.test.mjs'
+      - 'scripts/pam-geography-evidence.mjs'
+      - 'test/pam-geography-evidence.test.mjs'
+      - 'scripts/pam-wikidata-facts.mjs'
+      - 'test/pam-wikidata-facts.test.mjs'
+
+permissions:
+  contents: read
+jobs:
+  thematic-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Verify exact 1,650-row roster, question contracts and unknown handling
+        run: node --test test/pam-thematic-lab.test.mjs
+      - name: Verify reviewed-evidence matrix compiler and no invented negative answers
+        run: node --test test/pam-reviewed-fact-compiler.test.mjs
+      - name: Verify 550 recovered Wikidata identity suggestions have verified provenance and stay unapproved
+        run: node --test test/pam-wikidata-review.test.mjs
+      - name: Generate QID identity review queue without approving candidates
+        run: node scripts/pam-wikidata-review.mjs
+      - name: Verify question pruning preserves separability and broad opening filters
+        run: node --test test/pam-question-prune.test.mjs
+      - name: Check unreviewed source facts, known-answer matrix and provenance remain research-only
+        run: node --test test/pam-source-evidence-compiler.test.mjs
+      - name: Generate 66 dialogue transcripts and repetition statistics
+        run: node scripts/pam-run-fun-audit.mjs
+      - name: Verify conservative geography source uncertainty
+        run: node --test test/pam-geography-evidence.test.mjs
+      - name: Quantify benefit of source-backed questions and 104 gameplay samples
+        run: node scripts/pam-run-source-audit.mjs
+      - name: Verify provenance-linked Wikidata factual label parsing
+        run: node --test test/pam-wikidata-facts.test.mjs
+      - name: Verify Bayesian 20-turn reasoning and soft-response stability
+        run: node --test test/pam-thematic-reasoner.test.mjs
+      - name: Enforce known-opposite separability instead of pretending unknown means no
+        run: node --test test/pam-known-opposite-audit.test.mjs
+      - name: Measure the unapproved question/target collision rate
+        run: node scripts/run-semantic-audit.mjs
+      - name: Protect frozen original 1,775-answer baseline and compare names
+        run: node scripts/pam-expansion-baseline-check.mjs
+      - name: Confirm existing Pam benchmark still passes unchanged
+        run: node --test test/pam-1775-integration.test.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: pam-1650-knowledge-preflight
+          path: |
+            data/pam20q/expansion/semantic-audit.json
+            data/pam20q/expansion/fun-audit.json
+            data/pam20q/expansion/source-evidence-audit.json
+            data/pam20q/expansion/baseline-comparison.json
+            data/pam20q/expansion/wikidata-identity-review.json
+            data/pam20q/expansion/wikidata-identity-review.csv
+          if-no-files-found: warn
+          retention-days: 30

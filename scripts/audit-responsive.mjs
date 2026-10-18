@@ -5,7 +5,7 @@ import path from "node:path";
 
 const origin = process.env.SSBD_AUDIT_URL || "http://localhost:8787";
 const widths = [320, 360, 390, 430, 768, 820, 1024, 1280, 1440, 1920];
-const routes = ["/", "/mom-mode/", "/review"];
+const routes = ["/", "/mom/", "/review"];
 const out = "artifacts/responsive-audit";
 await fs.mkdir(out, { recursive: true });
 const browser = await chromium.launch({ headless: true });
@@ -47,7 +47,7 @@ try {
   // Capture actual Pam gameplay after dismissing her introduction.
   for (const width of widths) {
     const page = await browser.newPage({viewport:{width,height:850},deviceScaleFactor:1});
-    const state = {route:"/mom-mode/",width,scenario:"pam-gameplay",screenshots:[],errors:[]};
+    const state = {route:"/mom/",width,scenario:"pam-gameplay",screenshots:[],errors:[]};
     page.on("pageerror",e=>state.errors.push(e.message));
     const capture = async name => {
       const file = `pam-${name}-${width}.png`;
@@ -61,7 +61,7 @@ try {
       if(check.overflow||check.offscreen.length) state.errors.push(`${name}: ${JSON.stringify(check)}`);
     };
     try {
-      await page.goto(new URL("/mom-mode/",origin).href,{waitUntil:"domcontentloaded"});
+      await page.goto(new URL("/mom/",origin).href,{waitUntil:"domcontentloaded"});
       await page.locator("#pam-intro-dialog").waitFor({state:"visible",timeout:10000});
       await page.locator("#pam-intro-play").click();
       await capture("setup");

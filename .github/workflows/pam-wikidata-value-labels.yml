@@ -1,0 +1,27 @@
+name: Pam Wikidata value-label research (first 550)
+on:
+  push:
+    branches: [feature/pam-thematic-1650-knowledge-lab]
+    paths:
+      - '.github/workflows/pam-wikidata-value-labels.yml'
+permissions: {contents: read}
+jobs:
+  identify-source-values:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '24'}
+      - name: Test label provenance, rate policy and handling of unavailable values
+        run: node --test test/pam-wikidata-resolve-labels.test.mjs
+      - name: Label saved source property values only, with HTTP throttling
+        run: node scripts/pam-wikidata-resolve-labels.mjs
+      - name: Preserve partial evidence even if interrupted
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pam-first550-unreviewed-value-labels
+          path: data/pam20q/expansion/wikidata-value-labels.json
+          if-no-files-found: warn
+          retention-days: 30

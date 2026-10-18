@@ -16,6 +16,14 @@ const knownAt=(q,t)=>!KNOWN||KNOWN[q*N+t]===1;
 const polarity=s=>s&1;
 const strength=s=>(s&2)?2:1;
 const CATEGORY_Q=Object.freeze({animal:0,vegetable:1,mineral:2,other:3});
+// The six-way opener is a separate, reviewed taxonomy. It does not reinterpret
+// or alter the 156 classic questions, nor manufacture negative evidence.
+const OPENING_CATEGORIES=Object.freeze(['person','place','animal_plant','object','entertainment','other']);
+const OPENING_HINTS=Object.freeze({
+ person:[], place:[[3,0.3]], animal_plant:[[0,1.5],[1,1.5]],
+ object:[[2,0.4],[3,0.4],[49,0.5]], entertainment:[[3,0.3]], other:[[3,0.3]]
+});
+const punctuate=value=>/[?!]$/.test(String(value).trim())?String(value).trim():String(value).trim()+'?';
 const REGULAR_ANSWERS=new Set(['yes','probably','maybe','unknown','doubtful','probably_not','no']);
 
 const REDUNDANCY_SCORE_FLOOR=0.99;
@@ -91,6 +99,33 @@ function setCategory(game,value){
  game.turn=1;game.history.push({kind:'category',value,turn:1});
  return choose(game);
 }
+function setOpeningCategory(game,value){
+ if(game.status!=='playing'||game.turn!==0)throw new Error('Opening category can only be chosen at the start');
+ if(!OPENING_CATEGORIES.includes(value))throw new Error('Unsupported Pam opening category');
+ game.category=value;
+ // Optional future, identity-reviewed taxonomy may supply overlapping labels.
+ // No candidate is ever excluded for having an unknown or overlapping category.
+ const tags=model.openingCategories;
+ if(tags!=null&&(!Array.isArray(tags)||tags.length!==N))throw new Error('Invalid opening category metadata');
+ for(let t=0;t<N;t++){
+  if(tags){
+   const labels=tags[t];
+   if(!Array.isArray(labels)||labels.some(label=>!OPENING_CATEGORIES.includes(label)))throw new Error('Invalid opening category labels');
+   if(labels.includes(value))game.scores[t]+=2;
+  }else{
+   // The frozen ontology has only animal / vegetable / mineral / other.
+   // Its broad "other" field must never be used as a factual assertion that
+   // something is a person, a place or an entertainment work.
+   const hints=OPENING_HINTS[value];
+   let boost=0;
+   for(const [q,weight] of hints)if(knownAt(q,t)&&polarity(stateAt(q,t)))boost=Math.max(boost,weight);
+   game.scores[t]+=boost;
+  }
+ }
+ game.turn=1;
+ game.history.push({kind:'category',value,turn:1,format:'six-choice'});
+ return choose(game);
+}
 function responseProfile(answer){
  if(answer==='yes')return{yes:true,power:2};
  if(answer==='probably')return{yes:true,power:1};
@@ -106,7 +141,7 @@ function answer(game,question,answerValue){
  const profile=responseProfile(answer);
  if(profile)applyPolarity(game,q,profile.yes,profile.power);
  else if(answer==='maybe')applyMaybe(game,q);
- game.turn+=1;game.history.push({kind:'question',turn:game.turn,id:`q${q}`,text:QUESTIONS[q],answer});
+ game.turn+=1;game.history.push({kind:'question',turn:game.turn,id:`q${q}`,text:punctuate(QUESTIONS[q]),answer});
  return choose(game);
 }
 function candidatePool(game){
@@ -192,11 +227,11 @@ function makeGuess(game,reason='forced'){
 }
 function choose(game){
  if(game.status!=='playing')throw new Error('game finished');
- if(game.turn===0)return{kind:'category',number:1,text:'First things first. What kind of thing is it?',options:Object.keys(CATEGORY_Q),questionsAsked:0,maxQuestions:game.budget};
+ if(game.turn===0)return{kind:'category',number:1,text:'What kind of thing are you thinking of?',options:[...OPENING_CATEGORIES],questionsAsked:0,maxQuestions:game.budget};
  if(game.turn>=game.budget)return makeGuess(game,'question_limit');
  if(shouldHunch(game))return{kind:'hunch',index:top(game).index,confidence:top(game).p,reason:'confidence',questionsAsked:game.turn,maxQuestions:game.budget,continuePrice:game.continuePrice,continueCost:game.continueCost};
  const next=bestQuestion(game);if(!next)return makeGuess(game,'no_questions');
- return{kind:'question',index:next.index,id:`q${next.index}`,text:QUESTIONS[next.index],gain:next.gain,confidence:top(game).p};
+ return{kind:'question',index:next.index,id:`q${next.index}`,text:punctuate(QUESTIONS[next.index]),gain:next.gain,confidence:top(game).p};
 }
 function commitGuess(game,hunch){if(!hunch||hunch.kind!=='hunch')throw new Error('guess requires a hunch');return makeGuess(game,'confidence');}
 function deferGuess(game,hunch){if(!hunch||hunch.kind!=='hunch')throw new Error('continue requires a hunch');game.continueCost+=game.continuePrice;game.deferGuessOnce=true;game.history.push({kind:'decision',decision:'continue',cost:game.continuePrice});return choose(game);}
@@ -207,5 +242,5 @@ function confirm(game,guess,correct){
 }
 function debugSnapshot(game,limit=5){return{runtime:{mode:'frozen-classic-20q',concepts:N,questions:F,offline:true},topCandidates:rank(game,limit).map(i=>({name:TARGETS[i],score:game.scores[i],confidence:i===rank(game,1)[0]?confidence(game):null})),turn:game.turn,category:game.category};}
 
-global.PamClassic20Q=Object.freeze({N,F,QUESTIONS,TARGETS,createGame,choose,answer,setCategory,commitGuess,deferGuess,confirm,top,debugSnapshot});
+global.PamClassic20Q=Object.freeze({N,F,QUESTIONS,TARGETS,createGame,choose,answer,setCategory,setOpeningCategory,commitGuess,deferGuess,confirm,top,debugSnapshot});
 })(window);

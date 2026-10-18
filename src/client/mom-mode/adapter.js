@@ -4,7 +4,7 @@ const Engine=global.PamClassic20Q;
 if(!Engine)throw new Error('Pam classic 20Q engine failed to load');
 let game=null,pending=null,lastGuess=null;
 const supportedAnswers=['yes','probably','maybe','unknown','doubtful','no'];
-const supportedCategories=['animal','vegetable','mineral','other'];
+const supportedCategories=['person','place','animal_plant','object','entertainment','other'];
 function context(){const history=game?.history||[];const previous=[...history].reverse().find(h=>h.kind==='question')||null;return{previous,history:history.filter(h=>h.kind==='question')};}
 function categoryState(q){return{kind:'category',text:q.text,number:1,questionsAsked:0,maxQuestions:game.budget,options:[...supportedCategories],...context()};}
 function questionState(q){return{kind:'question',text:q.text,number:game.turn+1,questionsAsked:game.turn,maxQuestions:game.budget,questionId:q.id,confidence:q.confidence||Engine.top(game).p,gain:q.gain??null,...context()};}
@@ -17,7 +17,7 @@ function submitAnswer(value){
  const answer=String(value||'').toLowerCase();
  if(pending.kind==='category'){
   if(!supportedCategories.includes(answer))throw new Error('Unsupported Pam category');
-  return stateFor(Engine.setCategory(game,answer));
+  return stateFor(Engine.setOpeningCategory(game,answer));
  }
  if(pending.kind!=='question')throw new Error('Pam is not waiting for an answer');
  if(!supportedAnswers.includes(answer))throw new Error('Unsupported Pam answer');
