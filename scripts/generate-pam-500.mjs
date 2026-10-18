@@ -241,6 +241,7 @@ for(const candidate of candidateProfiles){
  }
  candidate.baselineDistance=nearest;
  candidate.selectionDistance=Infinity;
+ candidate.collisionsSelected=0;
 }
 
 // Approximate how many entries in this source catalogue have at least one
@@ -281,23 +282,25 @@ const selected=[],byGroup={},picked=[];
 while(selected.length<BATCH_SIZE){
  let best=null,bestScore=-Infinity;
  for(const candidate of candidateProfiles){
-  if(candidate.picked)continue;
+  if(candidate.picked||candidate.baselineDistance===0)continue;
   const count=byGroup[candidate.kind]||0;
   // Spread across concept domains, so the game does not acquire 200 nearly
   // identical animals or foods. Enforce meaningful distance from prior targets.
   const overlapPenalty=candidate.selectionDistance===0?25:candidate.selectionDistance===1?8:0;
+  const peerCollisionPenalty=candidate.collisionsSelected*7;
   const score=candidate.baselineDistance*3+Math.min(10,candidate.selectionDistance)*2
-    -overlapPenalty-Math.max(0,count-22)*0.45+Math.min(4,candidate.profile.yes.length)*0.05
+    -overlapPenalty-peerCollisionPenalty-Math.max(0,count-22)*0.45+Math.min(4,candidate.profile.yes.length)*0.05
     +(candidate.diverse?7:0);
   if(score>bestScore){bestScore=score;best=candidate;}
  }
- if(!best)throw new Error('Could not assemble 500 candidates');
+ if(!best)throw new Error('Could not assemble 500 candidates distinguishable from the baseline');
  best.picked=true;selected.push(best.profile);picked.push(best);
  byGroup[best.kind]=(byGroup[best.kind]||0)+1;
  for(const candidate of candidateProfiles){
   if(candidate.picked)continue;
   const d=distance(candidate.bits,best.bits);
   if(d<candidate.selectionDistance)candidate.selectionDistance=d;
+  if(d===0)candidate.collisionsSelected++;
  }
 }
 console.log('PAM_500_SELECTION='+JSON.stringify({
@@ -306,7 +309,9 @@ console.log('PAM_500_SELECTION='+JSON.stringify({
  medianBaselineDistance:[...picked.map(p=>p.baselineDistance)].sort((a,b)=>a-b)[250],
  minPeerDistance:Math.min(...picked.slice(1).map(p=>p.selectionDistance)),
  comparedToAllExisting:baseline.targets.length,
- selectedDiverseCount:picked.filter(p=>p.diverse).length
+ selectedDiverseCount:picked.filter(p=>p.diverse).length,
+ collidingCandidateJoins:picked.reduce((total,p)=>total+p.collisionsSelected,0),
+ baselineZeroCandidatesRejected:candidateProfiles.filter(p=>p.baselineDistance===0).length
 }));
 const doc={version:1,count:BATCH_SIZE,review_status:'candidate_unreviewed',source:'Deterministic candidate catalogue; semantic and gameplay verification pending',profiles:selected};
 await writeFile(targetPath,JSON.stringify(doc,null,2)+'\n');
