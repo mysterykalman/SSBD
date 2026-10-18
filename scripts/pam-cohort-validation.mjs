@@ -9,6 +9,8 @@ import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {MOVIE_FRANCHISES} from './pam-movie-franchise-review.mjs';
+import {loadPamClassicModel} from './pam-classic-model.mjs';
+import {loadPam1775Model} from './pam-quality-model.mjs';
 const QID=/^Q[1-9]\d*$/;
 const normalize=value=>String(value||'').normalize('NFKC').toLocaleLowerCase('en').replace(/[’‘]/g,"'").replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const distinct=arr=>[...new Set(arr)];
@@ -247,7 +249,8 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
  if(!queuePath||!factsPath||!outPath)throw Error('Usage: node scripts/pam-cohort-validation.mjs <queue> <facts> <labels-or-dash> <output>');
  const [q,f]=await Promise.all([readFile(queuePath,'utf8'),readFile(factsPath,'utf8')]);
  const labels=labelsPath&&labelsPath!=='-'?JSON.parse(await readFile(labelsPath,'utf8')).labels:{};
- const report=auditPamCohort(JSON.parse(q),JSON.parse(f),{labels});
+ const original=await loadPam1775Model(loadPamClassicModel);
+ const report=auditPamCohort(JSON.parse(q),JSON.parse(f),{labels,originalNames:original.targets});
  await mkdir(dirname(outPath),{recursive:true});
  await writeFile(outPath,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({summary:report.summary,filmGroups:report.franchiseActions,
