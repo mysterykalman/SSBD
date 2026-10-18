@@ -9,6 +9,7 @@ on:
       - data/pam20q/candidates/**
       - scripts/generate-pam-500.mjs
       - scripts/audit-pam-500-separability.mjs
+      - scripts/review-pam-500-candidates.mjs
       - scripts/pam-quality-model.mjs
       - scripts/build-pam-classic.mjs
       - src/client/mom-mode/engine.js
@@ -137,3 +138,33 @@ jobs:
           }
           console.log('PAM_500_BUILD_VALIDATED=2275');
           NODE
+
+  cull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Regenerate 500 candidate profiles
+        run: node scripts/generate-pam-500.mjs
+      - name: Cross-reference duplicates and test playable shortlist
+        run: node scripts/review-pam-500-candidates.mjs
+      - name: Attach retained/rejected rosters and exact counts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-500-culled-final-count
+          path: .dev-data/pam-500/culled/
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Summarize final count
+        if: always()
+        run: |
+          if test -f .dev-data/pam-500/culled/summary.json; then
+            cat .dev-data/pam-500/culled/summary.json
+            cat .dev-data/pam-500/culled/summary.json >> "$GITHUB_STEP_SUMMARY"
+          fi
