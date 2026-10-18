@@ -1,0 +1,33 @@
+name: Pam Rapid Full-Cohort Snapshot
+on:
+  push:
+    branches: [feature/pam-thematic-1650-knowledge-lab]
+    paths:
+      - '.github/workflows/pam-fast-cohort-snapshot.yml'
+      - 'scripts/pam-fast-cohort-snapshot.mjs'
+  workflow_dispatch:
+permissions: {contents: read, actions: read}
+jobs:
+  frozen-research-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Retrieve 1650-row frozen identity review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .dev-data/pam-fast
+          gh run download 39163517479 --repo mysterykalman/SSBD --pattern pam-1650-complete-unreviewed-identity-queue --dir .dev-data/pam-fast
+      - name: Report full roster and source-pinned overlap with movie decisions
+        run: |
+          file=$(find .dev-data/pam-fast -name wikidata-identity-review.json -print -quit)
+          node scripts/pam-fast-cohort-snapshot.mjs "$file" .dev-data/pam-fast/complete-frozen-snapshot.json
+      - name: Archive complete candidate review checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-1352-rapid-auditable-snapshot
+          path: .dev-data/pam-fast/complete-frozen-snapshot.json
+          retention-days: 30
