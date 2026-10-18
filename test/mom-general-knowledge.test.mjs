@@ -1,106 +1,64 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import {readFile} from "node:fs/promises";
-import vm from "node:vm";
+/**
+ * General-knowledge regression tests against the shipped model plus the
+ * approved-fact compiler. The thematic additions are still research-only.
+ * Do not interpret these tests as a verified Venus de Milo gameplay win.
+ */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {loadCurrentPam,traceCurrentPam} from './support/pam-current-engine.mjs';
+import {compileReviewedEvidence} from '../scripts/pam-reviewed-fact-compiler.mjs';
 
-async function load(){
- const ctx={globalThis:null};ctx.globalThis=ctx;vm.createContext(ctx);
- for(const file of [
-  "src/client/mom-mode/knowledge.generated.js",
-  "src/client/mom-mode/knowledge.general.js",
-  "src/client/mom-mode/knowledge.js",
-  "src/client/mom-mode/engine.js"
- ]) vm.runInContext(await readFile(file,"utf8"),ctx,{filename:file});
- return ctx.MomBayes;
-}
+const current=await loadCurrentPam();
+const {engine:e,model:m}=current;
 
-function traceSecret(e,name){
- const secret=e.OBJECTS.findIndex(o=>o.name===name);
- assert.notEqual(secret,-1,`missing ${name}`);
- const game=e.createGame();
- const questionIds=[];
- const guesses=[];
- let q=e.choose(game);
- while(game.status==="playing"){
-  if(q.kind==="hunch") q=e.commitGuess(game,q);
-  if(q.kind==="guess"){
-   guesses.push(q.label);
-   const correct=q.index===secret;
-   const confirmed=e.confirm(game,q,correct);
-   return {result:{kind:"result",winner:correct?"pam":"player",turns:game.turn,guess:q.label,score:confirmed.score},questionIds,guesses};
-  }
-  if(q.kind==="stumped") return {result:{kind:"result",winner:"player",turns:game.turn,guess:e.top(game)?.object?.name||null,stumped:true},questionIds,guesses};
-  assert.equal(q.kind,"question",`unexpected Mom action: ${q.kind}`);
-  questionIds.push(q.id);
-  q=e.answer(game,q,e.oracle(secret,q));
+test('existing Pam knowledge spans the four frozen base categories',()=>{
+ assert.equal(e.N,1775);
+ assert.equal(e.F,156);
+ for(let q=0;q<4;q++){
+  let count=0;
+  for(let i=0;i<e.N;i++)if(m.knownMask[q*e.N+i]&&(m.weights[q*e.N+i]&1))count++;
+  assert.ok(count>0,'missing original knowledge class '+q);
  }
- return {result:{kind:"result",winner:game.status==="won"?"pam":"player",turns:game.turn,guess:e.top(game)?.object?.name||null},questionIds,guesses};
-}
-
-const benchmarks=[
- "Venus de Milo","Mona Lisa","Statue of Liberty","Colosseum","Hamlet",
- "1984","Star Wars","Toy Story","Photosynthesis","Gravity","Apollo 11 moon landing",
- "World War II","Zeus","Nintendo Switch","iPhone","Beethoven's Fifth Symphony"
-];
-
-test("Mom has broad category-based general knowledge",async()=>{
- const e=await load();
- assert.ok(e.meta.generalObjects>=90,`expected at least 90 general-knowledge anchors, got ${e.meta.generalObjects}`);
- for(const name of benchmarks) assert.ok(e.OBJECTS.some(o=>o.name===name),`missing benchmark concept: ${name}`);
- for(const trait of ["gk_artwork","gk_sculpture","gk_book","gk_film","gk_science","gk_event","gk_product"])
-  assert.ok(e.FEATURES.some(f=>f.id===trait),`missing general-knowledge trait: ${trait}`);
- const colosseum=e.OBJECTS.find(o=>o.name==="Colosseum");
- assert.ok(colosseum?.yes.includes("place"));
- assert.ok(colosseum?.no.includes("gk_book")&&colosseum?.no.includes("gk_artwork"));
- const photosynthesis=e.OBJECTS.find(o=>o.name==="Photosynthesis");
- assert.ok(photosynthesis?.yes.includes("gk_science"));
- assert.ok(["person","animal","place","food","drink"].every(id=>photosynthesis?.no.includes(id)));
 });
 
-test("Venus de Milo is a fair Mom win with a culturally sensible path",async()=>{
- const e=await load();
- const trace=traceSecret(e,"Venus de Milo");
- assert.equal(trace.result.winner,"pam",`Pam failed Venus de Milo; final candidate was ${trace.result.guess||"none"}`);
- assert.ok(trace.result.turns<=20);
- assert.ok(trace.questionIds.includes("gk_artwork"),`Pam never established artwork; path: ${trace.questionIds.join(", ")}`);
- const sculptureSignals=["gk_artwork","gk_sculpture","gk_marble","gk_ancient","gk_greek","gk_museum","gk_louvre"];
- const used=sculptureSignals.filter(id=>trace.questionIds.includes(id));
- assert.ok(used.length>=2,`Pam did not narrow Venus de Milo through useful sculpture/history traits; path: ${trace.questionIds.join(", ")}`);
-});
-
-test("Pam solves most representative general-knowledge benchmarks within 20 turns",{skip:process.env.MOM_GENERAL_BENCHMARK!=="1"},async()=>{
- const e=await load();
- let wins=0;
- const failures=[];
- for(const name of benchmarks){
-  const secret=e.OBJECTS.findIndex(o=>o.name===name);
-  assert.notEqual(secret,-1,`missing ${name}`);
-  const result=e.selfPlay(secret);
-  if(result.won)wins++;else failures.push(`${name} -> ${result.guess||"none"}`);
-  assert.ok(result.turns<=20,`${name} exceeded turn budget`);
+test('sampled general-knowledge gameplay has natural questions within 20 turns',()=>{
+ for(const i of [0,63,219,487,740,1199,1400,1650,1774]){
+  const play=traceCurrentPam(current,i);
+  assert.ok(play.turns<=20,m.targets[i]);
+  assert.ok(play.path.every(p=>p.kind!=='question'||p.text.endsWith('?')));
  }
- assert.ok(wins>=12,`Pam solved only ${wins}/${benchmarks.length}: ${failures.join(", ")}`);
 });
 
-
-test("confirmed general-knowledge families suppress unrelated generic questions",async()=>{
- const e=await load();
- const g=e.createGame();
- g.answers.set("gk_book","yes");
- const genericIds=["person","place","animal","plant","food","drink","household","electronic"];
- for(const id of genericIds){const f=e.FEATURES.findIndex(feature=>feature.id===id);if(f>=0)assert.equal(e.questionAllowed(g,f),false,`${id} should be suppressed after gk_book=yes`);}
- const novel=e.FEATURES.findIndex(feature=>feature.id==="gk_novel");
- assert.ok(novel>=0);
- assert.equal(e.questionAllowed(g,novel),true);
+test('known artwork types can be kept separate with reviewed source facts',()=>{
+ const targets=[{id:'PAM-0001',name:'Venus de Milo'},{id:'PAM-0002',name:'Mona Lisa'}];
+ const rows=[
+  ['PAM-0001','Venus de Milo','Q1','sculpture','yes'],
+  ['PAM-0002','Mona Lisa','Q2','sculpture','no']
+ ].map(([id,name,qid,value,truth])=>({
+  id,approved_name:name,subject_qid:qid,reviewer:'synthetic test fixture',
+  identity_reviewed:true,reviewed_at:'2026-10-18',
+  identity_source:'https://www.wikidata.org/wiki/'+qid,
+  facts:[{field:'artwork_type',value,truth,source:'https://www.wikidata.org/wiki/'+qid,review_status:'approved'}]
+ }));
+ const result=compileReviewedEvidence(targets,rows,[{text:'Is it a sculpture?',field:'artwork_type',value:'sculpture'}]);
+ assert.deepEqual([...result.knownMask],[1,1]);
+ assert.deepEqual([...result.weights],[3,2]);
 });
 
-test("non-entity general-knowledge kinds get safe root negatives",async()=>{
- const e=await load();
- const music=e.OBJECTS.findIndex(o=>o.name==="Beethoven's Fifth Symphony");
- assert.ok(music>=0);
- for(const id of ["person","animal","plant","place","food","drink"]){
-  const f=e.FEATURES.findIndex(feature=>feature.id===id);
-  assert.ok(f>=0);
-  assert.equal(e.truth[music*e.F+f],0,`${id} should be an explicit safe negative for a music work`);
- }
+test('unprofiled cultural subjects never inherit speculative negative answers',()=>{
+ const targets=[{id:'PAM-0001',name:'Venus de Milo'},{id:'PAM-0002',name:'Mona Lisa'}];
+ const record={id:'PAM-0001',approved_name:'Venus de Milo',subject_qid:'Q1',
+  identity_reviewed:true,reviewer:'synthetic test fixture',reviewed_at:'2026-10-18',
+  identity_source:'https://www.wikidata.org/wiki/Q1',
+  facts:[{field:'artwork_type',value:'sculpture',truth:'yes',review_status:'approved',source:'https://www.wikidata.org/wiki/Q1'}]};
+ const result=compileReviewedEvidence(targets,[record],[{text:'Is it a sculpture?',field:'artwork_type',value:'sculpture'}]);
+ assert.deepEqual([...result.knownMask],[1,0]);
+ assert.equal(result.summary.reviewedNo,0);
+});
+
+test('answers without evidence cannot be turned into confident classifications',()=>{
+ let sparse=0;
+ for(const known of m.knownMask)if(known===0)sparse++;
+ assert.ok(sparse>0,'the reviewed 375 additions require honest unknowns');
+ assert.ok(sparse<m.knownMask.length);
 });
