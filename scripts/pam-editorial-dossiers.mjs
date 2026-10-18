@@ -3,7 +3,7 @@
  * dossiers, grouped by semantic category, without fabricating approvals.
  */
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
-import {join,dirname} from 'node:path';
+import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const esc=value=>String(value??'').replace(/\|/g,'/').replace(/\r?\n/g,' ');
 const slug=s=>String(s).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,90);

@@ -9,7 +9,13 @@ on:
       - 'scripts/pam-1352-source-research.mjs'
       - 'scripts/pam-cohort-validation.mjs'
       - 'test/pam-cohort-validation.test.mjs'
+      - 'scripts/pam-editorial-dossiers.mjs'
+      - 'scripts/pam-1352-simulation.mjs'
   workflow_dispatch:
+
+concurrency:
+  group: pam-full-evidence-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -48,6 +54,14 @@ jobs:
             .dev-data/pam-full-cohort/pam-1352-source-claims.json \
             .dev-data/pam-full-cohort/pam-1352-related-labels.json \
             .dev-data/pam-full-cohort/pam-1352-full-audit.json
+            .dev-data/pam-full-cohort/pam-1352-game-diagnostics.json
+            .dev-data/pam-full-cohort/dossiers/
+      - name: Execute exact and softened source-only diagnostic games
+        run: |
+          node scripts/pam-1352-simulation.mjs .dev-data/pam-full-cohort/pam-1352-full-audit.json .dev-data/pam-full-cohort/pam-1352-game-diagnostics.json
+      - name: Build 1352 individual evidence and competitor dossiers
+        run: |
+          node scripts/pam-editorial-dossiers.mjs .dev-data/pam-full-cohort/pam-1352-full-audit.json .dev-data/pam-full-cohort/dossiers
       - name: Enforce research-only status and exact accounting
         run: |
           node --input-type=module <<'EOF'

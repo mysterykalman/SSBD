@@ -172,7 +172,6 @@ export function auditPamCohort(queue,facts,{originalNames=[],labels={}}={}){
   const candidateQuestions=[];
   const years=distinct(rows.map(r=>r.year).filter(x=>x!=null)).sort((a,b)=>a-b);
   const category=rows[0].category;
-  const isMovie=category==='Movies';
   const dateField=DATE_FIELD[rows[0].category];
   if(dateField){
    const thresholds=distinct(years.map(y=>Math.floor(y/10)*10)).sort((a,b)=>a-b);

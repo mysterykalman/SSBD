@@ -5,7 +5,7 @@
  */
 import {readFile,writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
-import {createThematicGame,oracleThematicGame} from './pam-thematic-reasoner.mjs';
+import {oracleThematicGame} from './pam-thematic-reasoner.mjs';
 export function buildDiagnosticModel(rows){
  if(!rows.length)throw Error('Empty diagnostic cluster');
  const targets=rows.map(x=>({id:x.id,name:x.name}));
