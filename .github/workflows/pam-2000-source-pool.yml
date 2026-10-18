@@ -1,0 +1,42 @@
+name: Pam 2000 source pool
+on:
+  push:
+    branches: [feature/pam-500-from-2000]
+    paths:
+      - scripts/build-pam-2000-pool.mjs
+      - scripts/pam-2000-corpus.mjs
+      - scripts/pam-2000-lexical-classifier.mjs
+      - .github/workflows/pam-2000-source-pool.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-pool:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Build a minimum 2000-name logic checked source pool
+        run: node scripts/build-pam-2000-pool.mjs
+      - name: Publish source pool for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-2000-preflight-candidates
+          path: data/pam20q/candidates/pam-2000-preflight-pool.json
+          retention-days: 30
+      - name: Commit unapproved preflight pool to isolated branch
+        run: |
+          git config user.name "SSBD Pam Candidate Audit"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/pam20q/candidates/pam-2000-preflight-pool.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data: record logic-checked 2000-plus unreviewed Pam candidate pool"
+            git push origin HEAD:feature/pam-500-from-2000
+          fi
