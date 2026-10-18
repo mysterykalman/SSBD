@@ -7,6 +7,7 @@ on:
       - feature/homepage-4-mode-grid
       - 'feature/pam-*'
     paths:
+      - '.github/workflows/pam-classic20q-ci.yml'
       - 'data/pam20q/**'
       - 'src/client/mom-mode/**'
       - 'scripts/build-pam-classic.mjs'
