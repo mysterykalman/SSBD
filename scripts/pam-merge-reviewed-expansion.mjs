@@ -5,6 +5,7 @@
  */
 import {compileReviewedEvidence} from './pam-reviewed-fact-compiler.mjs';
 import {openingCategoriesForThematicTarget} from './pam-thematic-lab.mjs';
+import {movieFranchiseForTitle} from './pam-movie-franchise-review.mjs';
 const norm=x=>String(x||'').normalize('NFKC').toLocaleLowerCase('en').trim().replace(/\s+/g,' ');
 export function appendReviewedPamExpansion(base,roster,approved,questions,{count=1352}={}){
  if(approved?.release_status!=='EDITORIAL_APPROVAL_COMPLETE'||approved?.approval_kind!=='human_reviewed')
@@ -14,7 +15,7 @@ export function appendReviewedPamExpansion(base,roster,approved,questions,{count
  const rosterById=new Map(roster.map(t=>[t.id,t]));
  if(roster.length!==1650||rosterById.size!==1650)throw Error('Unexpected frozen research roster');
  if(base.targets.length!==1775||base.questions.length!==156)throw Error('Frozen original model changed');
- const selected=new Set(),existing=new Set(base.targets.map(norm));
+ const selected=new Set(),existing=new Set(base.targets.map(norm)),reviewedFranchises=new Map();
  const additions=[];
  for(const record of approved.records){
   const target=rosterById.get(record.id);
@@ -23,6 +24,11 @@ export function appendReviewedPamExpansion(base,roster,approved,questions,{count
   if(existing.has(norm(target.name)))throw Error('Existing playable answer collision: '+target.name);
   if(record.franchise_review!=='APPROVED'||record.gameplay_review!=='APPROVED')
    throw Error('Franchise and gameplay review required: '+record.id);
+  if(target.category==='Movies'){
+   const franchise=movieFranchiseForTitle(target.name);
+   if(franchise&&reviewedFranchises.has(franchise))throw Error('One-film-per-franchise rule: '+target.name+' conflicts with '+reviewedFranchises.get(franchise));
+   if(franchise)reviewedFranchises.set(franchise,target.name);
+  }
   selected.add(record.id);
   additions.push({...target,subject_qid:record.subject_qid});
  }
