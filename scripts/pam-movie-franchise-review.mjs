@@ -6,7 +6,7 @@
 export const MOVIE_FRANCHISES=Object.freeze({
  'Jurassic Park':['Jurassic Park','The Lost World: Jurassic Park','Jurassic Park III','Jurassic World','Jurassic World: Fallen Kingdom','Jurassic World Dominion','Jurassic World Rebirth'],
  'Batman':['Batman (1989 film)','Batman','Batman Returns','Batman Forever','Batman & Robin','Batman Begins','The Dark Knight','The Dark Knight Rises','The Batman'],
- 'Star Wars':['Star Wars: A New Hope','Star Wars','The Empire Strikes Back','Return of the Jedi','The Phantom Menace','Attack of the Clones','Revenge of the Sith','The Force Awakens','The Last Jedi','The Rise of Skywalker','Rogue One: A Star Wars Story','Solo: A Star Wars Story'],
+ 'Star Wars':['Star Wars: A New Hope','Star Wars: The Force Awakens','Star Wars','The Empire Strikes Back','Return of the Jedi','The Phantom Menace','Attack of the Clones','Revenge of the Sith','The Force Awakens','The Last Jedi','The Rise of Skywalker','Rogue One: A Star Wars Story','Solo: A Star Wars Story'],
  'The Lord of the Rings':['The Lord of the Rings: The Fellowship of the Ring','The Lord of the Rings: The Two Towers','The Lord of the Rings: The Return of the King','The Hobbit: An Unexpected Journey','The Hobbit: The Desolation of Smaug','The Hobbit: The Battle of the Five Armies'],
  'Toy Story':['Toy Story','Toy Story 2','Toy Story 3','Toy Story 4'],
  'Shrek':['Shrek','Shrek 2','Shrek the Third','Shrek Forever After'],
