@@ -81,3 +81,9 @@ The direct/near-label comparison identified **15** possible collisions with base
 The research pilot is `.github/workflows/pam-thematic-wikidata-pilot.yml`. It can query a balanced sample across all 11 categories and produces review-only artifact files. Wikimedia documentation: https://www.mediawiki.org/wiki/Wikibase/API and https://www.wikidata.org/wiki/Wikidata:Data_formats . These are sources for structured claims, not a blanket certification of entity matches or every real-world trait.
 
 The goal of the next pass is to turn enough **reviewed** facts into discriminating profiles to pass category-level clean/softened 20-turn games. Question count is a consequence of separation and quality, not a quota that justifies making up questions.
+
+## New technical building block: reviewed-evidence matrix
+
+`scripts/pam-reviewed-fact-compiler.mjs` and `test/pam-reviewed-fact-compiler.test.mjs` define an isolated, review-gated compiler for future release. Once the human/source identity is verified, every yes/no cell must carry a review approval and a traceable evidence URL; imported research hints are never accepted as playable truth. **No change is made to the frozen 1,775-target runtime.**
+
+Where a curator approves a *complete single-valued field*, such as a named city's verified present-day country, an opposite value is a defensible known **No**, not an invented negative. Multi-valued occupations, languages, creator lists, musical genres and other open taxonomies do not get negative assertions through absence or competing values. The compiler outputs a question-major matrix and explicit known mask, and rejects conflicting complete values, category-insensitive name hints, unknown candidate identifiers, unreviewed entity mappings and unapproved source claims. This gives the future game the kind of factual discrimination the workbook-only model lacks while safeguarding accuracy.

@@ -9,6 +9,8 @@ on:
       - 'scripts/run-semantic-audit.mjs'
       - 'scripts/pam-expansion-baseline-check.mjs'
       - 'test/pam-thematic-lab.test.mjs'
+      - 'scripts/pam-reviewed-fact-compiler.mjs'
+      - 'test/pam-reviewed-fact-compiler.test.mjs'
       - '.github/workflows/pam-thematic-audit.yml'
   pull_request:
     paths:
@@ -17,6 +19,8 @@ on:
       - 'scripts/run-semantic-audit.mjs'
       - 'scripts/pam-expansion-baseline-check.mjs'
       - 'test/pam-thematic-lab.test.mjs'
+      - 'scripts/pam-reviewed-fact-compiler.mjs'
+      - 'test/pam-reviewed-fact-compiler.test.mjs'
 
 permissions:
   contents: read
@@ -31,6 +35,8 @@ jobs:
           node-version: '24'
       - name: Verify exact 1,650-row roster, question contracts and unknown handling
         run: node --test test/pam-thematic-lab.test.mjs
+      - name: Verify reviewed-evidence matrix compiler and no invented negative answers
+        run: node --test test/pam-reviewed-fact-compiler.test.mjs
       - name: Measure the unapproved question/target collision rate
         run: node scripts/run-semantic-audit.mjs
       - name: Protect frozen original 1,775-answer baseline and compare names
