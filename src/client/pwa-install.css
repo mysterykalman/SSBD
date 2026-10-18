@@ -227,3 +227,7 @@
 /* Three-step installation guide: no editorial framing above or below the steps. */
 .pwa-install-panel h2 {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .pwa-install-steps {margin:0 0 18px}
+
+@media (max-width:560px) {
+  .pwa-install-trigger {font-size:clamp(.7rem,2.7vw,.82rem);gap:3px;padding-inline:11px}
+}
