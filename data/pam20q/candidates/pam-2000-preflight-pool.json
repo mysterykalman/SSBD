@@ -17958,7 +17958,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a tacos",
+      "name": "tacos",
       "kind": "meal",
       "category": "other",
       "origin": "lexical_52k",
@@ -21538,7 +21538,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a Black rhinoceros",
+      "name": "Black rhinoceros",
       "kind": "hoof",
       "category": "animal",
       "origin": "lexical_52k",
@@ -22788,7 +22788,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "an Indian rhinoceros",
+      "name": "Indian rhinoceros",
       "kind": "hoof",
       "category": "animal",
       "origin": "lexical_52k",
@@ -22838,7 +22838,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a Javan rhinoceros",
+      "name": "Javan rhinoceros",
       "kind": "hoof",
       "category": "animal",
       "origin": "lexical_52k",
@@ -26266,7 +26266,7 @@
       "reason": "duplicate_1775"
     },
     {
-      "name": "a tarantulas",
+      "name": "tarantulas",
       "kind": "invert",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
@@ -26278,7 +26278,7 @@
       "reason": "duplicate_1775"
     },
     {
-      "name": "a zebras",
+      "name": "zebras",
       "kind": "hoof",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
