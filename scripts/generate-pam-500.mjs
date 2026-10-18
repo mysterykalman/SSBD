@@ -278,7 +278,7 @@ console.log('PAM_500_CANDIDATE_DISTINGUISHABILITY='+JSON.stringify({
  requiresFactualEnrichmentFor500:Math.max(...independentCounts)<BATCH_SIZE
 }));
 
-const selected=[],byGroup={},picked=[];
+const selected=[],byGroup={},byCategory={},picked=[];
 while(selected.length<BATCH_SIZE){
  let best=null,bestScore=-Infinity;
  for(const candidate of candidateProfiles){
@@ -287,15 +287,18 @@ while(selected.length<BATCH_SIZE){
   // Spread across concept domains, so the game does not acquire 200 nearly
   // identical animals or foods. Enforce meaningful distance from prior targets.
   const overlapPenalty=candidate.selectionDistance===0?25:candidate.selectionDistance===1?8:0;
-  const peerCollisionPenalty=candidate.collisionsSelected*7;
+  const peerCollisionPenalty=candidate.collisionsSelected*5;
+  const categoryPenalty=candidate.profile.category==='other'?Math.max(0,(byCategory.other||0)-295)*0.17:0;
   const score=candidate.baselineDistance*3+Math.min(10,candidate.selectionDistance)*2
-    -overlapPenalty-peerCollisionPenalty-Math.max(0,count-22)*0.45+Math.min(4,candidate.profile.yes.length)*0.05
-    +(candidate.diverse?7:0);
+    -overlapPenalty-peerCollisionPenalty-categoryPenalty-Math.max(0,count-22)*0.45
+    +Math.min(15,candidate.profile.yes.length)*0.3
+    +(candidate.diverse?11:0);
   if(score>bestScore){bestScore=score;best=candidate;}
  }
  if(!best)throw new Error('Could not assemble 500 candidates distinguishable from the baseline');
  best.picked=true;selected.push(best.profile);picked.push(best);
  byGroup[best.kind]=(byGroup[best.kind]||0)+1;
+ byCategory[best.profile.category]=(byCategory[best.profile.category]||0)+1;
  for(const candidate of candidateProfiles){
   if(candidate.picked)continue;
   const d=distance(candidate.bits,best.bits);
@@ -311,7 +314,8 @@ console.log('PAM_500_SELECTION='+JSON.stringify({
  comparedToAllExisting:baseline.targets.length,
  selectedDiverseCount:picked.filter(p=>p.diverse).length,
  collidingCandidateJoins:picked.reduce((total,p)=>total+p.collisionsSelected,0),
- baselineZeroCandidatesRejected:candidateProfiles.filter(p=>p.baselineDistance===0).length
+ baselineZeroCandidatesRejected:candidateProfiles.filter(p=>p.baselineDistance===0).length,
+ byCategory
 }));
 const doc={version:1,count:BATCH_SIZE,review_status:'candidate_unreviewed',source:'Deterministic candidate catalogue; semantic and gameplay verification pending',profiles:selected};
 await writeFile(targetPath,JSON.stringify(doc,null,2)+'\n');
