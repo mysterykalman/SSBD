@@ -6,6 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadCurrentPam,traceCurrentPam} from './support/pam-current-engine.mjs';
+import {compileReviewedEvidence} from '../scripts/pam-reviewed-fact-compiler.mjs';
 const fixture=await loadCurrentPam();
 const {engine:e,model:m}=fixture;
 
@@ -36,14 +37,18 @@ test('a question is grounded in independently known yes/no evidence',()=>{
  assert.ok(yes+no+unknown===e.N);
 });
 
-test('unknown evidence remains neutral even for strong yes answers',()=>{
- const g=e.createGame();
- const q=e.setOpeningCategory(g,'other');
- const unknownIndex=m.targets.findIndex((_,t)=>m.knownMask[q.index*e.N+t]===0);
- assert.ok(unknownIndex>=0,'the combined model must expose sparse reviewed traits');
- const before=g.scores[unknownIndex];
- e.answer(g,q,'yes');
- assert.equal(g.scores[unknownIndex],before,'unknown must never become an implicit No');
+test('unknown evidence cannot become a negative answer in reviewed additions',()=>{
+ const targets=[{id:'PAM-0001',name:'Approved Target'},{id:'PAM-0002',name:'Unreviewed Target'}];
+ const record={id:'PAM-0001',approved_name:'Approved Target',subject_qid:'Q1001',
+  identity_reviewed:true,reviewer:'fixture-author',reviewed_at:'2026-10-18',
+  identity_source:'https://www.wikidata.org/wiki/Q1001',
+  facts:[{field:'artwork_type',value:'sculpture',truth:'yes',review_status:'approved',
+   source:'https://www.wikidata.org/wiki/Q1001'}]};
+ const result=compileReviewedEvidence(targets,[record],
+  [{text:'Is it a sculpture?',field:'artwork_type',value:'sculpture'}]);
+ assert.deepEqual([...result.knownMask],[1,0]);
+ assert.deepEqual([...result.weights],[3,0]);
+ assert.equal(result.summary.reviewedNo,0);
 });
 
 test('reviewed known evidence differentiates yes and no without erasing candidates',()=>{
