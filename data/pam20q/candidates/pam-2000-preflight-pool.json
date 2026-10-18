@@ -10,18 +10,18 @@
     "rawCandidates": 2769,
     "baseline": 1775,
     "sourceLexicalLeads": 860,
-    "eligibleUniqueCandidates": 2401,
-    "rejected": 368,
+    "eligibleUniqueCandidates": 2399,
+    "rejected": 370,
     "bySource": {
       "diversified_catalogue": 457,
       "original_catalogue": 1315,
-      "lexical_52k": 629
+      "lexical_52k": 627
     },
     "byCategory": {
       "mineral": 106,
       "other": 1237,
-      "animal": 712,
-      "vegetable": 346
+      "animal": 711,
+      "vegetable": 345
     },
     "byKind": {
       "rock": 38,
@@ -41,12 +41,12 @@
       "medicine": 32,
       "mammal": 157,
       "hoof": 63,
-      "bird": 158,
+      "bird": 157,
       "fish": 127,
       "reptile": 65,
       "insect": 77,
       "invert": 46,
-      "fruit": 40,
+      "fruit": 39,
       "berry": 36,
       "vegetable": 38,
       "root": 35,
@@ -72,7 +72,7 @@
     "rejectByReason": {
       "duplicate_1775": 242,
       "quantity_or_fragment_not_atomic": 44,
-      "inappropriate_or_unstable_referent": 10,
+      "inappropriate_or_unstable_referent": 12,
       "duplicate_in_pool": 72
     }
   },
@@ -17878,16 +17878,6 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a date",
-      "kind": "fruit",
-      "category": "vegetable",
-      "origin": "lexical_52k",
-      "source_rank": 71,
-      "source_flags": "",
-      "confidence": "lead_not_fact_checked",
-      "review_status": "candidate_unreviewed"
-    },
-    {
       "name": "a gingerbread",
       "kind": "dessert",
       "category": "other",
@@ -17918,7 +17908,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a noodles",
+      "name": "noodles",
       "kind": "meal",
       "category": "other",
       "origin": "lexical_52k",
@@ -17928,7 +17918,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a limes",
+      "name": "limes",
       "kind": "fruit",
       "category": "vegetable",
       "origin": "lexical_52k",
@@ -17958,7 +17948,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a cookies",
+      "name": "cookies",
       "kind": "dessert",
       "category": "other",
       "origin": "lexical_52k",
@@ -18378,16 +18368,6 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a chat",
-      "kind": "bird",
-      "category": "animal",
-      "origin": "lexical_52k",
-      "source_rank": 658,
-      "source_flags": "",
-      "confidence": "lead_not_fact_checked",
-      "review_status": "candidate_unreviewed"
-    },
-    {
       "name": "a retriever",
       "kind": "mammal",
       "category": "animal",
@@ -18758,7 +18738,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a frogs",
+      "name": "frogs",
       "kind": "amphibian",
       "category": "animal",
       "origin": "lexical_52k",
@@ -18808,7 +18788,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a trousers",
+      "name": "trousers",
       "kind": "wear",
       "category": "other",
       "origin": "lexical_52k",
@@ -18858,7 +18838,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a bagpipes",
+      "name": "bagpipes",
       "kind": "instrument",
       "category": "other",
       "origin": "lexical_52k",
@@ -18868,7 +18848,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a tights",
+      "name": "tights",
       "kind": "wear",
       "category": "other",
       "origin": "lexical_52k",
@@ -18948,7 +18928,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a calipers",
+      "name": "calipers",
       "kind": "tool",
       "category": "other",
       "origin": "lexical_52k",
@@ -19038,7 +19018,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a files",
+      "name": "files",
       "kind": "tool",
       "category": "other",
       "origin": "lexical_52k",
@@ -19058,7 +19038,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a pens",
+      "name": "pens",
       "kind": "office",
       "category": "other",
       "origin": "lexical_52k",
@@ -19458,7 +19438,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a stretch pants",
+      "name": "stretch pants",
       "kind": "wear",
       "category": "other",
       "origin": "lexical_52k",
@@ -19678,7 +19658,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a hot pants",
+      "name": "hot pants",
       "kind": "wear",
       "category": "other",
       "origin": "lexical_52k",
@@ -23578,7 +23558,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a darts",
+      "name": "darts",
       "kind": "sport",
       "category": "other",
       "origin": "lexical_52k",
@@ -23588,7 +23568,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a bowls",
+      "name": "bowls",
       "kind": "kitchen",
       "category": "other",
       "origin": "lexical_52k",
@@ -23628,7 +23608,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a bees",
+      "name": "bees",
       "kind": "insect",
       "category": "animal",
       "origin": "lexical_52k",
@@ -23688,7 +23668,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a garnets",
+      "name": "garnets",
       "kind": "gem",
       "category": "mineral",
       "origin": "lexical_52k",
@@ -23748,7 +23728,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a soles",
+      "name": "soles",
       "kind": "fish",
       "category": "animal",
       "origin": "lexical_52k",
@@ -23768,7 +23748,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a creepers",
+      "name": "creepers",
       "kind": "plant",
       "category": "vegetable",
       "origin": "lexical_52k",
@@ -23788,7 +23768,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "an apes",
+      "name": "apes",
       "kind": "mammal",
       "category": "animal",
       "origin": "lexical_52k",
@@ -23798,7 +23778,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a beets",
+      "name": "beets",
       "kind": "root",
       "category": "vegetable",
       "origin": "lexical_52k",
@@ -23808,7 +23788,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a belts",
+      "name": "belts",
       "kind": "wear",
       "category": "other",
       "origin": "lexical_52k",
@@ -23818,7 +23798,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a brownies",
+      "name": "brownies",
       "kind": "dessert",
       "category": "other",
       "origin": "lexical_52k",
@@ -23828,7 +23808,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a coals",
+      "name": "coals",
       "kind": "rock",
       "category": "mineral",
       "origin": "lexical_52k",
@@ -23838,7 +23818,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a kites",
+      "name": "kites",
       "kind": "bird",
       "category": "animal",
       "origin": "lexical_52k",
@@ -23848,7 +23828,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a mittens",
+      "name": "mittens",
       "kind": "wear",
       "category": "other",
       "origin": "lexical_52k",
@@ -23858,7 +23838,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a mussels",
+      "name": "mussels",
       "kind": "invert",
       "category": "animal",
       "origin": "lexical_52k",
@@ -23878,7 +23858,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a roses",
+      "name": "roses",
       "kind": "plant",
       "category": "vegetable",
       "origin": "lexical_52k",
@@ -23888,7 +23868,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a sandals",
+      "name": "sandals",
       "kind": "wear",
       "category": "other",
       "origin": "lexical_52k",
@@ -23898,7 +23878,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a sardines",
+      "name": "sardines",
       "kind": "fish",
       "category": "animal",
       "origin": "lexical_52k",
@@ -23908,7 +23888,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a saws",
+      "name": "saws",
       "kind": "tool",
       "category": "other",
       "origin": "lexical_52k",
@@ -23928,7 +23908,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a slugs",
+      "name": "slugs",
       "kind": "invert",
       "category": "animal",
       "origin": "lexical_52k",
@@ -23938,7 +23918,7 @@
       "review_status": "candidate_unreviewed"
     },
     {
-      "name": "a toads",
+      "name": "toads",
       "kind": "amphibian",
       "category": "animal",
       "origin": "lexical_52k",
@@ -24912,6 +24892,12 @@
       "reason": "duplicate_1775"
     },
     {
+      "name": "a date",
+      "kind": "fruit",
+      "origin": "lexical_52k",
+      "reason": "inappropriate_or_unstable_referent"
+    },
+    {
       "name": "a churro",
       "kind": "dessert",
       "origin": "lexical_52k",
@@ -24930,31 +24916,31 @@
       "reason": "duplicate_1775"
     },
     {
-      "name": "a carrots",
+      "name": "carrots",
       "kind": "root",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a dumplings",
+      "name": "dumplings",
       "kind": "meal",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a grapes",
+      "name": "grapes",
       "kind": "fruit",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a hamburgers",
+      "name": "hamburgers",
       "kind": "meal",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a pancakes",
+      "name": "pancakes",
       "kind": "meal",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
@@ -25320,6 +25306,12 @@
       "reason": "duplicate_in_pool"
     },
     {
+      "name": "a chat",
+      "kind": "bird",
+      "origin": "lexical_52k",
+      "reason": "inappropriate_or_unstable_referent"
+    },
+    {
       "name": "a dove",
       "kind": "bird",
       "origin": "lexical_52k",
@@ -25452,7 +25444,7 @@
       "reason": "duplicate_in_pool"
     },
     {
-      "name": "an eagles",
+      "name": "eagles",
       "kind": "bird",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
@@ -25554,7 +25546,7 @@
       "reason": "duplicate_1775"
     },
     {
-      "name": "a spoons",
+      "name": "spoons",
       "kind": "kitchen",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
@@ -25890,13 +25882,13 @@
       "reason": "duplicate_1775"
     },
     {
-      "name": "a daffodils",
+      "name": "daffodils",
       "kind": "plant",
       "origin": "lexical_52k",
       "reason": "duplicate_in_pool"
     },
     {
-      "name": "a tulips",
+      "name": "tulips",
       "kind": "plant",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
@@ -26184,19 +26176,19 @@
       "reason": "duplicate_in_pool"
     },
     {
-      "name": "a marbles",
+      "name": "marbles",
       "kind": "rock",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a spades",
+      "name": "spades",
       "kind": "tool",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a nutcrackers",
+      "name": "nutcrackers",
       "kind": "kitchen",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
@@ -26208,7 +26200,7 @@
       "reason": "duplicate_in_pool"
     },
     {
-      "name": "a carnations",
+      "name": "carnations",
       "kind": "plant",
       "origin": "lexical_52k",
       "reason": "duplicate_in_pool"
@@ -26220,55 +26212,55 @@
       "reason": "duplicate_1775"
     },
     {
-      "name": "a diamonds",
+      "name": "diamonds",
       "kind": "gem",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a donkeys",
+      "name": "donkeys",
       "kind": "hoof",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a lizards",
+      "name": "lizards",
       "kind": "reptile",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a pebbles",
+      "name": "pebbles",
       "kind": "rock",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a pencils",
+      "name": "pencils",
       "kind": "office",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a rockets",
+      "name": "rockets",
       "kind": "vehicle",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a rulers",
+      "name": "rulers",
       "kind": "office",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
     },
     {
-      "name": "a skates",
+      "name": "skates",
       "kind": "fish",
       "origin": "lexical_52k",
       "reason": "duplicate_in_pool"
     },
     {
-      "name": "a t-shirts",
+      "name": "t-shirts",
       "kind": "wear",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
@@ -26280,7 +26272,7 @@
       "reason": "duplicate_1775"
     },
     {
-      "name": "a wheelbarrows",
+      "name": "wheelbarrows",
       "kind": "tool",
       "origin": "lexical_52k",
       "reason": "duplicate_1775"
