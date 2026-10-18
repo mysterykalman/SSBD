@@ -45,11 +45,11 @@ const T={
  vehicle:{category:'other',yes:'manufactured invented buy transport move carryPeople',weakYes:'mechanical motorized',no:'living mammal fish insect'},
  instrument:{category:'other',yes:'manufactured buy played noise heard',weakYes:'hold',no:'living mammal fish insect'},
  nature:{category:'mineral',yes:'organic seenReal',weakYes:'touch',no:'mammal fish insect electronic'},
- rock:{category:'mineral',yes:'stone seenReal touch',no:'living alive manufactured invented electronic motorized wear eat'},
+ rock:{category:'mineral',yes:'stone touch',no:'living alive manufactured invented electronic motorized wear eat'},
  gem:{category:'mineral',yes:'stone buy touch smallBread',no:'living alive manufactured invented electronic motorized wear'},
  ice:{category:'mineral',yes:'cold wet touch',no:'living alive electronic motorized wear eat'},
- landform:{category:'mineral',yes:'veryLarge seenReal touch',no:'living alive manufactured electronic motorized wear eat'},
- weather:{category:'other',yes:'seenReal',no:'living alive manufactured invented buy electronic motorized tool'},
+ landform:{category:'mineral',yes:'veryLarge touch',no:'living alive manufactured electronic motorized wear eat'},
+ weather:{category:'other',yes:'',no:'living alive manufactured invented buy electronic motorized tool'},
  body:{category:'other',yes:'bodyPart organic touch',no:'manufactured invented electronic motorized tool'},
  abstract:{category:'other',yes:'abstract',no:'manufactured invented buy living alive bodyPart hold lift touch'},
  office:{category:'other',yes:'manufactured invented buy useful touch',no:'living alive'},
@@ -292,7 +292,7 @@ while(selected.length<BATCH_SIZE){
   const score=candidate.baselineDistance*3+Math.min(10,candidate.selectionDistance)*2
     -overlapPenalty-peerCollisionPenalty-categoryPenalty-Math.max(0,count-22)*0.45
     +Math.min(15,candidate.profile.yes.length)*0.3
-    +(candidate.diverse?11:0);
+    +(candidate.diverse?20:0);
   if(score>bestScore){bestScore=score;best=candidate;}
  }
  if(!best)throw new Error('Could not assemble 500 candidates distinguishable from the baseline');
