@@ -69,3 +69,26 @@ The original broad catalogue had several traits that represented an animal's foo
 The evidence compiler additionally derives only strict logical implications: a pocketable object is smaller than a bread loaf; a smaller-than-golf-ball object is smaller than a bread loaf; something wearable on the head is wearable; motorized things are mechanical; audible noise can be heard; a larger-than-sofa object is larger than a microwave. These rules are checked against explicit negative answers, and any contradiction fails generation.
 
 A later validation of the factually corrected profiles, [run 39082692302](https://github.com/mysterykalman/SSBD/actions/runs/39082692302), produced 222/500 exact, 215/500 softened, **zero old-target regressions** and 337 ambiguous new targets. Its lower score than the intermediate 231/500 run was not repaired by reverting verified corrections or inventing new answers: factual reliability remains the first prerequisite to approval.
+
+## Current validated candidate status (latest complete run)
+
+[Run 39083031314](https://github.com/mysterykalman/SSBD/actions/runs/39083031314) includes the corrected insectivore, shorebird, headwear, landform, ant/wasp and logical-implication evidence, and the strict existing-target collision gate.
+
+| Metric | Latest |
+| --- | ---: |
+| Source candidates surviving duplicate-profile pruning | **1,141** |
+| Diverse-catalogue candidates chosen for proposed 500 | **266/500** |
+| Exact oracle games correctly guessed | **224/500** |
+| Softened-answer oracle games correctly guessed | **219/500** |
+| Softened yes/no actually exercised | **494/500** |
+| Targets with zero known separating answers against another new target | **336/500** |
+| Targets with zero known separating answers against previous 1,775 | **0** |
+| Existing target correctness regressions | **0/1,775** |
+| Target-specific follow-up fact-review prompts | **1,262** |
+| Fact/source correction test | **PASS** |
+| Pam lint + baseline integrity + Vercel unreviewed release guard + full 2,275 build | **PASS** |
+| Strict release gameplay gate | **FAIL (correctly blocks release)** |
+
+**Key distinction:** The latest dataset is more factually defensible but achieves only 224 exact and 219 softened correct guesses. The higher 231 exact result came from an earlier, less-correct candidate selection and must not be presented as the verified current result. The new review queue remains required for the 336 unresolved profiles. Neither this branch nor the earlier unreviewed expansion branch is production-ready.
+
+The run publishes both `pam-500-candidate-profiles` (exact compiled 500 under review) and `pam-500-separability` (all target diagnostics, CSV and JSON 1,262-question review queue). Only the proposed data is tested; no deployment or main-branch merge is initiated.
