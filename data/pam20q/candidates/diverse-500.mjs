@@ -123,7 +123,6 @@ a waterfall|+wet +noise +heard
 a geyser|+hot +wet +noise
 a hot spring|+hot +wet +wet
 a tidal pool|+wet +wet
-a coral reef|+wet +wet +colorful
 a rocky coastline|+stone +wet +wet
 a sandy beach|+brown +wet
 a river rapids|+wet +noise +heard
