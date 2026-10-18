@@ -1,0 +1,85 @@
+name: Pam Full 1352 Source and Semantic Audit
+
+on:
+  push:
+    branches:
+      - feature/pam-thematic-1650-knowledge-lab
+    paths:
+      - '.github/workflows/pam-full-1352-evidence.yml'
+      - 'scripts/pam-1352-source-research.mjs'
+      - 'scripts/pam-cohort-validation.mjs'
+      - 'test/pam-cohort-validation.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run semantic and provenance contracts
+        run: node --test test/pam-cohort-validation.test.mjs test/pam-wikidata-facts-batch.test.mjs
+      - name: Retrieve exact 1650-row original identity review
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          mkdir -p .dev-data/pam-full-cohort
+          gh run download 39163517479 --repo mysterykalman/SSBD \
+            --pattern 'pam-1650-complete-unreviewed-identity-queue' \
+            --dir .dev-data/pam-full-cohort
+          test "$(find .dev-data/pam-full-cohort -name wikidata-identity-review.json | wc -l)" -eq 1
+      - name: Research all 1352 individually plausible entities and source property labels
+        run: |
+          queue=$(find .dev-data/pam-full-cohort -name wikidata-identity-review.json -print -quit)
+          node scripts/pam-1352-source-research.mjs "$queue" \
+            .dev-data/pam-full-cohort/pam-1352-source-claims.json \
+            .dev-data/pam-full-cohort/pam-1352-related-labels.json
+      - name: Audit all 1352 candidates against 1775 shipped answers and semantic competitors
+        run: |
+          queue=$(find .dev-data/pam-full-cohort -name wikidata-identity-review.json -print -quit)
+          node scripts/pam-cohort-validation.mjs "$queue" \
+            .dev-data/pam-full-cohort/pam-1352-source-claims.json \
+            .dev-data/pam-full-cohort/pam-1352-related-labels.json \
+            .dev-data/pam-full-cohort/pam-1352-full-audit.json
+      - name: Enforce research-only status and exact accounting
+        run: |
+          node --input-type=module <<'EOF'
+          import {readFileSync} from 'node:fs';
+          const p='.dev-data/pam-full-cohort/';
+          const facts=JSON.parse(readFileSync(p+'pam-1352-source-claims.json'));
+          const report=JSON.parse(readFileSync(p+'pam-1352-full-audit.json'));
+          if(report.summary.activeCount!==1352||report.summary.pausedCount!==298)
+            throw Error('Research cohort counts changed');
+          if(facts.identity_approvals!==0||facts.factual_approvals!==0||
+             report.summary.editorialApprovedCount!==0)
+            throw Error('Research-only sources were promoted into approved gameplay');
+          if(facts.subjects.length!==1352||new Set(facts.subjects.map(s=>s.id)).size!==1352)
+            throw Error('Incomplete or duplicate candidate research');
+          console.log(JSON.stringify({research_complete:1352,
+            sourceFound:report.summary.sourceFound,sourceMissing:report.summary.sourceMissing,
+            grouped:report.summary.clusterCount,
+            positiveClaimFacts:report.summary.sourcePositiveEvidenceCount,
+            possibleQuestionTemplates:report.summary.researchQuestionCandidates,
+            duplicateQidGroups:report.summary.duplicatedQidGroups,
+            franchiseConflicts:report.summary.franchiseCollisionGroups,
+            sequelReviewFlags:report.summary.curatedSequelReplacementFlags,
+            baselineNameCollisions:report.summary.originalDisplayNameCollisions},null,2));
+          EOF
+      - name: Preserve all evidence and provisional QA reports including partial data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-1352-full-source-and-semantic-audit
+          path: |
+            .dev-data/pam-full-cohort/pam-1352-source-claims.json
+            .dev-data/pam-full-cohort/pam-1352-related-labels.json
+            .dev-data/pam-full-cohort/pam-1352-full-audit.json
+          if-no-files-found: warn
+          retention-days: 30
