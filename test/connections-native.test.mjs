@@ -11,15 +11,15 @@ function seeded(seed) {
   };
 }
 
-test("connections library has 200 families and 800 reusable groups", () => {
-  assert.equal(CONNECTION_FAMILIES.length, 200);
-  assert.equal(CONNECTION_GROUPS.length, 800);
+test("connections library has 600 families and 2400 reusable groups", () => {
+  assert.equal(CONNECTION_FAMILIES.length, 600);
+  assert.equal(CONNECTION_GROUPS.length, 2400);
   const counts = Object.groupBy(CONNECTION_GROUPS, group => group.difficulty);
-  assert.equal(counts.easy.length, 200);
-  assert.equal(counts.medium.length, 200);
-  assert.equal(counts.hard.length, 200);
-  assert.equal(counts.very_hard.length, 200);
-  assert.equal(new Set(CONNECTION_GROUPS.map(group => group.id)).size, 800);
+  assert.equal(counts.easy.length, 600);
+  assert.equal(counts.medium.length, 600);
+  assert.equal(counts.hard.length, 600);
+  assert.equal(counts.very_hard.length, 600);
+  assert.equal(new Set(CONNECTION_GROUPS.map(group => group.id)).size, 2400);
 });
 
 test("every reusable group contains four unique words", () => {
@@ -34,7 +34,7 @@ test("generated games respect tier recipes and board QA", () => {
     const used = [];
     const recent = [];
     for (let index = 0; index < 50; index++) {
-      const game = generateConnectionsGame({tier, usedSignatures: used, recentFamilyIds: recent, rng: seeded(tier * 10000 + index)});
+      const game = generateConnectionsGame({tier, usedSignatures: used, recentFamilyIds: recent, seenFamilyIds: recent, rng: seeded(tier * 10000 + index)});
       assert.deepEqual(game.recipe, CONNECTION_RECIPES[tier]);
       assert.equal(game.groups.length, 4);
       assert.equal(game.board.length, 16);
