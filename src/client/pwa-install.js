@@ -53,13 +53,9 @@
       sheet = document.createElement("dialog");
       sheet.className = "pwa-install-dialog";
       sheet.setAttribute("aria-labelledby", "pwaInstallTitle");
-      sheet.setAttribute("aria-describedby", "pwaInstallLead");
       sheet.innerHTML = `<div class="pwa-install-panel">
-        <p class="pwa-install-eyebrow">YOUR GAME. YOUR DEVICE.</p>
-        <h2 id="pwaInstallTitle" tabindex="-1"></h2>
-        <p id="pwaInstallLead" class="pwa-install-lead"></p>
-        <ol class="pwa-install-steps"></ol>
-        <p class="pwa-install-foot"></p>
+        <h2 id="pwaInstallTitle" tabindex="-1">Install SSBD</h2>
+        <ol class="pwa-install-steps" aria-label="Installation steps"></ol>
         <button type="button" class="btn primary big pwa-install-close">Got it</button>
       </div>`;
       sheet.querySelector("button").addEventListener("click", () => sheet.close());
@@ -70,14 +66,12 @@
       document.body.append(sheet);
     }
     const copy = currentCopy();
-    sheet.querySelector("h2").textContent = copy.title;
-    sheet.querySelector(".pwa-install-lead").textContent = copy.description;
+    // Only the three actionable steps belong in the end-user installation sheet.
     sheet.querySelector("ol").replaceChildren(...copy.steps.map(step => {
       const item = document.createElement("li");
       item.textContent = step;
       return item;
     }));
-    sheet.querySelector(".pwa-install-foot").textContent = copy.note;
     if (!sheet.open) sheet.showModal();
     sheet.querySelector("h2").focus({preventScroll: true});
   }
