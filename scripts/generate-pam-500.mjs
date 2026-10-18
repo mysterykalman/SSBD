@@ -281,7 +281,7 @@ if(process.env.PAM_EXPORT_ALL_CANDIDATES==='1'){
   baselineCount:baseline.targets.length,questionCount:baseline.questions.length,
   profiles:candidateProfiles.map(c=>({profile:c.profile,origin:c.origin,kind:c.kind,
    baselineDistance:c.baselineDistance,priorValidated100:c.validated100}))};
- await writeFile(allCandidatePath,JSON.stringify(exportDoc)+'\\n');
+ await writeFile(allCandidatePath,JSON.stringify(exportDoc)+'\n');
  console.log('PAM_2000_COMPILED_PROFILE_POOL='+JSON.stringify({sourceCount:poolManifest.candidates.length,distinctProfileCount:candidateProfiles.length,baselineZeroCandidates:candidateProfiles.filter(c=>c.baselineDistance===0).length}));
  process.exit(0);
 }
