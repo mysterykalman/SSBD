@@ -15,7 +15,7 @@ async function reachDecision(page){
   }
   if(await page.locator('#guess-actions:not([hidden])').count())return 'guess';
   if(await page.locator('#result-actions:not([hidden])').count())return 'result';
-  if(await page.locator('#category-actions:not([hidden])').count())await page.click('#category-actions [data-answer="other"]');
+  if(await page.locator('#category-actions:not([hidden])').count())await page.click('#category-actions [data-answer="object"]');
   else if(await page.locator('#answer-actions:not([hidden])').count())await page.click('#answer-actions [data-answer="no"]');
   else await page.waitForTimeout(20);
  }
@@ -45,7 +45,7 @@ test("Mom Mode loads the frozen offline runtime, richer answers, portrait and ru
  await page.click('#rules-btn');
  await page.waitForSelector('#rules-dialog[open]');
  assert.match(await page.locator('#rules-dialog').textContent(),/20 questions\. One guess\./i);
- assert.match(await page.locator('#rules-dialog').textContent(),/Animal.*vegetable.*mineral/is);
+ assert.match(await page.locator('#rules-dialog').textContent(),/Person.*Place.*Animal or Plant.*Object.*Entertainment.*Other/is);
  await page.click('#rules-close');
  assert.equal(await page.locator('#rules-dialog[open]').count(),0);
  assert.equal(await page.locator('#pam-score').textContent(),'0');
@@ -53,7 +53,7 @@ test("Mom Mode loads the frozen offline runtime, richer answers, portrait and ru
  await page.fill('#secret-word','chair');
  await page.click('#start-btn');
  await page.waitForSelector('#category-actions:not([hidden])');
- assert.equal(await page.locator('#category-actions [data-answer]').count(),4);
+ assert.equal(await page.locator('#category-actions [data-answer]').count(),6);
  await page.click('#category-actions [data-answer="other"]');
  await page.waitForSelector('#answer-actions:not([hidden])');
  assert.equal(await page.locator('#answer-actions [data-answer]').count(),6);
