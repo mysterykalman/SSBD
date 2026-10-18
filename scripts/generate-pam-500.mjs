@@ -142,6 +142,28 @@ function compile(group,entry){
  }
  if(template.category==='animal'&&p.yes.includes('herbivore')&&!p.no.includes('vegetarian'))p.yes.push('vegetarian');
 
+ // Logically entailed answers are safe ways to enrich evidence without
+ // fabricating species-specific or object-specific properties. If a curated
+ // negative contradicts an implication, halt instead of overwriting it.
+ const strictImplications=[
+  ['smallGolf',['smallBread']],
+  ['pocket',['smallBread','lift']],
+  ['wearHead',['wear']],
+  ['noise',['heard']],
+  ['bigSofa',['bigMicrowave','largerButter']],
+  ['veryLarge',['bigMicrowave','largerButter']],
+  ['bigMicrowave',['largerButter']]
+ ];
+ for(const [antecedent,consequents] of strictImplications){
+  if(!p.yes.includes(antecedent))continue;
+  for(const trait of consequents){
+   if(p.no.includes(trait))throw new Error('Contradictory certain trait '+antecedent+' => '+trait+' for '+p.name);
+   if(p.weakYes.includes(trait))p.weakYes=p.weakYes.filter(x=>x!==trait);
+   p.yes.push(trait);
+  }
+ }
+
+
  // Strict size implications are physical constraints, not fabricated colors
  // or subjective properties. Explicit facts always win; incoherent size
  // combinations fail rather than silently becoming fake knowledge.
