@@ -11,7 +11,6 @@
 const ANSWERS=Object.freeze({yes:[.985,.015],no:[.015,.985],probably:[.72,.28],probably_not:[.28,.72]});
 const EPS=1e-12;
 
-function entropy(probabilities){let h=0;for(const p of probabilities)if(p>EPS)h-=p*Math.log2(p);return h;}
 function sum(values){let total=0;for(const x of values)total+=x;return total;}
 
 function familiesFor(field){
