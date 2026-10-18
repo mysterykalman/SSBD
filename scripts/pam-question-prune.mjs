@@ -6,8 +6,6 @@
  * The test counts all pairs with both known contradictory facts before/after.
  * UNKNOWN is never counted as false; removal is exact, not sampled.
  */
-import {knownOppositeAudit} from './pam-known-opposite-audit.mjs';
-
 const COST_PRIORITY=Object.freeze({
  movie_year:12,movie_decade:8,movie_period:4,
  city_country:2,car_origin:2,painting_artist:2,musical_creators:2,
