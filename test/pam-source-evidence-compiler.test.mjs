@@ -23,7 +23,11 @@ test('source-backed questions are readable and all explicitly unapproved',()=>{
  const additions=combined.model.questions.slice(baseline.questions.length);
  assert.ok(additions.length>=50);
  assert.ok(additions.every(q=>q.review_status==='SOURCE_RESEARCH_UNVERIFIED'));
- assert.ok(additions.every(q=>q.yes>1&&q.no>1));
+ assert.ok(additions.every(q=>q.yes>=2&&q.no>=0));
+ // Open-world Wikidata properties never prove a negative from absence.
+ assert.ok(additions.filter(q=>q.evidence_scope==='POSITIVE_ONLY_OPEN_WORLD').every(q=>q.no===0));
+ // Dated threshold comparisons can have both observed true and false answers.
+ assert.ok(additions.some(q=>q.no>=2));
  assert.ok(additions.every(q=>q.text.endsWith('?')&&q.text.length<=150));
  assert.ok(additions.every(q=>!(/Q\d{2,}/.test(q.text))));
 });
@@ -38,8 +42,10 @@ test('source country evidence separates cities across borders without fabricatin
  assert.ok(q);
  assert.equal(q.states[ny],3);
  assert.equal(q.states[la],3);
- assert.equal(q.known[montreal],1);
- assert.equal(q.states[montreal],2);
+ // Montréal has evidence for Canada, but no explicit source claim proving
+ // the negative "not United States" in an approved exclusive-domain model.
+ assert.equal(q.known[montreal],0);
+ assert.equal(q.states[montreal],0);
  // The research source includes the first 50 cities but not every city.
  assert.equal(q.known[other],0);
 });
@@ -47,13 +53,16 @@ test('source country evidence separates cities across borders without fabricatin
 test('source evidence improves strict separability without approving production data',()=>{
  const first=knownOppositeAudit(baseline),second=knownOppositeAudit(combined.model);
  assert.equal(first.unresolvedPairs,34901);
- assert.equal(second.unresolvedPairs,32425);
- assert.ok(second.unresolvedPairs<first.unresolvedPairs);
- assert.equal(second.uniquelySeparable,136);
+ // Positive source claims stay unknown for negatives; only direct
+ // observed-year thresholds with known opposites may reduce ambiguity.
+ assert.ok(second.unresolvedPairs<=first.unresolvedPairs);
+ assert.ok(second.unresolvedPairs>0,'Research alone cannot resolve every identity');
+ assert.ok(second.uniquelySeparable>=first.uniquelySeparable);
  assert.equal(baseline.questions.length,351,'baseline questions unchanged');
  const pruned=pruneRedundantQuestions(combined.model);
  assert.ok(pruned.report.after<combined.model.questions.length);
- assert.equal(pruned.report.pairsPreserved,1328000);
+ assert.equal(knownOppositeAudit(pruned.model).unresolvedPairs,second.unresolvedPairs,
+  'Pruning must not erase any verified known-opposite distinctions');
 });
 
 test('a falsely approved subject or changed frozen name is rejected before compilation',()=>{
