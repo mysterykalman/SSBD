@@ -17,7 +17,7 @@ if(!Number.isInteger(requested)||requested<1||requested>count)
 const indices=[...new Set(Array.from({length:requested},(_,i)=>
  Math.round((i+.5)*count/requested-.5)))];
 const modes=['exact','soft_yes','soft_no','one_unknown','mixed','wrong_opening'];
-const byCohort=i=>i<1200?'original_1200':i<1400?'extension_200':'quality_375';
+const cohortFor=i=>i<1200?'original_1200':i<1400?'extension_200':'quality_375';
 const quantile=(rows,p)=>{
  if(!rows.length)return null;
  const sorted=[...rows].sort((a,b)=>a-b);
@@ -39,7 +39,7 @@ function run(i,mode){
    const right=action.index===i;
    engine.confirm(g,action,right);
    return{
-    target:i,name:model.targets[i],cohort:byCohort(i),mode,
+    target:i,name:model.targets[i],cohort:cohortFor(i),mode,
     applied:mode==='exact'||mode==='wrong_opening'||modifications>0,
     modifications,correct:right,guess:action.label,turns:g.turn,
     usedQuestions:seen.size,violations:0
