@@ -48,7 +48,7 @@ const T={
  rock:{category:'mineral',yes:'stone touch',no:'living alive manufactured invented electronic motorized wear eat'},
  gem:{category:'mineral',yes:'stone buy touch smallBread',no:'living alive manufactured invented electronic motorized wear'},
  ice:{category:'mineral',yes:'cold wet touch',no:'living alive electronic motorized wear eat'},
- landform:{category:'mineral',yes:'veryLarge touch',no:'living alive manufactured electronic motorized wear eat'},
+ landform:{category:'mineral',yes:'touch',no:'living alive manufactured electronic motorized wear eat'},
  weather:{category:'other',yes:'',no:'living alive manufactured invented buy electronic motorized tool'},
  body:{category:'other',yes:'bodyPart organic touch',no:'manufactured invented electronic motorized tool'},
  abstract:{category:'other',yes:'abstract',no:'manufactured invented buy living alive bodyPart hold lift touch'},
@@ -148,7 +148,8 @@ function compile(group,entry){
  const strictImplications=[
   ['smallGolf',['smallBread']],
   ['pocket',['smallBread','lift']],
-  ['wearHead',['wear']],
+  ['wearHead',['wear','head']],
+  ['motorized',['mechanical']],
   ['noise',['heard']],
   ['bigSofa',['bigMicrowave','largerButter']],
   ['veryLarge',['bigMicrowave','largerButter']],
