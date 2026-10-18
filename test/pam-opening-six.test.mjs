@@ -37,7 +37,7 @@ test('six distinct multiple-choice openings preserve the frozen 1775 × 156 mode
    if(next.kind==='guess')break;
    if(next.kind==='hunch'){next=Engine.deferGuess(game,next);continue;}
    assert.equal(next.kind,'question');
-   assert.match(next.text,/\\?$/);
+   assert.ok(next.text.trim().endsWith('?'));
    if(i===0)assert.equal(next.index>=4,true);
    next=Engine.answer(game,next,'unknown');
    assert.ok(game.turn<=20);
@@ -57,8 +57,8 @@ test('six buttons keep deliberate two-column, three-row order and accessible cli
  const root=new URL('../src/client/mom-mode/',import.meta.url);
  const html=await readFile(new URL('index.html',root),'utf8');
  const css=await readFile(new URL('classic.css',root),'utf8');
- const matches=[...html.matchAll(/data-answer="(person|place|animal_plant|object|entertainment|other)"[^>]*>([^<]+)<\\/button>/g)];
+ const matches=[...html.matchAll(new RegExp('data-answer="(person|place|animal_plant|object|entertainment|other)"[^>]*>([^<]+)</button>','g'))];
  assert.deepEqual(matches.map(m=>m[1]),choices);
  assert.deepEqual(matches.map(m=>m[2]),['Person','Place','Animal or Plant','Object','Entertainment','Other']);
- assert.match(css,/\\.category-answers\\{display:grid;grid-template-columns:repeat\\(2,minmax\\(0,1fr\\)\\)/);
+ assert.ok(css.includes('.category-answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));
 });
