@@ -1,0 +1,29 @@
+name: Pam Original 1775 Oracle Baseline
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/pam-1775-oracle-report.mjs'
+      - 'test/support/pam-current-engine.mjs'
+      - 'src/client/mom-mode/engine.js'
+      - 'scripts/pam-quality-model.mjs'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Measure exact and uncertainty oracle baseline
+        run: node scripts/pam-1775-oracle-report.mjs --sample=96
+      - name: Archive attributable baseline report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-original-1775-oracle
+          path: .dev-data/pam-baseline/oracle.json
+          if-no-files-found: warn
