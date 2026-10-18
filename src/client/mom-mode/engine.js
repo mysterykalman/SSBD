@@ -2,7 +2,11 @@
 'use strict';
 const model=global.PAM_CLASSIC_MODEL;
 if(!model)throw new Error('Pam classic model not loaded');
-const QUESTIONS=Object.freeze([...model.questions]);
+// Display-only punctuation: never change question indices or trait semantics.
+const QUESTIONS=Object.freeze([...model.questions].map(value=>{
+ const text=String(value).trim();
+ return /\\?$/.test(text)?text:text+'?';
+}));
 const TARGETS=Object.freeze([...model.targets]);
 const N=TARGETS.length,F=QUESTIONS.length;
 if(![1200,1400,1775,2275].includes(N)||F!==156)throw new Error(`Unexpected Pam classic model shape ${N}×${F}`);
