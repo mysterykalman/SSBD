@@ -18,7 +18,7 @@ const categoryFor={mammal:'animal',hoof:'animal',bird:'animal',fish:'animal',rep
 const prior=new Set(baseline.targets.map(normalizePamName)),seen=new Set(),pool=[],rejected=[];
 const suspicious=/^(?:a|an|the)?\s*(?:pile|mound|handful|pinch|piece|slice|chunk|layer|patch|cloud|group|set|pair|clump) of\b/i;
 const disallowed=/\b(?:sex|orgasm|nudity|porn|heroin|cocaine|meth|fascism|torture|gunshot|shotgun|rifle|pistol|ammunition|suicide|murder|rape|nazi|booby trap)\b/i;
-const disallowedSingle=new Set(['a warning','an internet meme','a solar eclipse shadow','a nightmare','a secret','a promise','a joke','a riddle','a surprise','a daydream']);
+const disallowedSingle=new Set(['a date','a chat','a gift wrap','a tree','an artificial organ','a warning','an internet meme','a solar eclipse shadow','a nightmare','a secret','a promise','a joke','a riddle','a surprise','a daydream']);
 const alias={};
 const pluralKey=s=>{
  if(s.endsWith('ies')&&s.length>5)return s.slice(0,-3)+'y';
@@ -52,7 +52,9 @@ for(const group of [...pam500DiverseCatalogue,...pam500Catalogue]){
 }
 const order=lexical.sort((a,b)=>a.rank-b.rank);
 for(const item of order){
- const display=/^[aeiou]/i.test(item.name)?'an '+item.name:'a '+item.name;
+ // Prefer the uncountable/plural form over ungrammatical guesses like 'a cookies'.
+ const plural=/s$/i.test(item.name)&&!/(?:ss|us|is|ous|as|os)$/i.test(item.name);
+ const display=plural?item.name:(/^[aeiou]/i.test(item.name)?'an ':'a ')+item.name;
  process(display,item.kind,'lexical_52k',item.rank,'');
 }
 const raw=lexical.length+pam500Catalogue.reduce((s,g)=>s+g.entries.trim().split(/\n/).length,0)+pam500DiverseCatalogue.reduce((s,g)=>s+g.entries.trim().split(/\n/).length,0);
