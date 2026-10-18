@@ -240,7 +240,12 @@ function commitGuess(game,hunch){if(!hunch||hunch.kind!=='hunch')throw new Error
 function deferGuess(game,hunch){if(!hunch||hunch.kind!=='hunch')throw new Error('continue requires a hunch');game.continueCost+=game.continuePrice;game.deferGuessOnce=true;game.history.push({kind:'decision',decision:'continue',cost:game.continuePrice});return choose(game);}
 function scoreFor(questionCount,correct,continueCost=0){const base=Math.min(Math.max(Number(questionCount)||0,0),20);return Math.max(0,base+(correct?0:10)-Math.max(0,Number(continueCost)||0));}
 function confirm(game,guess,correct){
- if(!guess||guess.kind!=='guess')throw new Error('No Pam guess to confirm');game.status='finished';
+ // The one-guess contract applies to engine callers as well as the UI.
+ // A second confirmation must never overwrite a lost or won round.
+ if(game.status!=='playing'||game.guessUsed)throw new Error('game finished; Pam already used her one guess');
+ if(!guess||guess.kind!=='guess')throw new Error('No Pam guess to confirm');
+ game.guessUsed=true;
+ game.status='finished';
  return{kind:'result',winner:correct?'pam':'player',correct:Boolean(correct),turns:game.turn,guess:guess.label,reason:guess.reason,continueCost:game.continueCost,score:scoreFor(game.turn,Boolean(correct),game.continueCost)};
 }
 function debugSnapshot(game,limit=5){return{runtime:{mode:'frozen-classic-20q',concepts:N,questions:F,offline:true},topCandidates:rank(game,limit).map(i=>({name:TARGETS[i],score:game.scores[i],confidence:i===rank(game,1)[0]?confidence(game):null})),turn:game.turn,category:game.category};}
