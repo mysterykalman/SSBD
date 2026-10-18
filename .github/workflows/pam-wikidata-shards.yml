@@ -3,6 +3,7 @@ on:
   push:
     branches: [feature/pam-thematic-1650-knowledge-lab]
     paths: ['.github/workflows/pam-wikidata-shards.yml']
+  workflow_dispatch:
 permissions: {contents: read}
 concurrency:
   group: pam-wikidata-remaining-research
