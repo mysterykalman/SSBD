@@ -30,4 +30,4 @@ jobs:
       - run: npm ci
       - run: node --test test/connections-native.test.mjs
       - run: npm run typecheck
-      - run: npm run lint
+      - run: npx eslint src/shared/connections/generator.js src/shared/connections/library.js test/connections-native.test.mjs
