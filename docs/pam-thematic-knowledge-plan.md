@@ -89,3 +89,52 @@ The goal of the next pass is to turn enough **reviewed** facts into discriminati
 Where a curator approves a *complete single-valued field*, such as a named city's verified present-day country, an opposite value is a defensible known **No**, not an invented negative. Multi-valued occupations, languages, creator lists, musical genres and other open taxonomies do not get negative assertions through absence or competing values. The compiler outputs a question-major matrix and explicit known mask, and rejects conflicting complete values, category-insensitive name hints, unknown candidate identifiers, unreviewed entity mappings and unapproved source claims. This gives the future game the kind of factual discrimination the workbook-only model lacks while safeguarding accuracy.
 
 Related Wikidata QID values are decoded through source-linked English labels before editorial review. A claim can now carry both `value_id` and `value_label`; the label is a readable **unreviewed** suggestion, never proof. A failed label lookup remains a missing label, not a negative fact, and does not approve the parent entity.
+## 2026-10-18: production evidence gate and question-quality work
+
+The source roster remains **unreviewed**. The initial full Wikidata job exceeded the
+one-hour GitHub Actions runtime after saving the first 550 responses (one-third of the 1,650 subjects). Of those responses, the initial matching heuristic
+suggested 349 plausible single identities, 193 ambiguities and 8 missing
+search results. A revised heuristic using descriptions, geographic context,
+medium, artist/creator and film release year ranked **467** single plausible
+identities, **75** ambiguities and **8** misses in the same saved 550 responses.
+**This is NOT 467 factual approvals.** All matches remain suggestions pending
+human or equivalent substantiated entity-level verification.
+
+The remaining 1,100 subjects are researched in three bounded GitHub jobs
+(`pam-wikidata-shards.yml`) with separate artifacts and explicit Wikimedia
+request pacing. The initial 550 responses are retained as the original full-
+lookup Actions artifact. Research results do not mutate the production model.
+
+The earlier `collisionAudit` metric counted question fingerprints including a
+question's *unknown* state, and reported 147 individually unique fingerprints.
+This is a useful upper bound, not a valid proof of discriminability. The new
+`knownOppositeAudit` requires a question with known yes for one candidate and
+known no for the other; it finds only **136 individually separable** subjects,
+**1,514** still ambiguous and **34,901 unresolved candidate pairs** under
+spreadsheet metadata alone. Absence from Wikidata is **not** a reliable no.
+This is a strict release blocker until source evidence fills in the matrix.
+
+The `pam-thematic-reasoner.mjs` experimental chooser now maintains a posterior
+probability distribution rather than treating `Probably` as an exact answer or
+silently eliminating targets with missing data. It scores information-gaining
+questions, tracks recently asked semantic families, honors the hard 20-turn
+limit, never uses letters or spelling of the answer as a clue and withholds
+confidence when facts are insufficient. Its synthetic fully-known 128-target
+trials pass 128/128; it is **not** integrated into the existing Pam UI/runtime,
+and the synthetic tests do not certify real 1,650-target success.
+
+### Non-negotiable release gates
+
+1. Verify identity QIDs and semantic reference (including common title/homonym
+   collisions) and carry provenance and date precision in reviewed claims.
+2. All shipped targets must have a known opposite to relevant confusable peers.
+3. Original 1,775-target/156-question gameplay matrices remain unchanged;
+   **zero** original-target correctness regressions are allowed.
+4. Measure all new targets under exact yes/no and softened yes/no responses,
+   with category-difficulty reporting and 20 turns at most, not only a sample.
+5. Evaluate real question transcripts for repetitive country/decade questioning,
+   inappropriate premature guesses, pacing, intelligible language, and Pam's
+   character voice. Fewer questions should be required when the answer is easy;
+   genuinely difficult answers must still be possible to use as stumps.
+6. No production merge/deploy until full browser/mobile tests and the review
+   gate are cleared. Passing lab unit tests alone is not production readiness.
