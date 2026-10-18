@@ -105,16 +105,19 @@ async function main(){
  if(!Number.isInteger(pace)||pace<250)throw Error('--pace-ms must be at least 250ms');
  const roster=await loadThematicRoster();const selected=sampleAcrossCategories(roster,sample);
  const result=[];
+ const dir=join(root,'data','pam20q','expansion');await mkdir(dir,{recursive:true});
+ const output=join(dir,'wikidata-suggestion-sample.json');
+ const snapshot=()=>({generated_at:new Date().toISOString(),source:'https://www.wikidata.org/',status:'research_candidates_only',source_policy:'Wikidata CC0; never auto-approve entity matches, claims or negative facts',selected:sample,total:roster.length,completed:result.length,results:result});
  for(let i=0;i<selected.length;i++){
   const target=selected[i];
   try{result.push(await reconcileOne(target));}
   catch(error){result.push({id:target.id,name:target.name,category:target.category,status:'source_error',error:String(error).slice(0,300),suggested_candidates:[]});}
   process.stderr.write(`${i+1}/${selected.length} ${target.id} ${result.at(-1).status}\n`);
+  if(result.length%25===0||i===selected.length-1)await writeFile(output,JSON.stringify(snapshot(),null,2)+'\n');
   if(i<selected.length-1)await delay(pace);
  }
- const out={generated_at:new Date().toISOString(),source:'https://www.wikidata.org/',status:'research_candidates_only',source_policy:'Wikidata CC0; never auto-approve entity matches, claims or negative facts',selected:sample,total:roster.length,results:result};
- const dir=join(root,'data','pam20q','expansion');await mkdir(dir,{recursive:true});
- await writeFile(join(dir,'wikidata-suggestion-sample.json'),JSON.stringify(out,null,2)+'\n');
+ const out=snapshot();
+ await writeFile(output,JSON.stringify(out,null,2)+'\n');
  console.log(JSON.stringify({queried:result.length,single_plausible_not_verified:result.filter(x=>x.status==='single_plausible_not_verified').length,ambiguous:result.filter(x=>x.status==='ambiguous_needs_review').length,not_found:result.filter(x=>x.status==='not_found').length,source_error:result.filter(x=>x.status==='source_error').length}));
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1])await main();
