@@ -64,10 +64,12 @@ export function validateReviewedSubject(record){
 /** Compiles selected approved questions into question-major matrices. */
 export function compileReviewedEvidence(targets,records,questions){
  const targetIds=new Set(targets.map(t=>t.id));
- const byId=new Map();
+ const byId=new Map(),byQid=new Map();
  for(const record of records){
   if(!targetIds.has(record.id))throw Error(`Unknown candidate in verified fact set: ${record.id}`);
   if(byId.has(record.id))throw Error(`Duplicate verified record: ${record.id}`);
+  if(byQid.has(record.subject_qid))throw Error(`Duplicate verified identity QID: ${record.subject_qid} (${byQid.get(record.subject_qid)}, ${record.id})`);
+  byQid.set(record.subject_qid,record.id);
   const target=targets.find(t=>t.id===record.id);
   if(normalize(target.name).toLocaleLowerCase('en')!==normalize(record.approved_name).toLocaleLowerCase('en'))
    throw Error(`Reviewed identity name does not match candidate ${record.id}`);
