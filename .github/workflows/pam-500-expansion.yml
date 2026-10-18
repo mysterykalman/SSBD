@@ -13,6 +13,7 @@ on:
       - scripts/pam-quality-model.mjs
       - scripts/build-pam-classic.mjs
       - src/client/mom-mode/engine.js
+      - test/pam-question-punctuation.test.mjs
       - test/pam-500-expansion-*.test.mjs
   workflow_dispatch:
 
@@ -42,7 +43,7 @@ jobs:
       - name: Rebuild exactly 500 curated profiles
         run: node scripts/generate-pam-500.mjs
       - name: Verify biological and physical fact corrections
-        run: node --test test/pam-500-expansion-facts.test.mjs
+        run: node --test test/pam-500-expansion-facts.test.mjs test/pam-question-punctuation.test.mjs
       - name: Preserve the generated unreviewed 500-target JSON as a review artifact
         uses: actions/upload-artifact@v4
         with:
@@ -64,6 +65,8 @@ jobs:
           if-no-files-found: ignore
       - name: Prove no original profile changed
         run: node --test test/pam-500-expansion-integrity.test.mjs test/pam-500-expansion-facts.test.mjs
+      - name: Verify question marks on all 156 Pam questions
+        run: node --test test/pam-question-punctuation.test.mjs
       - name: Simulate new targets and old baseline
         run: node --test --test-concurrency=1 test/pam-500-expansion-gameplay.test.mjs
       - name: Lint and type-check
@@ -111,6 +114,8 @@ jobs:
         run: node scripts/generate-pam-500.mjs
       - name: Verify biological and physical fact corrections
         run: node --test test/pam-500-expansion-facts.test.mjs
+      - name: Verify question marks on all 156 Pam questions
+        run: node --test test/pam-question-punctuation.test.mjs
       - name: Lint new Pam expansion sources
         run: npx eslint scripts/generate-pam-500.mjs scripts/audit-pam-500-separability.mjs scripts/pam-quality-model.mjs test/pam-500-expansion-gameplay.test.mjs test/pam-500-release-gate.test.mjs test/pam-500-expansion-integrity.test.mjs
       - name: Verify unchanged 1775 knowledge and 500 matrix append
