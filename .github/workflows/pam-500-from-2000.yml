@@ -40,6 +40,7 @@ jobs:
           console.log('PAM_2000_CATEGORY_MIX='+JSON.stringify(d.summary.byCategory));
           NODE
       - name: Generate distinct candidate profiles and select exactly 500
+        id: generate
         run: node scripts/generate-pam-500.mjs
       - name: Reject contradictions against existing 1775
         run: node scripts/audit-pam-500-separability.mjs --strict-existing
@@ -54,13 +55,13 @@ jobs:
       - name: Compile production-style 2275 target bundle for validation only
         run: npm run build
       - name: Export strictly unreviewed selected 500
-        if: always()
+        if: steps.generate.outcome == 'success'
         run: |
           if test -f data/pam20q/quality/quality-500.json; then
             cp data/pam20q/quality/quality-500.json data/pam20q/candidates/pam-500-from-2000-candidate.json
           fi
       - name: Upload 500 profiles and reviewed question queues
-        if: always()
+        if: steps.generate.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: pam-500-from-2000-review
@@ -72,7 +73,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
       - name: Preserve unreviewed shortlist on isolated branch
-        if: always()
+        if: steps.generate.outcome == 'success'
         run: |
           if test -f data/pam20q/candidates/pam-500-from-2000-candidate.json; then
             git config user.name "SSBD Pam Candidate CI"
