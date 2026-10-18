@@ -64,3 +64,34 @@ test('every question requires editorial provenance and proper punctuation',()=>{
  const p=questions.map(x=>({...x}));delete p[0].reviewed_by;
  assert.throws(()=>appendReviewedPamExpansion(frozen,roster,pack(),p,{count:2}),/separate dated editorial signoff/);
 });
+
+test('reviewed replacement ledger swaps one film slot without touching original 1775',()=>{
+ const sequel=roster.find(x=>x.name==='The Godfather Part II');
+ assert.ok(sequel);
+ const normal=eligible[0];
+ const replacementName='The Sting';
+ const movieRecord=record(sequel,3);movieRecord.approved_name=replacementName;
+ const document={release_status:'EDITORIAL_APPROVAL_COMPLETE',approval_kind:'human_reviewed',
+  records:[record(normal,0),movieRecord],
+  replacements:[{
+   slot_id:sequel.id,original_name:sequel.name,approved_name:replacementName,
+   subject_qid:movieRecord.subject_qid,identity_source:movieRecord.identity_source,
+   release_year:1973,subcategory:'Classic Cinema (to 1979)',
+   review_status:'approved',reviewed_by:'Fixture reviewer',reviewed_at:'2026-10-18'
+  }]};
+ const out=appendReviewedPamExpansion(frozen,roster,document,questions,{count:2});
+ assert.equal(out.targets[1776],replacementName);
+ assert.deepEqual(out.targets.slice(0,1775),frozen.targets);
+ const bad=structuredClone(document);bad.replacements[0].reviewed_at='never';
+ assert.throws(()=>appendReviewedPamExpansion(frozen,roster,bad,questions,{count:2}),/dated, accountable/);
+ const changed=structuredClone(document);changed.records[1].approved_name='Another unapproved movie';
+ assert.throws(()=>appendReviewedPamExpansion(frozen,roster,changed,questions,{count:2}),/Replacement name not approved/);
+});
+test('approved model cannot contain two entries from one film franchise',()=>{
+ const a=roster.find(x=>x.name==='The Godfather');
+ const b=roster.find(x=>x.name==='The Godfather Part II');
+ assert.ok(a&&b);
+ const data={release_status:'EDITORIAL_APPROVAL_COMPLETE',approval_kind:'human_reviewed',
+  records:[record(a,0),record(b,1)]};
+ assert.throws(()=>appendReviewedPamExpansion(frozen,roster,data,questions,{count:2}),/One-film-per-franchise rule/);
+});
