@@ -38,9 +38,9 @@ def cleaned_icon() -> Image.Image:
         for x in range(w):
             r,g,b=inp[x,y]
             warmth=max(r-b,0)
-            darkness=max(0,238-min(r,g,b))
+            darkness=max(0,175-min(r,g,b))
             # Preserve felt and its original soft dark drop shadow.
-            matte=max((warmth-9)*15, darkness*7)
+            matte=max((warmth-8)*19, darkness*6)
             out[x,y]=max(0,min(255,round(matte)))
 
     # The original pillow patch has rounded corners. This only removes the
