@@ -63,7 +63,7 @@ function polish(){
   const card=document.querySelector('.home-grid.start-grid [data-mode="connections"]');
   if(!card)return;
   const standees=[...card.querySelectorAll('.conn-launch-standee')];
-  const labels=["OWEN","ZOE","MARTIN","PROFESSOR BRAINE"];
+  const labels=["OWEN","ZOE","MARTIN","DR. JONES"];
   standees.forEach((standee,index)=>{
     if(labels[index]&&standee.dataset.name!==labels[index])standee.dataset.name=labels[index];
   });
