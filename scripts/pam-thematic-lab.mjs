@@ -27,6 +27,33 @@ const CATEGORY_LABELS=Object.freeze({
  'Car Companies':'a car manufacturer'
 });
 
+/**
+ * Six-way opening taxonomy for the UNREVIEWED 1,650-subject research roster.
+ * Use the source category and subcategory only. This is a routing hint, not a
+ * factual review or a license to infer negative answers to questions.
+ *
+ * Multiple categories are intentional. An actor is both a person and an
+ * entertainment performer. Selecting either must keep that candidate viable.
+ */
+export const SIX_OPENING_CATEGORIES=Object.freeze(['person','place','animal_plant','object','entertainment','other']);
+
+export function openingCategoriesForThematicTarget(target){
+ if(!target||typeof target.category!=='string')throw Error('Pam thematic target required');
+ const {category,subcategory}=target;
+ if(category==='Cities'||category==='Countries'||category==='Landmarks')return ['place'];
+ if(category==='People'){
+  return ['person',...(['Film, TV & Comedy','Solo Musicians & Composers'].includes(subcategory)?['entertainment']:[])];
+ }
+ if(category==='Bands & Music Groups'||category==='Movies'||category==='TV Shows'||category==='Musicals')return ['entertainment'];
+ if(category==='Monuments, Paintings & Sculptures'){
+  if(subcategory==='Monuments & Historic Sites')return ['place'];
+  if(['Paintings','Sculptures & Public Art'].includes(subcategory))return ['object'];
+  throw Error('Unclassified monument or artwork subcategory: '+subcategory);
+ }
+ if(category==='Brands'||category==='Car Companies')return ['other'];
+ throw Error('Unclassified research category: '+category);
+}
+
 const SUBCATEGORY_PROMPTS=Object.freeze({
  'Paintings':'Is it a painting?',
  'Sculptures & Public Art':'Is it a sculpture or public artwork?',
