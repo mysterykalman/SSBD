@@ -8,9 +8,9 @@ export const pam500DiverseCatalogue=[
 {kind:'rock',flags:'-living -alive -manufactured -electronic +stone',entries:`
 a granite boulder|+heavy +bigMicrowave +brown
 a basalt rock|+black +heavy +smallBread
-a sandstone slab|+flat +brown +heavy
+a sandstone slab|+flat +brown +heavy +manufactured
 a limestone rock|+white +heavy
-a slate slab|+flat +black +fragile
+a slate slab|+flat +black +fragile +manufactured
 a shale rock|+flat +brown +fragile
 an obsidian shard|+black +sharp +fragile +seeThrough
 a pumice stone|+stone +smallBread +float +hole
@@ -110,24 +110,24 @@ an ice sheet|+white +veryLarge +flat
 a chunk of sea ice|+white +float +wet
 a chunk of lake ice|+clear +float +seeThrough
 `},
-{kind:'landform',flags:'-living -alive +veryLarge +seenReal',entries:`
-a volcano crater|+round +hole +stone
+{kind:'landform',flags:'-living -alive',entries:`
+a volcano crater|+round +hole +stone +veryLarge
 a limestone cave|+hole +stone
-a canyon wall|+tall +stone +brown
-a sea cliff|+tall +stone +wet
+a canyon wall|+tall +stone +brown +veryLarge
+a sea cliff|+tall +stone +wet +veryLarge
 a sand dune|+brown +tall
-a rocky mountain ridge|+stone +tall +heavy
-a river delta|+wet +flat
+a rocky mountain ridge|+stone +tall +heavy +veryLarge
+a river delta|+wet +flat +veryLarge
 a riverbank|+wet +brown
 a waterfall|+wet +noise +heard
 a geyser|+hot +wet +noise
 a hot spring|+hot +wet +wet
 a tidal pool|+wet +wet
-a rocky coastline|+stone +wet +wet
-a sandy beach|+brown +wet
+a rocky coastline|+stone +wet +wet +veryLarge
+a sandy beach|+brown +wet +veryLarge
 a river rapids|+wet +noise +heard
 a deep ocean trench|+wet +veryLarge
-a snowy mountain pass|+white +cold +tall
+a snowy mountain pass|+white +cold +tall +veryLarge
 a deep sinkhole|+round +hole +dangerous
 a rocky island|+stone +wet
 a natural rock arch|+stone +hole +tall
@@ -135,10 +135,10 @@ a natural stone bridge|+stone +hole +tall
 a stalactite|+stone +tall +sharp
 a stalagmite|+stone +tall +sharp
 a volcanic lava flow|+hot +stone +dangerous
-a river gorge|+stone +hole
+a river gorge|+stone +hole +veryLarge
 a gravel riverbed|+brown +stone +wet
 a salt flat|+white +flat +wet
-a mountain glacier|+cold +white +heavy
+a mountain glacier|+cold +white +heavy +veryLarge
 a muddy trail|+brown +wet +flat
 a desert oasis|+green +wet +wet
 a frozen lake|+cold +wet +flat
