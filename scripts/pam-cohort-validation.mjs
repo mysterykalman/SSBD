@@ -8,30 +8,12 @@
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {MOVIE_FRANCHISES} from './pam-movie-franchise-review.mjs';
+import {movieFranchiseForTitle,selectMovieFranchiseRepresentatives} from './pam-movie-franchise-review.mjs';
 import {loadPamClassicModel} from './pam-classic-model.mjs';
 import {loadPam1775Model} from './pam-quality-model.mjs';
 const QID=/^Q[1-9]\d*$/;
 const normalize=value=>String(value||'').normalize('NFKC').toLocaleLowerCase('en').replace(/[’‘]/g,"'").replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const distinct=arr=>[...new Set(arr)];
-const idMap=new Map();
-for(const [franchise,titles] of Object.entries(MOVIE_FRANCHISES)){
- for(const title of titles){
-  const n=normalize(title);
-  if(idMap.has(n))throw Error('Duplicate curated franchise title: '+title);
-  idMap.set(n,franchise);
- }
-}
-const preferred={
- 'Jurassic Park':'Jurassic Park',
- 'Batman':'The Dark Knight',
- 'Star Wars':'Star Wars',
- 'The Lord of the Rings':'The Lord of the Rings: The Fellowship of the Ring',
- 'Toy Story':'Toy Story','Shrek':'Shrek','The Godfather':'The Godfather',
- 'Back to the Future':'Back to the Future','Indiana Jones':'Raiders of the Lost Ark',
- 'Avatar':'Avatar','The Matrix':'The Matrix','Spider-Man':'Spider-Man: Into the Spider-Verse',
- 'Frozen':'Frozen','Finding Nemo':'Finding Nemo','The Lion King':'The Lion King'
-};
 const CATEGORY_PROPERTIES=Object.freeze({
  'Movies':['film_director','genre','country_of_origin','original_language','cast_member','release_date','series'],
  'TV Shows':['genre','country_of_origin','original_language','inception_date','performer'],
@@ -72,14 +54,14 @@ function knownYear(claims,field){
  return years.length===1?years[0]:null;
 }
 function movieFranchise(row,claims){
- const curated=idMap.get(normalize(row.name));
+ const curated=movieFranchiseForTitle(row.name);
  if(curated)return {id:'curated:'+curated,label:curated};
  const series=distinct((claims.get('series')||[]).filter(c=>c.kind==='item').map(c=>c.value));
  if(series.length===1)return {id:'wikidata:'+series[0],label:'Wikidata series '+series[0]};
  return null;
 }
 function chooseKeeper(group){
- const known=preferred[group[0].franchise?.label];
+ const known=selectMovieFranchiseRepresentatives(group.map(x=>({...x,category:'Movies'}))).retained[0]?.name;
  if(known){
   const match=group.find(x=>normalize(x.name)===normalize(known));
   if(match)return match.id;
@@ -150,11 +132,14 @@ export function auditPamCohort(queue,facts,{originalNames=[],labels={}}={}){
    decision:'REVIEW_AND_REPLACE_DUPLICATES',approvedRemoval:false});
   for(const x of items)x.franchiseCollision=true;
  }
+ const movieSelection=selectMovieFranchiseRepresentatives(profiles.filter(x=>x.category==='Movies'));
+ const excludeMovieIds=new Set(movieSelection.exclude.map(x=>x.id));
  const curations=[];
  for(const p of profiles){
   if(p.category!=='Movies'||!p.franchise)continue;
-  const recommended=preferred[p.franchise.label];
-  if(recommended&&normalize(p.name)!==normalize(recommended)){
+  const recommended=selectMovieFranchiseRepresentatives(profiles.filter(x=>x.category==='Movies'))
+   .retained.find(x=>x.family===p.franchise.label)?.name;
+  if(excludeMovieIds.has(p.id)||(recommended&&normalize(p.name)!==normalize(recommended))){
    p.sequelReview='REVIEW_REMOVE_OR_REPLACE';
    curations.push({id:p.id,name:p.name,franchise:p.franchise.label,preferred:recommended});
   }
@@ -304,12 +289,14 @@ export function auditPamCohort(queue,facts,{originalNames=[],labels={}}={}){
   duplicatedQidGroups:duplicatedQids.length,
   franchiseCollisionGroups:franchiseActions.length,
   curatedSequelReplacementFlags:curations.length,
+  excludedMovieCandidates:movieSelection.exclude.length,
+  stagedCohortAfterFranchiseFiltering:profiles.length-movieSelection.exclude.length,
   sourcePositiveEvidenceCount:profiles.reduce((n,p)=>n+p.positives.length,0),
   clusterCount:clusterReports.length,semanticClusterCount:semanticClusters.length,
   sameCategoryPairs:pairwiseCount,sourceDateSeparablePairs:sourceSeparablePairs,
   sourceDateUnresolvedPairs:pairwiseCount-sourceSeparablePairs,
   researchQuestionCandidates:clusterReports.reduce((n,c)=>n+c.questionCandidates,0)};
- return {status:'SOURCE_EVIDENCE_REVIEW_ONLY',summary,franchiseActions,curations,
+ return {status:'SOURCE_EVIDENCE_REVIEW_ONLY',summary,movieSelection,franchiseActions,curations,
   duplicatedQids,clusters:clusterReports,semanticClusters,nearestCompetitors,
   unresolvedByCategory,profiles,
   releaseEligibility:'NOT_APPROVED: independent identity review, negative evidence review, integrated games and regression QA required'};
@@ -323,7 +310,7 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
  const report=auditPamCohort(JSON.parse(q),JSON.parse(f),{labels,originalNames:original.targets});
  await mkdir(dirname(outPath),{recursive:true});
  await writeFile(outPath,JSON.stringify(report,null,2)+'\n');
- console.log(JSON.stringify({summary:report.summary,filmGroups:report.franchiseActions,
+ console.log(JSON.stringify({summary:report.summary,filmGroups:report.franchiseActions,movieSelection:report.movieSelection,
   sampleMovieClusters:report.clusters.filter(x=>x.cluster.startsWith('Movies /')),
   largestSemanticClusters:report.semanticClusters.slice(0,18),
   movieCandidates:report.profiles.filter(x=>x.category==='Movies').map(x=>({id:x.id,name:x.name,sequelReview:x.sequelReview||null,franchise:x.franchise?.label||null}))},null,2));
