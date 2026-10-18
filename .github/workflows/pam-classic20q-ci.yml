@@ -5,6 +5,7 @@ on:
     branches:
       - feature/pam-classic20q
       - feature/homepage-4-mode-grid
+      - 'feature/pam-*'
     paths:
       - 'data/pam20q/**'
       - 'src/client/mom-mode/**'
@@ -13,6 +14,8 @@ on:
       - 'test/pam-classic20q.test.mjs'
       - 'test/pam-quality375.test.mjs'
       - 'test/e2e/mom-mode.test.mjs'
+      - 'test/e2e/pam-opening.test.mjs'
+      - 'test/pam-opening-six.test.mjs'
       - 'package.json'
   pull_request:
     paths:
@@ -37,7 +40,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Validate integrated 1775-target Pam model
-        run: node --test test/pam-classic20q.test.mjs test/pam-quality375.test.mjs
+        run: node --test test/pam-classic20q.test.mjs test/pam-quality375.test.mjs test/pam-opening-six.test.mjs test/pam-1775-integration.test.mjs
       - name: Build offline game bundle
         run: npm run build
       - name: Verify classic assets are shipped
@@ -56,4 +59,4 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Smoke test Pam UI
-        run: node --test --test-concurrency=1 test/e2e/mom-mode.test.mjs
+        run: node --test --test-concurrency=1 test/e2e/mom-mode.test.mjs test/e2e/pam-opening.test.mjs
