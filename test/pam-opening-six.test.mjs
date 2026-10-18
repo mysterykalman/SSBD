@@ -83,3 +83,20 @@ test('Pam rejects replayed questions and cannot exceed the 20-question budget',(
  assert.equal(game.turn,spent);
  assert.ok(game.turn<=20);
 });
+
+test('a wrong final guess cannot be re-confirmed as a win',()=>{
+ const game=Engine.createGame({budget:20});
+ let action=Engine.setOpeningCategory(game,'other');
+ for(let guard=0;guard<22&&action.kind!=='guess';guard++){
+  if(action.kind==='hunch'){action=Engine.commitGuess(game,action);break;}
+  assert.equal(action.kind,'question');
+  action=Engine.answer(game,action,'unknown');
+ }
+ assert.equal(action.kind,'guess');
+ const outcome=Engine.confirm(game,action,false);
+ assert.equal(outcome.correct,false);
+ assert.equal(game.status,'finished');
+ assert.equal(game.guessUsed,true);
+ assert.throws(()=>Engine.confirm(game,action,true),/game finished|one guess/);
+ assert.throws(()=>Engine.choose(game),/game finished/);
+});
