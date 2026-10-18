@@ -81,6 +81,9 @@ jobs:
             git add data/pam20q/candidates/pam-500-from-2000-candidate.json
             if ! git diff --cached --quiet; then
               git commit -m "data: save 500 unreviewed Pam candidates selected from 2000-plus preflight pool"
+              git restore data/pam20q/quality/quality-500.json
+              git fetch origin feature/pam-500-from-2000
+              git rebase origin/feature/pam-500-from-2000
               git push origin HEAD:feature/pam-500-from-2000
             fi
           fi
