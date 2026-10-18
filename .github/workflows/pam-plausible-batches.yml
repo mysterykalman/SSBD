@@ -6,6 +6,7 @@ on:
       - feature/pam-thematic-1650-knowledge-lab
     paths:
       - 'scripts/pam-plausible-batches.mjs'
+      - 'scripts/pam-category-review-packets.mjs'
       - '.github/workflows/pam-plausible-batches.yml'
   workflow_dispatch:
 
@@ -36,6 +37,16 @@ jobs:
           input=$(find .dev-data/pam-identity -name wikidata-identity-review.json -print -quit)
           test -n "$input"
           node scripts/pam-plausible-batches.mjs "$input" .dev-data/pam-review-packets
+      - name: Prepare semantic category and subcategory packets
+        run: |
+          input=$(find .dev-data/pam-identity -name wikidata-identity-review.json -print -quit)
+          node scripts/pam-category-review-packets.mjs "$input" .dev-data/pam-category-packets
+      - name: Archive category packets
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-1352-category-review-packets
+          path: .dev-data/pam-category-packets/
+          retention-days: 30
       - name: Archive review packets
         uses: actions/upload-artifact@v4
         with:
