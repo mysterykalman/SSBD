@@ -68,7 +68,7 @@ export function inspectConnectionsBoard(groups, tier) {
   });
 }
 
-export function generateConnectionsGame({tier, recentFamilyIds = [], seenFamilyIds = [], usedSignatures = [], rng = Math.random, maxAttempts = 12000} = {}) {
+export function generateConnectionsGame({tier = 1, recentFamilyIds = [], seenFamilyIds = [], usedSignatures = [], rng = Math.random, maxAttempts = 12000} = {}) {
   const recipe = CONNECTION_RECIPES[tier];
   if (!recipe) throw new Error(`Unknown Connections tier: ${tier}`);
 
