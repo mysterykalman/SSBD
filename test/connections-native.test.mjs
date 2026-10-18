@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {CONNECTION_FAMILIES, CONNECTION_GROUPS} from "../src/shared/connections/library.js";
-import {CONNECTION_RECIPES, connectionGroupsCompatible, generateConnectionsGame, inspectConnectionsBoard} from "../src/shared/connections/generator.js";
+import {CONNECTION_RECIPES, connectionGroupsCompatible, connectionMechanic, generateConnectionsGame, inspectConnectionsBalance, inspectConnectionsBoard} from "../src/shared/connections/generator.js";
 import {ODD_ONE_IN_CHARACTERS} from "../src/client/connections/characters.js";
 
 function seeded(seed) {
@@ -45,6 +45,9 @@ test("generated games respect tier recipes and board QA", () => {
       assert.equal(game.board.length, 16);
       assert.equal(new Set(game.board).size, 16);
       assert.equal(game.qa.valid, true);
+      assert.equal(game.balance.valid, true);
+      assert.equal(inspectConnectionsBalance(game.groups, tier).valid, true);
+      assert.ok(new Set(game.groups.map(connectionMechanic)).size >= (tier === 1 ? 2 : 3));
       assert.equal(game.qa.alternateGroups.length, 0);
       assert.deepEqual(game.groups.map(group => group.difficulty).sort(), [...CONNECTION_RECIPES[tier]].sort());
       for (let left = 0; left < game.groups.length; left++) {
