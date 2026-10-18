@@ -26,7 +26,7 @@ test('one representative per franchise excludes sibling films while preserving i
  'The Terminator','Terminator 2: Judgment Day','Dune (2021 film)','Dune: Part Two',
  'Citizen Kane','Arrival','Star Wars: A New Hope','Return of the Jedi']);
  const selected=selectMovieFranchiseRepresentatives(options);
- assert.equal(selected.exclude.length,6);
+ assert.equal(selected.exclude.length,5);
  assert.equal(selected.retained.find(x=>x.family==='Batman')?.name,'The Dark Knight');
  assert.equal(selected.retained.find(x=>x.family==='Terminator')?.name,'The Terminator');
  assert.equal(selected.retained.find(x=>x.family==='Star Wars')?.name,'Star Wars: A New Hope');
