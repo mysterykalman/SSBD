@@ -1,0 +1,44 @@
+name: Pam Plausible 1352 Review Packets
+
+on:
+  push:
+    branches:
+      - feature/pam-thematic-1650-knowledge-lab
+    paths:
+      - 'scripts/pam-plausible-batches.mjs'
+      - '.github/workflows/pam-plausible-batches.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-ten-review-packets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Retrieve complete identity research artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .dev-data/pam-identity
+          gh run download 39163517479 --repo mysterykalman/SSBD \
+            --pattern 'pam-1650-complete-unreviewed-identity-queue' \
+            --dir .dev-data/pam-identity
+          find .dev-data/pam-identity -name wikidata-identity-review.json -print
+      - name: Split all plausible identities into ten non-overlapping packets
+        run: |
+          input=$(find .dev-data/pam-identity -name wikidata-identity-review.json -print -quit)
+          test -n "$input"
+          node scripts/pam-plausible-batches.mjs "$input" .dev-data/pam-review-packets
+      - name: Archive review packets
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-1352-ten-plausible-review-packets
+          path: .dev-data/pam-review-packets/
+          retention-days: 30
