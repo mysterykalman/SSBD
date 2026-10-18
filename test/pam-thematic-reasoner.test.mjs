@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadThematicRoster,compileThematicModel} from '../scripts/pam-thematic-lab.mjs';
-import {createThematicGame,selectThematicQuestion,acceptThematicAnswer,nextThematicDecision,oracleThematicGame,candidateDistribution} from '../scripts/pam-thematic-reasoner.mjs';
+import {createThematicGame,selectThematicQuestion,acceptThematicAnswer,nextThematicDecision,oracleThematicGame} from '../scripts/pam-thematic-reasoner.mjs';
 
 function fullyKnownMatrix(n=128){
  const targets=Array.from({length:n},(_,i)=>({name:'Subject '+String(i+1)}));
