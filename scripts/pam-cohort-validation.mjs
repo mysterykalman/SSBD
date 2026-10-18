@@ -171,7 +171,8 @@ export function auditPamCohort(queue,facts,{originalNames=[],labels={}}={}){
  for(const [cluster,rows] of [...byCluster].sort(([a],[b])=>a.localeCompare(b))){
   const candidateQuestions=[];
   const years=distinct(rows.map(r=>r.year).filter(x=>x!=null)).sort((a,b)=>a-b);
-  const isMovie=rows[0].category==='Movies';
+  const category=rows[0].category;
+  const isMovie=category==='Movies';
   const dateField=DATE_FIELD[rows[0].category];
   if(dateField){
    const thresholds=distinct(years.map(y=>Math.floor(y/10)*10)).sort((a,b)=>a-b);
@@ -179,7 +180,12 @@ export function auditPamCohort(queue,facts,{originalNames=[],labels={}}={}){
     const answer=rows.map(p=>p.year==null?'?':p.year<y?'Y':'N');
     const yes=answer.filter(x=>x==='Y').length,no=answer.filter(x=>x==='N').length;
     if(yes&&no)candidateQuestions.push({field:'year_before',value:y,
-      text:isMovie?'Was the movie released before '+y+'?':'Did it begin before '+y+'?',
+      text:({Movies:'Was the movie released before ',People:'Was this person born before ',
+       'TV Shows':'Did this show first air before ',
+       'Bands & Music Groups':'Was this group formed before ',
+       Brands:'Was this brand established before ',
+       'Car Companies':'Was this automaker founded before ',
+       Musicals:'Was this stage musical created before '})[category]+y+'?',
       yes,no,known:yes+no,unreviewed:true});
    }
   }
@@ -228,6 +234,68 @@ export function auditPamCohort(queue,facts,{originalNames=[],labels={}}={}){
    sampleQuestions:candidateQuestions.slice(0,8).map(q=>q.text),
    approvalStatus:'UNREVIEWED'});
  }
+
+ // Similarity work crosses the workbook's era-based subcategories. It must
+ // compare 1990s movies with 2000s movies of the same genre, for example.
+ const byCategory=new Map(),semanticGroups=new Map();
+ const semanticFields={
+  Movies:['genre'], 'TV Shows':['genre'], 'Bands & Music Groups':['genre'],
+  People:['occupation','field_of_work'],
+  'Monuments, Paintings & Sculptures':['creator','material','movement'],
+  Cities:['country'],Countries:['continent'],'Landmarks':['country','architecture_style'],
+  Brands:['industry'], 'Car Companies':['country_of_origin'],
+  Musicals:['composer','creator']
+ };
+ for(const p of profiles){
+  if(!byCategory.has(p.category))byCategory.set(p.category,[]);
+  byCategory.get(p.category).push(p);
+  const relevant=semanticFields[p.category]||[];
+  const matches=distinct(p.positives.filter(f=>f.kind==='item'&&f.value_label&&relevant.includes(f.field))
+   .map(f=>f.field+': '+f.value_label)).slice(0,5);
+  if(!matches.length)matches.push('source trait not yet available / '+p.subcategory);
+  for(const value of matches){
+   const key=p.category+' / '+value;
+   if(!semanticGroups.has(key))semanticGroups.set(key,[]);
+   semanticGroups.get(key).push(p);
+  }
+ }
+ const semanticClusters=[...semanticGroups].filter(([,v])=>v.length>=2)
+  .map(([label,rows])=>({label,count:rows.length,sourceMembers:rows.filter(x=>x.sourceComplete).length,
+   sample:rows.slice(0,12).map(x=>({id:x.id,name:x.name}))}))
+  .sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label));
+ const nearestCompetitors=[],unresolvedByCategory={};
+ let pairwiseCount=0,sourceSeparablePairs=0;
+ for(const [category,group] of byCategory){
+  let unresolved=0;
+  for(let i=0;i<group.length;i++){
+   const a=group[i],keysA=new Set(a.positives.filter(x=>x.kind==='item').map(x=>x.field+':'+x.qid));
+   const related=[];
+   for(let j=0;j<group.length;j++){
+    if(i===j)continue;
+    const b=group[j],keysB=new Set(b.positives.filter(x=>x.kind==='item').map(x=>x.field+':'+x.qid));
+    let common=0;for(const key of keysA)if(keysB.has(key))common++;
+    const overlap=keysA.size+keysB.size-common;
+    const similarity=overlap?common/overlap:0;
+    const yearKnown=a.year!=null&&b.year!=null;
+    const yearDifferentiable=yearKnown&&a.year!==b.year;
+    if(j>i){
+     pairwiseCount++;
+     if(yearDifferentiable)sourceSeparablePairs++;
+     else unresolved++;
+    }
+    related.push({id:b.id,name:b.name,similarity:Number(similarity.toFixed(3)),
+     sharedSourceTraits:common,
+     sourceBackedYearDifference:yearDifferentiable?{a:a.year,b:b.year,
+      question:'Was it before '+Math.max(a.year,b.year)+'?'}:null,
+     binaryDifferenceStatus:yearDifferentiable?'SUPPORTED_BY_SOURCE_DATES':'NOT_YET_ESTABLISHED'});
+   }
+   related.sort((x,y)=>y.sharedSourceTraits-x.sharedSourceTraits||
+    y.similarity-x.similarity||x.name.localeCompare(y.name));
+   nearestCompetitors.push({id:a.id,name:a.name,category,closest:related.slice(0,3)});
+  }
+  unresolvedByCategory[category]=unresolved;
+ }
+
  const duplicatedQids=[...qids].filter(([,ids])=>ids.length>1).map(([qid,ids])=>({qid,ids}));
  const summary={activeCount:profiles.length,pausedCount:paused.length,reviewedIdentityCount:0,editorialApprovedCount:0,
   sourceFound:profiles.filter(x=>x.sourceComplete).length,sourceMissing:profiles.filter(x=>!x.sourceComplete).length,
@@ -238,10 +306,13 @@ export function auditPamCohort(queue,facts,{originalNames=[],labels={}}={}){
   franchiseCollisionGroups:franchiseActions.length,
   curatedSequelReplacementFlags:curations.length,
   sourcePositiveEvidenceCount:profiles.reduce((n,p)=>n+p.positives.length,0),
-  clusterCount:clusterReports.length,
+  clusterCount:clusterReports.length,semanticClusterCount:semanticClusters.length,
+  sameCategoryPairs:pairwiseCount,sourceDateSeparablePairs:sourceSeparablePairs,
+  sourceDateUnresolvedPairs:pairwiseCount-sourceSeparablePairs,
   researchQuestionCandidates:clusterReports.reduce((n,c)=>n+c.questionCandidates,0)};
  return {status:'SOURCE_EVIDENCE_REVIEW_ONLY',summary,franchiseActions,curations,
-  duplicatedQids,clusters:clusterReports,profiles,
+  duplicatedQids,clusters:clusterReports,semanticClusters,nearestCompetitors,
+  unresolvedByCategory,profiles,
   releaseEligibility:'NOT_APPROVED: independent identity review, negative evidence review, integrated games and regression QA required'};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
@@ -254,5 +325,7 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
  await mkdir(dirname(outPath),{recursive:true});
  await writeFile(outPath,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({summary:report.summary,filmGroups:report.franchiseActions,
-  sampleMovieClusters:report.clusters.filter(x=>x.cluster.startsWith('Movies /'))},null,2));
+  sampleMovieClusters:report.clusters.filter(x=>x.cluster.startsWith('Movies /')),
+  largestSemanticClusters:report.semanticClusters.slice(0,18),
+  movieCandidates:report.profiles.filter(x=>x.category==='Movies').map(x=>({id:x.id,name:x.name,sequelReview:x.sequelReview||null,franchise:x.franchise?.label||null}))},null,2));
 }
