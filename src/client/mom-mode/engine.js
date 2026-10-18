@@ -136,8 +136,11 @@ function responseProfile(answer){
 function answer(game,question,answerValue){
  if(game.status!=='playing')throw new Error('game finished');
  if(!question||question.kind!=='question')throw new Error('Pam is not waiting for a question answer');
+ if(game.turn<1||game.turn>=game.budget)throw new Error('Pam question budget exhausted or opening not answered');
+ const q=question.index;
+ if(!Number.isInteger(q)||q<4||q>=F||game.asked.has(q))throw new Error('Invalid or repeated Pam question');
  const answer=String(answerValue||'').toLowerCase();if(!REGULAR_ANSWERS.has(answer))throw new Error('Unsupported Pam answer');
- const q=question.index;game.asked.add(q);game.lastQuestion=q;
+ game.asked.add(q);game.lastQuestion=q;
  const profile=responseProfile(answer);
  if(profile)applyPolarity(game,q,profile.yes,profile.power);
  else if(answer==='maybe')applyMaybe(game,q);
