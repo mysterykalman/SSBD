@@ -16,10 +16,35 @@ export function appendReviewedPamExpansion(base,roster,approved,questions,{count
  if(roster.length!==1650||rosterById.size!==1650)throw Error('Unexpected frozen research roster');
  if(base.targets.length!==1775||base.questions.length!==156)throw Error('Frozen original model changed');
  const selected=new Set(),existing=new Set(base.targets.map(norm)),reviewedFranchises=new Map();
+ const overlays=new Map();
+ for(const replacement of approved.replacements||[]){
+  const slot=rosterById.get(replacement.slot_id);
+  if(!slot||slot.category!=='Movies'||slot.name!==replacement.original_name)
+   throw Error('Replacement slot must preserve a frozen movie candidate and its provenance');
+  if(overlays.has(replacement.slot_id))throw Error('Duplicate replacement slot');
+  if(replacement.review_status!=='approved'||!replacement.reviewed_by||!/^20\\d{2}-\\d{2}-\\d{2}$/.test(replacement.reviewed_at||''))
+   throw Error('Individually dated, accountable replacement approval required');
+  if(!replacement.approved_name||!/^Q\\d+$/.test(replacement.subject_qid||'')||
+    replacement.identity_source!=='https://www.wikidata.org/wiki/'+replacement.subject_qid)
+   throw Error('Replacement requires canonical name and approved sourced identity');
+  overlays.set(replacement.slot_id,replacement);
+ }
+ const usedOverlays=new Set();
  const additions=[];
  for(const record of approved.records){
-  const target=rosterById.get(record.id);
-  if(!target||record.approved_name!==target.name)throw Error('Approved record outside source roster: '+record.id);
+  const frozenTarget=rosterById.get(record.id);
+  if(!frozenTarget)throw Error('Approved record outside source roster: '+record.id);
+  const replacement=overlays.get(record.id);
+  if(replacement&&record.approved_name!==replacement.approved_name)
+   throw Error('Replacement name not approved for slot: '+record.id);
+  if(!replacement&&record.approved_name!==frozenTarget.name)
+   throw Error('Name change requires individually approved replacement: '+record.id);
+  if(replacement&&record.subject_qid!==replacement.subject_qid)
+   throw Error('Replacement identity QID conflicts with reviewed facts');
+  if(replacement)usedOverlays.add(record.id);
+  const target=replacement?{...frozenTarget,name:replacement.approved_name,
+   context:String(replacement.release_year||frozenTarget.context),
+   subcategory:replacement.subcategory||frozenTarget.subcategory}:frozenTarget;
   if(selected.has(record.id))throw Error('Duplicate reviewed candidate: '+record.id);
   if(existing.has(norm(target.name)))throw Error('Existing playable answer collision: '+target.name);
   if(record.franchise_review!=='APPROVED'||record.gameplay_review!=='APPROVED')
@@ -32,6 +57,7 @@ export function appendReviewedPamExpansion(base,roster,approved,questions,{count
   selected.add(record.id);
   additions.push({...target,subject_qid:record.subject_qid});
  }
+ if(usedOverlays.size!==overlays.size)throw Error('Approved replacement ledger contains unused entries');
  const activeQuestions=questions.map((q,i)=>{
   if(!q?.text?.endsWith('?')||q.text.length>145||!q.field||!q.value)throw Error('Malformed reviewed question '+i);
   return q;
