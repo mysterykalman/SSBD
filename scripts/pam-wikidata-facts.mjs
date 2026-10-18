@@ -17,7 +17,8 @@ export const CLAIMS=Object.freeze({
  P127:'owned_by',P112:'founder',P195:'collection',P276:'current_location',
  P135:'movement',P186:'material',P180:'depicts',P149:'architecture_style',
  P101:'field_of_work',P576:'dissolved_or_abolished_date',P463:'member_of',
- P179:'series',P162:'film_producer'
+ P179:'series',P162:'film_producer',
+ P37:'official_language',P38:'currency',P47:'shares_border',P1082:'population',P2046:'area'
 });
 export function extractClaimFacts(entity){
  const out=[];
@@ -28,12 +29,19 @@ export function extractClaimFacts(entity){
    const main=claim.mainsnak;
    if(main?.snaktype!=='value'||!main.datavalue?.value)continue;
    const val=main.datavalue.value;
+   const qualifierDate=pid=>claim.qualifiers?.[pid]?.find(x=>x.snaktype==='value'&&x.datavalue?.value?.time)?.datavalue?.value||null;
+   const pointInTime=qualifierDate('P585'),endDate=qualifierDate('P582');
+   const common={property:pid,field:role,source:`https://www.wikidata.org/wiki/${entity.id}#${pid}`,claim_id:claim.id||null,
+    rank:claim.rank||'normal',point_in_time:pointInTime?.time||null,point_precision:pointInTime?.precision??null,
+    ended_at:endDate?.time||null,status:'source_claim_unreviewed'};
    if(typeof val.id==='string'&&/^Q\d+$/.test(val.id)){
-    out.push({property:pid,field:role,kind:'item',value_id:val.id,source:`https://www.wikidata.org/wiki/${entity.id}#${pid}`,claim_id:claim.id||null,status:'source_claim_unreviewed'});
+    out.push({...common,kind:'item',value_id:val.id});
    }else if(typeof val.time==='string'){
     // Dates can be approximate or uncertain. Save the source string/precision;
     // do not collapse into 'born in year X' without checking precision.
-    out.push({property:pid,field:role,kind:'time',value_time:val.time,precision:val.precision,source:`https://www.wikidata.org/wiki/${entity.id}#${pid}`,claim_id:claim.id||null,status:'source_claim_unreviewed'});
+    out.push({...common,kind:'time',value_time:val.time,precision:val.precision});
+   }else if(typeof val.amount==='string'&&Number.isFinite(Number(val.amount))){
+    out.push({...common,kind:'quantity',value_amount:Number(val.amount),unit:String(val.unit||'1')});
    }
   }
  }

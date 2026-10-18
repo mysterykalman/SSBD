@@ -47,3 +47,25 @@ test('linked Wikidata QID labels are human-readable but never automatically appr
  assert.equal(occupation.status,'source_claim_unreviewed');
  assert.equal(response.subjects[0].reviewed,false);
 });
+test('population, area, and national language preserve time qualifiers and quantities, never synthetic negatives',()=>{
+ const sample={id:'Q16',claims:{
+  P1082:[{id:'pop',rank:'preferred',mainsnak:{snaktype:'value',datavalue:{value:{amount:'+41200000',unit:'1'}}},qualifiers:{P585:[{snaktype:'value',datavalue:{value:{time:'+2021-01-01T00:00:00Z',precision:11}}}]}}],
+  P2046:[{id:'area',rank:'normal',mainsnak:{snaktype:'value',datavalue:{value:{amount:'+9984670',unit:'http://www.wikidata.org/entity/Q712226'}}}}],
+  P37:[{id:'language',rank:'preferred',mainsnak:{snaktype:'value',datavalue:{value:{id:'Q1860'}}}}],
+  P47:[{id:'border',rank:'normal',mainsnak:{snaktype:'value',datavalue:{value:{id:'Q30'}}},qualifiers:{P582:[{snaktype:'value',datavalue:{value:{time:'+1990-01-01T00:00:00Z',precision:9}}}]}}],
+  P38:[{id:'unknown',rank:'normal',mainsnak:{snaktype:'somevalue'}}]
+ }};
+ const facts=extractClaimFacts(sample);
+ assert.equal(facts.length,4);
+ const pop=facts.find(x=>x.field==='population');
+ assert.equal(pop.kind,'quantity');assert.equal(pop.value_amount,41200000);
+ assert.equal(pop.point_in_time,'+2021-01-01T00:00:00Z');
+ assert.equal(pop.point_precision,11);assert.equal(pop.rank,'preferred');
+ const area=facts.find(x=>x.field==='area');
+ assert.equal(area.value_amount,9984670);
+ assert.equal(area.unit,'http://www.wikidata.org/entity/Q712226');
+ assert.ok(facts.some(x=>x.field==='official_language'&&x.value_id==='Q1860'));
+ assert.equal(facts.find(x=>x.field==='shares_border').ended_at,'+1990-01-01T00:00:00Z');
+ assert.ok(facts.every(x=>x.status==='source_claim_unreviewed'));
+ assert.ok(!facts.some(x=>x.field==='currency'));
+});
