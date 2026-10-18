@@ -56,9 +56,12 @@ test('unprofiled cultural subjects never inherit speculative negative answers',(
  assert.equal(result.summary.reviewedNo,0);
 });
 
-test('answers without evidence cannot be turned into confident classifications',()=>{
- let sparse=0;
- for(const known of m.knownMask)if(known===0)sparse++;
- assert.ok(sparse>0,'the reviewed 375 additions require honest unknowns');
- assert.ok(sparse<m.knownMask.length);
+test('answers without supporting evidence are not treated as No',()=>{
+ const targets=[{id:'PAM-0001',name:'Unreviewed Painting'}];
+ const result=compileReviewedEvidence(targets,[],
+  [{text:'Was it painted in Italy?',field:'country',value:'Italy'}]);
+ assert.deepEqual([...result.knownMask],[0]);
+ assert.deepEqual([...result.weights],[0]);
+ assert.equal(result.summary.reviewedNo,0);
+ assert.equal(result.summary.unknownCells,1);
 });
