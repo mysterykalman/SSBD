@@ -2,7 +2,7 @@ name: Installable PWA checks
 
 on:
   pull_request:
-    branches: [main, 'feature/pam-*']
+    branches: [main]
     paths:
       - '.github/workflows/pwa-ci.yml'
       - 'src/client/**'
@@ -13,7 +13,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
   push:
-    branches: [main]
+    branches: [main, 'feature/pam-*']
     paths:
       - '.github/workflows/pwa-ci.yml'
       - 'src/client/**'
