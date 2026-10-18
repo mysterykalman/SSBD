@@ -32,6 +32,7 @@ function parseCatalogue(groups,label){
 }
 const catalogue=parseCatalogue(pam500Catalogue,'previous');
 const diverse=parseCatalogue(pam500DiverseCatalogue,'diverse');
+const invertebrateInsects=new Set(["a tarantula hawk wasp","a paper wasp","a potter wasp","a mud dauber","a velvet ant","a leafcutter ant","an army ant","a trap-jaw ant","a honeypot ant","a bullet ant"]);
 const byName=new Map([...catalogue,...diverse].map(p=>[p.name.toLowerCase(),p]));
 const get=name=>{const p=byName.get(name.toLowerCase());assert.ok(p,'Missing correction fixture '+name);return p;};
 const answer=(name,trait)=>get(name).traits.get(trait);
@@ -47,7 +48,10 @@ test('biological diets do not misclassify animal type as something eaten',()=>{
  for(const p of [...catalogue,...diverse]){
   if(!biological.has(p.kind))continue;
   if(p.kind!=='fish')assert.notEqual(p.traits.get('fish'),'+',p.name+' must not be called a fish');
-  if(p.kind!=='insect')assert.notEqual(p.traits.get('insect'),'+',p.name+' must not be called an insect');
+  if(p.kind==='invert'){
+   if(invertebrateInsects.has(p.name))assert.equal(p.traits.get('insect'),'+',p.name+' is biologically an insect');
+   else assert.notEqual(p.traits.get('insect'),'+',p.name+' is an invertebrate but not an insect');
+  }else if(p.kind!=='insect')assert.notEqual(p.traits.get('insect'),'+',p.name+' must not be called an insect');
   if(['mammal','hoof','bird'].includes(p.kind)){
    assert.notEqual(p.traits.get('cold'),'+',p.name+' is not physically cold merely because of habitat');
   }
