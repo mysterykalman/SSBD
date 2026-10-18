@@ -14,7 +14,7 @@ export const KNOWN_STATES=Object.freeze({NO:2,YES:3});
 const SOURCE=/^https:\/\/(www\.)?(wikidata\.org|wikipedia\.org|britannica\.com|nps\.gov|unesco\.org|imdb\.com|musicbrainz\.org|metmuseum\.org|moma\.org|louvre\.fr|nga\.gov|officialcharts\.com)\//i;
 function normalize(v){return String(v??'').normalize('NFKC').trim().replace(/\s+/g,' ');}
 function pair(field,value){return normalize(field).toLocaleLowerCase('en')+'\u001f'+normalize(value).toLocaleLowerCase('en');}
-function meaningful(value){return /^[\p{L}\p{N}][\p{L}\p{N} '’.,&\/()\-]+$/u.test(value);}
+function meaningful(value){return /^[\p{L}\p{N}][\p{L}\p{N} '’.,&/()-]+$/u.test(value);}
 function sourceCheck(url){return typeof url==='string'&&SOURCE.test(url);}
 
 /**

@@ -87,7 +87,7 @@ function renderPicker() {
         tierButton(1, "A friendly start with mostly direct categories."),
         tierButton(2, "More overlap, with a harder group mixed in."),
         tierButton(3, "A real puzzle: phrases, misdirection and wordplay."),
-        tierButton(4, "The sharp end. Hard clues and lateral connections."))));
+        tierButton(4, "The sharp end. Hard clues and lateral connections.")))));
   overlay.querySelector(".conn-tier")?.focus();
 }
 

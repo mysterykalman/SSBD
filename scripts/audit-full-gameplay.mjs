@@ -75,7 +75,7 @@ async function pam(page){
   await page.locator("#secret-word").fill("chair");
   await page.locator("#start-btn").click();
   await capture(page,"pam","round","category");
-  await page.locator('#category-actions [data-answer="other"]').click();
+  await page.locator('#category-actions [data-answer="object"]').click();
   for(let i=0;i<24;i++){
     const stage=await page.locator(".game-card").getAttribute("data-stage");
     await capture(page,"pam","round",stage+"-"+i);
@@ -123,7 +123,7 @@ async function odd(page,tier){
   if(await page.getByRole("button",{name:"Clear picks"}).isEnabled())await page.getByRole("button",{name:"Clear picks"}).click();
   await capture(page,"odd-one-in","tier-"+tier,"after-selection");
 }
-async function together(page){
+async function _together(page){
   await capture(page,"together","entry","home");
   await page.locator("#createFamily").click();
   await capture(page,"together","entry","name-dialog");

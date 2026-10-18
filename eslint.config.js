@@ -23,6 +23,8 @@ export default [
   // Mom Mode's inference/data files have a guarded CommonJS export for direct engine tests.
   {files: ["src/client/mom-mode/engine.js", "src/client/mom-mode/knowledge.js"], languageOptions: {globals: {...globals.browser, module: "readonly"}}},
   {files: ["scripts/**/*.mjs", "test/**/*.mjs", "eslint.config.js"], languageOptions: {globals: {...globals.node}}},
+  // Browser globals are valid inside Playwright page.evaluate and Pam VM fixtures.
+  {files: ["scripts/audit-full-gameplay.mjs", "scripts/audit-responsive.mjs", "test/pam-*.test.mjs"], languageOptions: {globals: {...globals.node, ...globals.browser}}},
   // Playwright page.evaluate callbacks run in the browser.
   // Follow-up: test/e2e/family.test.mjs has an unused `name` parameter; drop this relaxation once it is fixed.
   {files: ["test/e2e/**/*.mjs"], languageOptions: {globals: {...globals.node, ...globals.browser}}, rules: {"no-unused-vars": ["error", {args: "none", varsIgnorePattern: "^_", caughtErrors: "none"}]}}
