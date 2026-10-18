@@ -130,7 +130,8 @@
     ".pill.green",
     ".match-badge",
     ".mode-chip[data-character=gary]",
-    ".game-card[data-outcome=won] .game-top .eyebrow"
+    ".game-card[data-outcome=won] .game-top .eyebrow",
+    ".pwa-update-label"
    ]
   },
   {
@@ -148,7 +149,8 @@
    "asset": "chip-purple",
    "selectors": [
     ".pill.purple",
-    ".mode-chip[data-mode=pam]"
+    ".mode-chip[data-mode=pam]",
+    ".pwa-install-eyebrow"
    ]
   },
   {
@@ -181,7 +183,8 @@
    "selectors": [
     "#joinFamily",
     ".sg-use",
-    "#retryFamily"
+    "#retryFamily",
+    "#pwaInstallBtn"
    ]
   },
   {
@@ -189,14 +192,16 @@
    "selectors": [
     "#closeBtn",
     "#keep-asking-btn",
-    "#historyBtn.btn"
+    "#historyBtn.btn",
+    ".pwa-update-apply"
    ]
   },
   {
    "asset": "btn-purple",
    "selectors": [
     ".btn.sun",
-    "#pam-intro-play"
+    "#pam-intro-play",
+    ".pwa-install-close"
    ]
   },
   {

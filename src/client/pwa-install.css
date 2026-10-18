@@ -1,75 +1,224 @@
-/* The installation controls use SSBD's existing ink, soft felt palette and rounded typography. */
+/*
+ * SSBD PWA UI uses real, existing felt pieces from felt/skins.json:
+ * Install button = aqua btn-teal; primary sheet action = purple btn-purple;
+ * update action = blue btn-blue; sheet eyebrow = purple chip-purple;
+ * update label = green chip-green. Number badges use the original felt badge sprites.
+ * Do not add new patch artwork or blanket beige buttons here.
+ */
 .pwa-install-trigger {
-  appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:7px;
-  flex-shrink:0; min-height:44px; padding:8px 13px; white-space:nowrap;
-  border:2px solid var(--ink, #3b2a24); border-radius:14px;
-  color:var(--ink, #3b2a24); background:var(--panel, #fdf7ee);
-  box-shadow:2px 3px 0 var(--ink, #3b2a24);
-  font:900 .87rem/1.15 var(--font, "Nunito", system-ui, sans-serif);
-  cursor:pointer; touch-action:manipulation;
+  --felt-h:48px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  flex:none;
+  min-width:48px;
+  min-height:48px;
+  padding-inline:20px;
+  white-space:nowrap;
+  appearance:none;
+  border:0;
+  color:var(--ink,#3b2a24);
+  font:900 .86rem/1.15 var(--font,"Nunito",system-ui,sans-serif);
+  cursor:pointer;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .14s ease, filter .14s ease;
 }
-.pwa-install-trigger svg {flex:none}
-.pwa-install-trigger:hover {transform:translateY(-1px)}
-.pwa-install-trigger:active {transform:translate(1px,2px);box-shadow:1px 1px 0 var(--ink, #3b2a24)}
-.pwa-install-trigger:focus-visible,.pwa-install-close:focus-visible,.pwa-update-dismiss:focus-visible {
-  outline:3px solid var(--focus, #3f86d6);outline-offset:3px
+.pwa-install-trigger svg {flex:none;stroke-linecap:round}
+.pwa-install-trigger:hover {transform:translateY(-2px);filter:brightness(1.05)}
+.pwa-install-trigger:active {transform:translateY(2px)}
+.pwa-install-trigger:focus-visible,
+.pwa-install-close:focus-visible,
+.pwa-update-dismiss:focus-visible,
+.pwa-update-apply:focus-visible {
+  outline:3px solid var(--focus,#3f86d6);
+  outline-offset:3px;
 }
 .pwa-install-trigger[hidden] {display:none!important}
 .pwa-install-short {display:none}
+
 .pwa-install-dialog {
-  border:2px solid var(--ink, #3b2a24);padding:0;
-  width:min(470px,calc(100% - 28px));max-height:calc(100dvh - 30px);
-  overflow:auto; border-radius:24px; color:var(--ink, #3b2a24);
-  background:var(--panel, #fdf7ee);
-  box-shadow:6px 7px 0 var(--ink, #3b2a24)
+  position:fixed;
+  width:min(504px,calc(100% - 24px));
+  max-height:calc(100dvh - 28px);
+  padding:0;
+  overflow:auto;
+  color:var(--ink,#3b2a24);
+  background:
+    var(--grain),
+    radial-gradient(circle at 96% 0%,rgba(161,137,216,.24),transparent 34%),
+    radial-gradient(circle at 0% 100%,rgba(95,177,164,.19),transparent 37%),
+    var(--panel,#fdf7ee);
+  border:3px solid #9d88cb;
+  border-radius:26px;
+  box-shadow:0 0 0 5px rgba(255,255,255,.86) inset,
+    0 0 0 7px rgba(108,81,168,.14),
+    0 22px 58px rgba(40,28,54,.33);
 }
-.pwa-install-dialog::backdrop {background:rgba(31,27,28,.7)}
-.pwa-install-panel {padding:clamp(22px,5vw,36px);padding-bottom:max(24px,env(safe-area-inset-bottom))}
-.pwa-install-eyebrow {font:900 .72rem/1.4 var(--font, "Nunito",sans-serif);letter-spacing:.13em;color:var(--purple-deep,#6c51a8);margin:0 0 11px}
-.pwa-install-panel h2 {margin:0 0 14px;font:900 clamp(1.65rem,5vw,2.2rem)/1.13 var(--font, "Nunito",sans-serif)}
+.pwa-install-dialog::backdrop {background:rgba(30,25,35,.71)}
+.pwa-install-panel {
+  padding:clamp(23px,5.5vw,39px);
+  padding-bottom:max(23px,env(safe-area-inset-bottom));
+}
+.pwa-install-eyebrow {
+  --felt-h:39px;
+  display:inline-flex;
+  align-items:center;
+  width:auto;
+  min-height:39px;
+  padding-inline:18px;
+  margin:0 0 11px;
+  color:var(--ink,#3b2a24);
+  font:900 .68rem/1.3 var(--font,"Nunito",system-ui,sans-serif);
+  letter-spacing:.1em;
+}
+.pwa-install-panel h2 {
+  margin:0 0 11px;
+  max-width:18ch;
+  font:900 clamp(1.65rem,4.7vw,2.15rem)/1.13 var(--font,"Nunito",sans-serif);
+  letter-spacing:-.02em;
+  text-wrap:balance;
+}
 .pwa-install-panel h2:focus {outline:0}
-.pwa-install-lead {font:700 1rem/1.5 var(--font, "Nunito",sans-serif);margin:0 0 20px}
-.pwa-install-steps {margin:0 0 20px;padding-left:25px}
-.pwa-install-steps li {padding-left:7px;margin:0 0 12px;font:700 .96rem/1.45 var(--font, "Nunito",sans-serif)}
-.pwa-install-steps li::marker {color:var(--purple-deep,#6c51a8);font-weight:900}
-.pwa-install-foot {margin:0 0 22px;font:700 .85rem/1.45 var(--font, "Nunito",sans-serif);color:var(--ink-soft,#776258)}
-.pwa-install-close {width:100%;min-height:48px}
+.pwa-install-lead {
+  font:750 1rem/1.5 var(--font,"Nunito",sans-serif);
+  margin:0 0 21px;
+  max-width:40ch;
+}
+.pwa-install-steps {
+  list-style:none;
+  counter-reset:pwaStep;
+  padding:0;
+  margin:0 0 18px;
+  display:grid;
+  gap:10px;
+}
+.pwa-install-steps li {
+  counter-increment:pwaStep;
+  display:grid;
+  grid-template-columns:41px minmax(0,1fr);
+  gap:12px;
+  align-items:center;
+  position:relative;
+  min-width:0;
+  padding:10px 13px 10px 8px;
+  border-radius:17px;
+  background:rgba(111,160,216,.14);
+  color:var(--ink,#3b2a24);
+  font:800 .93rem/1.4 var(--font,"Nunito",sans-serif);
+  text-wrap:pretty;
+}
+.pwa-install-steps li:nth-child(2) {background:rgba(95,177,164,.15)}
+.pwa-install-steps li:nth-child(3) {background:rgba(116,173,124,.16)}
+.pwa-install-steps li::before {
+  content:counter(pwaStep);
+  display:grid;
+  place-items:center;
+  width:41px;
+  height:41px;
+  flex:none;
+  color:#2e2928;
+  font:900 1rem/1 var(--font,"Nunito",sans-serif);
+  background:url("/felt/badge-coral.webp") center / contain no-repeat;
+}
+.pwa-install-steps li:nth-child(2)::before {background-image:url("/felt/badge-teal.webp")}
+.pwa-install-steps li:nth-child(3)::before {background-image:url("/felt/badge-green.webp")}
+.pwa-install-foot {
+  margin:0 0 22px;
+  font:750 .85rem/1.45 var(--font,"Nunito",sans-serif);
+  color:var(--ink-soft,#776258);
+}
+.pwa-install-close {
+  --felt-h:58px;
+  width:100%;
+  min-height:58px;
+  padding-inline:25px;
+}
+
 .pwa-update-notice {
-  position:fixed;z-index:75;left:50%;bottom:max(16px,env(safe-area-inset-bottom));
-  transform:translateX(-50%);width:min(510px,calc(100% - 24px));
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  border:2px solid var(--ink,#3b2a24);border-radius:16px;
-  background:var(--panel,#fdf7ee);color:var(--ink,#3b2a24);
-  padding:10px 12px;box-shadow:3px 4px 0 var(--ink,#3b2a24);
-  font:800 .9rem/1.35 var(--font,"Nunito",sans-serif)
+  position:fixed;
+  z-index:75;
+  left:50%;
+  bottom:max(16px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  width:min(525px,calc(100% - 24px));
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 12px;
+  border:2px dashed var(--purple-deep,#6c51a8);
+  border-radius:22px;
+  background:var(--grain),linear-gradient(115deg,#e5e1f7,#d7f0ef);
+  box-shadow:0 6px 20px rgba(47,37,61,.23);
+  color:var(--ink,#3b2a24);
+  font:800 .9rem/1.35 var(--font,"Nunito",sans-serif);
 }
-.pwa-update-notice .btn {flex-shrink:0}
+.pwa-update-label {
+  --felt-h:48px;
+  display:inline-flex;
+  align-items:center;
+  min-height:48px;
+  padding-inline:12px;
+  min-width:0;
+  flex:1 1 auto;
+  text-align:center;
+  font-size:.83rem;
+  line-height:1.2;
+}
+.pwa-update-apply {
+  --felt-h:46px;
+  min-height:46px;
+  min-width:81px;
+  flex:none;
+}
 .pwa-update-dismiss {
-  appearance:none;border:0;background:transparent;color:inherit;
+  appearance:none;
+  border:0;
+  background:url("/felt/badge-coral.webp") center / contain no-repeat;
+  color:var(--ink,#3b2a24);
+  display:grid;
+  place-items:center;
+  flex:none;
+  width:40px;
+  height:40px;
+  min-width:40px;
+  min-height:40px;
+  padding:0 0 1px;
   font:900 1.3rem/1 var(--font,"Nunito",sans-serif);
-  min-width:32px;min-height:36px;cursor:pointer
+  cursor:pointer;
 }
-/* Keep installation available without stealing the limited header space on phones. */
 @media (max-width:430px) {
-  .pwa-install-trigger {min-height:44px;min-width:44px;padding:8px;box-shadow:2px 3px 0 var(--ink,#3b2a24)}
-  .pwa-install-long {display:none}
-  .pwa-install-short {display:none}
+  .pwa-install-trigger {
+    --felt-h:46px;
+    min-width:46px;
+    min-height:46px;
+    padding-inline:9px;
+    gap:2px;
+  }
+  .pwa-install-long,.pwa-install-short {display:none}
+  .pwa-install-panel {padding:25px 21px 28px}
+  .pwa-install-steps li {grid-template-columns:37px minmax(0,1fr);gap:9px;padding-right:9px;font-size:.88rem}
+  .pwa-install-steps li::before {width:37px;height:37px}
+  .pwa-update-notice {gap:4px;padding:7px}
+  .pwa-update-label {font-size:.75rem;padding-inline:8px}
+  .pwa-update-apply {min-width:68px}
 }
 @media (min-width:375px) and (max-width:430px) {
-  body:not(:has(#mom-app)) .pwa-install-trigger {padding-inline:9px}
   body:not(:has(#mom-app)) .pwa-install-short {display:inline}
 }
 @media (max-width:360px) {
-  /* Pam has Games, How to play and Sound as well as installation: give them their own row. */
   body:has(#mom-app) .topbar:has(.pwa-install-trigger:not([hidden])) {
-    display:grid;grid-template-columns:1fr;row-gap:4px
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    row-gap:4px;
   }
   body:has(#mom-app) .topbar:has(.pwa-install-trigger:not([hidden])) .top-actions {
-    width:100%;justify-content:space-between;flex-wrap:nowrap
+    width:100%;
+    justify-content:space-between;
+    flex-wrap:nowrap;
   }
-}
-@media (max-width:340px) {
-  body:not(:has(#mom-app)) .pwa-install-short {display:none}
 }
 @media (prefers-reduced-motion:reduce) {
   .pwa-install-trigger:hover,.pwa-install-trigger:active {transform:none}

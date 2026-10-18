@@ -191,3 +191,28 @@ test("short landscape screens avoid a desktop-height homepage hero", async () =>
     await context.close();
   }
 });
+
+test("PWA installation controls use SSBD's existing colourful felt pieces on Home and Pam", async () => {
+  const context = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const page = await context.newPage();
+  for(const route of ["/","/mom/"]) {
+    await page.goto(server.url+route);
+    await page.evaluate(()=>document.querySelectorAll("dialog[open]").forEach(d=>d.close()));
+    await page.locator("#pwaInstallBtn").waitFor();
+    const buttonSource=await page.locator("#pwaInstallBtn").evaluate(el=>getComputedStyle(el).borderImageSource);
+    assert.match(buttonSource,/\/felt\/btn-teal\.webp/,route+" must use aqua felt install button");
+    await page.locator("#pwaInstallBtn").click();
+    const sheet=page.locator(".pwa-install-dialog");
+    assert.equal(await sheet.isVisible(),true);
+    const closeSource=await sheet.locator(".pwa-install-close").evaluate(el=>getComputedStyle(el).borderImageSource);
+    assert.match(closeSource,/\/felt\/btn-purple\.webp/,route+" must use purple felt button");
+    const eyebrowSource=await sheet.locator(".pwa-install-eyebrow").evaluate(el=>getComputedStyle(el).borderImageSource);
+    assert.match(eyebrowSource,/\/felt\/chip-purple\.webp/,route+" must use original purple felt chip");
+    const colors=await sheet.locator(".pwa-install-steps li").evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el,"::before").backgroundImage));
+    assert.match(colors[0],/badge-coral\.webp/);
+    assert.match(colors[1],/badge-teal\.webp/);
+    assert.match(colors[2],/badge-green\.webp/);
+    await sheet.locator(".pwa-install-close").click();
+  }
+  await context.close();
+});
