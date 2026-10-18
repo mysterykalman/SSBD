@@ -1,0 +1,31 @@
+name: Pam Wikidata factual evidence from first 550 (research only)
+on:
+  push:
+    branches: [feature/pam-thematic-1650-knowledge-lab]
+    paths: ['.github/workflows/pam-wikidata-facts-first550.yml']
+permissions: {contents: read}
+jobs:
+  source-claims:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '24'}
+      - name: Check identity and fact source safeguards
+        run: node --test test/pam-wikidata-review.test.mjs test/pam-wikidata-facts.test.mjs test/pam-wikidata-facts-batch.test.mjs
+      - name: Rank source identities, no auto-approvals
+        run: node scripts/pam-wikidata-review.mjs
+      - name: Collect provenance-linked claims with rate limiting and checkpoints
+        run: node scripts/pam-wikidata-facts-batch.mjs
+      - name: Preserve research artifact even if interrupted
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pam-unverified-facts-first550
+          path: |
+            data/pam20q/expansion/wikidata-facts-first550.json
+            data/pam20q/expansion/wikidata-identity-review.json
+            data/pam20q/expansion/wikidata-identity-review.csv
+          if-no-files-found: warn
+          retention-days: 30

@@ -11,7 +11,13 @@ export const CLAIMS=Object.freeze({
  P106:'occupation',P136:'genre',P569:'birth_date',P570:'death_date',
  P577:'release_date',P571:'inception_date',P170:'creator',P50:'author',
  P86:'composer',P175:'performer',P740:'formation_location',
- P131:'administrative_location',P36:'capital',P166:'award',P1412:'languages_spoken'
+ P131:'administrative_location',P36:'capital',P166:'award',P1412:'languages_spoken',
+ P30:'continent',P31:'instance_of',P57:'film_director',P161:'cast_member',
+ P364:'original_language',P452:'industry',P159:'headquarters_location',
+ P127:'owned_by',P112:'founder',P195:'collection',P276:'current_location',
+ P135:'movement',P186:'material',P180:'depicts',P149:'architecture_style',
+ P101:'field_of_work',P576:'dissolved_or_abolished_date',P463:'member_of',
+ P179:'series',P162:'film_producer'
 });
 export function extractClaimFacts(entity){
  const out=[];
