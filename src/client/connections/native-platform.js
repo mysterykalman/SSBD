@@ -337,6 +337,16 @@ function submitSelection() {
     game.lastSolvedId = hit.id;
     game.board = game.board.filter(word => !game.selected.has(word));
     game.selected.clear();
+    // Once three groups are solved, the remaining four words form the final group.
+    // Reveal that group without asking the player to submit an inevitable answer.
+    if (game.solved.length === 3) {
+      const finalGroup = game.groups.find(group => !game.solved.includes(group.id));
+      if (finalGroup) {
+        game.solved.push(finalGroup.id);
+        game.lastSolvedId = finalGroup.id;
+        game.board = [];
+      }
+    }
     const count = game.solved.length;
     if (count === 4) setLine("win");
     else if (count === 3) setLine("correct3");
@@ -393,7 +403,12 @@ function celebration() {
 }
 
 function endState(won) {
-  const allGroups = game.groups;
+  // Keep the solved order, placing the automatically revealed fourth group last.
+  // On a loss, show the remaining groups after the ones the player found.
+  const allGroups = [
+    ...game.solved.map(id => game.groups.find(group => group.id === id)).filter(Boolean),
+    ...game.groups.filter(group => !game.solved.includes(group.id))
+  ];
   return el("section", {class: "card conn-end"},
     won ? celebration() : null,
     el("div", {class: "conn-end-host"}, standee(game.character, "conn-host-standee"), el("h2", {}, won ? "You got all four." : "The puzzle got the last word."), el("div", {class: "bubble conn-bubble", role: "status"}, game.message)),
