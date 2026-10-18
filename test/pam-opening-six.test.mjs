@@ -26,7 +26,7 @@ test('six distinct multiple-choice openings preserve the frozen 1775 × 156 mode
   assert.deepEqual(opening.options,choices);
   assert.equal(opening.kind,'category');
   assert.ok(game.scores.every(Number.isFinite));
-  const next=Engine.setOpeningCategory(game,value);
+  let next=Engine.setOpeningCategory(game,value);
   assert.equal(game.turn,1);
   assert.equal(game.category,value);
   assert.deepEqual(game.history[0],{kind:'category',value,turn:1,format:'six-choice'});
@@ -35,13 +35,12 @@ test('six distinct multiple-choice openings preserve the frozen 1775 × 156 mode
   assert.throws(()=>Engine.setOpeningCategory(game,value),/start/);
   for(let i=0;i<21;i++){
    if(next.kind==='guess')break;
-   if(next.kind==='hunch')break;
+   if(next.kind==='hunch'){next=Engine.deferGuess(game,next);continue;}
    assert.equal(next.kind,'question');
    assert.match(next.text,/\\?$/);
    if(i===0)assert.equal(next.index>=4,true);
-   const following=Engine.answer(game,next,'unknown');
+   next=Engine.answer(game,next,'unknown');
    assert.ok(game.turn<=20);
-   if(following.kind==='guess'||following.kind==='hunch')break;
   }
  }
 });
