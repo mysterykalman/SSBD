@@ -1,80 +1,58 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import {readFile} from "node:fs/promises";
-import vm from "node:vm";
+/**
+ * Natural question-order and topical-evidence contract for current Pam.
+ * The removed MomBayes facet-scoring API is deliberately not emulated.
+ */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {loadCurrentPam} from './support/pam-current-engine.mjs';
+import {compileReviewedEvidence} from '../scripts/pam-reviewed-fact-compiler.mjs';
+const {engine:e}=await loadCurrentPam();
 
-async function load(){
-  const ctx={globalThis:null};ctx.globalThis=ctx;vm.createContext(ctx);
-  for(const file of [
-    "src/client/mom-mode/knowledge.js",
-    "src/client/mom-mode/knowledge.general.js",
-    "src/client/mom-mode/facets.js",
-    "src/client/mom-mode/engine.js",
-    "src/client/mom-mode/deduction.js"
-  ])vm.runInContext(await readFile(file,"utf8"),ctx,{filename:file});
-  return ctx.MomBayes;
-}
+const candidates=[
+ {id:'PAM-0001',name:'Nintendo Switch'},
+ {id:'PAM-0002',name:'PlayStation 5'},
+ {id:'PAM-0003',name:'Xbox'}
+];
+const identity=(id,name,qid,facts)=>({id,approved_name:name,subject_qid:qid,
+ identity_reviewed:true,reviewer:'synthetic test fixture',reviewed_at:'2026-10-18',
+ identity_source:'https://www.wikidata.org/wiki/'+qid,
+ facts:facts.map(([truth,value])=>({field:'manufacturer',value,truth,review_status:'approved',source:'https://www.wikidata.org/wiki/'+qid}))});
+const question=[{text:'Is it made by Nintendo?',field:'manufacturer',value:'Nintendo'}];
 
-const fi=(e,id)=>e.FEATURES.findIndex(feature=>feature.id===id);
-const oi=(e,name)=>e.OBJECTS.findIndex(object=>object.name===name);
-
-function restrictBelief(e,g,indexes){
-  g.belief.fill(0);
-  for(const index of indexes)g.belief[index]=1/indexes.length;
-}
-
-test("Pam begins with a broad or category-level filter rather than a niche detail",async()=>{
-  const e=await load();
-  const g=e.createGame();
-  const action=e.choose(g);
-  assert.equal(action.kind,"question");
-  const meta=e.QUESTION_META[action.index];
-  assert.ok(meta.breadth==="broad"||meta.breadth==="category",`opening question was ${action.id} (${meta.breadth})`);
+test('Pam begins with an approachable broad classification, not niche trivia',()=>{
+ const g=e.createGame();
+ const first=e.choose(g);
+ assert.equal(first.kind,'category');
+ assert.equal(first.text,'What kind of thing are you thinking of?');
+ assert.deepEqual([...first.options],['person','place','animal_plant','object','entertainment','other']);
 });
 
-test("once the answer is known to be a person, object-style questions cannot re-enter the sequence",async()=>{
-  const e=await load();
-  const people=[];
-  const person=fi(e,"person");
-  for(let i=0;i<e.N;i++)if(e.truth[i*e.F+person]===1)people.push(i);
-  assert.ok(people.length>=5);
+test('person and entertainment labels must not become exclusionary negatives',()=>{
+ for(const label of ['person','entertainment','object']){
   const g=e.createGame();
-  restrictBelief(e,g,people);
-  g.answers.set("person","yes");
-  g.turn=2;
-  const blocked=new Set(["manmade","electronic","battery","screen","vehicle","wearable","tool","furniture","appliance"]);
-  for(let step=0;step<4;step++){
-    const action=e.choose(g);
-    if(action.kind!=="question")break;
-    assert.ok(!blocked.has(action.id),`person branch asked ${action.id}`);
-    const doctor=oi(e,"Doctor");
-    assert.ok(doctor>=0);
-    const answer=e.oracle(doctor,action);
-    const next=e.answer(g,action,answer);
-    if(next.kind!=="question")break;
-  }
+  const next=e.setOpeningCategory(g,label);
+  assert.equal(g.turn,1);
+  assert.equal(next.kind,'question');
+  assert.ok(g.scores.every(Number.isFinite));
+ }
 });
 
-test("brand becomes the natural next filter when three known consoles remain",async()=>{
-  const e=await load();
-  const candidates=["Nintendo Switch","PlayStation 5","Xbox"].map(name=>oi(e,name));
-  assert.ok(candidates.every(index=>index>=0));
-  const g=e.createGame();
-  restrictBelief(e,g,candidates);
-  g.answers.set("gk_product","yes");
-  g.answers.set("gk_console","yes");
-  g.turn=8;
-  const best=e.bestNaturalQuestion(g);
-  assert.ok(best);
-  const id=e.FEATURES[best.index].id;
-  assert.match(id,/^facet_brand_/);
+test('reviewed manufacturer questions separate console answers only with real negatives',()=>{
+ const records=[
+  identity('PAM-0001','Nintendo Switch','Q1001',[['yes','Nintendo']]),
+  identity('PAM-0002','PlayStation 5','Q1002',[['no','Nintendo']]),
+  identity('PAM-0003','Xbox','Q1003',[['no','Nintendo']])
+ ];
+ const result=compileReviewedEvidence(candidates,records,question);
+ assert.deepEqual([...result.knownMask],[1,1,1]);
+ assert.deepEqual([...result.weights],[3,2,2]);
+ assert.equal(result.summary.reviewedKnownCells,3);
 });
 
-test("a product brand filter is not competitive before the product branch is established",async()=>{
-  const e=await load();
-  const brand=fi(e,"facet_brand_nintendo");
-  assert.ok(brand>=0);
-  const g=e.createGame();
-  const ranked=e.questionScore(g,brand);
-  assert.equal(ranked.eligible,false);
+test('a brand question is not informative about targets with unreviewed brands',()=>{
+ const records=[identity('PAM-0001','Nintendo Switch','Q1001',[['yes','Nintendo']])];
+ const result=compileReviewedEvidence(candidates,records,question);
+ assert.deepEqual([...result.knownMask],[1,0,0]);
+ assert.equal(result.summary.unknownCells,2);
+ assert.equal(result.summary.reviewedNo,0);
 });
