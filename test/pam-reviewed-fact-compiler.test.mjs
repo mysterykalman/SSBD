@@ -4,7 +4,9 @@ import {compileReviewedEvidence,validateReviewedSubject} from '../scripts/pam-re
 const SRC='https://www.wikidata.org/wiki/Q90';
 const targets=[{id:'PAM-0001',name:'Paris'},{id:'PAM-0002',name:'Tokyo'},{id:'PAM-0003',name:'London'},{id:'PAM-0004',name:'Undocumented city'}];
 const questions=[{field:'city_present_day_country',value:'France',text:'Is this city in France?'},{field:'city_present_day_country',value:'Japan',text:'Is this city in Japan?'},{field:'person_occupation',value:'physicist',text:'Were they known for physics?'}];
-const approved=(id,qid,facts)=>({id,subject_qid:qid,identity_reviewed:true,facts});
+const approved=(id,qid,facts)=>({id,subject_qid:qid,identity_reviewed:true,
+ approved_name:targets.find(target=>target.id===id)?.name,
+ reviewer:'independent-editor',reviewed_at:'2026-10-18',identity_source:`https://www.wikidata.org/wiki/${qid}`,facts});
 const fact=(field,value,complete=true)=>({field,value,truth:'yes',complete,review_status:'approved',source:SRC});
 
 test('source-linked reviewed city countries can yield explicit Yes and logically exclusive No',()=>{
@@ -40,4 +42,11 @@ test('untrusted links and lexical name-hint filters are not factual evidence',()
  assert.throws(()=>compileReviewedEvidence(targets,[r],questions),/trusted HTTPS/);
  const x=approved('PAM-0001','Q90',[fact('last_name','Paris')]);
  assert.throws(()=>compileReviewedEvidence(targets,[x],questions),/non-semantic/);
+});
+test('identity approval cannot be forged by a boolean flag or mismatched referent',()=>{
+ const r=approved('PAM-0001','Q90',[fact('city_present_day_country','France')]);
+ assert.throws(()=>validateReviewedSubject({...r,reviewer:''}),/Identity approval/);
+ assert.throws(()=>validateReviewedSubject({...r,identity_source:'https://www.wikidata.org/wiki/Q1490'}),/Identity source/);
+ assert.throws(()=>compileReviewedEvidence(targets,[{...r,approved_name:'Tokyo'}],questions),/identity name/);
+ assert.throws(()=>compileReviewedEvidence([{...targets[0],subject_qid:'Q1490'}],[r],questions),/identity QID/);
 });
