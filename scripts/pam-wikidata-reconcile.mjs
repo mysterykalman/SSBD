@@ -30,11 +30,99 @@ export function searchTerms(target){
  const terms=[target.name];
  const stripped=target.name.replace(/\s*\([^)]*\)\s*$/,'').trim();
  if(stripped!==target.name)terms.push(stripped);
+ for(const alias of QUERY_ALIASES[target.name]||[])terms.push(alias);
+ if(target.category==='Musicals')terms.push(stripped+' musical');
  return [...new Set(terms)];
+}
+/**
+ * An entity match is an identity suggestion, never a factual assertion. The
+ * context checks deliberately prefer the right film/year, painting/medium,
+ * city/country and person/occupation over same-named unrelated entities.
+ * Ratings must NOT be treated as verified or used in production without review.
+ */
+const QUERY_ALIASES=Object.freeze({
+ 'Czechia':['Czech Republic'],'Türkiye':['Turkey'],'Ivory Coast':["Côte d'Ivoire"],'South Korea':['Republic of Korea']
+});
+const COUNTRY_ALIASES=Object.freeze({
+ 'United States':['united states','u.s.','usa','american'],
+ 'United Kingdom':['united kingdom','u.k.','britain','british','english','scottish','welsh'],
+ 'South Korea':['south korea','republic of korea','korean'],
+ 'United Arab Emirates':['united arab emirates','emirati','uae'],
+ 'Türkiye':['turkey','türkiye','turkish'],
+ 'Czechia':['czech republic','czechia'],
+});
+const INFO_WORDS=new Set(['the','and','with','from','of','in','at','to','on','or','a','an','near',
+ 'north','south','east','west','stage','film','painting','mountain','sculpture','island','landmark',
+ 'located','historic','history','ancient','modern','famous','rock','known','united','states']);
+function contextualTerms(context){
+ const raw=String(context||'');
+ const tokens=[...new Set((raw.normalize('NFKD').replace(/\p{M}/gu,'').match(/[\p{L}\p{N}]+/gu)||[])
+  .map(x=>x.toLowerCase()).filter(x=>x.length>=4&&!INFO_WORDS.has(x)))];
+ return tokens.filter(x=>!/^\d{4}$/.test(x)).slice(0,8);
+}
+function categoryEvidence(target,description){
+ const d=String(description||'').toLowerCase();
+ const t=target.category,sub=target.subcategory;
+ let score=0;
+ if(t==='Movies'){
+  if(/\b(film series|soundtrack|song|album|television series|video game)\b/.test(d))score-=7;
+  if(/\b(film|motion picture|movie)\b/.test(d)&&!/film series/.test(d))score+=5;
+  const match=String(target.context||'').match(/^(18|19|20)\d{2}$/);
+  if(match){const y=match[0];if(new RegExp('\\b'+y+'\\b').test(d))score+=7;
+   else if(/\b(18|19|20)\d{2}\b/.test(d))score-=3;}
+ }
+ if(t==='TV Shows'){
+  if(/\b(television series|tv series|sitcom|game show|reality show)\b/.test(d))score+=7;
+  if(/\b(song|album|film|episode|book|pinball)\b/.test(d))score-=6;
+ }
+ if(t==='Musicals'){
+  if(/\b(stage musical|broadway musical|musical theatre|musical with music|musical based)\b/.test(d))score+=9;
+  else if(/\bmusical\b/.test(d))score+=4;
+  if(/\b(film|album|city|town|musical film|film series|song|novel)\b/.test(d))score-=7;
+  const ctx=contextualTerms(target.context);score+=Math.min(9,ctx.filter(x=>d.includes(x)).length*4);
+ }
+ if(t==='Monuments, Paintings & Sculptures'){
+  if(sub==='Paintings'){
+   if(/\b(painting|fresco|artwork|oil on canvas)\b/.test(d))score+=5;
+   if(/\b(sculpture|song|album|novel|film)\b/.test(d))score-=5;
+  }
+  if(sub==='Sculptures & Public Art'){
+   if(/\b(sculpture|statue|public art|installation)\b/.test(d))score+=5;
+   if(/\b(painting|song|album|novel|film)\b/.test(d))score-=5;
+  }
+  if(sub==='Monuments & Historic Sites'&&/\b(temple|church|castle|monument|historic|archaeological|palace|heritage|cathedral|building)\b/.test(d))score+=3;
+ }
+ if(t==='Landmarks'){
+  if(sub==='Natural Landmarks'){
+   if(/\b(mountain|river|waterfall|volcano|national park|valley|canyon|lake|island|desert|reef|forest)\b/.test(d))score+=6;
+   if(/\b(painting|song|band|film|building|novel)\b/.test(d))score-=6;
+  }
+  if(sub==='Built Landmarks & Attractions'&&/\b(bridge|tower|building|monument|stadium|cathedral|temple|castle|museum)\b/.test(d))score+=5;
+ }
+ if(t==='People'){
+  if(/\b(album|song|film|band|group|submarine|book|podcast|episode)\b/.test(d))score-=6;
+  const ctx=contextualTerms(target.context), normalized=d.replace(/[-]/g,'');
+  if(ctx.some(w=>normalized.includes(w)))score+=6;
+  if(/\b(person|human|artist|physicist|chemist|actor|politician|singer|writer|scientist|mathematician|naturalist|president|astrophysicist|inventor|athlete|author|composer|polymath|philosopher|biologist|primatologist|historian)\b/.test(d))score+=4;
+ }
+ if(t==='Bands & Music Groups'){
+  if(/\b(band|musical group|music group|rock group|vocal group|duo|orchestra)\b/.test(d))score+=4;
+  if(/\b(pinball|sculpture|song|album|novel|film|record)\b/.test(d))score-=5;
+ }
+ if(t==='Brands'||t==='Car Companies'){
+  if(/\b(company|manufacturer|automotive|automobile|corporation|business|brand|car marque|division of general motors|retailer)\b/.test(d))score+=4;
+  if(/\b(song|album|person|city|town|film|family name|genus|journal|comic)\b/.test(d))score-=5;
+  if(t==='Car Companies'&&/\b(automotive|automobile manufacturing company|motor corporation|car manufacturer|motor company)\b/.test(d))score+=3;
+ }
+ if(t==='Countries'){
+  if(/\b(country|sovereign state|republic|kingdom)\b/.test(d))score+=5;
+  if(/\b(former|historical|national team|island of|part of the|state of|province of)\b/.test(d))score-=5;
+ }
+ return score;
 }
 export function scoreCandidate(target,result){
  const label=normalize(result.label||result.match?.text||''),term=normalize(searchTerms(target)[0]);
- const plain=normalize(searchTerms(target).at(-1));
+ const plain=normalize(String(target.name).replace(/\s*\([^)]*\)\s*$/,'').trim());
  const description=result.description||'';
  const hint=DESCRIPTION_HINTS[target.category];
  let score=0;
@@ -44,9 +132,22 @@ export function scoreCandidate(target,result){
  else if(label.includes(plain)&&plain.length>=6)score+=1;
  if(hint?.test(description))score+=3;
  if(/\b(disambiguation|Wikimedia disambiguation|family name|given name)\b/i.test(description))score-=6;
- // A descriptive mismatch is not evidence that the candidate is false, but it
- // MUST be reviewed rather than promoted on name matching alone.
  if(description&&!hint?.test(description))score-=2;
+ score+=categoryEvidence(target,description);
+ const cd=description.toLowerCase();
+ if(target.category==='Cities'||target.category==='Car Companies'){
+  const wanted=String(target.context||'').trim();
+  if(wanted){
+   const aliases=COUNTRY_ALIASES[wanted]||[wanted.toLowerCase()];
+   if(aliases.some(a=>new RegExp('(^|[^a-z])'+a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'($|[^a-z])').test(cd)))score+=8;
+   // If another explicit country is described while the desired country's
+   // English name is not, do not make the false-positive an exact match.
+  }
+ }else if(target.category==='Landmarks'||target.category==='Monuments, Paintings & Sculptures'){
+  const tokens=contextualTerms(target.context);
+  const matched=tokens.filter(t=>cd.includes(t));
+  score+=Math.min(9,matched.length*3);
+ }
  return score;
 }
 export function rankCandidates(target,searchResults){

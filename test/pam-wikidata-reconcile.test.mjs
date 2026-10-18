@@ -31,3 +31,52 @@ test('Wikidata client respects JSON shape and does not need network in unit test
  assert.ok(called.includes('wbsearchentities'));
  assert.equal(result.search[0].id,'Q340');
 });
+test('geographic context distinguishes Mount Everest in Himalayas from identically named mountains',()=>{
+ const target={name:'Mount Everest',category:'Landmarks',subcategory:'Natural Landmarks',context:'Himalayas, Nepal / China'};
+ const candidates=[
+  {id:'Q21939846',label:'Mount Everest',description:'mountain in New South Wales, Australia'},
+  {id:'Q513',label:'Mount Everest',description:"Earth's highest mountain above sea level, located in the Mahalangur Himal sub-range of the Himalayas"},
+  {id:'Q31505139',label:'Mount Everest',description:'mountain in the Free State Province, South Africa'}
+ ];
+ const ranked=rankCandidates(target,candidates);
+ assert.equal(ranked[0].qid,'Q513');
+ assert.equal(matchSuggestion(target,ranked),'single_plausible_not_verified');
+});
+
+test('a film date prioritizes its actual release over the book, soundtrack and game',()=>{
+ const target={name:'The Wizard of Oz (1939)',category:'Movies',subcategory:'Classic Cinema (to 1979)',context:'1939'};
+ const ranked=rankCandidates(target,[
+  {id:'Q127901334',label:'The Wizard of Oz',description:'film series'},
+  {id:'Q193695',label:'The Wizard of Oz',description:'1939 movie based on the book by L. Frank Baum'},
+  {id:'Q131581585',label:'The Wizard of Oz',description:'soundtrack album of the 1939 film'}
+ ]);
+ assert.equal(ranked[0].qid,'Q193695');
+});
+
+test('stage musical provenance differentiates it from a similarly titled musical film',()=>{
+ const target={name:'The Phantom of the Opera (stage musical)',category:'Musicals',subcategory:'Stage Musicals',context:'Andrew Lloyd Webber'};
+ const ranked=rankCandidates(target,[
+  {id:'Q276407',label:'The Phantom of the Opera',description:'2004 musical film directed by Joel Schumacher'},
+  {id:'Q382353',label:'The Phantom of the Opera',description:'musical with music by Andrew Lloyd Webber'},
+  {id:'Q3988705',label:'The Phantom of the Opera',description:'musical with music by Paul Schierhorn and Lawrence Rosen'}
+ ]);
+ assert.equal(ranked[0].qid,'Q382353');
+ assert.equal(matchSuggestion(target,ranked),'single_plausible_not_verified');
+});
+
+test('US country context does not match the substring USA in the Philippine place name Agusan',()=>{
+ const target={name:'San Francisco',category:'Cities',subcategory:'North America',context:'United States'};
+ const ranked=rankCandidates(target,[
+  {id:'Q627190',label:'San Francisco',description:'municipality of the Philippines in the province of Agusan del Sur'},
+  {id:'Q62',label:'San Francisco',description:'city and county in California, United States'}
+ ]);
+ assert.equal(ranked[0].qid,'Q62');
+ assert.ok(ranked[0].score-ranked[1].score>=3);
+});
+
+test('country aliases add searches but never silently approve matching Wikidata entities',()=>{
+ const t={name:'Türkiye',category:'Countries',subcategory:'Asia & Middle East',context:null};
+ assert.ok(searchTerms(t).includes('Turkey'));
+ const ranked=rankCandidates(t,[{id:'Q43',label:'Turkey',description:'country in West Asia and Southeast Europe'}]);
+ assert.notEqual(matchSuggestion(t,ranked),'approved');
+});
