@@ -36,7 +36,7 @@ export function validateReviewedSubject(record){
  if(!/^Q\d+$/.test(record.subject_qid||''))throw Error(`Verified subject QID required for ${record.id}`);
  // An approval bit alone is not an identity audit. Require an accountable,
  // dated review and a citation bound to this exact Wikidata entity.
- if(!normalize(record.approved_name)||!normalize(record.reviewer)||!/^20\\d{2}-\\d{2}-\\d{2}$/.test(record.reviewed_at||''))
+ if(!normalize(record.approved_name)||!normalize(record.reviewer)||!/^20\d{2}-\d{2}-\d{2}$/.test(record.reviewed_at||''))
   throw Error(`Identity approval requires a name, reviewer and review date: ${record.id}`);
  if(record.identity_source!==`https://www.wikidata.org/wiki/${record.subject_qid}`)
   throw Error(`Identity source must match approved Wikidata QID: ${record.id}`);
