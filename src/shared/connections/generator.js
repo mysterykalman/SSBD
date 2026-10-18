@@ -43,8 +43,6 @@ export function connectionGroupsCompatible(left, right) {
   if (left.difficulty === "easy" && right.difficulty === "easy" && left.topic === right.topic) return false;
   if (left.difficulty === "very_hard" && right.difficulty === "very_hard" && left.theme === right.theme) return false;
 
-  if (left.difficulty === "medium" && right.difficulty === "hard" && left.theme !== "compound_before") return false;
-  if (right.difficulty === "medium" && left.difficulty === "hard" && right.theme !== "compound_before") return false;
 
   return true;
 }
@@ -70,11 +68,12 @@ export function inspectConnectionsBoard(groups, tier) {
   });
 }
 
-export function generateConnectionsGame({tier, recentFamilyIds = [], usedSignatures = [], rng = Math.random, maxAttempts = 12000} = {}) {
+export function generateConnectionsGame({tier, recentFamilyIds = [], seenFamilyIds = [], usedSignatures = [], rng = Math.random, maxAttempts = 12000} = {}) {
   const recipe = CONNECTION_RECIPES[tier];
   if (!recipe) throw new Error(`Unknown Connections tier: ${tier}`);
 
   const recent = new Set(recentFamilyIds);
+  const seen = new Set(seenFamilyIds);
   const used = new Set(usedSignatures);
   const pools = Object.fromEntries([...GROUPS_BY_DIFFICULTY].map(([difficulty, groups]) => [difficulty, shuffleConnections(groups, rng)]));
 
@@ -83,8 +82,10 @@ export function generateConnectionsGame({tier, recentFamilyIds = [], usedSignatu
 
     for (const difficulty of recipe) {
       let candidates = pools[difficulty].filter(candidate => chosen.every(group => connectionGroupsCompatible(group, candidate)));
-      const freshCandidates = candidates.filter(candidate => !recent.has(candidate.familyId));
-      if (freshCandidates.length) candidates = freshCandidates;
+      const neverSeen = candidates.filter(candidate => !seen.has(candidate.familyId));
+      const recentlyUnseen = candidates.filter(candidate => !recent.has(candidate.familyId));
+      if (neverSeen.length) candidates = neverSeen;
+      else if (recentlyUnseen.length) candidates = recentlyUnseen;
       if (!candidates.length) break;
 
       const sampleSize = Math.min(candidates.length, 24);
