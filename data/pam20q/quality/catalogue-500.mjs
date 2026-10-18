@@ -10,10 +10,10 @@ a margay|+spotted +forest +climb +longTail
 an ocelot|+spotted +forest +climb
 a jaguarundi|+forest +longTail
 a kodkod|+spotted +forest +climb
-a flat-headed cat|+water +swim
+a flat-headed cat|+swim
 a leopard cat|+spotted +forest +climb
-a Pallas's cat|+fluffy +cold
-a Chinese mountain cat|+fluffy +cold
+a Pallas's cat|+fluffy
+a Chinese mountain cat|+fluffy
 a jungle cat|+brown +longTail
 a Geoffroy's cat|+spotted +nocturnal
 a pampas cat|+brown +forest
@@ -22,9 +22,9 @@ a bay cat|+brown +forest
 a golden cat|+brown +forest
 a striped hyena|+striped +nocturnal +scavenger
 an aardwolf|+striped +nocturnal +carnivore
-a bat-eared fox|+nocturnal +brown +insect
-a fennec fox|+nocturnal +brown +smallBread
-a corsac fox|+brown +cold
+a bat-eared fox|+nocturnal +brown
+a fennec fox|+nocturnal +brown
+a corsac fox|+brown
 a kit fox|+nocturnal +brown
 an island fox|+brown +forest
 a gray fox|+climb +forest +longTail
@@ -45,7 +45,7 @@ a saiga antelope|+brown +groups
 a sable antelope|+brown +groups
 a roan antelope|+brown +groups
 a waterbuck|+swim +brown
-a sitatunga|+water +swim +brown
+a sitatunga|+swim +brown
 a nyala|+striped +brown +forest
 a greater kudu|+striped +tall +brown
 a lesser kudu|+striped +brown
@@ -56,27 +56,27 @@ a topi|+brown +groups
 a hartebeest|+brown +groups
 a wildebeest|+brown +groups +heavy
 a klipspringer|+climb +jump +brown
-a steenbok|+brown +smallBread
+a steenbok|+brown
 an oribi|+brown +groups
 a bushbuck|+forest +striped +brown
 a sambar deer|+forest +brown +tall
-a muntjac|+forest +brown +smallBread
+a muntjac|+forest +brown
 a pudu|+forest +brown
 a water deer|-water +swim +brown
-a marsh deer|+water +swim +brown
-a barasingha|+water +brown
+a marsh deer|+swim +brown
+a barasingha|+brown
 a hog deer|+forest +brown
 a chital|+spotted +forest
 a nilgai|+tall +groups +brown
 a blackbuck|+brown +groups
 a pronghorn|+tall +groups +brown
 a musk deer|+forest +brown
-a peccary|+groups +forest +brown
-a babirusa|+forest +brown
-a red river hog|+red +forest +groups
-a warthog|+brown +groups
-a collared peccary|+forest +groups
-a pygmy hog|+forest +brown
+a peccary|+groups +forest +brown -herbivore
+a babirusa|+forest +brown -herbivore
+a red river hog|+red +forest +groups -herbivore
+a warthog|+brown +groups -herbivore
+a collared peccary|+forest +groups ~herbivore
+a pygmy hog|+forest +brown -herbivore
 `},
 {kind:'mammal',flags:'+herbivore +furry +paws',entries:`
 a rock hyrax|+climb +brown +groups
@@ -88,27 +88,27 @@ a paca|+rodent +spotted +forest
 a viscacha|+rodent +fluffy +jump
 a chinchilla|+rodent +fluffy +jump
 a prairie dog|+rodent +groups +brown
-a marmot|+rodent +groups +brown +cold
+a marmot|+rodent +groups +brown
 a jerboa|+rodent +jump +longTail
 a kangaroo rat|+rodent +jump +longTail
 a dormouse|+rodent +nocturnal +climb
 a harvest mouse|+rodent +climb +brown
 a flying squirrel|+rodent +forest +climb
-a sugar glider|+forest +nocturnal +climb
+a sugar glider|+forest +nocturnal +climb -herbivore
 a quokka|+brown +jump
 a tree kangaroo|+forest +climb +jump
 a wallaroo|+jump +brown
 a bettong|+jump +nocturnal
-a bilby|+nocturnal +brown
-a numbat|+striped +forest
-a bandicoot|+nocturnal +brown
-an echidna|+eggs +spine +brown
-a pangolin|+shell +brown
+a bilby|+nocturnal +brown -herbivore
+a numbat|+striped +forest -herbivore +carnivore
+a bandicoot|+nocturnal +brown -herbivore
+an echidna|+eggs +spine +brown -herbivore +carnivore
+a pangolin|+brown -shell -furry -herbivore +carnivore
 a three-toed sloth|+forest +climb
 a two-toed sloth|+forest +climb
-a tamandua|+forest +climb +longTail
-a silky anteater|+forest +climb +longTail
-a giant anteater|+longTail +brown
+a tamandua|+forest +climb +longTail -herbivore +carnivore
+a silky anteater|+forest +climb +longTail -herbivore +carnivore
+a giant anteater|+longTail +brown -herbivore +carnivore
 a naked mole-rat|+rodent +groups -furry
 a porcupine|+rodent +forest +brown
 a crested porcupine|+rodent +brown
@@ -120,7 +120,7 @@ a potoo|+nocturnal +forest +brown
 a frogmouth|+nocturnal +forest +brown
 a nightjar|+nocturnal +brown
 a hoopoe|+colorful +brown
-a bee-eater|+colorful +forest +insect
+a bee-eater|+colorful +forest +carnivore
 a kingfisher|+colorful +carnivore
 a roller bird|+colorful +forest
 a hornbill|+forest +colorful +tall
@@ -140,26 +140,26 @@ a flowerpecker|+colorful +smallBread
 a waxwing|+brown +groups
 a shrike|+carnivore +brown
 a drongo|+black +longTail
-a magpie-lark|+black +white +water
+a magpie-lark|+black +white
 a treecreeper|+forest +climb
 a nuthatch|+forest +climb
-a dipper bird|+water +swim
-a wagtail|+longTail +water
+a dipper bird|+swim
+a wagtail|+longTail
 a pipit|+brown +groups
 a bullfinch|+red +smallBread
 a crossbill|+forest +red
 a goldcrest|+forest +green +smallBread
 a firecrest|+forest +colorful +smallBread
 a linnet|+brown +smallBread
-a redpoll|+red +cold +smallBread
+a redpoll|+red +smallBread
 `},
 {kind:'bird',flags:'+eggs +wings',entries:`
 a razorbill|+black +white +saltWater +swim
 a guillemot|+black +white +saltWater +swim
 a murrelet|+black +white +saltWater +swim
 a kittiwake|+white +saltWater +swim
-a gannet|+white +saltWater +swim +fish
-a booby bird|+saltWater +swim +fish
+a gannet|+white +saltWater +swim +carnivore
+a booby bird|+saltWater +swim +carnivore
 a frigatebird|+black +saltWater +veryLarge
 a skua|+brown +saltWater +scavenger
 a jaeger bird|+saltWater +scavenger
@@ -167,10 +167,10 @@ a shearwater|+saltWater +swim
 a petrel|+saltWater +swim
 a storm petrel|+saltWater +black +swim
 a fulmar|+saltWater +swim +white
-a cormorant|+black +water +swim +fish
+a cormorant|+black +water +swim +carnivore
 a shag bird|+black +saltWater +swim
-an anhinga|+water +swim +fish
-a grebe|+water +swim +fish
+an anhinga|+water +swim +carnivore
+a grebe|+water +swim +carnivore
 a coot|+water +swim +black
 a moorhen|+water +swim +black
 a gallinule|+water +swim +colorful
@@ -271,11 +271,11 @@ a flounder|+saltWater +flat
 a frilled lizard|+brown +forest +feet
 a horned lizard|+brown +feet
 a glass lizard|+brown -feet
-a basilisk lizard|+green +water +swim +feet
+a basilisk lizard|+green +swim +feet
 a chuckwalla|+brown +feet
 a thorny devil|+brown +feet
 a blue-tongued skink|+brown +feet
-a crocodile skink|+brown +feet +water
+a crocodile skink|+brown +feet
 a fire skink|+red +feet
 a sandfish skink|+brown +feet
 a bearded dragon|+brown +feet
@@ -306,7 +306,7 @@ a rat snake|+climb -feet
 a ribbon snake|+striped +water -feet
 `},
 {kind:'insect',flags:'+eggs +insect',entries:`
-an atlas moth|+wings +colorful +veryLarge
+an atlas moth|+wings +colorful
 a luna moth|+wings +green +colorful
 a death's-head hawkmoth|+wings +brown
 a hummingbird hawkmoth|+wings +brown
@@ -354,7 +354,7 @@ a camel spider|+brown +legs
 a jumping spider|+jump +legs +carnivore
 a trapdoor spider|+nocturnal +legs +carnivore
 a wolf spider|+legs +carnivore
-a fishing spider|+water +swim +legs
+a fishing spider|+swim +legs
 a garden orb-weaver| +legs
 a golden silk orb-weaver|+colorful +legs
 a crab spider|+legs +colorful
@@ -1238,7 +1238,7 @@ a beach umbrella|+shade +tall +open
 a sun shelter|+shade +open +veryLarge
 a portable hammock|+soft +stretch +hold
 a hammock strap|+stretch +heavy
-a camping pillow|+soft +smallBread
+a camping pillow|+soft
 an inflatable sleeping pad|+soft +blowUp +flat
 a foam sleeping pad|+soft +flat
 a camp stool|+legs +hold
@@ -1304,7 +1304,7 @@ a quilted bedspread|+flat +soft +household
 a duvet insert|+fluffy +soft +household
 a bolster pillow|+round +soft
 a body pillow|+soft +bigMicrowave
-a lumbar pillow|+soft +smallBread
+a lumbar pillow|+soft
 a pregnancy pillow|+soft +round
 a travel neck pillow|+soft +round
 a memory foam topper|+soft +flat +bigMicrowave
