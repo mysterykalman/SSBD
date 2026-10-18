@@ -1,0 +1,85 @@
+name: Pam 500 from 2000+ pool
+on:
+  push:
+    branches: [feature/pam-500-from-2000]
+    paths:
+      - .github/workflows/pam-500-from-2000.yml
+      - scripts/generate-pam-500.mjs
+      - scripts/pam-2000-corpus.mjs
+      - scripts/build-pam-2000-pool.mjs
+      - scripts/pam-2000-lexical-classifier.mjs
+      - data/pam20q/candidates/pam-2000-preflight-pool.json
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: pam-500-from-2000-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      PAM_ALLOW_UNREVIEWED_500: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Verify 2000 plus unique screened names and source categories
+        run: |
+          node - <<'NODE'
+          const d=require('./data/pam20q/candidates/pam-2000-preflight-pool.json');
+          if(d.candidates.length<2000||d.summary.eligibleUniqueCandidates!==d.candidates.length)throw Error('Insufficient candidate corpus');
+          if(d.candidates.some(p=>p.review_status!=='candidate_unreviewed'))throw Error('Unreviewed candidates must not be approved');
+          console.log('PAM_2000_ELIGIBLE='+d.candidates.length);
+          console.log('PAM_2000_CATEGORY_MIX='+JSON.stringify(d.summary.byCategory));
+          NODE
+      - name: Generate distinct candidate profiles and select exactly 500
+        run: node scripts/generate-pam-500.mjs
+      - name: Reject contradictions against existing 1775
+        run: node scripts/audit-pam-500-separability.mjs --strict-existing
+      - name: Check exact name and answer matrix preservation
+        run: node --test test/pam-500-expansion-integrity.test.mjs test/pam-500-release-gate.test.mjs
+      - name: Check known factual mistakes remain corrected
+        run: node --test test/pam-500-expansion-facts.test.mjs test/pam-question-punctuation.test.mjs
+      - name: Gameplay quality and original 1775 full regression simulations
+        id: oracle
+        continue-on-error: true
+        run: node --test --test-concurrency=1 test/pam-500-expansion-gameplay.test.mjs
+      - name: Compile production-style 2275 target bundle for validation only
+        run: npm run build
+      - name: Export strictly unreviewed selected 500
+        if: always()
+        run: |
+          if test -f data/pam20q/quality/quality-500.json; then
+            cp data/pam20q/quality/quality-500.json data/pam20q/candidates/pam-500-from-2000-candidate.json
+          fi
+      - name: Upload 500 profiles and reviewed question queues
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-500-from-2000-review
+          path: |
+            data/pam20q/candidates/pam-500-from-2000-candidate.json
+            .dev-data/pam-500/separability-report.json
+            .dev-data/pam-500/review-queue.json
+            .dev-data/pam-500/review-queue.csv
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Preserve unreviewed shortlist on isolated branch
+        if: always()
+        run: |
+          if test -f data/pam20q/candidates/pam-500-from-2000-candidate.json; then
+            git config user.name "SSBD Pam Candidate CI"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/pam20q/candidates/pam-500-from-2000-candidate.json
+            if ! git diff --cached --quiet; then
+              git commit -m "data: save 500 unreviewed Pam candidates selected from 2000-plus preflight pool"
+              git push origin HEAD:feature/pam-500-from-2000
+            fi
+          fi
