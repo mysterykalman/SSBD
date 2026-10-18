@@ -29,3 +29,21 @@ test('only distinct plausible QIDs are fetched; even they stay unapproved',async
  assert.ok(called.includes('Q42'));
  assert.ok(!called.includes('Q345'));
 });
+test('linked Wikidata QID labels are human-readable but never automatically approved',async()=>{
+ const source={results:[{id:'PAM-0001',name:'A',category:'People',status:'single_plausible_not_verified',suggested_candidates:[{qid:'Q42'}]}]};
+ const calls=[];
+ const response=await retrieveFactCandidates(source,{includeValueLabels:true,fetchImpl:async url=>{
+  const u=new URL(url);const ids=u.searchParams.get('ids');calls.push(ids);
+  if(ids==='Q42')return{ok:true,status:200,json:async()=>({entities:{Q42:example}})};
+  if(ids==='Q49757')return{ok:true,status:200,json:async()=>({entities:{Q49757:{id:'Q49757',labels:{en:{value:'poet'}},descriptions:{en:{value:'person who writes poems'}}}}})};
+  throw Error('Unexpected Wikidata QIDs '+ids);
+ }});
+ assert.equal(response.label_metrics.referenced_qids,1);
+ assert.equal(response.label_metrics.resolved_labels,1);
+ assert.equal(calls.length,2);
+ const occupation=response.subjects[0].claims.find(x=>x.field==='occupation');
+ assert.equal(occupation.value_label,'poet');
+ assert.equal(occupation.value_label_status,'wikidata_label_unreviewed');
+ assert.equal(occupation.status,'source_claim_unreviewed');
+ assert.equal(response.subjects[0].reviewed,false);
+});

@@ -11,6 +11,8 @@ on:
       - 'test/pam-thematic-lab.test.mjs'
       - 'scripts/pam-reviewed-fact-compiler.mjs'
       - 'test/pam-reviewed-fact-compiler.test.mjs'
+      - 'scripts/pam-wikidata-facts.mjs'
+      - 'test/pam-wikidata-facts.test.mjs'
       - '.github/workflows/pam-thematic-audit.yml'
   pull_request:
     paths:
@@ -21,6 +23,8 @@ on:
       - 'test/pam-thematic-lab.test.mjs'
       - 'scripts/pam-reviewed-fact-compiler.mjs'
       - 'test/pam-reviewed-fact-compiler.test.mjs'
+      - 'scripts/pam-wikidata-facts.mjs'
+      - 'test/pam-wikidata-facts.test.mjs'
 
 permissions:
   contents: read
@@ -37,6 +41,8 @@ jobs:
         run: node --test test/pam-thematic-lab.test.mjs
       - name: Verify reviewed-evidence matrix compiler and no invented negative answers
         run: node --test test/pam-reviewed-fact-compiler.test.mjs
+      - name: Verify provenance-linked Wikidata factual label parsing
+        run: node --test test/pam-wikidata-facts.test.mjs
       - name: Measure the unapproved question/target collision rate
         run: node scripts/run-semantic-audit.mjs
       - name: Protect frozen original 1,775-answer baseline and compare names

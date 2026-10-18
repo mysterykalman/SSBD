@@ -33,7 +33,36 @@ export function extractClaimFacts(entity){
  }
  return out;
 }
-export async function retrieveFactCandidates(doc,{fetchImpl=fetch}={}){
+/** Resolve related QIDs to human-readable names; these are reference labels, not proof. */
+export async function labelFactObjects(subjects,{fetchImpl=fetch}={}){
+ const ids=[...new Set(subjects.flatMap(subject=>subject.claims.filter(claim=>claim.kind==='item').map(claim=>claim.value_id)))];
+ const labels={};
+ for(let i=0;i<ids.length;i+=45){
+  const selected=ids.slice(i,i+45);
+  try{
+   const response=await wikidataFetch({action:'wbgetentities',ids:selected.join('|'),props:'labels|descriptions',languages:'en',format:'json',formatversion:2},{fetchImpl});
+   for(const [qid,entity] of Object.entries(response.entities||{})){
+    if(entity.missing||!entity.labels?.en?.value)continue;
+    labels[qid]={name:entity.labels.en.value,description:entity.descriptions?.en?.value||null};
+   }
+  }catch(error){
+   // A failed label API is a reference gap, not a negative fact.
+   process.stderr.write(`Could not label Wikidata batch ${i/45+1}: ${String(error).slice(0,160)}\n`);
+  }
+ }
+ for(const subject of subjects){
+  for(const claim of subject.claims){
+   if(claim.kind==='item'){
+    const match=labels[claim.value_id];
+    claim.value_label=match?.name||null;
+    claim.value_description=match?.description||null;
+    claim.value_label_status=match?'wikidata_label_unreviewed':'label_missing';
+   }
+  }
+ }
+ return {subjects,linkedEntityCount:ids.length,labeledEntityCount:Object.keys(labels).length};
+}
+export async function retrieveFactCandidates(doc,{fetchImpl=fetch,includeValueLabels=false}={}){
  const single=doc.results.filter(x=>x.status==='single_plausible_not_verified'&&x.suggested_candidates?.[0]?.qid);
  const ids=[...new Set(single.map(x=>x.suggested_candidates[0].qid))];
  const entities={};
@@ -49,14 +78,16 @@ export async function retrieveFactCandidates(doc,{fetchImpl=fetch}={}){
    entity_label:subject?.labels?.en?.value??null,entity_description:subject?.descriptions?.en?.value??null,
    reviewed:false,claims:subject?extractClaimFacts(subject):[]};
  });
- return {review_status:'research_only_unverified',subject_count:suggestions.length,subjects:suggestions};
+ let labels={linkedEntityCount:0,labeledEntityCount:0};
+ if(includeValueLabels)labels=await labelFactObjects(suggestions,{fetchImpl});
+ return {review_status:'research_only_unverified',subject_count:suggestions.length,label_metrics:{referenced_qids:labels.linkedEntityCount,resolved_labels:labels.labeledEntityCount},subjects:suggestions};
 }
 async function main(){
  const doc=JSON.parse(await readFile(join(root,'wikidata-suggestion-sample.json'),'utf8'));
- const facts=await retrieveFactCandidates(doc);
+ const facts=await retrieveFactCandidates(doc,{includeValueLabels:true});
  facts.source='https://www.wikidata.org/';
  facts.generated_at=new Date().toISOString();
  await writeFile(join(root,'wikidata-facts-suggested.json'),JSON.stringify(facts,null,2)+'\n');
- console.log(JSON.stringify({subjects:facts.subject_count,claims:facts.subjects.reduce((n,x)=>n+x.claims.length,0),review_status:facts.review_status}));
+ console.log(JSON.stringify({subjects:facts.subject_count,claims:facts.subjects.reduce((n,x)=>n+x.claims.length,0),labels:facts.label_metrics,review_status:facts.review_status}));
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1])await main();
