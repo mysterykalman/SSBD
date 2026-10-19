@@ -1,0 +1,473 @@
+{
+  "schemaVersion": 1,
+  "group": "Standalone movie replacements",
+  "editorialSelection": {
+    "status": "APPROVED_BY_OWNER",
+    "approvedOn": "2026-10-18",
+    "scope": "These exact 15 film titles are acceptable candidates for Pam",
+    "notApproved": [
+      "identity QIDs",
+      "individual factual assertions",
+      "negative answers",
+      "gameplay release"
+    ]
+  },
+  "policy": {
+    "oneFilmPerFranchise": true,
+    "doNotAlterOriginal1775": true,
+    "deferredIdentityCandidates": 298,
+    "existingPlausibleCandidateScope": 1352
+  },
+  "entries": [
+    {
+      "title": "The Sting",
+      "releaseYear": 1973,
+      "theme": "classic-crime",
+      "clueLeads": [
+        "con artists",
+        "Paul Newman",
+        "Robert Redford"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.afi.com/robert-osborne-the-sting/",
+      "referenceStatus": "SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED",
+      "questionCandidates": [
+        {
+          "text": "Is con artists central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Paul Newman central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Robert Redford central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "Amadeus",
+      "releaseYear": 1984,
+      "theme": "historical-music",
+      "clueLeads": [
+        "Mozart",
+        "Salieri",
+        "classical music"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.afi.com/afis-100-years-100-movies/",
+      "referenceStatus": "SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED",
+      "questionCandidates": [
+        {
+          "text": "Is Mozart central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Salieri central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is classical music central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "Stand by Me",
+      "releaseYear": 1986,
+      "theme": "coming-of-age",
+      "clueLeads": [
+        "four boys",
+        "Stephen King adaptation",
+        "Rob Reiner"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.afi.com/news/stand-by-me-afi-movie-club/",
+      "referenceStatus": "SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED",
+      "questionCandidates": [
+        {
+          "text": "Is four boys central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Stephen King adaptation central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Rob Reiner central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "Good Will Hunting",
+      "releaseYear": 1997,
+      "theme": "character-drama",
+      "clueLeads": [
+        "mathematics prodigy",
+        "MIT janitor",
+        "therapy"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://catalog.afi.com/",
+      "referenceStatus": "SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED",
+      "questionCandidates": [
+        {
+          "text": "Is mathematics prodigy central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is MIT janitor central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is therapy central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "The Big Lebowski",
+      "releaseYear": 1998,
+      "theme": "comedy",
+      "clueLeads": [
+        "bowling",
+        "mistaken identity",
+        "Jeff Lebowski"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": null,
+      "referenceStatus": "SOURCE_PENDING",
+      "questionCandidates": [
+        {
+          "text": "Is bowling central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is mistaken identity central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Jeff Lebowski central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "The Iron Giant",
+      "releaseYear": 1999,
+      "theme": "animated-scifi",
+      "clueLeads": [
+        "giant robot",
+        "boy friendship",
+        "Cold War"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": null,
+      "referenceStatus": "SOURCE_PENDING",
+      "questionCandidates": [
+        {
+          "text": "Is giant robot central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is boy friendship central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Cold War central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "School of Rock",
+      "releaseYear": 2003,
+      "theme": "music-comedy",
+      "clueLeads": [
+        "substitute teacher",
+        "student rock band",
+        "Jack Black"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": null,
+      "referenceStatus": "SOURCE_PENDING",
+      "questionCandidates": [
+        {
+          "text": "Is substitute teacher central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is student rock band central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Jack Black central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "The King's Speech",
+      "releaseYear": 2010,
+      "theme": "historical-drama",
+      "clueLeads": [
+        "King George VI",
+        "speech therapy",
+        "stammer"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": null,
+      "referenceStatus": "SOURCE_PENDING",
+      "questionCandidates": [
+        {
+          "text": "Is King George VI central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is speech therapy central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is stammer central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "The Prestige",
+      "releaseYear": 2006,
+      "theme": "mystery",
+      "clueLeads": [
+        "rival stage magicians",
+        "Victorian era",
+        "Christopher Nolan"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": null,
+      "referenceStatus": "SOURCE_PENDING",
+      "questionCandidates": [
+        {
+          "text": "Is rival stage magicians central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Victorian era central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Christopher Nolan central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "Little Miss Sunshine",
+      "releaseYear": 2006,
+      "theme": "family-comedy",
+      "clueLeads": [
+        "family road trip",
+        "child beauty pageant",
+        "Volkswagen van"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": null,
+      "referenceStatus": "SOURCE_PENDING",
+      "questionCandidates": [
+        {
+          "text": "Is family road trip central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is child beauty pageant central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Volkswagen van central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "Moana",
+      "releaseYear": 2016,
+      "theme": "animated-fantasy",
+      "clueLeads": [
+        "ocean voyage",
+        "Maui",
+        "wayfinding"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://movies.disney.com/Moana",
+      "referenceStatus": "SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED",
+      "questionCandidates": [
+        {
+          "text": "Is ocean voyage central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Maui central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is wayfinding central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "Arrival",
+      "releaseYear": 2016,
+      "theme": "science-fiction",
+      "clueLeads": [
+        "linguist Louise Banks",
+        "extraterrestrial communication",
+        "Denis Villeneuve"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.paramount.com/movies/arrival",
+      "referenceStatus": "SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED",
+      "questionCandidates": [
+        {
+          "text": "Is linguist Louise Banks central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is extraterrestrial communication central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Denis Villeneuve central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "La La Land",
+      "releaseYear": 2016,
+      "theme": "musical-romance",
+      "clueLeads": [
+        "Los Angeles",
+        "jazz pianist",
+        "aspiring actress"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": null,
+      "referenceStatus": "SOURCE_PENDING",
+      "questionCandidates": [
+        {
+          "text": "Is Los Angeles central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is jazz pianist central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is aspiring actress central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "Coco",
+      "releaseYear": 2017,
+      "theme": "animated-fantasy",
+      "clueLeads": [
+        "Miguel",
+        "Land of the Dead",
+        "family music"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.pixar.com/coco",
+      "referenceStatus": "SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED",
+      "questionCandidates": [
+        {
+          "text": "Is Miguel central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Land of the Dead central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is family music central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    },
+    {
+      "title": "The Shape of Water",
+      "releaseYear": 2017,
+      "theme": "fantasy-romance",
+      "clueLeads": [
+        "Cold War laboratory",
+        "Elisa",
+        "aquatic creature"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PENDING",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.20thcenturystudios.com/movies/the-shape-of-water",
+      "referenceStatus": "SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED",
+      "questionCandidates": [
+        {
+          "text": "Is Cold War laboratory central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is Elisa central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        },
+        {
+          "text": "Is aquatic creature central to the movie?",
+          "status": "DRAFT_NOT_APPROVED"
+        }
+      ]
+    }
+  ]
+}
