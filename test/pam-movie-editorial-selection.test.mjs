@@ -10,7 +10,7 @@ test('owner approved precisely 15 new recognisable movie candidates, not unsourc
  assert.equal(catalog.entries.length,15);
  assert.equal(new Set(catalog.entries.map(x=>x.title.toLowerCase())).size,15);
  assert(catalog.entries.every(e=>e.productionEnabled===false&&
-  e.factualReviewStatus==='PENDING'&&e.gameplayReviewStatus==='PENDING'));
+  e.factualReviewStatus==='PARTIAL_SOURCE_CHECK_COMPLETED'&&e.gameplayReviewStatus==='PENDING'));
  assert(catalog.entries.every(e=>Number.isInteger(e.releaseYear)&&e.releaseYear>=1970&&e.releaseYear<=2026));
 });
 test('one representative per known movie franchise and no original target exact-title collisions',async()=>{
@@ -34,7 +34,9 @@ test('question drafts and references are distinguishable from editorial approval
   }
   if(entry.referenceSource){
    assert.match(entry.referenceSource,/^https:\/\//);
-   assert.equal(entry.referenceStatus,'SOURCE_IDENTIFIED_NOT_FULLY_FACT_CHECKED');
+   assert.equal(entry.referenceStatus,'SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES');
+   assert.equal(entry.sourceBackedPositiveClues.length,3);
+   assert(entry.sourceBackedPositiveClues.every(f=>f.source===entry.referenceSource));
   }else assert.equal(entry.referenceStatus,'SOURCE_PENDING');
  }
  assert.equal(catalog.policy.deferredIdentityCandidates,298);
