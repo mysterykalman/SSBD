@@ -7,6 +7,8 @@ on:
       - 'scripts/pam-fast-cohort-snapshot.mjs'
       - 'scripts/pam-movie-franchise-review.mjs'
       - 'test/pam-movie-franchise-review.test.mjs'
+      - 'test/pam-movie-editorial-selection.test.mjs'
+      - 'data/pam20q/expansion/standalone-movie-editorial-selection.json'
       - 'test/pam-3127-engine-stress.test.mjs'
       - 'test/pam-reviewed-expansion.test.mjs'
       - 'scripts/pam-merge-reviewed-expansion.mjs'
@@ -27,7 +29,7 @@ jobs:
           mkdir -p .dev-data/pam-fast
           gh run download 39163517479 --repo mysterykalman/SSBD --pattern pam-1650-complete-unreviewed-identity-queue --dir .dev-data/pam-fast
       - name: Verify movie-franchise editorial selection contracts
-        run: node --test test/pam-movie-franchise-review.test.mjs test/pam-cohort-validation.test.mjs test/pam-reviewed-expansion.test.mjs test/pam-3127-engine-stress.test.mjs
+        run: node --test test/pam-movie-franchise-review.test.mjs test/pam-movie-editorial-selection.test.mjs test/pam-cohort-validation.test.mjs test/pam-reviewed-expansion.test.mjs test/pam-3127-engine-stress.test.mjs
       - name: Report full roster and source-pinned overlap with movie decisions
         run: |
           file=$(find .dev-data/pam-fast -name wikidata-identity-review.json -print -quit)
