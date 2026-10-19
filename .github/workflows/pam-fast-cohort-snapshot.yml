@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/pam-fast-cohort-snapshot.yml'
       - 'scripts/pam-fast-cohort-snapshot.mjs'
+      - 'scripts/export-film-review.mjs'
       - 'scripts/pam-movie-franchise-review.mjs'
       - 'test/pam-movie-franchise-review.test.mjs'
       - 'test/pam-movie-editorial-selection.test.mjs'
@@ -34,6 +35,8 @@ jobs:
         run: |
           file=$(find .dev-data/pam-fast -name wikidata-identity-review.json -print -quit)
           node scripts/pam-fast-cohort-snapshot.mjs "$file" .dev-data/pam-fast/complete-frozen-snapshot.json
+      - name: Print numbered source movie roster
+        run: node scripts/export-film-review.mjs
       - name: Archive complete candidate review checkpoint
         uses: actions/upload-artifact@v4
         with:
