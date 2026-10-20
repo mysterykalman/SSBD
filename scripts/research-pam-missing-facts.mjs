@@ -35,7 +35,7 @@ async function fetchPage(title){
 }
 for(let t=0;t<limit;t++){
  // Never treat pre-existing legacy negatives as verified, or overwrite them.
- const unknowns=patterns.filter(p=>model.knownMask[p.traitIndex??traitIndex[p.trait]]?.length===-1 || model.knownMask[traitIndex[p.trait]*N+t]===0);
+ const unknowns=patterns.filter(p=>model.knownMask[traitIndex[p.trait]*N+t]===0);
  if(!unknowns.length)continue;
  const target=model.targets[t],subject=clean(target);
  try {
