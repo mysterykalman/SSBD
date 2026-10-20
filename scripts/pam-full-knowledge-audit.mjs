@@ -30,7 +30,7 @@ for(let t=0;t<N;t++){
 const unique=new Map(proposed.map(p=>[p.target+'|'+p.question,p]));
 const report={
  schemaVersion:1,model:{targets:N,questions:Q,knownCells:coverage.reduce((s,r)=>s+r.known,0),totalCells:N*Q},
- coverage:{fullyKnown:coverage.filter(r=>!r.unknown).length,targetsWithUnknowns:coverage.filter(r=>r.unknown).length},
+ coverage:{fullyKnown:coverage.filter(r=>!r.unknown).length,targetsWithUnknowns:coverage.filter(r=>r.unknown).length,legacyWithoutIndependentProvenance:m.baseTargetCount+m.extensionCount,explicitlyMaskedTargets:m.qualityCount},
  proposals:[...unique.values()],contradictions:conflicts,
  lowCoverage:coverage.filter(r=>r.unknown>0).sort((a,b)=>b.unknown-a.unknown||a.target.localeCompare(b.target)),
  questionGaps:unknownsByQuestion.map((unknown,q)=>({index:q,question:questions[q],unknown})).filter(r=>r.unknown).sort((a,b)=>b.unknown-a.unknown)
