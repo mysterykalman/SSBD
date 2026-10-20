@@ -16,16 +16,16 @@ export async function applyVerifiedPamFacts(model){
   const t=lookup.get(entry.target.toLowerCase());
   if(t===undefined)throw Error('Unknown verified Pam target: '+entry.target);
   if(!entry.source?.startsWith('https://'))throw Error('Missing HTTPS evidence for '+entry.target);
-  for(const trait of entry.yes){
+  for(const [trait,value] of [...(entry.yes||[]).map(x=>[x,3]),...(entry.no||[]).map(x=>[x,2])]){
    const q=pamTraitIndex[trait];
    if(q===undefined)throw Error('Unknown verified trait '+trait);
    const cell=q*n+t;
    if(knownMask[cell]){
-    if(weights[cell]===3)alreadyKnown.push({target:entry.target,trait,source:entry.source});
+    if(weights[cell]===value)alreadyKnown.push({target:entry.target,trait,source:entry.source});
     else conflicts.push({target:entry.target,trait,existing:weights[cell],source:entry.source});
     continue;
    }
-   knownMask[cell]=1;weights[cell]=3;
+   knownMask[cell]=1;weights[cell]=value;
    applied.push({target:entry.target,trait,source:entry.source});
   }
  }
