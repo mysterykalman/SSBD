@@ -1,0 +1,330 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-10-20",
+  "source": "data/pam20q/reference/classic/weights.u2states.bin",
+  "states": {
+    "0": "probably no",
+    "1": "probably yes",
+    "2": "no",
+    "3": "yes"
+  },
+  "questionCount": 156,
+  "reviewType": "individual full-question review, model-assisted, subject to gameplay review",
+  "rows": [
+    {
+      "name": "friendship",
+      "targetIndex": 1132,
+      "original": "222322032223320222220222332223323213222323222303323232222202303212232222022221202203322222221233032222222302201232230022202022312302132023323021200200303232",
+      "states": "222322032222220222210222232222222223222223222202223222222202202222232222022222202203222222221222022222222202202232220022232022222202232022222022200200202222",
+      "changedCells": 36,
+      "reviewNotes": "An intangible relationship, not a physical animal or object. Physical-trait questions are answered literally, not metaphorically; joy/love/usefulness are intentionally affirmative. Its figurative fragility is softened."
+    },
+    {
+      "name": "mail (snail mail)",
+      "targetIndex": 262,
+      "original": "222333333030032223302220202020222033230023303230113022230000100010003300020020002303122100301013001100300000121000010001020110001200100001001103310112130010",
+      "states": "222333333030012223302220202120222031230023303130133022230000200020003300020020002303222100201023002200300000121000020002020120002200200002002003220232220020",
+      "changedCells": 27,
+      "reviewNotes": "Postal letters and envelopes, not an actual snail or other organism. Variations in stationery size, colour and decoration use softened probabilities. Combustible refers to ordinary paper postal letters."
+    }
+  ],
+  "scopedCorrections": [
+    {
+      "target": "a nut",
+      "targetIndex": 70,
+      "questionIndex": 155,
+      "question": "Does it have hooves",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A tree nut has no hooves."
+    },
+    {
+      "target": "magic",
+      "targetIndex": 516,
+      "questionIndex": 91,
+      "question": "Does it have leaves",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "Magic is an abstract concept, not foliage."
+    },
+    {
+      "target": "magic",
+      "targetIndex": 516,
+      "questionIndex": 120,
+      "question": "Does it live in salt-water",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "Magic does not live in the sea."
+    },
+    {
+      "target": "magic",
+      "targetIndex": 516,
+      "questionIndex": 128,
+      "question": "Is it a herbivore",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "Magic does not feed on plants."
+    },
+    {
+      "target": "magic",
+      "targetIndex": 516,
+      "questionIndex": 155,
+      "question": "Does it have hooves",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "Magic has no hooves."
+    },
+    {
+      "target": "a whistle",
+      "targetIndex": 840,
+      "questionIndex": 155,
+      "question": "Does it have hooves",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A whistle has no hooves."
+    },
+    {
+      "target": "a barbeque",
+      "targetIndex": 1010,
+      "questionIndex": 130,
+      "question": "Does it have roots",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A barbecue grill has no botanical roots."
+    },
+    {
+      "target": "a barbeque",
+      "targetIndex": 1010,
+      "questionIndex": 149,
+      "question": "Does it have feathers",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A barbecue grill has no feathers."
+    },
+    {
+      "target": "a barbeque",
+      "targetIndex": 1010,
+      "questionIndex": 155,
+      "question": "Does it have hooves",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A barbecue grill has no hooves."
+    },
+    {
+      "target": "a mouse trap",
+      "targetIndex": 521,
+      "questionIndex": 131,
+      "question": "Does it have paws",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A mouse trap has no paws."
+    },
+    {
+      "target": "an antenna (radio)",
+      "targetIndex": 870,
+      "questionIndex": 91,
+      "question": "Does it have leaves",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A radio antenna has no leaves."
+    },
+    {
+      "target": "an antenna (radio)",
+      "targetIndex": 870,
+      "questionIndex": 120,
+      "question": "Does it live in salt-water",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A radio antenna does not inhabit salt water."
+    },
+    {
+      "target": "an antenna (radio)",
+      "targetIndex": 870,
+      "questionIndex": 131,
+      "question": "Does it have paws",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A radio antenna has no paws."
+    },
+    {
+      "target": "dynamite",
+      "targetIndex": 1020,
+      "questionIndex": 120,
+      "question": "Does it live in salt-water",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "Dynamite does not inhabit salt water."
+    },
+    {
+      "target": "dynamite",
+      "targetIndex": 1020,
+      "questionIndex": 131,
+      "question": "Does it have paws",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "Dynamite has no paws."
+    },
+    {
+      "target": "a billboard",
+      "targetIndex": 1089,
+      "questionIndex": 99,
+      "question": "Does it lay eggs",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A billboard does not lay eggs."
+    },
+    {
+      "target": "a billboard",
+      "targetIndex": 1089,
+      "questionIndex": 124,
+      "question": "Is it a rodent",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A billboard is not a rodent."
+    },
+    {
+      "target": "a billboard",
+      "targetIndex": 1089,
+      "questionIndex": 131,
+      "question": "Does it have paws",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A billboard has no paws."
+    },
+    {
+      "target": "braces (for teeth)",
+      "targetIndex": 680,
+      "questionIndex": 149,
+      "question": "Does it have feathers",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "Dental braces do not have feathers."
+    },
+    {
+      "target": "a mini van",
+      "targetIndex": 237,
+      "questionIndex": 132,
+      "question": "Is it living",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A minivan is not a living organism."
+    },
+    {
+      "target": "a mini van",
+      "targetIndex": 237,
+      "questionIndex": 144,
+      "question": "Is it a farm animal",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A minivan is not a farm animal."
+    },
+    {
+      "target": "a mini van",
+      "targetIndex": 237,
+      "questionIndex": 151,
+      "question": "Is it a root vegetable",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A minivan is not a root vegetable."
+    },
+    {
+      "target": "an abacus",
+      "targetIndex": 729,
+      "questionIndex": 100,
+      "question": "Does it live in water",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "An abacus is an object and does not live in water."
+    },
+    {
+      "target": "an abacus",
+      "targetIndex": 729,
+      "questionIndex": 120,
+      "question": "Does it live in salt-water",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "An abacus does not live in salt water."
+    },
+    {
+      "target": "a cruise ship",
+      "targetIndex": 651,
+      "questionIndex": 100,
+      "question": "Does it live in water",
+      "oldState": 3,
+      "newState": 2,
+      "rationale": "A cruise ship travels on water; it does not live there."
+    },
+    {
+      "target": "golf cart",
+      "targetIndex": 287,
+      "questionIndex": 124,
+      "question": "Is it a rodent",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A golf cart is not a rodent."
+    },
+    {
+      "target": "golf cart",
+      "targetIndex": 287,
+      "questionIndex": 142,
+      "question": "Is it a scavenger",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A golf cart is not a scavenger."
+    },
+    {
+      "target": "an anvil",
+      "targetIndex": 525,
+      "questionIndex": 144,
+      "question": "Is it a farm animal",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "An anvil is not a farm animal."
+    },
+    {
+      "target": "a fishing lure",
+      "targetIndex": 891,
+      "questionIndex": 99,
+      "question": "Does it lay eggs",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A fishing lure does not lay eggs."
+    },
+    {
+      "target": "a hot pepper",
+      "targetIndex": 62,
+      "questionIndex": 142,
+      "question": "Is it a scavenger",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A pepper is not a scavenging animal."
+    },
+    {
+      "target": "a camera lens",
+      "targetIndex": 724,
+      "questionIndex": 120,
+      "question": "Does it live in salt-water",
+      "oldState": 1,
+      "newState": 2,
+      "rationale": "A camera lens does not live in salt water."
+    },
+    {
+      "target": "a seashell",
+      "targetIndex": 980,
+      "questionIndex": 120,
+      "question": "Does it live in salt-water",
+      "oldState": 3,
+      "newState": 2,
+      "rationale": "An empty seashell is not alive and therefore does not live in salt water."
+    },
+    {
+      "target": "a red panda (endangered)",
+      "targetIndex": 84,
+      "questionIndex": 147,
+      "question": "Is it an insect",
+      "oldState": 0,
+      "newState": 2,
+      "rationale": "A red panda is a mammal, not an insect."
+    }
+  ]
+}
