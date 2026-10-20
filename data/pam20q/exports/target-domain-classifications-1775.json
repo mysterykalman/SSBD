@@ -259,9 +259,9 @@
     {
       "index": 28,
       "target": "a car tire",
-      "domain": "vehicle.transport",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "vehicle.part",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -286,9 +286,9 @@
     {
       "index": 31,
       "target": "a bar of soap",
-      "domain": "food.prepared",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.consumable",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -349,9 +349,9 @@
     {
       "index": 38,
       "target": "a web site",
-      "domain": "technology.electronics",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "abstract",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -412,9 +412,9 @@
     {
       "index": 45,
       "target": "ice skates",
-      "domain": "nature.material",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "sports.toys.games",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -448,9 +448,9 @@
     {
       "index": 49,
       "target": "lip balm",
-      "domain": "clothing.accessory",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "object.accessory",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -466,9 +466,9 @@
     {
       "index": 51,
       "target": "a tea cup",
-      "domain": "food.drink",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.tableware",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -484,9 +484,9 @@
     {
       "index": 53,
       "target": "a tea pot",
-      "domain": "food.drink",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.tableware",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -511,9 +511,9 @@
     {
       "index": 56,
       "target": "lip gloss",
-      "domain": "clothing.accessory",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "object.accessory",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -666,9 +666,9 @@
     {
       "index": 73,
       "target": "a lug nut",
-      "domain": "food.produce",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "object.other",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -760,9 +760,9 @@
     {
       "index": 83,
       "target": "DNA",
-      "domain": "abstract",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "nature.material",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -895,9 +895,9 @@
     {
       "index": 98,
       "target": "a tire",
-      "domain": "vehicle.transport",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "vehicle.part",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1039,13 +1039,13 @@
     {
       "index": 114,
       "target": "a snow man",
-      "domain": "nature.material",
-      "source": "lexical-proposal",
-      "confidence": "low",
+      "domain": "object.other",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [
         "human.person"
       ],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 115,
@@ -1167,9 +1167,9 @@
     {
       "index": 128,
       "target": "nail clippers",
-      "domain": "clothing.accessory",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1239,9 +1239,9 @@
     {
       "index": 136,
       "target": "a vase",
-      "domain": "places.structures",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.container",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1275,22 +1275,22 @@
     {
       "index": 140,
       "target": "a hair brush",
-      "domain": "human.body",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 141,
       "target": "corn (the plant)",
-      "domain": "food.produce",
-      "source": "lexical-proposal",
-      "confidence": "low",
+      "domain": "plant",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [
         "plant"
       ],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 142,
@@ -1322,9 +1322,9 @@
     {
       "index": 145,
       "target": "a beer bottle",
-      "domain": "food.drink",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.container",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1394,9 +1394,9 @@
     {
       "index": 153,
       "target": "a desk lamp",
-      "domain": "household.furniture",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.appliance",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1412,9 +1412,9 @@
     {
       "index": 155,
       "target": "a stop sign",
-      "domain": "vehicle.transport",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "places.structures",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1430,9 +1430,9 @@
     {
       "index": 157,
       "target": "body lotion",
-      "domain": "clothing.accessory",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "object.accessory",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1558,9 +1558,9 @@
     {
       "index": 171,
       "target": "a song",
-      "domain": "technology.electronics",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "abstract",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1576,27 +1576,27 @@
     {
       "index": 173,
       "target": "a pine cone",
-      "domain": "plant",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "nature.material",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 174,
       "target": "nail polish",
-      "domain": "clothing.accessory",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.consumable",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 175,
       "target": "a bowl",
-      "domain": "household.furniture",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.tableware",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1630,9 +1630,9 @@
     {
       "index": 179,
       "target": "a beer can",
-      "domain": "food.drink",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.container",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1657,9 +1657,9 @@
     {
       "index": 182,
       "target": "hand lotion",
-      "domain": "human.body",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "object.accessory",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -1958,9 +1958,9 @@
     {
       "index": 215,
       "target": "an atom",
-      "domain": "astronomy.space",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "nature.material",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2050,9 +2050,9 @@
     {
       "index": 225,
       "target": "a bird house",
-      "domain": "animal.bird",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "places.structures",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2140,9 +2140,9 @@
     {
       "index": 235,
       "target": "a hair clip",
-      "domain": "human.body",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "clothing.accessory",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2167,13 +2167,13 @@
     {
       "index": 238,
       "target": "a bass guitar",
-      "domain": "animal.fish",
-      "source": "lexical-proposal",
-      "confidence": "low",
+      "domain": "music.instrument",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [
         "music.instrument"
       ],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 239,
@@ -2205,18 +2205,18 @@
     {
       "index": 242,
       "target": "a hair scrunchie",
-      "domain": "human.body",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "clothing.accessory",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 243,
       "target": "a wine bottle",
-      "domain": "food.drink",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.container",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2299,9 +2299,9 @@
     {
       "index": 252,
       "target": "a coat hanger",
-      "domain": "clothing.accessory",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.furnishing",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2317,9 +2317,9 @@
     {
       "index": 254,
       "target": "hair spray",
-      "domain": "human.body",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.consumable",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2391,9 +2391,9 @@
     {
       "index": 262,
       "target": "mail (snail mail)",
-      "domain": "animal.invertebrate",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "paper.media",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2472,9 +2472,9 @@
     {
       "index": 271,
       "target": "a road",
-      "domain": "vehicle.transport",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "places.structures",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2618,9 +2618,9 @@
     {
       "index": 287,
       "target": "golf cart",
-      "domain": "sports.toys.games",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "vehicle.transport",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2710,9 +2710,9 @@
     {
       "index": 297,
       "target": "a paper clip",
-      "domain": "food.prepared",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "object.other",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2935,9 +2935,9 @@
     {
       "index": 322,
       "target": "a tooth pick",
-      "domain": "human.body",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3160,9 +3160,9 @@
     {
       "index": 347,
       "target": "a brick",
-      "domain": "household.furniture",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "nature.material",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3218,9 +3218,9 @@
     {
       "index": 353,
       "target": "towel",
-      "domain": "household.furniture",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.furnishing",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3236,9 +3236,9 @@
     {
       "index": 355,
       "target": "a trash can",
-      "domain": "household.furniture",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.furnishing",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3254,9 +3254,9 @@
     {
       "index": 357,
       "target": "a poker chip",
-      "domain": "biology.body",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "object.other",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3380,13 +3380,13 @@
     {
       "index": 371,
       "target": "a water bottle",
-      "domain": "food.drink",
-      "source": "lexical-proposal",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [
         "nature.material"
       ],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 372,
@@ -3499,9 +3499,9 @@
     {
       "index": 384,
       "target": "a Q-tip",
-      "domain": "clothing.accessory",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.consumable",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3553,9 +3553,9 @@
     {
       "index": 390,
       "target": "tooth paste",
-      "domain": "human.body",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.consumable",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3616,9 +3616,9 @@
     {
       "index": 397,
       "target": "a smoke detector",
-      "domain": "nature.material",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "technology.electronics",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3715,18 +3715,18 @@
     {
       "index": 408,
       "target": "a glass bottle",
-      "domain": "paper.media",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.container",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 409,
       "target": "a phone book",
-      "domain": "technology.electronics",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "paper.media",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -4462,9 +4462,9 @@
     {
       "index": 491,
       "target": "a steam iron",
-      "domain": "nature.material",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -4489,9 +4489,9 @@
     {
       "index": 494,
       "target": "a music box",
-      "domain": "abstract",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "technology.mechanical",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -4626,9 +4626,9 @@
     {
       "index": 509,
       "target": "a quark",
-      "domain": "astronomy.space",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "nature.material",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -4644,9 +4644,9 @@
     {
       "index": 511,
       "target": "a venus flytrap",
-      "domain": "food.produce",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "plant",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -4862,9 +4862,9 @@
     {
       "index": 535,
       "target": "a pencil",
-      "domain": "paper.media",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -5069,9 +5069,9 @@
     {
       "index": 558,
       "target": "carpet",
-      "domain": "household.furniture",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.furnishing",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -5458,9 +5458,9 @@
     {
       "index": 601,
       "target": "peanut butter",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -5539,9 +5539,9 @@
     {
       "index": 610,
       "target": "a record (before CD's)",
-      "domain": "technology.electronics",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "paper.media",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -6074,9 +6074,9 @@
     {
       "index": 669,
       "target": "a pirate",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "human.person",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -6173,9 +6173,9 @@
     {
       "index": 680,
       "target": "braces (for teeth)",
-      "domain": "human.body",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "clothing.accessory",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -6299,9 +6299,9 @@
     {
       "index": 694,
       "target": "a guitar pick",
-      "domain": "music.instrument",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "object.other",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -6688,9 +6688,9 @@
     {
       "index": 737,
       "target": "nothing",
-      "domain": "astronomy.space",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "abstract",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -7896,9 +7896,9 @@
     {
       "index": 871,
       "target": "a wedding",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "abstract",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -7923,9 +7923,9 @@
     {
       "index": 874,
       "target": "a clothes iron",
-      "domain": "nature.material",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -8040,9 +8040,9 @@
     {
       "index": 887,
       "target": "a doormat",
-      "domain": "clothing.accessory",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.furnishing",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -8318,9 +8318,9 @@
     {
       "index": 917,
       "target": "pleasure",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "abstract",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -8794,9 +8794,9 @@
     {
       "index": 969,
       "target": "an elevator",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.appliance",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -8911,9 +8911,9 @@
     {
       "index": 982,
       "target": "a chainsaw",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -9046,9 +9046,9 @@
     {
       "index": 997,
       "target": "a question",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "abstract",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -10218,9 +10218,9 @@
     {
       "index": 1127,
       "target": "fingernail polish",
-      "domain": "biology.body",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.consumable",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -10407,9 +10407,9 @@
     {
       "index": 1148,
       "target": "correction fluid",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "household.consumable",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -10506,9 +10506,9 @@
     {
       "index": 1159,
       "target": "a protractor (for measuring angles)",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -10614,9 +10614,9 @@
     {
       "index": 1171,
       "target": "electricity",
-      "domain": "technology.electronics",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "abstract",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -11327,9 +11327,9 @@
     {
       "index": 1250,
       "target": "hummus",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [
         "food.prepared"
       ],
@@ -11338,9 +11338,9 @@
     {
       "index": 1251,
       "target": "falafel",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -11455,27 +11455,27 @@
     {
       "index": 1264,
       "target": "pesto",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 1265,
       "target": "granola",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 1266,
       "target": "oatmeal",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [
         "food.prepared"
       ],
@@ -11502,36 +11502,36 @@
     {
       "index": 1269,
       "target": "guacamole",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 1270,
       "target": "salsa",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 1271,
       "target": "kimchi",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
     {
       "index": 1272,
       "target": "sauerkraut",
-      "domain": "food.produce",
-      "source": "curated-kind",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -12334,9 +12334,9 @@
     {
       "index": 1357,
       "target": "a zip tie",
-      "domain": "clothing.accessory",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "object.other",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -13797,9 +13797,9 @@
     {
       "index": 1518,
       "target": "coat rack",
-      "domain": "clothing.accessory",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.furnishing",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -14013,9 +14013,9 @@
     {
       "index": 1542,
       "target": "circus",
-      "domain": "sports.toys.games",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "abstract",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -14454,9 +14454,9 @@
     {
       "index": 1591,
       "target": "dinghy",
-      "domain": "vehicle.part",
-      "source": "manual-domain-assignment",
-      "confidence": "medium",
+      "domain": "vehicle.transport",
+      "source": "manual-audit-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
