@@ -1,0 +1,3478 @@
+{
+  "schemaVersion": 1,
+  "reviewStatus": "DIAGNOSTIC_ONLY_NOT_FACUAL_VALIDATION",
+  "source": "data/pam20q/exports/phase3-candidate-answer-matrix-1775x156.json",
+  "targets": 1775,
+  "questions": 156,
+  "cells": 276900,
+  "answerStates": {
+    "Y": 14157,
+    "N": 77263,
+    "P": 44427,
+    "Q": 141053
+  },
+  "structuralErrors": [],
+  "signatureCounts": {
+    "unique": 444,
+    "collidingProfiles": 1518,
+    "collisionGroups": 187,
+    "largest": 67
+  },
+  "candidateCollisions": [
+    [
+      "an anvil",
+      "a staple remover",
+      "a feather",
+      "a bandage",
+      "a thimble",
+      "curtains",
+      "an earphone",
+      "a surfboard",
+      "an extension cord",
+      "a carburetor",
+      "strainer",
+      "crutch",
+      "sprinkler",
+      "tripod",
+      "pavement",
+      "stretcher",
+      "shredder",
+      "grill",
+      "pulley",
+      "hose",
+      "funnel",
+      "vise",
+      "beaker",
+      "hourglass",
+      "paperweight",
+      "cassette",
+      "propeller",
+      "brace",
+      "mortar",
+      "reel",
+      "windshield wiper",
+      "washboard",
+      "tap",
+      "loom",
+      "chute",
+      "pedal",
+      "dustpan",
+      "slicer",
+      "snowboard",
+      "stilt",
+      "serving dish",
+      "coil",
+      "cord",
+      "dome",
+      "spade",
+      "stylus",
+      "petri dish",
+      "watering can",
+      "rag",
+      "cane",
+      "hull",
+      "beehive",
+      "plug",
+      "inkwell",
+      "nest",
+      "basin",
+      "mural",
+      "ruler",
+      "stirrup",
+      "polisher",
+      "periscope",
+      "spool",
+      "torch",
+      "shield",
+      "capsule",
+      "reflector",
+      "first-aid kit"
+    ],
+    [
+      "a bat",
+      "an ape",
+      "a mouse (the rodent)",
+      "a koala",
+      "a skunk",
+      "a sloth",
+      "a panda",
+      "a three toed sloth",
+      "a hyena",
+      "a coati (a raccoon like mammal)",
+      "a shrew",
+      "a ferret",
+      "a piglet",
+      "a wombat",
+      "a baboon",
+      "a raccoon",
+      "a gorilla",
+      "an opossum",
+      "a meerkat",
+      "an echidna",
+      "an anteater",
+      "an aardvark",
+      "a hedgehog",
+      "a marmoset",
+      "a mongoose",
+      "an armadillo",
+      "an orangutan",
+      "a wolverine",
+      "a chimpanzee",
+      "a pangolin",
+      "an aye-aye",
+      "a slow loris",
+      "a binturong",
+      "a dik-dik",
+      "a gerenuk",
+      "a markhor",
+      "a takin",
+      "a platypus",
+      "a Tasmanian devil",
+      "a gelada",
+      "a mandrill",
+      "a bonobo",
+      "a vicuña",
+      "a guanaco",
+      "a giant anteater",
+      "possum"
+    ],
+    [
+      "a big toe",
+      "an ear",
+      "a toe",
+      "a zit (pimple)",
+      "a leg",
+      "a butt (rear end)",
+      "hair",
+      "a nose",
+      "a foot",
+      "a hand",
+      "a hair follicle",
+      "lips",
+      "a wart",
+      "a bone",
+      "a tear drop",
+      "teeth",
+      "a heart",
+      "a belly button",
+      "a brain",
+      "a beard",
+      "a thumb",
+      "liver",
+      "an elbow",
+      "belly button lint",
+      "a skull",
+      "a uvula",
+      "a booger",
+      "a tongue",
+      "a pimple",
+      "a tattoo",
+      "an armpit",
+      "a toenail",
+      "an eyelash",
+      "toenail clippings",
+      "an eyeball",
+      "a freckle",
+      "a cadaver",
+      "an eyebrow",
+      "a mustache",
+      "a skeleton",
+      "a fingernail",
+      "tail",
+      "claw",
+      "tooth",
+      "muscle",
+      "stomach"
+    ],
+    [
+      "an egg",
+      "soup",
+      "rice",
+      "a dill pickle",
+      "tofu",
+      "a steak (beef)",
+      "sugar",
+      "a cough drop",
+      "bacon",
+      "a pickle",
+      "cheese",
+      "butter",
+      "cereal",
+      "yogurt",
+      "french fries",
+      "an aspirin",
+      "a vitamin",
+      "ketchup",
+      "cheddar cheese",
+      "mustard",
+      "a barbeque",
+      "macaroni and cheese",
+      "a hamburger",
+      "pad thai",
+      "a quesadilla",
+      "nachos",
+      "shawarma",
+      "a kebab",
+      "a croissant",
+      "a spring roll",
+      "a samosa",
+      "mozzarella cheese",
+      "parmesan cheese",
+      "miso soup",
+      "tempura",
+      "onion rings",
+      "mozzarella sticks",
+      "a Caesar salad",
+      "chili",
+      "salad",
+      "peppermint",
+      "casserole",
+      "nacho",
+      "sauce",
+      "waffle iron"
+    ],
+    [
+      "a toy",
+      "a bow (archery)",
+      "a golf club",
+      "a deck of cards",
+      "a doll",
+      "dice",
+      "a Lego brick",
+      "a game",
+      "a pogo stick",
+      "a golf tee",
+      "a swing set",
+      "a slide rule",
+      "a puzzle",
+      "a putter (golf club)",
+      "a jigsaw puzzle",
+      "a gumball",
+      "a fishing lure",
+      "a football",
+      "a dartboard",
+      "a paintball gun",
+      "a boomerang",
+      "a trampoline",
+      "a kaleidoscope",
+      "a Rubik's cube",
+      "a dumbbell",
+      "a pickleball paddle",
+      "a pickleball",
+      "a paddleboard",
+      "a snorkel",
+      "pinball",
+      "sandbox",
+      "playpen",
+      "basketball hoop",
+      "domino",
+      "seesaw",
+      "dollhouse",
+      "puppet",
+      "figurine",
+      "Shot put",
+      "chess",
+      "hurdle",
+      "rattle",
+      "yoyo",
+      "chessboard"
+    ],
+    [
+      "air",
+      "ink",
+      "salt",
+      "a rock",
+      "sand",
+      "dust",
+      "rain",
+      "clay",
+      "a stone",
+      "a virus",
+      "paint",
+      "chalk",
+      "steel",
+      "a grain of sand",
+      "manure",
+      "a bullet",
+      "copper",
+      "a quartz crystal",
+      "a magnet",
+      "silver",
+      "oxygen",
+      "helium",
+      "a diamond",
+      "an emerald",
+      "uranium",
+      "mercury (the liquid metal)",
+      "a crystal",
+      "calcium",
+      "aluminum",
+      "platinum",
+      "a container",
+      "pebble",
+      "stopwatch",
+      "shell",
+      "soldering iron",
+      "sack",
+      "leather",
+      "rain gauge",
+      "bark",
+      "silk",
+      "brass",
+      "ash",
+      "hay"
+    ],
+    [
+      "a bra",
+      "a tie (necktie)",
+      "a key chain",
+      "a belt",
+      "a coat",
+      "a neck tie",
+      "a mask",
+      "a wrist watch",
+      "a watch",
+      "a shirt",
+      "a scarf",
+      "a dress",
+      "an aglet (shoelace end)",
+      "a diaper",
+      "a pocket watch",
+      "a jacket",
+      "a ribbon",
+      "a zipper",
+      "a bikini",
+      "a saddle",
+      "an earring",
+      "panties",
+      "a T-shirt",
+      "a sweater",
+      "a wedding dress",
+      "a bathing suit",
+      "a shoelace",
+      "a necklace",
+      "a pacifier",
+      "a bathrobe",
+      "a chapstick",
+      "a horseshoe",
+      "a sweatshirt",
+      "a life jacket",
+      "a fanny pack",
+      "pom-pom",
+      "gift",
+      "badge",
+      "hanger",
+      "uniform",
+      "seat belt",
+      "tuxedo"
+    ],
+    [
+      "a fax machine",
+      "a VCR",
+      "a slot machine",
+      "cable tv",
+      "a photo copier",
+      "a headset",
+      "a spaceship",
+      "a satellite",
+      "a satellite dish",
+      "a calculator",
+      "a thermostat",
+      "a microscope",
+      "a CD",
+      "a MP3 player",
+      "20Q (pocket game)",
+      "20Q.net (online game)",
+      "a streaming stick",
+      "a fitness tracker",
+      "a quadcopter drone",
+      "a virtual reality headset",
+      "a smart thermostat",
+      "a key fob",
+      "a portable game console",
+      "a stud finder",
+      "a smart plug",
+      "a dash cam",
+      "a GPS tracker",
+      "cash register",
+      "saltshaker",
+      "antenna",
+      "hearing aid",
+      "tape recorder",
+      "pump",
+      "incubator",
+      "photocopier",
+      "telegraph",
+      "odometer",
+      "amplifier",
+      "breathalyzer",
+      "defibrillator",
+      "walkman",
+      "parking meter"
+    ],
+    [
+      "a jet",
+      "a tank (armored vehicle)",
+      "a mini van",
+      "a space shuttle",
+      "a bridge",
+      "a roller coaster",
+      "a hubcap",
+      "a rocket",
+      "an anchor",
+      "a bicycle",
+      "a go-kart",
+      "a sailboat",
+      "a shopping cart",
+      "a snowmobile",
+      "an all-terrain vehicle",
+      "an electric scooter",
+      "a hoverboard",
+      "an electric bike",
+      "a balance bike",
+      "a bike trailer",
+      "wagon",
+      "rollerblade",
+      "wheelbarrow",
+      "trailer",
+      "canister",
+      "ski lift",
+      "carousel",
+      "wheelchair",
+      "blimp",
+      "chariot",
+      "convertible",
+      "pallet",
+      "sail",
+      "rudder",
+      "cart",
+      "camper",
+      "harvester",
+      "fender",
+      "turbine",
+      "escalator",
+      "taillight",
+      "oar"
+    ],
+    [
+      "a home",
+      "a wall",
+      "a city",
+      "a bank",
+      "a roof",
+      "a house",
+      "a fence",
+      "the floor",
+      "an igloo",
+      "a toilet",
+      "a wreath",
+      "a garbage can",
+      "a pyramid (Egyptian)",
+      "a library",
+      "a chimney",
+      "a highway",
+      "a sidewalk",
+      "a cathedral",
+      "a billboard",
+      "a lighthouse",
+      "a university",
+      "a restaurant",
+      "a skyscraper",
+      "clock tower",
+      "barn",
+      "gate",
+      "garage",
+      "driveway",
+      "cabin",
+      "stall",
+      "locker",
+      "curb",
+      "ceiling",
+      "shed",
+      "motel",
+      "patio",
+      "coffin",
+      "grocery store",
+      "urinal"
+    ],
+    [
+      "an air conditioner",
+      "a fan (cools you off)",
+      "a lawn mower",
+      "a hair dryer",
+      "a lock",
+      "a scale (for weighing)",
+      "a spark plug",
+      "a crane (for lifting)",
+      "a vacuum cleaner",
+      "a vacuum",
+      "a faucet",
+      "an abacus",
+      "a ceiling fan",
+      "a blender",
+      "a furnace",
+      "an electric shaver",
+      "a windmill",
+      "a fireplace",
+      "a grandfather clock",
+      "a robot vacuum",
+      "an electric pressure cooker",
+      "a hair straightener",
+      "a curling iron",
+      "an induction cooktop",
+      "an espresso machine",
+      "a food processor",
+      "a stand mixer",
+      "a rice cooker",
+      "a slow cooker",
+      "a clothes steamer",
+      "a portable air purifier",
+      "cooler",
+      "shower curtain",
+      "mixer",
+      "roaster"
+    ],
+    [
+      "a fork",
+      "a comb",
+      "a tape measure",
+      "a spoon",
+      "a ruler (straightedge)",
+      "a broom",
+      "a drill",
+      "a hammer",
+      "an eraser",
+      "a spatula",
+      "a plunger (plumber's tool)",
+      "chopsticks",
+      "a screwdriver",
+      "a thermometer",
+      "a stethoscope",
+      "a silicone spatula",
+      "a meat thermometer",
+      "a garlic press",
+      "a whisk",
+      "kitchen tongs",
+      "a lint roller",
+      "a cordless drill",
+      "a socket wrench",
+      "a hex key",
+      "mop",
+      "clamp",
+      "plunger",
+      "wrench",
+      "magnifier",
+      "nutcracker",
+      "hoe",
+      "ladle",
+      "crowbar"
+    ],
+    [
+      "an owl",
+      "a bird",
+      "a bald eagle",
+      "a dodo bird",
+      "a kiwi (bird)",
+      "an eagle",
+      "a goose",
+      "a robin",
+      "a turkey",
+      "a toucan",
+      "a pigeon",
+      "a canary",
+      "a chicken",
+      "a bouquet of flowers",
+      "a seagull",
+      "a flamingo",
+      "a parakeet",
+      "a hummingbird",
+      "a shoebill",
+      "a kakapo",
+      "a harpy eagle",
+      "a secretary bird",
+      "a puffin",
+      "an albatross",
+      "hawk",
+      "dove",
+      "cardinal",
+      "osprey",
+      "cockatoo",
+      "seabird"
+    ],
+    [
+      "a video game console",
+      "a video camera",
+      "a camera",
+      "a stereo speaker",
+      "a speaker",
+      "a digital camera",
+      "a monitor",
+      "a scanner",
+      "an antenna (radio)",
+      "a television set",
+      "headphones",
+      "wireless earbuds",
+      "a Bluetooth speaker",
+      "a smart speaker",
+      "an action camera",
+      "a 3D printer",
+      "a portable projector",
+      "noise-cancelling headphones",
+      "a digital kitchen scale",
+      "a portable monitor",
+      "a mesh Wi-Fi router",
+      "television",
+      "remote control",
+      "radio",
+      "projector",
+      "webcam"
+    ],
+    [
+      "sea serpent (maybe mythical)",
+      "a yeti",
+      "an alien (extraterrestial)",
+      "an angel",
+      "a ghost",
+      "a devil",
+      "a fairy (elf)",
+      "a demon",
+      "a witch",
+      "a dragon",
+      "a zombie",
+      "a spirit",
+      "a unicorn",
+      "a vampire",
+      "a monster (frightful creature)",
+      "a pikachu (Pokemon character)",
+      "a griffin",
+      "a centaur",
+      "a phoenix",
+      "Godzilla",
+      "a werewolf",
+      "a gargoyle",
+      "a leprechaun",
+      "kryptonite",
+      "a U.F.O."
+    ],
+    [
+      "a flag",
+      "a stamp (postage)",
+      "a chalk board",
+      "a dollar bill",
+      "a credit card",
+      "a poster",
+      "a statue",
+      "a school",
+      "a family",
+      "a picture frame",
+      "a picture",
+      "a mailbox",
+      "a license plate",
+      "a business card",
+      "a portrait",
+      "a passport",
+      "a checkbook",
+      "a clipboard",
+      "a photograph",
+      "whiteboard",
+      "curtain",
+      "frame",
+      "stamp",
+      "monument",
+      "bulletin board"
+    ],
+    [
+      "a desk",
+      "a sofa",
+      "a chair",
+      "a couch",
+      "a quilt",
+      "a stool",
+      "a picnic table",
+      "a rocking chair",
+      "a mattress",
+      "a bookcase",
+      "bench",
+      "bed",
+      "wardrobe",
+      "bookshelf",
+      "footrest",
+      "railing",
+      "tile",
+      "ping-pong table",
+      "ramp",
+      "crib",
+      "bureau",
+      "vent",
+      "dresser"
+    ],
+    [
+      "a cow",
+      "an elk",
+      "a deer",
+      "a goat",
+      "a pony",
+      "a calf (baby cow)",
+      "a bull",
+      "a mule",
+      "a horse",
+      "a zebra",
+      "a llama",
+      "a moose",
+      "a camel",
+      "a bison",
+      "an okapi",
+      "a donkey",
+      "an alpaca",
+      "a gazelle",
+      "a reindeer",
+      "a saiga antelope",
+      "yak",
+      "cattle"
+    ],
+    [
+      "love",
+      "a kiss",
+      "time",
+      "a joke",
+      "money",
+      "a crush (in love)",
+      "sleep",
+      "a smile",
+      "a dream",
+      "magic",
+      "a number",
+      "thought",
+      "infinity",
+      "a birthday",
+      "happiness",
+      "a nightmare (bad dream)",
+      "friendship",
+      "pi (the number)",
+      "a soulmate",
+      "a QR code"
+    ],
+    [
+      "an eel",
+      "a bass (fish)",
+      "a tuna",
+      "a shark",
+      "a salmon (fish)",
+      "a piranha",
+      "a catfish",
+      "a goldfish",
+      "a seahorse",
+      "a coelacanth",
+      "a blobfish",
+      "a goblin shark",
+      "a leafy sea dragon",
+      "mackerel",
+      "blowfish",
+      "anchovy",
+      "fish",
+      "double bass",
+      "marlin"
+    ],
+    [
+      "the wind",
+      "a lake",
+      "the ocean",
+      "a river",
+      "a beach",
+      "clouds",
+      "an island",
+      "a volcano",
+      "a tornado",
+      "a mountain",
+      "a raindrop",
+      "sunshine",
+      "mud",
+      "fog",
+      "pond",
+      "brook",
+      "coast",
+      "storm",
+      "hurricane"
+    ],
+    [
+      "a taco",
+      "a pizza",
+      "sushi",
+      "a burrito",
+      "a sandwich",
+      "spaghetti",
+      "a cheeseburger",
+      "poutine",
+      "ramen",
+      "pho",
+      "a dumpling",
+      "curry",
+      "lasagna",
+      "risotto",
+      "gnocchi",
+      "a grilled cheese sandwich",
+      "a jam sandwich"
+    ],
+    [
+      "a pie",
+      "a cake",
+      "a stick of gum",
+      "a cookie",
+      "a raisin",
+      "a waffle",
+      "a pancake",
+      "chewing gum",
+      "a cupcake",
+      "a lollipop",
+      "a birthday cake",
+      "a popsicle",
+      "cheesecake",
+      "a marshmallow",
+      "a macaron",
+      "a brownie"
+    ],
+    [
+      "a sock",
+      "a shoe",
+      "a pair of glasses",
+      "a pair of socks",
+      "a shoe lace",
+      "a pair of sneakers",
+      "a boot",
+      "a glove",
+      "a boxing glove",
+      "glasses",
+      "a sneaker",
+      "slippers",
+      "eyeglasses",
+      "swim goggles",
+      "flip-flop",
+      "goggles"
+    ],
+    [
+      "a drum",
+      "a drum kit",
+      "a piano",
+      "a guitar",
+      "a violin",
+      "a trumpet",
+      "a saxophone",
+      "a harmonica",
+      "harp",
+      "banjo",
+      "tuba",
+      "tambourine",
+      "trombone",
+      "cymbal",
+      "kazoo",
+      "fiddle"
+    ],
+    [
+      "a baby",
+      "a fool",
+      "a human being",
+      "the human body",
+      "a woman",
+      "a child",
+      "a clown",
+      "a ninja",
+      "people (human beings)",
+      "myself",
+      "a daughter",
+      "a boyfriend",
+      "a celebrity",
+      "a girlfriend",
+      "me (as in you)"
+    ],
+    [
+      "a kiwi fruit",
+      "a pear (fruit)",
+      "an olive",
+      "a squash (as in a gourd)",
+      "an avocado (fruit)",
+      "a pumpkin",
+      "a coconut",
+      "an eggplant (aubergine)",
+      "a zucchini",
+      "a pineapple",
+      "avocado",
+      "gourd",
+      "squash",
+      "grapefruit",
+      "eggplant"
+    ],
+    [
+      "an ant",
+      "a fly",
+      "a bee",
+      "a flea",
+      "a dung beetle",
+      "a moth",
+      "a ladybug",
+      "a praying mantis",
+      "a termite",
+      "a mosquito",
+      "a cockroach",
+      "a grasshopper",
+      "beetle",
+      "wasp"
+    ],
+    [
+      "the sky",
+      "dark matter (astronomical)",
+      "the Earth",
+      "a comet",
+      "outer space",
+      "a galaxy",
+      "a quasar",
+      "the universe",
+      "an electron",
+      "an asteroid",
+      "the northern lights",
+      "a supernova",
+      "meteor",
+      "eclipse"
+    ],
+    [
+      "okra",
+      "peas",
+      "spinach",
+      "rhubarb",
+      "a kumquat",
+      "a mushroom",
+      "asparagus",
+      "an artichoke",
+      "a cauliflower",
+      "edamame",
+      "bean",
+      "dill",
+      "nutmeg",
+      "dried fruit"
+    ],
+    [
+      "a grape",
+      "a melon (fruit)",
+      "a mango",
+      "a peach",
+      "a blueberry",
+      "a cranberry",
+      "watermelon",
+      "a canteloupe",
+      "a pomegranate",
+      "raspberry",
+      "apricot",
+      "papaya",
+      "nectarine",
+      "guava"
+    ],
+    [
+      "an axe",
+      "a saw",
+      "a knife",
+      "a razor",
+      "a swiss army knife",
+      "a pocket knife",
+      "scissors",
+      "a vegetable peeler",
+      "a utility knife",
+      "chisel",
+      "ax",
+      "blade",
+      "peeler"
+    ],
+    [
+      "a boa constrictor (snake)",
+      "a king cobra",
+      "a snake",
+      "a turtle",
+      "an iguana",
+      "a python",
+      "a rattle snake",
+      "a snapping turtle",
+      "a tortoise",
+      "an anaconda (boa constrictor)",
+      "an alligator",
+      "a crocodile"
+    ],
+    [
+      "a can of soda",
+      "tea",
+      "beer",
+      "wine",
+      "a soft drink",
+      "vodka",
+      "alcohol",
+      "whiskey",
+      "lemonade",
+      "smoothie",
+      "cola",
+      "milkshake"
+    ],
+    [
+      "a crab",
+      "a giant squid",
+      "a coral",
+      "a squid",
+      "a shrimp",
+      "a hermit crab",
+      "an oyster",
+      "an octopus",
+      "a lobster",
+      "a starfish",
+      "a jellyfish",
+      "anemone"
+    ],
+    [
+      "a beaver (rodent)",
+      "a flying squirrel",
+      "a gerbil",
+      "a hamster",
+      "a squirrel",
+      "a chipmunk",
+      "a capybara",
+      "a porcupine",
+      "a groundhog",
+      "a chinchilla",
+      "beaver",
+      "marmot"
+    ],
+    [
+      "a car",
+      "a truck",
+      "a trunk (car)",
+      "a sports car",
+      "a pickup truck",
+      "a street car",
+      "a taxicab",
+      "limousine",
+      "garbage truck",
+      "police car",
+      "Dump truck"
+    ],
+    [
+      "a pea",
+      "a nut",
+      "corn on the cob",
+      "celery",
+      "a peanut",
+      "a cabbage",
+      "brussel sprouts",
+      "almond",
+      "walnut",
+      "pecan",
+      "pistachio"
+    ],
+    [
+      "a cue ball",
+      "a golf ball",
+      "a beach ball",
+      "a soccer ball",
+      "a tennis ball",
+      "marble (the rock)",
+      "a bowling ball",
+      "a crystal ball",
+      "a ping-pong ball",
+      "a magic 8 ball",
+      "marble"
+    ],
+    [
+      "a stereo system",
+      "a sewing machine",
+      "an engine (internal combustion)",
+      "an electric fan",
+      "a treadmill",
+      "a metronome",
+      "a microphone",
+      "a typewriter",
+      "a CD player",
+      "vending machine",
+      "engine"
+    ],
+    [
+      "an orca",
+      "a seal",
+      "a whale",
+      "an otter",
+      "a walrus",
+      "a dolphin",
+      "a manatee",
+      "a porpoise",
+      "a humpback whale",
+      "a dugong"
+    ],
+    [
+      "a lawn",
+      "bamboo",
+      "bush",
+      "seed",
+      "root",
+      "moss",
+      "blossom",
+      "petal",
+      "mistletoe",
+      "ivy"
+    ],
+    [
+      "a tick",
+      "a spider",
+      "an amoeba",
+      "a spider web",
+      "a crayfish",
+      "a tapeworm",
+      "plankton",
+      "a tarantula",
+      "a centipede",
+      "a tardigrade"
+    ],
+    [
+      "a purse",
+      "a wallet",
+      "a plastic bag",
+      "a backpack",
+      "an insulated lunch bag",
+      "a sleeping bag",
+      "a hiking backpack",
+      "a reusable shopping bag",
+      "a tote bag",
+      "duffel bag"
+    ],
+    [
+      "a yo-yo",
+      "a hockey puck",
+      "a frisbee",
+      "a baseball",
+      "a softball",
+      "a hula-hoop (toy)",
+      "a basketball",
+      "a volleyball",
+      "a kettlebell",
+      "hula hoop"
+    ],
+    [
+      "peanut butter",
+      "hummus",
+      "falafel",
+      "pesto",
+      "granola",
+      "oatmeal",
+      "guacamole",
+      "salsa",
+      "kimchi",
+      "sauerkraut"
+    ],
+    [
+      "a poop (faeces)",
+      "a fart",
+      "snot (nasal mucus)",
+      "a burp",
+      "urine",
+      "vomit",
+      "blood",
+      "phlegm",
+      "dandruff"
+    ],
+    [
+      "a beet",
+      "a baked potato",
+      "a sweet potato",
+      "a potato",
+      "a radish",
+      "a potato chip",
+      "a turnip",
+      "a parsnip",
+      "a rutabaga"
+    ],
+    [
+      "a train",
+      "a tractor",
+      "a forklift",
+      "a motorcycle",
+      "a helicopter",
+      "a locomotive",
+      "submarine",
+      "bulldozer",
+      "train set"
+    ],
+    [
+      "a selfie stick",
+      "a microfiber cloth",
+      "a laundry hamper",
+      "a drying rack",
+      "duct tape",
+      "a bungee cord",
+      "a carabiner",
+      "a foam roller",
+      "chinaware"
+    ],
+    [
+      "tape",
+      "dental floss",
+      "a napkin",
+      "a breath mint",
+      "a Kleenex",
+      "wallpaper",
+      "cloth",
+      "velcro"
+    ],
+    [
+      "an oven",
+      "a stove",
+      "a toaster",
+      "a barbecue grill",
+      "a microwave",
+      "an air fryer",
+      "a toaster oven",
+      "microwave oven"
+    ],
+    [
+      "a hat",
+      "a hard hat",
+      "a toque (woolen cap)",
+      "a fedora (hat)",
+      "helmet",
+      "cap",
+      "crown"
+    ],
+    [
+      "nail clippers",
+      "nail polish",
+      "a coat hanger",
+      "a Q-tip",
+      "a doormat",
+      "a zip tie",
+      "coat rack"
+    ],
+    [
+      "wind chimes",
+      "a slide (playground)",
+      "hammock",
+      "counter",
+      "beanbag",
+      "altar",
+      "garland"
+    ],
+    [
+      "a daisy",
+      "a tulip",
+      "an orchid",
+      "hibiscus",
+      "ficus",
+      "bonsai",
+      "magnolia"
+    ],
+    [
+      "a laptop computer",
+      "a computer",
+      "a computer printer",
+      "a computer game",
+      "a tablet computer",
+      "a smartwatch",
+      "an e-reader"
+    ],
+    [
+      "a dog",
+      "a shih tzu (dog)",
+      "a jack russell terrier (dog)",
+      "a prairie dog (rodent)",
+      "a rottweiler (dog)",
+      "a raccoon dog"
+    ],
+    [
+      "a pen",
+      "a pencil sharpener",
+      "a ballpoint pen",
+      "a highlighter pen",
+      "marker",
+      "quill"
+    ],
+    [
+      "an oak tree",
+      "a pine tree",
+      "a palm tree",
+      "a maple tree",
+      "a Christmas tree",
+      "a jacaranda (tree)"
+    ],
+    [
+      "a hair scrunchie",
+      "hair spray",
+      "a poker chip",
+      "tooth paste",
+      "braces (for teeth)",
+      "fingernail polish"
+    ],
+    [
+      "golf cart",
+      "a pirate",
+      "an elevator",
+      "a chainsaw",
+      "correction fluid",
+      "a protractor (for measuring angles)"
+    ],
+    [
+      "a puma",
+      "a bobcat",
+      "an ocelot",
+      "a cougar",
+      "a caracal",
+      "a serval"
+    ],
+    [
+      "drums",
+      "a xylophone",
+      "a didgeridoo",
+      "gong",
+      "jukebox",
+      "chime"
+    ],
+    [
+      "a dinosaur",
+      "a pterodactyl",
+      "a triceratops",
+      "velociraptor (dinosaur)",
+      "brontosaurus",
+      "tyrannosaurus rex"
+    ],
+    [
+      "a DVD disk",
+      "a hard disk",
+      "an ouija board",
+      "a floppy disk",
+      "a contactless payment card"
+    ],
+    [
+      "oil",
+      "wax",
+      "crude oil",
+      "gasoline",
+      "cotton"
+    ],
+    [
+      "a lion",
+      "a tiger",
+      "a tiger cub",
+      "a siberian tiger",
+      "a Tasmanian tiger"
+    ],
+    [
+      "a boat",
+      "a canoe",
+      "a kayak",
+      "a parachute",
+      "glider"
+    ],
+    [
+      "a nail (for hammering)",
+      "a sword",
+      "a screw",
+      "a staple",
+      "a guillotine"
+    ],
+    [
+      "a file folder",
+      "a sticky note",
+      "a postcard",
+      "notepad",
+      "cardboard"
+    ],
+    [
+      "a mobile phone",
+      "a cell-phone",
+      "a phone case",
+      "a magnetic phone mount",
+      "a foldable phone"
+    ],
+    [
+      "a golden retriever",
+      "a poodle",
+      "a dalmation",
+      "chihuahua",
+      "pug"
+    ],
+    [
+      "a lightbulb",
+      "a lightbulb filament",
+      "a headlamp",
+      "a camping lantern",
+      "laser pointer"
+    ],
+    [
+      "a wastebasket",
+      "cauldron",
+      "sink",
+      "crate",
+      "keg"
+    ],
+    [
+      "a book",
+      "a magazine",
+      "a newspaper",
+      "a dictionary"
+    ],
+    [
+      "a bear",
+      "a teddy bear",
+      "a panda bear",
+      "a grizzly bear"
+    ],
+    [
+      "a worm",
+      "a slug",
+      "a snail",
+      "an earthworm"
+    ],
+    [
+      "a toad",
+      "a tadpole",
+      "a bullfrog",
+      "an axolotl"
+    ],
+    [
+      "water",
+      "a water fall",
+      "mineral water",
+      "water cooler"
+    ],
+    [
+      "an onion",
+      "garlic",
+      "celeriac (celery root)",
+      "a beetroot"
+    ],
+    [
+      "a lemur",
+      "a monkey",
+      "a spider monkey",
+      "a proboscis monkey"
+    ],
+    [
+      "a lemon",
+      "a banana",
+      "a banana peel",
+      "plaintain (banana like)"
+    ],
+    [
+      "a tomato",
+      "a cherry tomato",
+      "a cherry",
+      "a strawberry"
+    ],
+    [
+      "coffee",
+      "a coffee maker",
+      "a coffee pot",
+      "coffee table"
+    ],
+    [
+      "a bottle",
+      "a plastic cup",
+      "a thermos",
+      "measuring cup"
+    ],
+    [
+      "a diamond ring",
+      "a wedding ring",
+      "a three-ring binder",
+      "napkin ring"
+    ],
+    [
+      "make-up",
+      "mascara (a cosmetic)",
+      "lipstick",
+      "deodorant"
+    ],
+    [
+      "a wedding",
+      "pleasure",
+      "a question",
+      "circus"
+    ],
+    [
+      "a pig",
+      "a hog",
+      "a warthog"
+    ],
+    [
+      "a fox",
+      "a fennec fox",
+      "an arctic fox"
+    ],
+    [
+      "a rat",
+      "a pet rat",
+      "a naked mole rat"
+    ],
+    [
+      "an ice cube",
+      "ice",
+      "an ice pack"
+    ],
+    [
+      "a web site",
+      "a song",
+      "electricity"
+    ],
+    [
+      "lip balm",
+      "lip gloss",
+      "body lotion"
+    ],
+    [
+      "a tea cup",
+      "a beer bottle",
+      "a wine bottle"
+    ],
+    [
+      "a bus",
+      "a school bus",
+      "bus station"
+    ],
+    [
+      "an emu",
+      "an ostrich",
+      "a cassowary"
+    ],
+    [
+      "a hare (rabbit)",
+      "a bunny",
+      "a rabbit"
+    ],
+    [
+      "a pool",
+      "a bathtub",
+      "an aquarium"
+    ],
+    [
+      "a fire",
+      "a fire extinguisher",
+      "a fire hydrant"
+    ],
+    [
+      "a bowl",
+      "a trash can",
+      "carpet"
+    ],
+    [
+      "a lime (fruit)",
+      "lettuce",
+      "broccoli"
+    ],
+    [
+      "a tabby cat",
+      "a siamese cat",
+      "a persian cat"
+    ],
+    [
+      "an alarm clock",
+      "a doorbell",
+      "a video doorbell"
+    ],
+    [
+      "candy",
+      "a candy cane",
+      "a candy bar"
+    ],
+    [
+      "a mirror",
+      "cutting board",
+      "rearview mirror"
+    ],
+    [
+      "a shovel",
+      "a fishing rod",
+      "a knitting needle"
+    ],
+    [
+      "a ladder",
+      "a trekking pole",
+      "totem pole"
+    ],
+    [
+      "a cactus",
+      "a four-leaf clover",
+      "leaf"
+    ],
+    [
+      "a walkie talkie",
+      "answering machine",
+      "pager"
+    ],
+    [
+      "a bucket",
+      "a suitcase",
+      "briefcase"
+    ],
+    [
+      "an icicle",
+      "an iceberg",
+      "a glacier"
+    ],
+    [
+      "popcorn",
+      "a pretzel",
+      "a cracker"
+    ],
+    [
+      "a battery",
+      "a USB-C hub",
+      "cartridge"
+    ],
+    [
+      "a halogen lamp",
+      "an LED strip light",
+      "laser"
+    ],
+    [
+      "tobacco",
+      "charcoal",
+      "dynamite"
+    ],
+    [
+      "chocolate",
+      "a chocolate bar",
+      "a chocolate chip cookie"
+    ],
+    [
+      "a flashlight",
+      "a jack-o-lantern",
+      "lantern"
+    ],
+    [
+      "a rhinoceros",
+      "a hippopotamus",
+      "a musk ox"
+    ],
+    [
+      "a power bank",
+      "a wireless charger",
+      "a solar power bank"
+    ],
+    [
+      "a cup",
+      "a travel mug"
+    ],
+    [
+      "a tea pot",
+      "a beer can"
+    ],
+    [
+      "gold",
+      "a gold nugget"
+    ],
+    [
+      "a snow flake",
+      "snow"
+    ],
+    [
+      "a star (astral body)",
+      "a neutron star"
+    ],
+    [
+      "a wall clock",
+      "pinwheel"
+    ],
+    [
+      "a hair brush",
+      "a hair clip"
+    ],
+    [
+      "corn (the plant)",
+      "a venus flytrap"
+    ],
+    [
+      "a stop sign",
+      "a road"
+    ],
+    [
+      "glue",
+      "scotch tape"
+    ],
+    [
+      "a loaf of bread",
+      "bread"
+    ],
+    [
+      "a shot glass",
+      "a glass (drinking glass)"
+    ],
+    [
+      "an atom",
+      "a quark"
+    ],
+    [
+      "a lamb",
+      "sheep"
+    ],
+    [
+      "a snow globe (toy)",
+      "a snow ball"
+    ],
+    [
+      "a dart",
+      "an arrow"
+    ],
+    [
+      "yarn",
+      "lumber"
+    ],
+    [
+      "a hole punch",
+      "a drinking straw"
+    ],
+    [
+      "a rope",
+      "a rubber band"
+    ],
+    [
+      "paper",
+      "a sheet of paper"
+    ],
+    [
+      "a movie",
+      "a cartoon"
+    ],
+    [
+      "a green bean",
+      "a green pepper"
+    ],
+    [
+      "a gecko (lizard)",
+      "a lizard"
+    ],
+    [
+      "a donut",
+      "a bagel"
+    ],
+    [
+      "a paper towel",
+      "toilet paper"
+    ],
+    [
+      "a lunch box",
+      "a brief case"
+    ],
+    [
+      "a match",
+      "a bonfire"
+    ],
+    [
+      "a steam iron",
+      "a clothes iron"
+    ],
+    [
+      "a tapir",
+      "a mammoth"
+    ],
+    [
+      "an orange",
+      "orange juice"
+    ],
+    [
+      "a bottle of beer",
+      "a bottle of pop"
+    ],
+    [
+      "a parrot",
+      "a peacock"
+    ],
+    [
+      "a filing cabinet",
+      "cabinet"
+    ],
+    [
+      "a tennis racket",
+      "a hockey stick"
+    ],
+    [
+      "a button",
+      "a doorknob"
+    ],
+    [
+      "a basket",
+      "a laundry basket"
+    ],
+    [
+      "a komodo dragon",
+      "a chameleon"
+    ],
+    [
+      "E-mail",
+      "internet"
+    ],
+    [
+      "a frying pan",
+      "a colander"
+    ],
+    [
+      "a playing card",
+      "a baseball card"
+    ],
+    [
+      "a rainbow",
+      "fireworks"
+    ],
+    [
+      "a leopard",
+      "a clouded leopard"
+    ],
+    [
+      "shampoo",
+      "cologne"
+    ],
+    [
+      "ironing board",
+      "mat"
+    ],
+    [
+      "a whistle",
+      "noisemaker"
+    ],
+    [
+      "a monarch butterfly",
+      "a butterfly"
+    ],
+    [
+      "a freezer",
+      "a refrigerator magnet"
+    ],
+    [
+      "a wallaby",
+      "a quokka"
+    ],
+    [
+      "a firefly",
+      "a dragonfly"
+    ],
+    [
+      "a cucumber",
+      "a jalepeno"
+    ],
+    [
+      "a hangover",
+      "a headache"
+    ],
+    [
+      "a computer disk",
+      "computer screen"
+    ],
+    [
+      "a joystick",
+      "touchpad"
+    ],
+    [
+      "a telephone",
+      "a telephone headset"
+    ],
+    [
+      "a cigarette",
+      "blowtorch"
+    ],
+    [
+      "a sunflower",
+      "sunflower seeds"
+    ],
+    [
+      "a lightning bolt",
+      "lightning"
+    ],
+    [
+      "cyberspace",
+      "artificial intelligence"
+    ],
+    [
+      "teriyaki chicken",
+      "chicken nuggets"
+    ],
+    [
+      "a mechanical keyboard",
+      "keyboard"
+    ],
+    [
+      "a laptop stand",
+      "a laptop sleeve"
+    ],
+    [
+      "an electric toothbrush",
+      "tongs"
+    ],
+    [
+      "washing machine",
+      "dishwasher"
+    ],
+    [
+      "carafe",
+      "flask"
+    ],
+    [
+      "barrette",
+      "hairpin"
+    ],
+    [
+      "bumper",
+      "windshield"
+    ]
+  ],
+  "questionReview": [
+    {
+      "index": 0,
+      "text": "Is it classified as Animal",
+      "states": {
+        "Y": 326,
+        "N": 1449,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 1,
+      "text": "Is it classified as Vegetable",
+      "states": {
+        "Y": 123,
+        "N": 1551,
+        "P": 101,
+        "Q": 0
+      }
+    },
+    {
+      "index": 2,
+      "text": "Is it classified as Mineral",
+      "states": {
+        "Y": 5,
+        "N": 1640,
+        "P": 130,
+        "Q": 0
+      }
+    },
+    {
+      "index": 3,
+      "text": "Is it classified as Other",
+      "states": {
+        "Y": 110,
+        "N": 453,
+        "P": 1212,
+        "Q": 0
+      }
+    },
+    {
+      "index": 4,
+      "text": "Do you hold it when you use it",
+      "states": {
+        "Y": 81,
+        "N": 859,
+        "P": 835,
+        "Q": 0
+      }
+    },
+    {
+      "index": 5,
+      "text": "Does it come in a box",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 911,
+        "Q": 864
+      }
+    },
+    {
+      "index": 6,
+      "text": "Is it white",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 23,
+        "Q": 1752
+      }
+    },
+    {
+      "index": 7,
+      "text": "Does it bring joy to people",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1775,
+        "Q": 0
+      }
+    },
+    {
+      "index": 8,
+      "text": "Is it smaller than a loaf of bread",
+      "states": {
+        "Y": 49,
+        "N": 328,
+        "P": 1081,
+        "Q": 317
+      }
+    },
+    {
+      "index": 9,
+      "text": "Is it black",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 7,
+        "Q": 1768
+      }
+    },
+    {
+      "index": 10,
+      "text": "Is it a common household object",
+      "states": {
+        "Y": 15,
+        "N": 864,
+        "P": 896,
+        "Q": 0
+      }
+    },
+    {
+      "index": 11,
+      "text": "Does it get wet",
+      "states": {
+        "Y": 37,
+        "N": 0,
+        "P": 0,
+        "Q": 1738
+      }
+    },
+    {
+      "index": 12,
+      "text": "Is it larger than a pound of butter",
+      "states": {
+        "Y": 305,
+        "N": 23,
+        "P": 785,
+        "Q": 662
+      }
+    },
+    {
+      "index": 13,
+      "text": "Is it colorful",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 8,
+        "Q": 1767
+      }
+    },
+    {
+      "index": 14,
+      "text": "Does it have a hole in it",
+      "states": {
+        "Y": 0,
+        "N": 52,
+        "P": 22,
+        "Q": 1701
+      }
+    },
+    {
+      "index": 15,
+      "text": "Is it round",
+      "states": {
+        "Y": 41,
+        "N": 0,
+        "P": 9,
+        "Q": 1725
+      }
+    },
+    {
+      "index": 16,
+      "text": "Does it break if dropped",
+      "states": {
+        "Y": 0,
+        "N": 23,
+        "P": 1098,
+        "Q": 654
+      }
+    },
+    {
+      "index": 17,
+      "text": "Does it open",
+      "states": {
+        "Y": 39,
+        "N": 22,
+        "P": 40,
+        "Q": 1674
+      }
+    },
+    {
+      "index": 18,
+      "text": "Is it flat",
+      "states": {
+        "Y": 45,
+        "N": 10,
+        "P": 29,
+        "Q": 1691
+      }
+    },
+    {
+      "index": 19,
+      "text": "Is it fragile",
+      "states": {
+        "Y": 0,
+        "N": 23,
+        "P": 426,
+        "Q": 1326
+      }
+    },
+    {
+      "index": 20,
+      "text": "Is it soft",
+      "states": {
+        "Y": 0,
+        "N": 97,
+        "P": 650,
+        "Q": 1028
+      }
+    },
+    {
+      "index": 21,
+      "text": "Is it dangerous",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 39,
+        "Q": 1736
+      }
+    },
+    {
+      "index": 22,
+      "text": "Is it smaller than a golf ball",
+      "states": {
+        "Y": 0,
+        "N": 360,
+        "P": 140,
+        "Q": 1275
+      }
+    },
+    {
+      "index": 23,
+      "text": "Is it bright",
+      "states": {
+        "Y": 9,
+        "N": 0,
+        "P": 29,
+        "Q": 1737
+      }
+    },
+    {
+      "index": 24,
+      "text": "Is it larger than a bread box (or microwave oven)",
+      "states": {
+        "Y": 226,
+        "N": 175,
+        "P": 71,
+        "Q": 1303
+      }
+    },
+    {
+      "index": 25,
+      "text": "Do you know any songs about it",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 0,
+        "Q": 1775
+      }
+    },
+    {
+      "index": 26,
+      "text": "Is it made of plastic",
+      "states": {
+        "Y": 0,
+        "N": 864,
+        "P": 911,
+        "Q": 0
+      }
+    },
+    {
+      "index": 27,
+      "text": "Is it brown",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 23,
+        "Q": 1752
+      }
+    },
+    {
+      "index": 28,
+      "text": "Can it be refilled",
+      "states": {
+        "Y": 32,
+        "N": 21,
+        "P": 0,
+        "Q": 1722
+      }
+    },
+    {
+      "index": 29,
+      "text": "Is it heavy",
+      "states": {
+        "Y": 257,
+        "N": 96,
+        "P": 593,
+        "Q": 829
+      }
+    },
+    {
+      "index": 30,
+      "text": "Does it make noise",
+      "states": {
+        "Y": 43,
+        "N": 0,
+        "P": 541,
+        "Q": 1191
+      }
+    },
+    {
+      "index": 31,
+      "text": "Does it roll",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 26,
+        "Q": 1749
+      }
+    },
+    {
+      "index": 32,
+      "text": "Can it be heard",
+      "states": {
+        "Y": 29,
+        "N": 0,
+        "P": 552,
+        "Q": 1194
+      }
+    },
+    {
+      "index": 33,
+      "text": "Is it electronic",
+      "states": {
+        "Y": 208,
+        "N": 883,
+        "P": 9,
+        "Q": 675
+      }
+    },
+    {
+      "index": 34,
+      "text": "Can you lift it",
+      "states": {
+        "Y": 873,
+        "N": 203,
+        "P": 699,
+        "Q": 0
+      }
+    },
+    {
+      "index": 35,
+      "text": "Do you love it",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1775,
+        "Q": 0
+      }
+    },
+    {
+      "index": 36,
+      "text": "Does it have buttons",
+      "states": {
+        "Y": 0,
+        "N": 864,
+        "P": 215,
+        "Q": 696
+      }
+    },
+    {
+      "index": 37,
+      "text": "Can you buy it",
+      "states": {
+        "Y": 1147,
+        "N": 141,
+        "P": 462,
+        "Q": 25
+      }
+    },
+    {
+      "index": 38,
+      "text": "Can it be played",
+      "states": {
+        "Y": 135,
+        "N": 0,
+        "P": 0,
+        "Q": 1640
+      }
+    },
+    {
+      "index": 39,
+      "text": "Does it weigh more than a duck",
+      "states": {
+        "Y": 0,
+        "N": 49,
+        "P": 183,
+        "Q": 1543
+      }
+    },
+    {
+      "index": 40,
+      "text": "Does it have lights on it",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 215,
+        "Q": 1560
+      }
+    },
+    {
+      "index": 41,
+      "text": "Was it used over 100 years ago",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1623,
+        "Q": 152
+      }
+    },
+    {
+      "index": 42,
+      "text": "Does it burn",
+      "states": {
+        "Y": 10,
+        "N": 0,
+        "P": 678,
+        "Q": 1087
+      }
+    },
+    {
+      "index": 43,
+      "text": "Is it very large",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 0,
+        "Q": 1775
+      }
+    },
+    {
+      "index": 44,
+      "text": "Do you carry it in your pocket",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 266,
+        "Q": 1509
+      }
+    },
+    {
+      "index": 45,
+      "text": "Can it float",
+      "states": {
+        "Y": 0,
+        "N": 29,
+        "P": 22,
+        "Q": 1724
+      }
+    },
+    {
+      "index": 46,
+      "text": "Does it store information",
+      "states": {
+        "Y": 160,
+        "N": 10,
+        "P": 131,
+        "Q": 1474
+      }
+    },
+    {
+      "index": 47,
+      "text": "Does it move",
+      "states": {
+        "Y": 426,
+        "N": 0,
+        "P": 0,
+        "Q": 1349
+      }
+    },
+    {
+      "index": 48,
+      "text": "Is it warm",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 26,
+        "Q": 1749
+      }
+    },
+    {
+      "index": 49,
+      "text": "Is it manufactured",
+      "states": {
+        "Y": 1016,
+        "N": 723,
+        "P": 36,
+        "Q": 0
+      }
+    },
+    {
+      "index": 50,
+      "text": "Is it useful",
+      "states": {
+        "Y": 911,
+        "N": 0,
+        "P": 864,
+        "Q": 0
+      }
+    },
+    {
+      "index": 51,
+      "text": "Is it cold",
+      "states": {
+        "Y": 4,
+        "N": 0,
+        "P": 16,
+        "Q": 1755
+      }
+    },
+    {
+      "index": 52,
+      "text": "Can you smell it",
+      "states": {
+        "Y": 104,
+        "N": 0,
+        "P": 585,
+        "Q": 1086
+      }
+    },
+    {
+      "index": 53,
+      "text": "Does it produce light",
+      "states": {
+        "Y": 9,
+        "N": 0,
+        "P": 86,
+        "Q": 1680
+      }
+    },
+    {
+      "index": 54,
+      "text": "Is it a tool",
+      "states": {
+        "Y": 182,
+        "N": 1584,
+        "P": 9,
+        "Q": 0
+      }
+    },
+    {
+      "index": 55,
+      "text": "Does it come in specific sizes",
+      "states": {
+        "Y": 111,
+        "N": 103,
+        "P": 904,
+        "Q": 657
+      }
+    },
+    {
+      "index": 56,
+      "text": "Can you see through it",
+      "states": {
+        "Y": 1,
+        "N": 0,
+        "P": 18,
+        "Q": 1756
+      }
+    },
+    {
+      "index": 57,
+      "text": "Is it bigger than a sofa",
+      "states": {
+        "Y": 74,
+        "N": 23,
+        "P": 78,
+        "Q": 1600
+      }
+    },
+    {
+      "index": 58,
+      "text": "Does it spin",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 153,
+        "Q": 1622
+      }
+    },
+    {
+      "index": 59,
+      "text": "Is it used to carry things",
+      "states": {
+        "Y": 57,
+        "N": 0,
+        "P": 85,
+        "Q": 1633
+      }
+    },
+    {
+      "index": 60,
+      "text": "Is it tall",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 60,
+        "Q": 1715
+      }
+    },
+    {
+      "index": 61,
+      "text": "Can you stretch it",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 7,
+        "Q": 1768
+      }
+    },
+    {
+      "index": 62,
+      "text": "Does it have legs",
+      "states": {
+        "Y": 46,
+        "N": 23,
+        "P": 308,
+        "Q": 1398
+      }
+    },
+    {
+      "index": 63,
+      "text": "Do you use it with a computer",
+      "states": {
+        "Y": 11,
+        "N": 0,
+        "P": 145,
+        "Q": 1619
+      }
+    },
+    {
+      "index": 64,
+      "text": "Does it have a good smell",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 268,
+        "Q": 1507
+      }
+    },
+    {
+      "index": 65,
+      "text": "Is it hot",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 22,
+        "Q": 1753
+      }
+    },
+    {
+      "index": 66,
+      "text": "Is it sharp",
+      "states": {
+        "Y": 28,
+        "N": 111,
+        "P": 153,
+        "Q": 1483
+      }
+    },
+    {
+      "index": 67,
+      "text": "Would you be lost without it",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1775,
+        "Q": 0
+      }
+    },
+    {
+      "index": 68,
+      "text": "Was it invented",
+      "states": {
+        "Y": 909,
+        "N": 866,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 69,
+      "text": "Can it be placed on your head",
+      "states": {
+        "Y": 10,
+        "N": 0,
+        "P": 0,
+        "Q": 1765
+      }
+    },
+    {
+      "index": 70,
+      "text": "Is it used in a game",
+      "states": {
+        "Y": 110,
+        "N": 0,
+        "P": 19,
+        "Q": 1646
+      }
+    },
+    {
+      "index": 71,
+      "text": "Is it a specific color",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 18,
+        "Q": 1757
+      }
+    },
+    {
+      "index": 72,
+      "text": "Is it crunchy",
+      "states": {
+        "Y": 18,
+        "N": 29,
+        "P": 189,
+        "Q": 1539
+      }
+    },
+    {
+      "index": 73,
+      "text": "Is it annoying",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1775,
+        "Q": 0
+      }
+    },
+    {
+      "index": 74,
+      "text": "Is it green",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 12,
+        "Q": 1763
+      }
+    },
+    {
+      "index": 75,
+      "text": "Does it come in pairs",
+      "states": {
+        "Y": 17,
+        "N": 0,
+        "P": 94,
+        "Q": 1664
+      }
+    },
+    {
+      "index": 76,
+      "text": "Do you wear it",
+      "states": {
+        "Y": 106,
+        "N": 1654,
+        "P": 9,
+        "Q": 6
+      }
+    },
+    {
+      "index": 77,
+      "text": "Can it carry people",
+      "states": {
+        "Y": 27,
+        "N": 1690,
+        "P": 58,
+        "Q": 0
+      }
+    },
+    {
+      "index": 78,
+      "text": "Is it slippery",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 0,
+        "Q": 1775
+      }
+    },
+    {
+      "index": 79,
+      "text": "Does it ring",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 14,
+        "Q": 1761
+      }
+    },
+    {
+      "index": 80,
+      "text": "Is it mechanical",
+      "states": {
+        "Y": 3,
+        "N": 0,
+        "P": 153,
+        "Q": 1619
+      }
+    },
+    {
+      "index": 81,
+      "text": "Can you recycle it",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 911,
+        "Q": 864
+      }
+    },
+    {
+      "index": 82,
+      "text": "Does it provide shade",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 9,
+        "Q": 1766
+      }
+    },
+    {
+      "index": 83,
+      "text": "Have you seen one in real life",
+      "states": {
+        "Y": 0,
+        "N": 25,
+        "P": 1750,
+        "Q": 0
+      }
+    },
+    {
+      "index": 84,
+      "text": "Can it climb",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 339,
+        "Q": 1436
+      }
+    },
+    {
+      "index": 85,
+      "text": "Can you eat it",
+      "states": {
+        "Y": 237,
+        "N": 1515,
+        "P": 23,
+        "Q": 0
+      }
+    },
+    {
+      "index": 86,
+      "text": "Does it taste sweet",
+      "states": {
+        "Y": 40,
+        "N": 0,
+        "P": 196,
+        "Q": 1539
+      }
+    },
+    {
+      "index": 87,
+      "text": "Is it red",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 8,
+        "Q": 1767
+      }
+    },
+    {
+      "index": 88,
+      "text": "Does it have a trunk",
+      "states": {
+        "Y": 3,
+        "N": 0,
+        "P": 0,
+        "Q": 1772
+      }
+    },
+    {
+      "index": 89,
+      "text": "Does it live in the forest",
+      "states": {
+        "Y": 0,
+        "N": 1404,
+        "P": 371,
+        "Q": 0
+      }
+    },
+    {
+      "index": 90,
+      "text": "Does it have a long tail",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 26,
+        "Q": 1749
+      }
+    },
+    {
+      "index": 91,
+      "text": "Does it have leaves",
+      "states": {
+        "Y": 33,
+        "N": 0,
+        "P": 0,
+        "Q": 1742
+      }
+    },
+    {
+      "index": 92,
+      "text": "Is it cool",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1775,
+        "Q": 0
+      }
+    },
+    {
+      "index": 93,
+      "text": "Is it planted in gardens",
+      "states": {
+        "Y": 0,
+        "N": 1743,
+        "P": 32,
+        "Q": 0
+      }
+    },
+    {
+      "index": 94,
+      "text": "Can it swim",
+      "states": {
+        "Y": 42,
+        "N": 0,
+        "P": 248,
+        "Q": 1485
+      }
+    },
+    {
+      "index": 95,
+      "text": "Does it communicate",
+      "states": {
+        "Y": 236,
+        "N": 0,
+        "P": 116,
+        "Q": 1423
+      }
+    },
+    {
+      "index": 96,
+      "text": "Does it live in groups (gregarious)",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 339,
+        "Q": 1436
+      }
+    },
+    {
+      "index": 97,
+      "text": "Is it alive",
+      "states": {
+        "Y": 359,
+        "N": 1416,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 98,
+      "text": "Is it motorized",
+      "states": {
+        "Y": 22,
+        "N": 1610,
+        "P": 128,
+        "Q": 15
+      }
+    },
+    {
+      "index": 99,
+      "text": "Does it lay eggs",
+      "states": {
+        "Y": 85,
+        "N": 1433,
+        "P": 257,
+        "Q": 0
+      }
+    },
+    {
+      "index": 100,
+      "text": "Does it live in water",
+      "states": {
+        "Y": 49,
+        "N": 1404,
+        "P": 151,
+        "Q": 171
+      }
+    },
+    {
+      "index": 101,
+      "text": "Is it fluffy",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 53,
+        "Q": 1722
+      }
+    },
+    {
+      "index": 102,
+      "text": "Is it delivered",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1147,
+        "Q": 628
+      }
+    },
+    {
+      "index": 103,
+      "text": "Is it a body part",
+      "states": {
+        "Y": 53,
+        "N": 1713,
+        "P": 9,
+        "Q": 0
+      }
+    },
+    {
+      "index": 104,
+      "text": "Is it made of stone",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 91,
+        "Q": 1684
+      }
+    },
+    {
+      "index": 105,
+      "text": "Does it smell sweet",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 9,
+        "Q": 1766
+      }
+    },
+    {
+      "index": 106,
+      "text": "Does it have tough skin",
+      "states": {
+        "Y": 17,
+        "N": 0,
+        "P": 322,
+        "Q": 1436
+      }
+    },
+    {
+      "index": 107,
+      "text": "Is it colorless",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 0,
+        "Q": 1775
+      }
+    },
+    {
+      "index": 108,
+      "text": "Is it yellow",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 9,
+        "Q": 1766
+      }
+    },
+    {
+      "index": 109,
+      "text": "Does it have seeds",
+      "states": {
+        "Y": 31,
+        "N": 1649,
+        "P": 95,
+        "Q": 0
+      }
+    },
+    {
+      "index": 110,
+      "text": "Would you touch it with a 10-foot pole",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1775,
+        "Q": 0
+      }
+    },
+    {
+      "index": 111,
+      "text": "Can it growl",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 29,
+        "Q": 1746
+      }
+    },
+    {
+      "index": 112,
+      "text": "Is it spontaneous",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1775,
+        "Q": 0
+      }
+    },
+    {
+      "index": 113,
+      "text": "Is it a type of dog",
+      "states": {
+        "Y": 12,
+        "N": 1594,
+        "P": 0,
+        "Q": 169
+      }
+    },
+    {
+      "index": 114,
+      "text": "Is it used for transportation",
+      "states": {
+        "Y": 88,
+        "N": 1687,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 115,
+      "text": "Is it a carnivore",
+      "states": {
+        "Y": 28,
+        "N": 1465,
+        "P": 282,
+        "Q": 0
+      }
+    },
+    {
+      "index": 116,
+      "text": "Is it clear",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 23,
+        "Q": 1752
+      }
+    },
+    {
+      "index": 117,
+      "text": "Is it tasty",
+      "states": {
+        "Y": 199,
+        "N": 0,
+        "P": 39,
+        "Q": 1537
+      }
+    },
+    {
+      "index": 118,
+      "text": "Can you blow it up",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 8,
+        "Q": 1767
+      }
+    },
+    {
+      "index": 119,
+      "text": "Is it a vegetarian",
+      "states": {
+        "Y": 28,
+        "N": 1460,
+        "P": 283,
+        "Q": 4
+      }
+    },
+    {
+      "index": 120,
+      "text": "Does it live in salt-water",
+      "states": {
+        "Y": 1,
+        "N": 1450,
+        "P": 23,
+        "Q": 301
+      }
+    },
+    {
+      "index": 121,
+      "text": "Is it an abstract concept",
+      "states": {
+        "Y": 35,
+        "N": 1707,
+        "P": 8,
+        "Q": 25
+      }
+    },
+    {
+      "index": 122,
+      "text": "Is it addictive",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 0,
+        "Q": 1775
+      }
+    },
+    {
+      "index": 123,
+      "text": "Is it striped",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 339,
+        "Q": 1436
+      }
+    },
+    {
+      "index": 124,
+      "text": "Is it a rodent",
+      "states": {
+        "Y": 16,
+        "N": 1596,
+        "P": 0,
+        "Q": 163
+      }
+    },
+    {
+      "index": 125,
+      "text": "Is it furry",
+      "states": {
+        "Y": 176,
+        "N": 1599,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 126,
+      "text": "Is it warm blooded",
+      "states": {
+        "Y": 240,
+        "N": 1535,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 127,
+      "text": "Is it organic",
+      "states": {
+        "Y": 675,
+        "N": 51,
+        "P": 0,
+        "Q": 1049
+      }
+    },
+    {
+      "index": 128,
+      "text": "Is it a herbivore",
+      "states": {
+        "Y": 28,
+        "N": 1485,
+        "P": 219,
+        "Q": 43
+      }
+    },
+    {
+      "index": 129,
+      "text": "Does it have a spine",
+      "states": {
+        "Y": 285,
+        "N": 1490,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 130,
+      "text": "Does it have roots",
+      "states": {
+        "Y": 35,
+        "N": 1740,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 131,
+      "text": "Does it have paws",
+      "states": {
+        "Y": 62,
+        "N": 1598,
+        "P": 115,
+        "Q": 0
+      }
+    },
+    {
+      "index": 132,
+      "text": "Is it living",
+      "states": {
+        "Y": 359,
+        "N": 1416,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 133,
+      "text": "Does it need love",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 339,
+        "Q": 1436
+      }
+    },
+    {
+      "index": 134,
+      "text": "Is it spotted",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 4,
+        "Q": 1771
+      }
+    },
+    {
+      "index": 135,
+      "text": "Is it a nocturnal animal",
+      "states": {
+        "Y": 0,
+        "N": 1436,
+        "P": 339,
+        "Q": 0
+      }
+    },
+    {
+      "index": 136,
+      "text": "Does it hop",
+      "states": {
+        "Y": 6,
+        "N": 1436,
+        "P": 333,
+        "Q": 0
+      }
+    },
+    {
+      "index": 137,
+      "text": "Would you like to be one",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 1775,
+        "Q": 0
+      }
+    },
+    {
+      "index": 138,
+      "text": "Is it intelligent",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 339,
+        "Q": 1436
+      }
+    },
+    {
+      "index": 139,
+      "text": "Is it cold blooded",
+      "states": {
+        "Y": 95,
+        "N": 1680,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 140,
+      "text": "Can it use tools",
+      "states": {
+        "Y": 0,
+        "N": 1436,
+        "P": 0,
+        "Q": 339
+      }
+    },
+    {
+      "index": 141,
+      "text": "Can you wear it on your head",
+      "states": {
+        "Y": 10,
+        "N": 0,
+        "P": 0,
+        "Q": 1765
+      }
+    },
+    {
+      "index": 142,
+      "text": "Is it a scavenger",
+      "states": {
+        "Y": 0,
+        "N": 1436,
+        "P": 339,
+        "Q": 0
+      }
+    },
+    {
+      "index": 143,
+      "text": "Can you touch it",
+      "states": {
+        "Y": 1284,
+        "N": 46,
+        "P": 89,
+        "Q": 356
+      }
+    },
+    {
+      "index": 144,
+      "text": "Is it a farm animal",
+      "states": {
+        "Y": 0,
+        "N": 1436,
+        "P": 0,
+        "Q": 339
+      }
+    },
+    {
+      "index": 145,
+      "text": "Is it a type of fish",
+      "states": {
+        "Y": 20,
+        "N": 1755,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 146,
+      "text": "Does it have a shell",
+      "states": {
+        "Y": 0,
+        "N": 0,
+        "P": 67,
+        "Q": 1708
+      }
+    },
+    {
+      "index": 147,
+      "text": "Is it an insect",
+      "states": {
+        "Y": 20,
+        "N": 1744,
+        "P": 11,
+        "Q": 0
+      }
+    },
+    {
+      "index": 148,
+      "text": "Is it combustible",
+      "states": {
+        "Y": 14,
+        "N": 0,
+        "P": 18,
+        "Q": 1743
+      }
+    },
+    {
+      "index": 149,
+      "text": "Does it have feathers",
+      "states": {
+        "Y": 42,
+        "N": 1733,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 150,
+      "text": "Can it jump",
+      "states": {
+        "Y": 189,
+        "N": 1436,
+        "P": 150,
+        "Q": 0
+      }
+    },
+    {
+      "index": 151,
+      "text": "Is it a root vegetable",
+      "states": {
+        "Y": 15,
+        "N": 1671,
+        "P": 0,
+        "Q": 89
+      }
+    },
+    {
+      "index": 152,
+      "text": "Is it a mammal",
+      "states": {
+        "Y": 188,
+        "N": 1587,
+        "P": 0,
+        "Q": 0
+      }
+    },
+    {
+      "index": 153,
+      "text": "Does it have wings",
+      "states": {
+        "Y": 41,
+        "N": 1689,
+        "P": 45,
+        "Q": 0
+      }
+    },
+    {
+      "index": 154,
+      "text": "Does it have feet",
+      "states": {
+        "Y": 240,
+        "N": 1468,
+        "P": 67,
+        "Q": 0
+      }
+    },
+    {
+      "index": 155,
+      "text": "Does it have hooves",
+      "states": {
+        "Y": 34,
+        "N": 1594,
+        "P": 0,
+        "Q": 147
+      }
+    }
+  ],
+  "note": "'Q' is a Probably No value in this proposal, not a validated factual No. All target-level profiles and assertions require review; do not use candidate collisions as actual production win/fail rates."
+}
