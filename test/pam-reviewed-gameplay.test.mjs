@@ -54,7 +54,7 @@ function play(engine,weights,targetIndex,soft) {
 }
 for(const soft of [false,true]) {
   test('reviewed Pam targets remain exact under '+(soft?'softened':'exact')+' production gameplay',()=>{
-    assert.equal(selected.length,42);
+    assert.equal(selected.length,47);
     for(const target of selected) {
       const i=raw.targets.indexOf(target);
       assert.ok(i>=0,target);

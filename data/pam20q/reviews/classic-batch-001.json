@@ -465,7 +465,147 @@
       "oldState": 0,
       "newState": 2,
       "rationale": "A red panda is a mammal, not an insect."
+    },
+    {
+      "target": "a binturong",
+      "targetIndex": 1216,
+      "questionIndex": 125,
+      "question": "Is it furry",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: furry",
+      "source": "https://nationalzoo.si.edu/animals/binturong"
+    },
+    {
+      "target": "a snow leopard",
+      "targetIndex": 1236,
+      "questionIndex": 90,
+      "question": "Does it have a long tail",
+      "oldState": 2,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: longTail",
+      "source": "https://animals.sandiegozoo.org/animals/snow-leopard"
+    },
+    {
+      "target": "a snow leopard",
+      "targetIndex": 1236,
+      "questionIndex": 131,
+      "question": "Does it have paws",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: paws",
+      "source": "https://animals.sandiegozoo.org/animals/snow-leopard"
+    },
+    {
+      "target": "a snow leopard",
+      "targetIndex": 1236,
+      "questionIndex": 115,
+      "question": "Is it a carnivore",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: carnivore",
+      "source": "https://animals.sandiegozoo.org/animals/snow-leopard"
+    },
+    {
+      "target": "a snow leopard",
+      "targetIndex": 1236,
+      "questionIndex": 125,
+      "question": "Is it furry",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: furry",
+      "source": "https://animals.sandiegozoo.org/animals/snow-leopard"
+    },
+    {
+      "target": "a snow leopard",
+      "targetIndex": 1236,
+      "questionIndex": 150,
+      "question": "Can it jump",
+      "oldState": 2,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: jump",
+      "source": "https://animals.sandiegozoo.org/animals/snow-leopard"
+    },
+    {
+      "target": "a caracal",
+      "targetIndex": 1233,
+      "questionIndex": 115,
+      "question": "Is it a carnivore",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: carnivore",
+      "source": "https://animals.sandiegozoo.org/animals/caracal"
+    },
+    {
+      "target": "a caracal",
+      "targetIndex": 1233,
+      "questionIndex": 125,
+      "question": "Is it furry",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: furry",
+      "source": "https://animals.sandiegozoo.org/animals/caracal"
+    },
+    {
+      "target": "a caracal",
+      "targetIndex": 1233,
+      "questionIndex": 131,
+      "question": "Does it have paws",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: paws",
+      "source": "https://animals.sandiegozoo.org/animals/caracal"
+    },
+    {
+      "target": "a serval",
+      "targetIndex": 1234,
+      "questionIndex": 115,
+      "question": "Is it a carnivore",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: carnivore",
+      "source": "https://animals.sandiegozoo.org/animals/serval"
+    },
+    {
+      "target": "a serval",
+      "targetIndex": 1234,
+      "questionIndex": 125,
+      "question": "Is it furry",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: furry",
+      "source": "https://animals.sandiegozoo.org/animals/serval"
+    },
+    {
+      "target": "a serval",
+      "targetIndex": 1234,
+      "questionIndex": 131,
+      "question": "Does it have paws",
+      "oldState": 1,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: paws",
+      "source": "https://animals.sandiegozoo.org/animals/serval"
+    },
+    {
+      "target": "a serval",
+      "targetIndex": 1234,
+      "questionIndex": 60,
+      "question": "Is it tall",
+      "oldState": 2,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: tall",
+      "source": "https://animals.sandiegozoo.org/animals/serval"
+    },
+    {
+      "target": "a harpy eagle",
+      "targetIndex": 1222,
+      "questionIndex": 115,
+      "question": "Is it a carnivore",
+      "oldState": 2,
+      "newState": 3,
+      "rationale": "Independent species fact sheet supports this specific trait for this named animal. Previously stored state disagreed with documented evidence. Trait: carnivore",
+      "source": "https://zoo.sandiegozoo.org/animals/harpy-eagle"
     }
   ],
-  "batchNote": "All complete rows are target-name specific and preserve a before/after 156-state sequence. Scoped corrections are cell-only reviews; neither source is a blanket category inference. This expands the initial 2 complete rows to 24."
+  "batchNote": "All complete rows are target-name specific and preserve a before/after 156-state sequence. Scoped corrections are cell-only reviews; neither source is a blanket category inference. This expands the initial 2 complete rows to 24. Additional scoped review: 14 individually verified zoo-source contradictions across 5 first-wave extension profiles, correcting legacy weak/negative statuses."
 }
