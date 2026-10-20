@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "method": "source-verified target-specific yes traits; apply only to unknown cells",
+  "entries": [
+    {
+      "target": "an aye-aye",
+      "yes": [
+        "nocturnal",
+        "longTail",
+        "forest",
+        "climb"
+      ],
+      "source": "https://animals.sandiegozoo.org/animals/lemur"
+    },
+    {
+      "target": "a binturong",
+      "yes": [
+        "nocturnal",
+        "forest",
+        "climb",
+        "longTail",
+        "furry"
+      ],
+      "source": "https://nationalzoo.si.edu/animals/binturong"
+    },
+    {
+      "target": "a snow leopard",
+      "yes": [
+        "cold",
+        "spotted",
+        "climb",
+        "longTail",
+        "paws"
+      ],
+      "source": "https://www.worldwildlife.org/resources/facts/where-do-snow-leopards-live-and-nine-other-snow-leopard-facts/"
+    }
+  ]
+}
