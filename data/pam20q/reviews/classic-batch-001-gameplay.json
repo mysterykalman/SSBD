@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-20",
+  "scope": "Targeted review regression, NOT full-library 1,775 or Part B acceptance",
+  "model": "Reconstructed actual 1,775×156 production model including 200 extension and 375 compressed quality profiles plus enrichment and verified evidence",
+  "engine": "src/client/mom-mode/engine.js",
+  "reviewFile": "data/pam20q/reviews/classic-batch-001.json",
+  "targetCount": 42,
+  "targets": [
+    "friendship",
+    "mail (snail mail)",
+    "love",
+    "time",
+    "sleep",
+    "a dream",
+    "magic",
+    "a joke",
+    "a poem",
+    "a song",
+    "a smile",
+    "a kiss",
+    "a novel",
+    "a movie",
+    "a game",
+    "a number",
+    "money",
+    "a burp",
+    "a fart",
+    "the color blue",
+    "the color red",
+    "the color green",
+    "happiness",
+    "the wind",
+    "a nut",
+    "a whistle",
+    "a barbeque",
+    "a mouse trap",
+    "an antenna (radio)",
+    "dynamite",
+    "a billboard",
+    "braces (for teeth)",
+    "a mini van",
+    "an abacus",
+    "a cruise ship",
+    "golf cart",
+    "an anvil",
+    "a fishing lure",
+    "a hot pepper",
+    "a camera lens",
+    "a seashell",
+    "a red panda (endangered)"
+  ],
+  "reviewedFullRows": 24,
+  "changedCells": 124,
+  "results": {
+    "exactBefore": {
+      "correct": 42,
+      "total": 42
+    },
+    "exactAfter": {
+      "correct": 42,
+      "total": 42
+    },
+    "softenedBefore": {
+      "correct": 42,
+      "total": 42
+    },
+    "softenedAfter": {
+      "correct": 42,
+      "total": 42
+    }
+  },
+  "knownLimitations": [
+    "Script is reproducible Node test but no post-commit GitHub Actions job result was available when recording this evidence.",
+    "This does not verify complete 1775-target accuracy, Part B targets or additional questions."
+  ]
+}
