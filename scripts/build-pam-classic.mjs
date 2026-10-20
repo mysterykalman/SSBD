@@ -4,6 +4,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {loadPamClassicModel} from './pam-classic-model.mjs';
 import {loadPam1775Model} from './pam-quality-model.mjs';
 import {enrichPamModel} from './pam-enrich-model.mjs';
+import {applyVerifiedPamFacts} from './pam-verified-facts.mjs';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const momDir=join(root,'src','client','mom-mode');
@@ -12,7 +13,7 @@ const stylesPath=join(momDir,'styles.css');
 const classicStylesPath=join(momDir,'classic.css');
 
 const [{questions,targets,weights,knownMask,baseTargetCount,extensionCount,qualityCount,totalExtensionCount},previous,baseStyles,classicStyles]=await Promise.all([
-  loadPam1775Model(loadPamClassicModel).then(enrichPamModel),
+  loadPam1775Model(loadPamClassicModel).then(enrichPamModel).then(applyVerifiedPamFacts),
   readFile(generatedPath,'utf8'),
   readFile(stylesPath,'utf8'),
   readFile(classicStylesPath,'utf8')
