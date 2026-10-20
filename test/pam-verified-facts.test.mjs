@@ -17,4 +17,5 @@ test('source-backed answers populate unknown cells without rewriting known answe
  assert.equal(enriched.weights[q],3);
  assert.equal(enriched.knownMask[q],1);
  assert.equal(model.knownMask[q],0);
+ assert.ok(enriched.verifiedEnrichment.applied.some(x=>x.target==='a caracal')===false);
 });
