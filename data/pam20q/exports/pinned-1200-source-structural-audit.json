@@ -1,0 +1,754 @@
+{
+  "schemaVersion": 1,
+  "source": "data/pam20q/reference/classic/weights.u2states.bin",
+  "sourceSha256": null,
+  "reviewClass": "mechanical matrix inspection, not individual fact review",
+  "targets": 1200,
+  "questions": 156,
+  "cells": 187200,
+  "stateCounts": {
+    "probablyNo": 51656,
+    "probablyYes": 5759,
+    "no": 104334,
+    "yes": 25451
+  },
+  "opening": {
+    "atLeastOnePositive": 1200,
+    "multiplePositive": 101,
+    "missingPositive": 0
+  },
+  "patterns": {
+    "multiOpening": [
+      {
+        "name": "an egg",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "an ice cube",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "ice",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "tea",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "an oak tree",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a nut",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a log (wood)",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "cat litter",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a baby",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "the Moon",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a coin",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a rose",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a pine tree",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a palm tree",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a pine cone",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "dirt",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "wine",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a fool",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a lawn",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "clay",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "water",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "the human body",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a woman",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a crush (in love)",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a brick",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "an alien (extraterrestial)",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a glass (drinking glass)",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a blade of grass",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a steak (beef)",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a grape",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a melon (fruit)",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a fairy (elf)",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a comet",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a clown",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a demon",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a pearl",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "sugar",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "chalk",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a grain of sand",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a witch",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a daisy",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a tulip",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "bacon",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "an apple pie",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "an anvil",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "maple syrup",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "people (human beings)",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "an orange",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "coffee",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a peanut",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a potato chip",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "peanut butter",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a marble (glass ball)",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a statue",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "myself",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a sponge",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a cactus",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a magnet",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a family",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a zombie",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a pirate",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "bamboo",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a banana peel",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a raisin",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "french fries",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "helium",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "an icicle",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "popcorn",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a wedding ring",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a vampire",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a vitamin",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a volcano",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "tobacco",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "ketchup",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a monster (frightful creature)",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a cadaver",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "an iceberg",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a crystal ball",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a glacier",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "mustard",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a mountain",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "gasoline",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a daughter",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a seashell",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a skeleton",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a gargoyle",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a boyfriend",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a Christmas tree",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a celebrity",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a pineapple",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a horseshoe",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a sunflower",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a carnation (flower)",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a four-leaf clover",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a blueberry",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "sunflower seeds",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a girlfriend",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a strawberry",
+        "categories": [
+          "Is it classified as Vegetable",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a carburetor",
+        "categories": [
+          "Is it classified as Mineral",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "a leprechaun",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      },
+      {
+        "name": "me (as in you)",
+        "categories": [
+          "Is it classified as Animal",
+          "Is it classified as Other"
+        ]
+      }
+    ],
+    "missingOpening": [],
+    "mammalNoWarmBlood": [
+      "a cadaver"
+    ],
+    "legsNoFeet": [
+      "a desk",
+      "a sofa",
+      "blue jeans",
+      "a crab"
+    ],
+    "feathersNoWings": [],
+    "mammalNoSpine": [],
+    "fishAndFeathers": [],
+    "mammalAndFish": [],
+    "insectAndSpine": [],
+    "biggerSofaAndSmallerLoaf": []
+  },
+  "interpretation": [
+    "Multiple positive classic Animal/Vegetable/Mineral/Other states do not alone prove an error because everyday objects can span these historical 20Q categories.",
+    "A dead mammal can correctly fail the warm-blooded property, exemplified by 'a cadaver'.",
+    "A desk and sofa can have legs without feet, while blue jeans have trouser legs; avoid inferring feet for every item with legs.",
+    "The 200 additional extension targets are compiled with states.fill(2) for unmentioned properties, thus many negative states are template defaults, NOT documented individually verified negative facts.",
+    "This report says nothing about the 375 quality profiles or the truth of every cell; full factual review has not been completed."
+  ]
+}
