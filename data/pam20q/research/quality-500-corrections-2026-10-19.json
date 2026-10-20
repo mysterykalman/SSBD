@@ -1,0 +1,768 @@
+{
+  "schemaVersion": 1,
+  "model": "research_candidate_unreviewed",
+  "reviewScope": "Individual indicated trait corrections; NOT full target-wide question review",
+  "reviewDate": "2026-10-19",
+  "correctedTargets": 100,
+  "correctedCells": 107,
+  "changes": [
+    {
+      "target": "a cormorant",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a paca",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a leaf-tailed gecko",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a bee-eater",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a sitatunga",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a bat-eared fox",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a hornbill",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a motmot",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a quetzal",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a drongo",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a magpie-lark",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a wagtail",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a redpoll",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a razorbill",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a gannet",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a skua",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "an anhinga",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a coot",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a gallinule",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a stilt bird",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a sandpiper",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "an oystercatcher",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a jacana",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a rock hyrax",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a naked mole-rat",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a kingfisher",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a springbok",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a bontebok",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a red river hog",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a marmot",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a dormouse",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a wallaroo",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a bettong",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a bilby",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a potoo",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a nightjar",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a hoopoe",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a roller bird",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a lyrebird",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a fishing cat",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a leopard tortoise",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a satin bowerbird",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a sunbird",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a waxwing",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a treecreeper",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a flat-headed cat",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a striped hyena",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a maned wolf",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a spotted skunk",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a hog-nosed skunk",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a sable antelope",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a waterbuck",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a nyala",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a greater kudu",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a lesser kudu",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a wildebeest",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a klipspringer",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a steenbok",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a sambar deer",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a muntjac",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a barasingha",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a chital",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a nilgai",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a peccary",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a collared peccary",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a tree hyrax",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a mara",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "an agouti",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a viscacha",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a prairie dog",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a jerboa",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a harvest mouse",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a tree kangaroo",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a frilled lizard",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a tokay gecko",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a day gecko",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a pancake tortoise",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a dipper bird",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a numbat",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a bullfinch",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a tamandua",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a crossbill",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a crested porcupine",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a goldcrest",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a tree porcupine",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a firecrest",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a beaver",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a kittiwake",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a booby bird",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a pudu",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a horned lizard",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a basilisk lizard",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a crocodile skink",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a fire skink",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a leopard gecko",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a crested gecko",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a softshell turtle",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a box turtle",
+      "trait": "legs",
+      "from": "no",
+      "to": "yes",
+      "reason": "Reviewed named limbed bird, mammal, or reptile, correcting feet-without-legs contradiction; single trait only"
+    },
+    {
+      "target": "a cormorant",
+      "trait": "fish",
+      "from": "yes",
+      "to": "no",
+      "reason": "Fish-eating bird is not a fish",
+      "source": "https://www.allaboutbirds.org/guide/Great_Cormorant/overview"
+    },
+    {
+      "target": "a gannet",
+      "trait": "fish",
+      "from": "yes",
+      "to": "no",
+      "reason": "Fish-eating bird is not a fish",
+      "source": "https://www.allaboutbirds.org/guide/Great_Cormorant/overview"
+    },
+    {
+      "target": "an anhinga",
+      "trait": "fish",
+      "from": "yes",
+      "to": "no",
+      "reason": "Fish-eating bird is not a fish",
+      "source": "https://www.allaboutbirds.org/guide/Great_Cormorant/overview"
+    },
+    {
+      "target": "a booby bird",
+      "trait": "fish",
+      "from": "yes",
+      "to": "no",
+      "reason": "Fish-eating bird is not a fish",
+      "source": "https://www.allaboutbirds.org/guide/Great_Cormorant/overview"
+    },
+    {
+      "target": "a bee-eater",
+      "trait": "insect",
+      "from": "yes",
+      "to": "no",
+      "reason": "Insect-eating vertebrate is not an insect",
+      "source": "https://birdguides.io/en/species/family/meropidae"
+    },
+    {
+      "target": "a bat-eared fox",
+      "trait": "insect",
+      "from": "yes",
+      "to": "no",
+      "reason": "Insect-eating vertebrate is not an insect",
+      "source": "https://nationalzoo.si.edu/animals/bat-eared-fox"
+    },
+    {
+      "target": "a cormorant",
+      "trait": "carnivore",
+      "from": "no",
+      "to": "yes",
+      "reason": "Diet consists primarily of fish",
+      "source": "https://www.allaboutbirds.org/guide/Great_Cormorant/lifehistory"
+    },
+    {
+      "target": "a bladderwort",
+      "trait": "roots",
+      "from": "yes",
+      "to": "no",
+      "reason": "Utricularia bladderworts have no true roots",
+      "source": "https://plants.ces.ncsu.edu/plants/utricularia/"
+    },
+    {
+      "target": "a jackfruit",
+      "trait": "buy",
+      "from": "no",
+      "to": "yes",
+      "reason": "Commonly sold commercially",
+      "source": "https://www.realcanadiansuperstore.ca/en/search?search-bar=jackfruit"
+    }
+  ]
+}
