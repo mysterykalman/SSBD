@@ -10632,11 +10632,11 @@
     {
       "index": 1173,
       "target": "a wastebasket",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1174,
@@ -14265,11 +14265,11 @@
     {
       "index": 1570,
       "target": "chinaware",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.tableware",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1571,
