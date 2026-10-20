@@ -5,6 +5,12 @@ const IMPLICATIONS=Object.freeze([
  [152,[126,129,132]], // mammal -> warm blood, backbone, living
  [155,[152,126,129]], // hooves -> mammal, warm blood, backbone
  [124,[152,126,129]], // rodent -> mammal, warm blood, backbone
+ [149,[126,129,132,97]], // feathers -> warm blood, backbone, living, alive
+ [147,[97,132,127]], // insect -> alive, living, organic
+ [152,[97,127]], // mammal -> alive, organic
+ [145,[129,97,132]], // fish -> backbone, alive, living
+ [128,[85]], // herbivore -> eats
+ [115,[85]], // carnivore -> eats
 ]);
 export function enrichPamModel(model){
  const n=model.targets.length,f=model.questions.length;
