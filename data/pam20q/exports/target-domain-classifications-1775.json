@@ -331,9 +331,9 @@
     {
       "index": 36,
       "target": "a hot dog",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "food.prepared",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -457,9 +457,9 @@
     {
       "index": 50,
       "target": "a dog collar",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "clothing.accessory",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -740,9 +740,9 @@
     {
       "index": 81,
       "target": "cat litter",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.consumable",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -805,9 +805,9 @@
     {
       "index": 88,
       "target": "a sea cucumber",
-      "domain": "food.produce",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "animal.invertebrate",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2409,9 +2409,9 @@
     {
       "index": 264,
       "target": "a fish hook",
-      "domain": "animal.fish",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -2564,9 +2564,9 @@
     {
       "index": 281,
       "target": "a fish tank",
-      "domain": "animal.fish",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "household.container",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -3169,24 +3169,24 @@
     {
       "index": 348,
       "target": "a mouse (computer)",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "low",
+      "domain": "technology.electronics",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [
         "technology.electronics"
       ],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 349,
       "target": "a mouse pad",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "low",
+      "domain": "object.accessory",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [
         "technology.electronics"
       ],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 350,
@@ -3742,9 +3742,9 @@
     {
       "index": 411,
       "target": "a mouse pointer",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "technology.electronics",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -4736,9 +4736,9 @@
     {
       "index": 521,
       "target": "a mouse trap",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "tools.equipment",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -7518,9 +7518,9 @@
     {
       "index": 829,
       "target": "a pegasus (winged horse)",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "medium",
+      "domain": "fiction.creature",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [],
       "reviewRequired": false
     },
@@ -8336,13 +8336,13 @@
     {
       "index": 919,
       "target": "a baseball bat",
-      "domain": "animal.mammal",
-      "source": "lexical-proposal",
-      "confidence": "low",
+      "domain": "sports.toys.games",
+      "source": "manual-semantic-correction",
+      "confidence": "high",
       "alternatives": [
         "sports.toys.games"
       ],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 920,
