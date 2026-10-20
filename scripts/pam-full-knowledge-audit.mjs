@@ -10,11 +10,8 @@ if(N!==1775||Q!==156)throw Error('Unexpected Pam knowledge shape');
 const isKnown=(q,t)=>!knownMask||knownMask[q*N+t]===1;
 const edges=new Map([
  [152,[126,129,132]], // mammal -> warm-blooded, spine, living
- [149,[153,99,132]], // feathers -> wings, lays eggs, living
  [155,[152,126,129]], // hooves -> mammal, warm-blooded, spine
  [124,[152,126,129]], // rodent -> mammal, warm-blooded, spine
- [145,[129,132]], // fish -> spine, living (only if question denotes fish; reviewed below)
- [131,[154]], // paws -> feet
 ]);
 const proposed=[],conflicts=[],coverage=[],unknownsByQuestion=Array(Q).fill(0);
 const state=(q,t)=>weights[q*N+t];
