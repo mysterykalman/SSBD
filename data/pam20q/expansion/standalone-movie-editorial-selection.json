@@ -1,0 +1,774 @@
+{
+  "schemaVersion": 1,
+  "group": "Standalone movie replacements",
+  "editorialSelection": {
+    "status": "APPROVED_BY_OWNER",
+    "approvedOn": "2026-10-18",
+    "scope": "These exact 15 film titles are acceptable candidates for Pam",
+    "notApproved": [
+      "identity QIDs",
+      "individual factual assertions",
+      "negative answers",
+      "gameplay release"
+    ],
+    "note": "Owner approved exactly the title selection. Source checks below cover core positive story traits only. Negative cells, Wikidata identity approval, and gameplay remain pending."
+  },
+  "policy": {
+    "oneFilmPerFranchise": true,
+    "doNotAlterOriginal1775": true,
+    "deferredIdentityCandidates": 298,
+    "existingPlausibleCandidateScope": 1352
+  },
+  "entries": [
+    {
+      "title": "The Sting",
+      "releaseYear": 1973,
+      "theme": "classic-crime",
+      "clueLeads": [
+        "con artists",
+        "Paul Newman",
+        "Robert Redford"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.afi.com/robert-osborne-the-sting/",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does the story revolve around con artists?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/robert-osborne-the-sting/"
+        },
+        {
+          "text": "Does it star Paul Newman and Robert Redford?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/robert-osborne-the-sting/"
+        },
+        {
+          "text": "Is it set in the world of Depression-era crime?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/robert-osborne-the-sting/"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "con artists",
+          "source": "https://www.afi.com/robert-osborne-the-sting/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Paul Newman",
+          "source": "https://www.afi.com/robert-osborne-the-sting/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Robert Redford",
+          "source": "https://www.afi.com/robert-osborne-the-sting/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "Amadeus",
+      "releaseYear": 1984,
+      "theme": "historical-music",
+      "clueLeads": [
+        "Mozart",
+        "Salieri",
+        "classical music"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.afi.com/afis-100-years-100-movies/",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does it portray a rivalry between composers?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/afis-100-years-100-movies/"
+        },
+        {
+          "text": "Does Wolfgang Amadeus Mozart feature prominently?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/afis-100-years-100-movies/"
+        },
+        {
+          "text": "Is Antonio Salieri central to the story?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/afis-100-years-100-movies/"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "Mozart",
+          "source": "https://www.afi.com/afis-100-years-100-movies/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Salieri",
+          "source": "https://www.afi.com/afis-100-years-100-movies/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "classical music",
+          "source": "https://www.afi.com/afis-100-years-100-movies/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "Stand by Me",
+      "releaseYear": 1986,
+      "theme": "coming-of-age",
+      "clueLeads": [
+        "four boys",
+        "Stephen King adaptation",
+        "Rob Reiner"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.afi.com/news/stand-by-me-afi-movie-club/",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Is it about a childhood journey?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/news/stand-by-me-afi-movie-club/"
+        },
+        {
+          "text": "Is it adapted from a Stephen King story?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/news/stand-by-me-afi-movie-club/"
+        },
+        {
+          "text": "Do four boys set out to find a dead body?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.afi.com/news/stand-by-me-afi-movie-club/"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "four boys",
+          "source": "https://www.afi.com/news/stand-by-me-afi-movie-club/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Stephen King adaptation",
+          "source": "https://www.afi.com/news/stand-by-me-afi-movie-club/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Rob Reiner",
+          "source": "https://www.afi.com/news/stand-by-me-afi-movie-club/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "Good Will Hunting",
+      "releaseYear": 1997,
+      "theme": "character-drama",
+      "clueLeads": [
+        "mathematics prodigy",
+        "MIT janitor",
+        "therapy"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.miramax.com/movie/good-will-hunting/",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does it follow a working-class mathematical genius?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.miramax.com/movie/good-will-hunting/"
+        },
+        {
+          "text": "Is the main character employed as a janitor?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.miramax.com/movie/good-will-hunting/"
+        },
+        {
+          "text": "Is therapy important to the story?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.miramax.com/movie/good-will-hunting/"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "mathematics prodigy",
+          "source": "https://www.miramax.com/movie/good-will-hunting/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "MIT janitor",
+          "source": "https://www.miramax.com/movie/good-will-hunting/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "therapy",
+          "source": "https://www.miramax.com/movie/good-will-hunting/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "The Big Lebowski",
+      "releaseYear": 1998,
+      "theme": "comedy",
+      "clueLeads": [
+        "bowling",
+        "mistaken identity",
+        "Jeff Lebowski"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.focusfeatures.com/the-big-lebowski",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does it feature a passionate bowler?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.focusfeatures.com/the-big-lebowski"
+        },
+        {
+          "text": "Does a mistaken identity trigger the plot?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.focusfeatures.com/the-big-lebowski"
+        },
+        {
+          "text": "Is the main character nicknamed the Dude?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.focusfeatures.com/the-big-lebowski"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "bowling",
+          "source": "https://www.focusfeatures.com/the-big-lebowski",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "mistaken identity",
+          "source": "https://www.focusfeatures.com/the-big-lebowski",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Jeff Lebowski",
+          "source": "https://www.focusfeatures.com/the-big-lebowski",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "The Iron Giant",
+      "releaseYear": 1999,
+      "theme": "animated-scifi",
+      "clueLeads": [
+        "giant robot",
+        "boy friendship",
+        "Cold War"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.rottentomatoes.com/m/iron_giant",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does it centre on a friendship between a boy and a robot?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.rottentomatoes.com/m/iron_giant"
+        },
+        {
+          "text": "Is it animated?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.rottentomatoes.com/m/iron_giant"
+        },
+        {
+          "text": "Does a giant robot become the target of government suspicion?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.rottentomatoes.com/m/iron_giant"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "giant robot",
+          "source": "https://www.rottentomatoes.com/m/iron_giant",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "boy friendship",
+          "source": "https://www.rottentomatoes.com/m/iron_giant",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Cold War",
+          "source": "https://www.rottentomatoes.com/m/iron_giant",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "School of Rock",
+      "releaseYear": 2003,
+      "theme": "music-comedy",
+      "clueLeads": [
+        "substitute teacher",
+        "student rock band",
+        "Jack Black"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.paramountpictures.com/movies/school-of-rock",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does the central character impersonate a teacher?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.paramountpictures.com/movies/school-of-rock"
+        },
+        {
+          "text": "Is a school rock band central to the story?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.paramountpictures.com/movies/school-of-rock"
+        },
+        {
+          "text": "Does it star Jack Black?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.paramountpictures.com/movies/school-of-rock"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "substitute teacher",
+          "source": "https://www.paramountpictures.com/movies/school-of-rock",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "student rock band",
+          "source": "https://www.paramountpictures.com/movies/school-of-rock",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Jack Black",
+          "source": "https://www.paramountpictures.com/movies/school-of-rock",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "The King's Speech",
+      "releaseYear": 2010,
+      "theme": "historical-drama",
+      "clueLeads": [
+        "King George VI",
+        "speech therapy",
+        "stammer"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://filmsandfestivals.britishcouncil.org/projects/the-kings-speech",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Is the central character a British monarch?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://filmsandfestivals.britishcouncil.org/projects/the-kings-speech"
+        },
+        {
+          "text": "Does the story focus on a speech impediment?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://filmsandfestivals.britishcouncil.org/projects/the-kings-speech"
+        },
+        {
+          "text": "Is an Australian speech therapist a central figure?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://filmsandfestivals.britishcouncil.org/projects/the-kings-speech"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "King George VI",
+          "source": "https://filmsandfestivals.britishcouncil.org/projects/the-kings-speech",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "speech therapy",
+          "source": "https://filmsandfestivals.britishcouncil.org/projects/the-kings-speech",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "stammer",
+          "source": "https://filmsandfestivals.britishcouncil.org/projects/the-kings-speech",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "The Prestige",
+      "releaseYear": 2006,
+      "theme": "mystery",
+      "clueLeads": [
+        "rival stage magicians",
+        "Victorian era",
+        "Christopher Nolan"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://d23.com/a-to-z/prestige-the-film/",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does it revolve around rival stage magicians?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://d23.com/a-to-z/prestige-the-film/"
+        },
+        {
+          "text": "Is the story set in Victorian-era London?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://d23.com/a-to-z/prestige-the-film/"
+        },
+        {
+          "text": "Is Nikola Tesla involved in the plot?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://d23.com/a-to-z/prestige-the-film/"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "rival stage magicians",
+          "source": "https://d23.com/a-to-z/prestige-the-film/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Victorian era",
+          "source": "https://d23.com/a-to-z/prestige-the-film/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Christopher Nolan",
+          "source": "https://d23.com/a-to-z/prestige-the-film/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "Little Miss Sunshine",
+      "releaseYear": 2006,
+      "theme": "family-comedy",
+      "clueLeads": [
+        "family road trip",
+        "child beauty pageant",
+        "Volkswagen van"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.searchlightpictures.com/littlemisssunshine/",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does a family take a road trip together?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.searchlightpictures.com/littlemisssunshine/"
+        },
+        {
+          "text": "Is a children's beauty pageant important to the story?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.searchlightpictures.com/littlemisssunshine/"
+        },
+        {
+          "text": "Does the family travel in a VW bus?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.searchlightpictures.com/littlemisssunshine/"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "family road trip",
+          "source": "https://www.searchlightpictures.com/littlemisssunshine/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "child beauty pageant",
+          "source": "https://www.searchlightpictures.com/littlemisssunshine/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Volkswagen van",
+          "source": "https://www.searchlightpictures.com/littlemisssunshine/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "Moana",
+      "releaseYear": 2016,
+      "theme": "animated-fantasy",
+      "clueLeads": [
+        "ocean voyage",
+        "Maui",
+        "wayfinding"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://movies.disney.com/Moana",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Is the central character a young ocean voyager?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://movies.disney.com/Moana"
+        },
+        {
+          "text": "Does a demigod named Maui feature in the story?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://movies.disney.com/Moana"
+        },
+        {
+          "text": "Is it an animated Disney musical adventure?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://movies.disney.com/Moana"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "ocean voyage",
+          "source": "https://movies.disney.com/Moana",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Maui",
+          "source": "https://movies.disney.com/Moana",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "wayfinding",
+          "source": "https://movies.disney.com/Moana",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "Arrival",
+      "releaseYear": 2016,
+      "theme": "science-fiction",
+      "clueLeads": [
+        "linguist Louise Banks",
+        "extraterrestrial communication",
+        "Denis Villeneuve"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.paramount.com/movies/arrival",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does it focus on communicating with extraterrestrials?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.paramount.com/movies/arrival"
+        },
+        {
+          "text": "Is the central character a linguist?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.paramount.com/movies/arrival"
+        },
+        {
+          "text": "Does the story feature mysterious spacecraft appearing around the world?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.paramount.com/movies/arrival"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "linguist Louise Banks",
+          "source": "https://www.paramount.com/movies/arrival",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "extraterrestrial communication",
+          "source": "https://www.paramount.com/movies/arrival",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Denis Villeneuve",
+          "source": "https://www.paramount.com/movies/arrival",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "La La Land",
+      "releaseYear": 2016,
+      "theme": "musical-romance",
+      "clueLeads": [
+        "Los Angeles",
+        "jazz pianist",
+        "aspiring actress"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://lionsgateplus.com/movies/la-la-land/",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does it focus on an aspiring actress and a jazz musician?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://lionsgateplus.com/movies/la-la-land/"
+        },
+        {
+          "text": "Is it set in Los Angeles?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://lionsgateplus.com/movies/la-la-land/"
+        },
+        {
+          "text": "Is it a live-action musical romance?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://lionsgateplus.com/movies/la-la-land/"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "Los Angeles",
+          "source": "https://lionsgateplus.com/movies/la-la-land/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "jazz pianist",
+          "source": "https://lionsgateplus.com/movies/la-la-land/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "aspiring actress",
+          "source": "https://lionsgateplus.com/movies/la-la-land/",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "Coco",
+      "releaseYear": 2017,
+      "theme": "animated-fantasy",
+      "clueLeads": [
+        "Miguel",
+        "Land of the Dead",
+        "family music"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.pixar.com/coco",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does the protagonist enter the Land of the Dead?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.pixar.com/coco"
+        },
+        {
+          "text": "Is family history central to the story?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.pixar.com/coco"
+        },
+        {
+          "text": "Does it feature a young musician named Miguel?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.pixar.com/coco"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "Miguel",
+          "source": "https://www.pixar.com/coco",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Land of the Dead",
+          "source": "https://www.pixar.com/coco",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "family music",
+          "source": "https://www.pixar.com/coco",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    },
+    {
+      "title": "The Shape of Water",
+      "releaseYear": 2017,
+      "theme": "fantasy-romance",
+      "clueLeads": [
+        "Cold War laboratory",
+        "Elisa",
+        "aquatic creature"
+      ],
+      "identityStatus": "REQUIRES_EXACT_REFERENT_CHECK",
+      "factualReviewStatus": "PARTIAL_SOURCE_CHECK_COMPLETED",
+      "gameplayReviewStatus": "PENDING",
+      "productionEnabled": false,
+      "referenceSource": "https://www.20thcenturystudios.com/movies/the-shape-of-water",
+      "referenceStatus": "SOURCE_CHECKED_FOR_CORE_IDENTITY_AND_POSITIVE_CLUES",
+      "questionCandidates": [
+        {
+          "text": "Does the story unfold in a Cold War government laboratory?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.20thcenturystudios.com/movies/the-shape-of-water"
+        },
+        {
+          "text": "Is an aquatic creature central to the plot?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.20thcenturystudios.com/movies/the-shape-of-water"
+        },
+        {
+          "text": "Is it directed by Guillermo del Toro?",
+          "status": "DRAFT_NOT_APPROVED",
+          "evidence": "https://www.20thcenturystudios.com/movies/the-shape-of-water"
+        }
+      ],
+      "sourceBackedPositiveClues": [
+        {
+          "claim": "Cold War laboratory",
+          "source": "https://www.20thcenturystudios.com/movies/the-shape-of-water",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "Elisa",
+          "source": "https://www.20thcenturystudios.com/movies/the-shape-of-water",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        },
+        {
+          "claim": "aquatic creature",
+          "source": "https://www.20thcenturystudios.com/movies/the-shape-of-water",
+          "sourceReview": "CHECKED_AS_CORE_STORY_OR_CAST_TRAIT"
+        }
+      ]
+    }
+  ]
+}

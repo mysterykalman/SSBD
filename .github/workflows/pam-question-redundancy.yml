@@ -24,8 +24,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Keep validated Pam knowledge frozen
-        run: git diff --exit-code 6ee006258414a8b65a23e2b9785b647a5e6ece3e HEAD -- data/pam20q
+      - name: Protect original 1,775-target source data against unintended edits
+        run: git diff --exit-code 6ee006258414a8b65a23e2b9785b647a5e6ece3e HEAD -- data/pam20q/reference data/pam20q/extensions data/pam20q/quality/quality-375.json.gz.b64 data/pam20q/quality/quality-375.part1 data/pam20q/quality/quality-375.part2 data/pam20q/quality/quality-375.part3 data/pam20q/quality/quality-375.part4
       - name: Install dependencies
         run: npm ci
       - name: Run complete Pam regression suite

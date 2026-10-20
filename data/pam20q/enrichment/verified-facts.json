@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "method": "source-verified target-specific yes traits; apply only to unknown cells",
+  "method": "source-verified target-specific facts; habitat temperature is not an animal's body temperature; apply only to unknown cells",
   "entries": [
     {
       "target": "an aye-aye",
@@ -26,7 +26,6 @@
     {
       "target": "a snow leopard",
       "yes": [
-        "cold",
         "spotted",
         "longTail",
         "paws",

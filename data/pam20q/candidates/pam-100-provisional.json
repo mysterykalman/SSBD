@@ -1,0 +1,622 @@
+{
+  "version": 1,
+  "review_status": "candidate_unreviewed",
+  "scope": "shortlist only: not loaded by Pam's production model",
+  "source_run": "https://github.com/mysterykalman/SSBD/actions/runs/39084429737",
+  "baseline_targets": 1775,
+  "initial_candidates": 500,
+  "eliminated_candidates": 400,
+  "retained_count": 100,
+  "potential_total": 1875,
+  "gameplay_exact_and_softened_pass": true,
+  "old_target_regressions": 0,
+  "additional_factual_review_required": true,
+  "byCategory": {
+    "animal": 43,
+    "vegetable": 17,
+    "mineral": 11,
+    "other": 29
+  },
+  "retained": [
+    {
+      "name": "a cormorant",
+      "category": "animal",
+      "family": "bird",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a gannet",
+      "category": "animal",
+      "family": "bird",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a hornbill",
+      "category": "animal",
+      "family": "bird",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a rock hyrax",
+      "category": "animal",
+      "family": "mammal",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a baobab tree",
+      "category": "vegetable",
+      "family": "tree",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a tarpon",
+      "category": "animal",
+      "family": "fish",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a remote-control helicopter",
+      "category": "other",
+      "family": "toy",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a river birch tree",
+      "category": "vegetable",
+      "family": "tree",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a mangrove tree",
+      "category": "vegetable",
+      "family": "tree",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a barracuda",
+      "category": "animal",
+      "family": "fish",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a sea grape tree",
+      "category": "vegetable",
+      "family": "tree",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a peccary",
+      "category": "animal",
+      "family": "hoof",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a bilby",
+      "category": "animal",
+      "family": "mammal",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a pupusa",
+      "category": "other",
+      "family": "meal",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "an orchid mantis",
+      "category": "animal",
+      "family": "insect",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a hand puppet",
+      "category": "other",
+      "family": "toy",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a stuffed bunny",
+      "category": "other",
+      "family": "toy",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a jackfruit",
+      "category": "vegetable",
+      "family": "fruit",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a catamaran",
+      "category": "other",
+      "family": "vehicle",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a leafhopper",
+      "category": "animal",
+      "family": "insect",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a panna cotta",
+      "category": "other",
+      "family": "dessert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a giant water bug",
+      "category": "animal",
+      "family": "insect",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a ladybird beetle",
+      "category": "animal",
+      "family": "insect",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "an enchilada",
+      "category": "other",
+      "family": "meal",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "an anglerfish",
+      "category": "animal",
+      "family": "fish",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a cobia",
+      "category": "animal",
+      "family": "fish",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a pipefish",
+      "category": "animal",
+      "family": "fish",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a leaf-tailed gecko",
+      "category": "animal",
+      "family": "reptile",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a diving beetle",
+      "category": "animal",
+      "family": "insect",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a painted turtle",
+      "category": "animal",
+      "family": "reptile",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a bowfin",
+      "category": "animal",
+      "family": "fish",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a watermelon radish",
+      "category": "vegetable",
+      "family": "root",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a mudskipper",
+      "category": "animal",
+      "family": "fish",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a softshell turtle",
+      "category": "animal",
+      "family": "reptile",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "kimbap",
+      "category": "other",
+      "family": "meal",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a fruit leather strip",
+      "category": "other",
+      "family": "snack",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a trail mix packet",
+      "category": "other",
+      "family": "snack",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a paper crown",
+      "category": "other",
+      "family": "party",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "hibiscus tea",
+      "category": "other",
+      "family": "beverage",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a pitcher plant",
+      "category": "vegetable",
+      "family": "plant",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a honeypot ant",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a tarantula hawk wasp",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a scorzonera",
+      "category": "vegetable",
+      "family": "root",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a candy cane beet",
+      "category": "vegetable",
+      "family": "root",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a polka dot plant",
+      "category": "vegetable",
+      "family": "plant",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "an army ant",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a bullet ant",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a frame drum",
+      "category": "other",
+      "family": "instrument",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a leopard tortoise",
+      "category": "animal",
+      "family": "reptile",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a bladderwort",
+      "category": "vegetable",
+      "family": "plant",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a tree fern",
+      "category": "vegetable",
+      "family": "plant",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a packable windbreaker",
+      "category": "other",
+      "family": "wear",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "an agate slice",
+      "category": "mineral",
+      "family": "gem",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "an adhesive bandage",
+      "category": "other",
+      "family": "medicine",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a banana slug",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a zebra plant",
+      "category": "vegetable",
+      "family": "plant",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a sea anemone",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a sensitive plant",
+      "category": "vegetable",
+      "family": "plant",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a vine snake",
+      "category": "animal",
+      "family": "reptile",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a jumping spider",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a heated eye mask",
+      "category": "other",
+      "family": "soft",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a horseshoe crab",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a sea spider",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a snowdrift",
+      "category": "mineral",
+      "family": "ice",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "an emerald gemstone",
+      "category": "mineral",
+      "family": "gem",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a gift tag",
+      "category": "other",
+      "family": "party",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a prize ribbon",
+      "category": "other",
+      "family": "party",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a velvet worm",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a house centipede",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a solar shower bag",
+      "category": "other",
+      "family": "object",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "an obsidian shard",
+      "category": "mineral",
+      "family": "rock",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a slate slab",
+      "category": "mineral",
+      "family": "rock",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a salt crystal",
+      "category": "mineral",
+      "family": "rock",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a sheet of black ice",
+      "category": "mineral",
+      "family": "ice",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a garden snail",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a cooling blanket",
+      "category": "other",
+      "family": "soft",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a Pilates ring",
+      "category": "other",
+      "family": "sport",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a pumice stone",
+      "category": "mineral",
+      "family": "rock",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a citrine crystal",
+      "category": "mineral",
+      "family": "rock",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a wobble board",
+      "category": "other",
+      "family": "sport",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a silver nugget",
+      "category": "mineral",
+      "family": "rock",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a piece of gneiss",
+      "category": "mineral",
+      "family": "rock",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a coot",
+      "category": "animal",
+      "family": "bird",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a bee-eater",
+      "category": "animal",
+      "family": "bird",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "an allspice berry",
+      "category": "vegetable",
+      "family": "berry",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a chokeberry",
+      "category": "vegetable",
+      "family": "berry",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a leaf insect",
+      "category": "animal",
+      "family": "insect",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a bath bomb",
+      "category": "other",
+      "family": "bath",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a green anaconda",
+      "category": "animal",
+      "family": "reptile",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a sticky note pad",
+      "category": "other",
+      "family": "office",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a peacock spider",
+      "category": "animal",
+      "family": "invert",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a Vietnamese iced coffee",
+      "category": "other",
+      "family": "beverage",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "Swiss chard",
+      "category": "vegetable",
+      "family": "vegetable",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a party pinata",
+      "category": "other",
+      "family": "party",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a plume of steam",
+      "category": "other",
+      "family": "weather",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a frigatebird",
+      "category": "animal",
+      "family": "bird",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a springbok",
+      "category": "animal",
+      "family": "hoof",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a striped hyena",
+      "category": "animal",
+      "family": "mammal",
+      "source": "data/pam20q/quality/catalogue-500.mjs"
+    },
+    {
+      "name": "a jump ring",
+      "category": "other",
+      "family": "craft",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    },
+    {
+      "name": "a kite spool",
+      "category": "other",
+      "family": "toy",
+      "source": "data/pam20q/candidates/diverse-500.mjs"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "targets": 1650,
+  "sha256_uncompressed": "1096c09f411cee7385972eaafeeddb48888b424e4594d18c84e41f6266d0e2f2",
+  "sha256_payload": "e61dc56766f8324360fd3468c6a3a6c9c50939f2849df0d7324e5869926419f7",
+  "compressed_bytes": 17701,
+  "source_category_counts": [
+    [
+      "Cities",
+      150
+    ],
+    [
+      "Countries",
+      100
+    ],
+    [
+      "Monuments, Paintings & Sculptures",
+      300
+    ],
+    [
+      "Landmarks",
+      200
+    ],
+    [
+      "Bands & Music Groups",
+      200
+    ],
+    [
+      "People",
+      200
+    ],
+    [
+      "Brands",
+      200
+    ],
+    [
+      "Movies",
+      150
+    ],
+    [
+      "TV Shows",
+      50
+    ],
+    [
+      "Musicals",
+      50
+    ],
+    [
+      "Car Companies",
+      50
+    ]
+  ],
+  "validation": "UNREVIEWED \u2014 DO NOT SHIP AS PLAYABLE"
+}

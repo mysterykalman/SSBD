@@ -13,9 +13,11 @@ test('source-backed answers populate unknown cells without rewriting known answe
  assert.equal(enriched.weights[index],2);
  assert.equal(enriched.knownMask[index],1);
  assert.ok(enriched.verifiedEnrichment.conflicts.some(x=>x.target==='an aye-aye'&&x.trait==='nocturnal'));
- const q=pamTraitIndex.cold*targets.length+2;
+ const q=pamTraitIndex.spotted*targets.length+2;
  assert.equal(enriched.weights[q],3);
  assert.equal(enriched.knownMask[q],1);
  assert.equal(model.knownMask[q],0);
+ const unsupportedCold=pamTraitIndex.cold*targets.length+2;
+ assert.equal(enriched.knownMask[unsupportedCold],0,'Cold-climate habitat is not evidence that the snow leopard itself is cold');
  assert.ok(enriched.verifiedEnrichment.applied.some(x=>x.target==='a caracal')===false);
 });
