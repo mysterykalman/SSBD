@@ -29,9 +29,51 @@
         "cold",
         "spotted",
         "longTail",
-        "paws"
+        "paws",
+        "mammal",
+        "carnivore",
+        "furry",
+        "climb",
+        "jump"
       ],
-      "source": "https://snowleopard.org/snow-leopard-facts/physical-features/"
+      "source": "https://animals.sandiegozoo.org/animals/snow-leopard"
+    },
+    {
+      "target": "a caracal",
+      "yes": [
+        "mammal",
+        "carnivore",
+        "furry",
+        "paws",
+        "jump"
+      ],
+      "no": [
+        "spotted",
+        "striped"
+      ],
+      "source": "https://animals.sandiegozoo.org/animals/caracal"
+    },
+    {
+      "target": "a serval",
+      "yes": [
+        "mammal",
+        "carnivore",
+        "spotted",
+        "furry",
+        "paws",
+        "jump",
+        "tall"
+      ],
+      "source": "https://animals.sandiegozoo.org/animals/serval"
+    },
+    {
+      "target": "a harpy eagle",
+      "yes": [
+        "feathers",
+        "wings",
+        "carnivore"
+      ],
+      "source": "https://zoo.sandiegozoo.org/animals/harpy-eagle"
     }
   ]
 }
