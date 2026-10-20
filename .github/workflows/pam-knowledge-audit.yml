@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify question selection regression
-        run: node --test test/pam-question-pool.test.mjs test/pam-enrich-model.test.mjs
+        run: node --test test/pam-question-pool.test.mjs test/pam-enrich-model.test.mjs test/pam-verified-facts.test.mjs
       - name: Audit knowledge coverage
         run: |
           mkdir -p artifacts
