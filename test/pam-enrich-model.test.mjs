@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {enrichPamModel} from '../scripts/pam-enrich-model.mjs';
+test('Pam enriches unknown implications without rewriting established answers',()=>{
+ const n=3,f=156;
+ const weights=Buffer.alloc(n*f),knownMask=Buffer.alloc(n*f);
+ const ix=(q,t)=>q*n+t;
+ weights[ix(152,0)]=3;knownMask[ix(152,0)]=1;
+ weights[ix(152,1)]=3;knownMask[ix(152,1)]=1;
+ weights[ix(126,1)]=2;knownMask[ix(126,1)]=1;
+ const model={targets:['mammal unknown','mammal conflict','unclassified'],questions:Array(f).fill('?'),weights,knownMask};
+ const result=enrichPamModel(model);
+ assert.equal(result.weights[ix(126,0)],3);
+ assert.equal(result.knownMask[ix(126,0)],1);
+ assert.equal(result.weights[ix(126,1)],2);
+ assert.equal(result.knownMask[ix(126,1)],1);
+ assert.equal(result.knownMask[ix(126,2)],0);
+ assert.equal(model.knownMask[ix(126,0)],0);
+ assert.ok(result.enrichment.additions.length>=1);
+ assert.ok(result.enrichment.conflicts.some(c=>c.target==='mammal conflict'&&c.q===126));
+});
