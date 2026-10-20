@@ -59,11 +59,11 @@
     {
       "index": 6,
       "target": "a cup",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 7,
@@ -178,11 +178,11 @@
     {
       "index": 19,
       "target": "a box (cardboard)",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 20,
@@ -949,11 +949,11 @@
     {
       "index": 104,
       "target": "a coin",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "object.accessory",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 105,
@@ -1122,11 +1122,11 @@
     {
       "index": 123,
       "target": "a wall clock",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "technology.mechanical",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 124,
@@ -1313,11 +1313,11 @@
     {
       "index": 144,
       "target": "tape",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 145,
@@ -1648,11 +1648,11 @@
     {
       "index": 181,
       "target": "a shot glass",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 182,
@@ -1812,11 +1812,11 @@
     {
       "index": 199,
       "target": "a pipe (for tobacco)",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "object.accessory",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 200,
@@ -1839,11 +1839,11 @@
     {
       "index": 202,
       "target": "a lamp shade",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 203,
@@ -2418,11 +2418,11 @@
     {
       "index": 265,
       "target": "wind chimes",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 266,
@@ -2654,11 +2654,11 @@
     {
       "index": 291,
       "target": "a dust bunny",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "nature.material",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 292,
@@ -3436,11 +3436,11 @@
     {
       "index": 377,
       "target": "a plate",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 378,
@@ -3526,11 +3526,11 @@
     {
       "index": 387,
       "target": "a glass (drinking glass)",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 388,
@@ -4093,11 +4093,11 @@
     {
       "index": 450,
       "target": "a paper towel",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 451,
@@ -4309,11 +4309,11 @@
     {
       "index": 474,
       "target": "a lunch box",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 475,
@@ -4354,11 +4354,11 @@
     {
       "index": 479,
       "target": "a brief case",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 480,
@@ -4444,11 +4444,11 @@
     {
       "index": 489,
       "target": "a slide (playground)",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 490,
@@ -4772,11 +4772,11 @@
     {
       "index": 525,
       "target": "an anvil",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "tools.equipment",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 526,
@@ -5033,11 +5033,11 @@
     {
       "index": 554,
       "target": "toilet paper",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 555,
@@ -5613,11 +5613,11 @@
     {
       "index": 618,
       "target": "a sponge",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 619,
@@ -5858,11 +5858,11 @@
     {
       "index": 645,
       "target": "dental floss",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 646,
@@ -5894,11 +5894,11 @@
     {
       "index": 649,
       "target": "a napkin",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 650,
@@ -5939,11 +5939,11 @@
     {
       "index": 654,
       "target": "a breath mint",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 655,
@@ -6951,11 +6951,11 @@
     {
       "index": 766,
       "target": "a Kleenex",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 767,
@@ -7149,11 +7149,11 @@
     {
       "index": 788,
       "target": "shampoo",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 789,
@@ -7419,11 +7419,11 @@
     {
       "index": 818,
       "target": "cologne",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 819,
@@ -7482,11 +7482,11 @@
     {
       "index": 825,
       "target": "ironing board",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 826,
@@ -8893,11 +8893,11 @@
     {
       "index": 980,
       "target": "a seashell",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "nature.material",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 981,
@@ -9118,11 +9118,11 @@
     {
       "index": 1005,
       "target": "a bookmark",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1006,
@@ -9183,11 +9183,11 @@
     {
       "index": 1012,
       "target": "a knitting needle",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "tools.equipment",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1013,
@@ -9687,11 +9687,11 @@
     {
       "index": 1068,
       "target": "wallpaper",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1069,
@@ -10524,11 +10524,11 @@
     {
       "index": 1161,
       "target": "a guillotine",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "tools.equipment",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1162,
@@ -13167,11 +13167,11 @@
     {
       "index": 1448,
       "target": "megaphone",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "tools.equipment",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1449,
@@ -13275,11 +13275,11 @@
     {
       "index": 1460,
       "target": "mat",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1461,
@@ -13617,11 +13617,11 @@
     {
       "index": 1498,
       "target": "fishbowl",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1499,
@@ -13671,11 +13671,11 @@
     {
       "index": 1504,
       "target": "garage",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "places.structures",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1505,
@@ -13698,11 +13698,11 @@
     {
       "index": 1507,
       "target": "pebble",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "nature.material",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1508,
@@ -13734,11 +13734,11 @@
     {
       "index": 1511,
       "target": "cauldron",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1512,
@@ -13761,11 +13761,11 @@
     {
       "index": 1514,
       "target": "pinwheel",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "technology.mechanical",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1515,
@@ -13806,11 +13806,11 @@
     {
       "index": 1519,
       "target": "hammock",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1520,
@@ -13914,11 +13914,11 @@
     {
       "index": 1531,
       "target": "shell",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "nature.material",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1532,
@@ -13986,11 +13986,11 @@
     {
       "index": 1539,
       "target": "windshield wiper",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "tools.equipment",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1540,
@@ -14112,11 +14112,11 @@
     {
       "index": 1553,
       "target": "tap",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "tools.equipment",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1554,
@@ -14328,11 +14328,11 @@
     {
       "index": 1577,
       "target": "buoy",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1578,
@@ -14355,11 +14355,11 @@
     {
       "index": 1580,
       "target": "sink",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1581,
@@ -14418,20 +14418,20 @@
     {
       "index": 1587,
       "target": "binder",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "object.accessory",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1588,
       "target": "bumper",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "vehicle.part",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1589,
@@ -14454,11 +14454,11 @@
     {
       "index": 1591,
       "target": "dinghy",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "vehicle.part",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1592,
@@ -14670,11 +14670,11 @@
     {
       "index": 1615,
       "target": "cloth",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1616,
@@ -14805,11 +14805,11 @@
     {
       "index": 1630,
       "target": "counter",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1631,
@@ -14841,11 +14841,11 @@
     {
       "index": 1634,
       "target": "beanbag",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1635,
@@ -14904,11 +14904,11 @@
     {
       "index": 1641,
       "target": "windshield",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "vehicle.part",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1642,
@@ -14969,11 +14969,11 @@
     {
       "index": 1648,
       "target": "cutting board",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "tools.equipment",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1649,
@@ -15014,11 +15014,11 @@
     {
       "index": 1653,
       "target": "bark",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "nature.material",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1654,
@@ -15113,11 +15113,11 @@
     {
       "index": 1664,
       "target": "altar",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1665,
@@ -15221,11 +15221,11 @@
     {
       "index": 1676,
       "target": "velcro",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.consumable",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1677,
@@ -15466,11 +15466,11 @@
     {
       "index": 1703,
       "target": "crate",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1704,
@@ -15601,11 +15601,11 @@
     {
       "index": 1718,
       "target": "garland",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.furnishing",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1719,
@@ -15628,11 +15628,11 @@
     {
       "index": 1721,
       "target": "stirrup",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "tools.equipment",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1722,
@@ -15745,11 +15745,11 @@
     {
       "index": 1734,
       "target": "stained glass",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "art.decor",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1735,
@@ -16098,11 +16098,11 @@
     {
       "index": 1773,
       "target": "keg",
-      "domain": "object.general",
-      "source": "general-object-fallback",
-      "confidence": "low",
+      "domain": "household.container",
+      "source": "manual-domain-assignment",
+      "confidence": "medium",
       "alternatives": [],
-      "reviewRequired": true
+      "reviewRequired": false
     },
     {
       "index": 1774,
