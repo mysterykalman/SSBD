@@ -174,7 +174,10 @@ function bestQuestion(game){
    if(polarity(stateAt(q,t)))leaderYes+=w;else leaderNo+=w;
   }
   const leaderBalance=leaderKnown>0?(1-Math.abs(leaderYes-leaderNo)/leaderKnown)*(leaderKnown/Math.max(1e-9,leaders.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[poolTop])/3),0))):0;
-  const base=(balance*0.72+leaderBalance*0.2+certainty*0.08)*coverage;
+  // Weak/defaulted answers should not win merely by splitting a large pool.
+  // Demand useful separation among leaders *and* reliable evidence.
+  const reliability=0.2+0.8*certainty;
+  const base=(balance*0.55+leaderBalance*0.35+certainty*0.10)*coverage*reliability;
   candidates.push({q,base});
   if(base>bestBase+1e-12){bestBase=base;baselineQ=q;}
  }
