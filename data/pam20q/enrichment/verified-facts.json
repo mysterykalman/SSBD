@@ -7,10 +7,9 @@
       "yes": [
         "nocturnal",
         "longTail",
-        "forest",
-        "climb"
+        "mammal"
       ],
-      "source": "https://animals.sandiegozoo.org/animals/lemur"
+      "source": "https://science.sandiegozoo.org/species/aye-aye"
     },
     {
       "target": "a binturong",
@@ -19,7 +18,8 @@
         "forest",
         "climb",
         "longTail",
-        "furry"
+        "furry",
+        "mammal"
       ],
       "source": "https://nationalzoo.si.edu/animals/binturong"
     },
@@ -28,11 +28,10 @@
       "yes": [
         "cold",
         "spotted",
-        "climb",
         "longTail",
         "paws"
       ],
-      "source": "https://www.worldwildlife.org/resources/facts/where-do-snow-leopards-live-and-nine-other-snow-leopard-facts/"
+      "source": "https://snowleopard.org/snow-leopard-facts/physical-features/"
     }
   ]
 }
