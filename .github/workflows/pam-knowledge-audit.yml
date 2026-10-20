@@ -1,0 +1,43 @@
+name: Pam knowledge audit
+on:
+  push:
+    branches:
+      - feature/pam-question-redundancy
+    paths:
+      - 'scripts/pam-*.mjs'
+      - 'scripts/build-pam-enriched-overlay.mjs'
+      - 'scripts/pam-classic-model.mjs'
+      - 'scripts/pam-quality-model.mjs'
+      - 'data/pam20q/**'
+      - 'src/client/mom-mode/engine.js'
+      - 'test/pam-question-pool.test.mjs'
+      - '.github/workflows/pam-knowledge-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify question selection regression
+        run: node --test test/pam-question-pool.test.mjs
+      - name: Audit knowledge coverage
+        run: |
+          mkdir -p artifacts
+          node scripts/pam-full-knowledge-audit.mjs --output artifacts/coverage.json
+      - name: Audit distinguishability
+        run: node scripts/audit-pam-distinguishability.mjs > artifacts/distinguishability.json
+      - name: Build non-destructive enrichment proposals
+        run: node scripts/build-pam-enriched-overlay.mjs --output artifacts/enrichment.json
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pam-knowledge-audit
+          path: artifacts/
+          if-no-files-found: warn
