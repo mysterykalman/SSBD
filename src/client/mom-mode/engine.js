@@ -110,7 +110,9 @@ function answer(game,question,answerValue){
  return choose(game);
 }
 function candidatePool(game){
- const ranked=rank(game,96),best=game.scores[ranked[0]??0];
+ // Consider every candidate close to the leader. A hard top-96 cut can hide
+ // unresolved ties in larger knowledge libraries and lead to wasted questions.
+ const ranked=rank(game),best=game.scores[ranked[0]??0];
  const close=ranked.filter(i=>game.scores[i]>=best-8);
  return close.length>=24?close:ranked.slice(0,Math.min(48,ranked.length));
 }
@@ -161,7 +163,18 @@ function bestQuestion(game){
   const balance=1-Math.abs(yes-no)/knownTotal;
   const certainty=strong/knownTotal;
   const coverage=knownTotal/denom;
-  const base=(balance*0.9+certainty*0.1)*coverage;
+  // Prefer questions which separate the current leaders, rather than merely
+  // dividing a broad candidate pool. The full-pool balance remains dominant.
+  const leaders=pool.slice(0,Math.min(8,pool.length));
+  let leaderYes=0,leaderNo=0,leaderKnown=0;
+  for(const t of leaders){
+   if(!knownAt(q,t))continue;
+   const w=Math.exp((game.scores[t]-game.scores[poolTop])/3);
+   leaderKnown+=w;
+   if(polarity(stateAt(q,t)))leaderYes+=w;else leaderNo+=w;
+  }
+  const leaderBalance=leaderKnown>0?(1-Math.abs(leaderYes-leaderNo)/leaderKnown)*(leaderKnown/Math.max(1e-9,leaders.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[poolTop])/3),0))):0;
+  const base=(balance*0.72+leaderBalance*0.2+certainty*0.08)*coverage;
   candidates.push({q,base});
   if(base>bestBase+1e-12){bestBase=base;baselineQ=q;}
  }
