@@ -5,7 +5,7 @@ if(!model)throw new Error('Pam classic model not loaded');
 const QUESTIONS=Object.freeze(model.questions.map(question=>String(question).trim().replace(/\?+$/,'')+'?'));
 const TARGETS=Object.freeze([...model.targets]);
 const N=TARGETS.length,F=QUESTIONS.length;
-if(!([1200,1400,1775].includes(N)&&F===156)&&!(N===3284&&F===488))throw new Error(`Unexpected Pam model shape ${N}×${F}`);
+if(!([1200,1400,1775].includes(N)&&F===156)&&!(N===3284&&F>=488&&F<=1000))throw new Error(`Unexpected Pam model shape ${N}×${F}`);
 function decodeBase64(value){const raw=atob(value);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 const WEIGHTS=decodeBase64(model.weightsB64);
 if(WEIGHTS.length!==N*F)throw new Error(`Pam classic matrix has ${WEIGHTS.length} cells; expected ${N*F}`);
