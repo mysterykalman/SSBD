@@ -10,9 +10,10 @@ const N=model.targets.length,oldN=baseline.targets.length;
 
 test('all original and expansion records appear in 3284 by 488 matrix',()=>{
  assert.equal(N,3284);
- assert.equal(model.questions.length,488);
- assert.equal(model.weights.length,N*488);
- assert.equal(model.knownMask.length,N*488);
+ assert.ok(model.questions.length>488 && model.questions.length<=1000);
+ assert.equal(model.questions.length,488+model.adaptive.generatedQuestions);
+ assert.equal(model.weights.length,N*model.questions.length);
+ assert.equal(model.knownMask.length,N*model.questions.length);
  assert.equal(model.targets[1775],'New York City');
  assert.equal(model.targets.at(-1),'DeLorean Motor Company');
 });
