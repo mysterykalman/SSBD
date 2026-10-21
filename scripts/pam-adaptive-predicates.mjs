@@ -23,6 +23,23 @@ export function generatePamFactQuestions(answerRows,metadataRows){
   if(m[0]!==r[0])throw Error('Adaptive metadata ID mismatch '+r[0]);
   const category=r[2],subcategory=m[1],clues=m.slice(2).map(tidy);
   const result={category};
+  if(['People','Music Groups','TV Shows','Brands','Countries','Landmarks','Movies'].includes(category))result.subtype=subcategory;
+  if(category==='Movies'){
+   const year=clues[0].match(/^Released (19\\d{2}|20\\d{2})$/);
+   if(year)result.movieYear=year[1];
+  }
+  if(category==='Musicals'){
+   const composer=clues[0].match(/associated with ([^;]+)/i);
+   if(composer)result.musicalComposer=tidy(composer[1]);
+  }
+  if(category==='Car Companies'){
+   const origin=clues[0].match(/associated with ([^;]+)/i);
+   if(origin)result.carOrigin=tidy(origin[1]);
+  }
+  if(category==='People'){
+   const role=clues[0].match(/^Known primarily as (.+)$/i);
+   if(role)result.primaryRole=tidy(role[1]);
+  }
   if(category==='Cities'){
    const match=clues[0].match(location);
    if(match)result.cityCountry=tidy(match[1]);
@@ -43,7 +60,18 @@ export function generatePamFactQuestions(answerRows,metadataRows){
   {key:'cityCountry',group:'Cities',text:x=>'Is the city in '+x+'?'},
   {key:'cityLandmark',group:'Cities',text:x=>'Is '+x+' one of its landmarks?'},
   {key:'artist',group:'Art & Monuments',text:x=>'Was the artwork created by '+x+'?'},
-  {key:'brandKind',group:'Brands',text:x=>'Is the brand primarily known for '+x+'?'}
+  {key:'brandKind',group:'Brands',text:x=>'Is the brand primarily known for '+x+'?'},
+  {key:'subtype',group:'People',text:x=>'Is the person primarily known for '+x+'?'},
+  {key:'subtype',group:'Music Groups',text:x=>'Is the group primarily associated with '+x+'?'},
+  {key:'subtype',group:'TV Shows',text:x=>'Is the show primarily in the '+x+' category?'},
+  {key:'subtype',group:'Brands',text:x=>'Does the brand primarily belong to '+x+'?'},
+  {key:'subtype',group:'Countries',text:x=>'Is the country in the '+x+' region?'},
+  {key:'subtype',group:'Landmarks',text:x=>'Is it primarily classified as '+x+'?'},
+  {key:'subtype',group:'Movies',text:x=>'Is the film in the '+x+' group?'},
+  {key:'primaryRole',group:'People',text:x=>'Is the person primarily known as '+x+'?'},
+  {key:'movieYear',group:'Movies',text:x=>'Was the movie released in '+x+'?'},
+  {key:'musicalComposer',group:'Musicals',text:x=>'Is the musical associated with '+x+'?'},
+  {key:'carOrigin',group:'Car Companies',text:x=>'Is the car brand associated with '+x+'?'}
  ];
  const questions=[];
  for(const dim of dimensions){
