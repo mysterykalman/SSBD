@@ -1,0 +1,27 @@
+name: Pam Adaptive Model QA
+on:
+  push:
+    branches:
+      - feature/pam-adaptive-candidate-splits
+  pull_request:
+    paths:
+      - 'data/pam20q/adaptive/**'
+      - 'scripts/pam-adaptive-model.mjs'
+      - 'src/client/mom-mode/engine.js'
+      - 'test/pam-adaptive-question-selection.test.mjs'
+      - 'test/pam-expanded-model.test.mjs'
+jobs:
+  validate-adaptive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Validate expanded knowledge layout and source preservation
+        run: node --test test/pam-expanded-model.test.mjs
+      - name: Validate adaptive question selection
+        run: node --test test/pam-adaptive-question-selection.test.mjs
