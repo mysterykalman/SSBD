@@ -7,9 +7,10 @@ const landmark=/\b(Tower|Castle|Palace|Bridge|Fort|Fortress|Temple|Mosque|Abbey|
 const tidy=x=>String(x||'').trim().replace(/\s+/g,' ');
 function productKind(text){
  const x=text.toLowerCase();
- if(/gummy|goldbear|candy|confection/.test(x))return 'gummy candy';
- if(/cola|soft drink|soda/.test(x))return 'soft drinks';
+ if(/gummy|goldbear/.test(x))return 'gummy candy';
  if(/chocolate|cocoa/.test(x))return 'chocolate';
+ if(/cola|soft drink|soda/.test(x))return 'soft drinks';
+ if(/candy|confection/.test(x))return 'candy';
  if(/coffee|espresso/.test(x))return 'coffee';
  if(/pizza/.test(x))return 'pizza';
  if(/burger/.test(x))return 'burgers';
