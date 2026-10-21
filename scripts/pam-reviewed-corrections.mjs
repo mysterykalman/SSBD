@@ -28,9 +28,19 @@ export async function applyReviewedPamCorrections(model) {
     for (let q=0;q<questions.length;q++) replace(row.name,i,q,Number(row.original[q]),Number(row.states[q]));
     fullReviews.push(row.name);
   }
+  const byName=new Map();
+  const duplicates=new Set();
+  for(let i=0;i<targets.length;i++){
+    if(byName.has(targets[i]))duplicates.add(targets[i]);
+    else byName.set(targets[i],i);
+  }
   for (const item of doc.scopedCorrections) {
-    const i=item.targetIndex;
-    if (i<0||i>=n||targets[i]!==item.target||questions[item.questionIndex]!==item.question) throw Error('Pam scoped review target/question mismatch: '+item.target);
+    // Immutable identity is the target's exact name, not a legacy row number.
+    // Extension ordering may evolve; never apply a review to the old index
+    // if it now names a different target. The original cell state is still
+    // checked by replace(), so true source drift cannot pass silently.
+    const i=byName.get(item.target);
+    if(i===undefined||duplicates.has(item.target)||questions[item.questionIndex]!==item.question) throw Error('Pam scoped review target/question mismatch: '+item.target);
     replace(item.target,i,item.questionIndex,item.oldState,item.newState);
   }
   return {...model,weights,knownMask,reviewedCorrections:{fullReviews,scopedTargetCount:new Set(doc.scopedCorrections.map(x=>x.target)).size,changedCells:applied}};

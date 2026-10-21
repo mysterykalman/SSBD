@@ -5,7 +5,7 @@ if(!model)throw new Error('Pam classic model not loaded');
 const QUESTIONS=Object.freeze(model.questions.map(question=>String(question).trim().replace(/\?+$/,'')+'?'));
 const TARGETS=Object.freeze([...model.targets]);
 const N=TARGETS.length,F=QUESTIONS.length;
-if(![1200,1400,1775].includes(N)||F!==156)throw new Error(`Unexpected Pam classic model shape ${N}×${F}`);
+if(!([1200,1400,1775].includes(N)&&F===156)&&!(N===3284&&F>=488&&F<=1000))throw new Error(`Unexpected Pam model shape ${N}×${F}`);
 function decodeBase64(value){const raw=atob(value);const out=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 const WEIGHTS=decodeBase64(model.weightsB64);
 if(WEIGHTS.length!==N*F)throw new Error(`Pam classic matrix has ${WEIGHTS.length} cells; expected ${N*F}`);
@@ -16,6 +16,8 @@ const knownAt=(q,t)=>!KNOWN||KNOWN[q*N+t]===1;
 const polarity=s=>s&1;
 const strength=s=>(s&2)?2:1;
 const CATEGORY_Q=Object.freeze({animal:0,vegetable:1,mineral:2,other:3});
+const ADAPTIVE_CATEGORIES=Object.freeze({person:'Person',place:'Place',animal_plant:'Animal or Plant',object:'Object',entertainment:'Entertainment',other:'Other'});
+const ROUTING=Array.isArray(model.routingCategories)&&model.routingCategories.length===N?model.routingCategories:null;
 const REGULAR_ANSWERS=new Set(['yes','probably','maybe','unknown','doubtful','probably_not','no']);
 
 const REDUNDANCY_SCORE_FLOOR=0.99;
@@ -85,9 +87,18 @@ function applyMaybe(game,q){
 }
 function setCategory(game,value){
  if(game.turn!==0)throw new Error('Category can only be chosen at the start of a Pam round');
- const selected=CATEGORY_Q[value];if(selected==null)throw new Error('Unsupported Pam category');
+ const adaptive=Boolean(ROUTING);
+ const selected=adaptive?ADAPTIVE_CATEGORIES[value]:CATEGORY_Q[value];
+ if(selected==null)throw new Error('Unsupported Pam category');
  game.category=value;
- for(const q of Object.values(CATEGORY_Q)){applyPolarity(game,q,q===selected,2);game.asked.add(q);}
+ if(adaptive){
+  // Coarse first-turn partition; keep alternatives possible for imperfect
+  // metadata instead of removing them from the candidate pool entirely.
+  for(let t=0;t<N;t++)game.scores[t]+=ROUTING[t]===value?8:-8;
+  for(const q of Object.values(CATEGORY_Q))game.asked.add(q);
+ }else{
+  for(const q of Object.values(CATEGORY_Q)){applyPolarity(game,q,q===selected,2);game.asked.add(q);}
+ }
  game.turn=1;game.history.push({kind:'category',value,turn:1});
  return choose(game);
 }
@@ -145,49 +156,54 @@ function redundancyFactor(game,q){
  return factor;
 }
 function bestQuestion(game){
- const pool=candidatePool(game),poolTop=pool[0];
- const denom=pool.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[poolTop])/3),0);
- const candidates=[];
- let bestBase=-Infinity,baselineQ=null;
+ const pool=candidatePool(game);
+ if(!pool.length)return null;
+ const highest=game.scores[pool[0]];
+ const weighted=pool.map(t=>({target:t,weight:Math.exp((game.scores[t]-highest)/3)}));
+ const total=weighted.reduce((sum,item)=>sum+item.weight,0);
+ const leaders=weighted.slice(0,Math.min(8,weighted.length));
+ const leaderTotal=leaders.reduce((sum,item)=>sum+item.weight,0);
+ let best=null;
+ // A good question must distinguish plausible answers, not simply be
+ // answerable by the largest number of them. Unknown classifications make
+ // no prediction and cannot be credited as a useful split.
  for(let q=4;q<F;q++){
   if(game.asked.has(q))continue;
-  let yes=0,no=0,strong=0,knownTotal=0;
-  for(const t of pool){
+  let yes=0,no=0,strong=0,leaderYes=0,leaderNo=0;
+  for(const item of weighted){
+   const t=item.target,w=item.weight;
    if(!knownAt(q,t))continue;
-   const s=stateAt(q,t),w=Math.exp((game.scores[t]-game.scores[poolTop])/3);
-   knownTotal+=w;
-   if(polarity(s))yes+=w;else no+=w;
-   if(strength(s)===2)strong+=w;
+   const state=stateAt(q,t);
+   if(polarity(state))yes+=w;else no+=w;
+   if(strength(state)===2)strong+=w;
   }
-  if(knownTotal<=0)continue;
-  const balance=1-Math.abs(yes-no)/knownTotal;
-  const certainty=strong/knownTotal;
-  const coverage=knownTotal/denom;
-  // Prefer questions which separate the current leaders, rather than merely
-  // dividing a broad candidate pool. The full-pool balance remains dominant.
-  const leaders=pool.slice(0,Math.min(8,pool.length));
-  let leaderYes=0,leaderNo=0,leaderKnown=0;
-  for(const t of leaders){
-   if(!knownAt(q,t))continue;
-   const w=Math.exp((game.scores[t]-game.scores[poolTop])/3);
-   leaderKnown+=w;
-   if(polarity(stateAt(q,t)))leaderYes+=w;else leaderNo+=w;
+  // Under sparse data, a one-sided, partially known trait can still be
+  // informative: a matching Yes supports its known targets, and a No weakens
+  // them. Keep this as a low-priority fallback, never treating Unknown as No.
+  const oneSided= yes<=0||no<=0;
+  if(yes+no<=0)continue;
+  for(const item of leaders){
+   if(!knownAt(q,item.target))continue;
+   if(polarity(stateAt(q,item.target)))leaderYes+=item.weight;
+   else leaderNo+=item.weight;
   }
-  const leaderBalance=leaderKnown>0?(1-Math.abs(leaderYes-leaderNo)/leaderKnown)*(leaderKnown/Math.max(1e-9,leaders.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[poolTop])/3),0))):0;
-  const base=(balance*0.72+leaderBalance*0.2+certainty*0.08)*coverage;
-  candidates.push({q,base});
-  if(base>bestBase+1e-12){bestBase=base;baselineQ=q;}
- }
- if(baselineQ==null)return null;
- let selectedQ=baselineQ,selectedBase=bestBase,bestAdjusted=-Infinity;
- for(const candidate of candidates){
-  if(candidate.base+1e-12<bestBase*REDUNDANCY_SCORE_FLOOR)continue;
-  const adjusted=candidate.base*redundancyFactor(game,candidate.q);
-  if(adjusted>bestAdjusted+1e-12||(Math.abs(adjusted-bestAdjusted)<=1e-12&&candidate.base>selectedBase+1e-12)){
-   selectedQ=candidate.q;selectedBase=candidate.base;bestAdjusted=adjusted;
+  const known=yes+no,coverage=known/total;
+  const split=4*yes*no/(known*known);
+  const leadKnown=leaderYes+leaderNo;
+  const leaderSplit=leadKnown>0?4*leaderYes*leaderNo/(leadKnown*leadKnown)*(leadKnown/leaderTotal):0;
+  // The coverage penalty is squared: a 50/50 split of five known answers
+  // must not outrank a moderately balanced split of the whole candidate pool.
+  const information=oneSided
+   ? 0.11*coverage*(1-coverage)
+   : (0.72*split+0.28*leaderSplit)*coverage*coverage;
+  const reliability=0.85+0.15*(strong/known);
+  const score=information*reliability*redundancyFactor(game,q);
+  if(!best||score>best.score+1e-12||
+     (Math.abs(score-best.score)<=1e-12&&q<best.index)){
+   best={index:q,score,gain:information,coverage};
   }
  }
- return{index:selectedQ,gain:selectedBase};
+ return best;
 }
 function shouldHunch(game){
  if(game.deferGuessOnce){game.deferGuessOnce=false;return false;}
@@ -205,7 +221,7 @@ function makeGuess(game,reason='forced'){
 }
 function choose(game){
  if(game.status!=='playing')throw new Error('game finished');
- if(game.turn===0)return{kind:'category',number:1,text:'First things first. What kind of thing is it?',options:Object.keys(CATEGORY_Q),questionsAsked:0,maxQuestions:game.budget};
+ if(game.turn===0)return{kind:'category',number:1,text:'First things first. What kind of thing is it?',options:Object.keys(ROUTING?ADAPTIVE_CATEGORIES:CATEGORY_Q),questionsAsked:0,maxQuestions:game.budget};
  if(game.turn>=game.budget)return makeGuess(game,'question_limit');
  if(shouldHunch(game))return{kind:'hunch',index:top(game).index,confidence:top(game).p,reason:'confidence',questionsAsked:game.turn,maxQuestions:game.budget,continuePrice:game.continuePrice,continueCost:game.continueCost};
  const next=bestQuestion(game);if(!next)return makeGuess(game,'no_questions');
