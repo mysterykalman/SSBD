@@ -48,3 +48,27 @@ test('expanded model produces bounded, measurable gameplay results',()=>{
  const correct=results.filter(r=>r.correct).length;
  console.log('PAM_ADAPTIVE_GAMEPLAY_DIAGNOSTIC='+JSON.stringify({tested:results.length,correct,results:results.map(r=>({expected:r.expected,actual:r.actual,correct:r.correct,turns:r.turns}))}));
 });
+
+test('stratified diagnostic across the original and expanded answer cohorts',()=>{
+ const chosen=new Set();
+ // 80 baseline concepts and 160 expansion concepts, distributed over the
+ // entire inventories rather than selected for ease of identification.
+ for(let i=0;i<80;i++)chosen.add(Math.floor(i*1775/80));
+ for(let i=0;i<160;i++)chosen.add(1775+Math.floor(i*1509/160));
+ const results=[...chosen].map(play);
+ const grouped={};
+ for(let i=0;i<results.length;i++){
+  const t=[...chosen][i],category=model.routingCategories[t];
+  const stat=grouped[category]||(grouped[category]={tested:0,correct:0});
+  stat.tested++;if(results[i].correct)stat.correct++;
+ }
+ console.log('PAM_ADAPTIVE_STRATIFIED='+JSON.stringify({
+  tested:results.length,correct:results.filter(x=>x.correct).length,
+  generatedQuestions:model.adaptive.generatedQuestions,byCategory:grouped,
+  misses:results.filter(x=>!x.correct).slice(0,30).map(x=>({expected:x.expected,guess:x.actual,turns:x.turns}))
+ }));
+ for(const result of results){
+  assert.ok(result.turns<=20,'Exceeded turn limit for '+result.expected);
+  assert.equal(new Set(result.asked).size,result.asked.length,'Repeated question for '+result.expected);
+ }
+});
