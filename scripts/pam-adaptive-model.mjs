@@ -1,3 +1,4 @@
+import {enrichCanonicalPamQuestions} from './pam-adaptive-canonical-enrichment.mjs';
 import {generatePamFactQuestions} from './pam-adaptive-predicates.mjs';
 import {readFile} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
@@ -32,6 +33,7 @@ export async function loadPamAdaptiveModel(loadOriginalModel){
   if(doc.schemaVersion!==1||doc.start!==metadataRows.length+1)throw Error('Out-of-order adaptive metadata part');
   metadataRows.push(...doc.rows);
  }
+ const canonical=enrichCanonicalPamQuestions(rows,metadataRows,questionDoc);
  const generated=generatePamFactQuestions(rows,metadataRows);
  const oldN=original.targets.length,oldF=original.questions.length,N=oldN+rows.length,F=oldF+EXTRA_QUESTIONS+generated.questions.length;
  if(oldN!==1775||oldF!==156)throw Error('Unexpected original Pam dimensions');
@@ -55,7 +57,7 @@ export async function loadPamAdaptiveModel(loadOriginalModel){
    const pos=q*N+t;weights[pos]=q===({animal:0,vegetable:1,mineral:2,other:3}[oldClass])?3:2;knownMask[pos]=1;
   }
   for(let q=0;q<EXTRA_QUESTIONS;q++){
-   const state=rows[i][3][q],pos=(oldF+q)*N+t;
+   const state=canonical.vectors[i][q],pos=(oldF+q)*N+t;
    if(state!=='U'){weights[pos]=STATUS[state];knownMask[pos]=1}
   }
  }
@@ -84,6 +86,6 @@ export async function loadPamAdaptiveModel(loadOriginalModel){
  for(const row of rows)routingCategories.push(route(row[2]));
  return {...original,questions,targets,weights,knownMask,routingCategories,
   adaptive:{originalTargets:oldN,expansionTargets:rows.length,originalQuestions:oldF,expansionQuestions:EXTRA_QUESTIONS,generatedQuestions:generated.questions.length,generatedTopics:generated.questions.map(q=>({id:q.id,text:q.text,origin:q.origin})),
-   answeredExpansionCells:rows.reduce((n,r)=>n+r[3].replace(/U/g,'').length,0)}
+   answeredExpansionCells:canonical.vectors.reduce((n,v)=>n+v.replace(/U/g,'').length,0),canonicalAdded:canonical.patches.length,canonicalConflicts:canonical.conflicts.length}
  };
 }
