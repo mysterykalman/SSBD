@@ -177,7 +177,11 @@ function bestQuestion(game){
    if(polarity(state))yes+=w;else no+=w;
    if(strength(state)===2)strong+=w;
   }
-  if(yes<=0||no<=0)continue; // No demonstrable discrimination.
+  // Under sparse data, a one-sided, partially known trait can still be
+  // informative: a matching Yes supports its known targets, and a No weakens
+  // them. Keep this as a low-priority fallback, never treating Unknown as No.
+  const oneSided= yes<=0||no<=0;
+  if(yes+no<=0)continue;
   for(const item of leaders){
    if(!knownAt(q,item.target))continue;
    if(polarity(stateAt(q,item.target)))leaderYes+=item.weight;
@@ -189,7 +193,9 @@ function bestQuestion(game){
   const leaderSplit=leadKnown>0?4*leaderYes*leaderNo/(leadKnown*leadKnown)*(leadKnown/leaderTotal):0;
   // The coverage penalty is squared: a 50/50 split of five known answers
   // must not outrank a moderately balanced split of the whole candidate pool.
-  const information=(0.72*split+0.28*leaderSplit)*coverage*coverage;
+  const information=oneSided
+   ? 0.11*coverage*(1-coverage)
+   : (0.72*split+0.28*leaderSplit)*coverage*coverage;
   const reliability=0.85+0.15*(strong/known);
   const score=information*reliability*redundancyFactor(game,q);
   if(!best||score>best.score+1e-12||
