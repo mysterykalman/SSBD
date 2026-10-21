@@ -1,3 +1,4 @@
+import {generatePamFactQuestions} from './pam-adaptive-predicates.mjs';
 import {readFile} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -25,9 +26,16 @@ export async function loadPamAdaptiveModel(loadOriginalModel){
   }
  }
  if(rows.length!==EXTRA_TARGETS)throw Error('Expected 1509 expansion records, got '+rows.length);
- const oldN=original.targets.length,oldF=original.questions.length,N=oldN+rows.length,F=oldF+EXTRA_QUESTIONS;
+ const metadataDocs=await Promise.all([1,2,3,4,5].map(i=>readFile(join(ROOT,'metadata-'+String(i).padStart(2,'0')+'.json'),'utf8').then(JSON.parse)));
+ const metadataRows=[];
+ for(const doc of metadataDocs){
+  if(doc.schemaVersion!==1||doc.start!==metadataRows.length+1)throw Error('Out-of-order adaptive metadata part');
+  metadataRows.push(...doc.rows);
+ }
+ const generated=generatePamFactQuestions(rows,metadataRows);
+ const oldN=original.targets.length,oldF=original.questions.length,N=oldN+rows.length,F=oldF+EXTRA_QUESTIONS+generated.questions.length;
  if(oldN!==1775||oldF!==156)throw Error('Unexpected original Pam dimensions');
- const questions=[...original.questions,...questionDoc.questions.map(q=>q.text)];
+ const questions=[...original.questions,...questionDoc.questions.map(q=>q.text),...generated.questions.map(q=>q.text)];
  const targets=[...original.targets,...rows.map(r=>r[1])];
  const weights=Buffer.alloc(N*F,0),knownMask=Buffer.alloc(N*F,0);
  for(let q=0;q<oldF;q++){
@@ -51,6 +59,14 @@ export async function loadPamAdaptiveModel(loadOriginalModel){
    if(state!=='U'){weights[pos]=STATUS[state];knownMask[pos]=1}
   }
  }
+ for(let q=0;q<generated.questions.length;q++){
+  const answers=generated.questions[q].states,questionIndex=oldF+EXTRA_QUESTIONS+q;
+  for(let i=0;i<rows.length;i++){
+   const state=answers[i];if(state==='U')continue;
+   const pos=questionIndex*N+oldN+i;
+   knownMask[pos]=1;weights[pos]=STATUS[state];
+  }
+ }
  const route=category=>{
   if(['People'].includes(category))return 'person';
   if(['Cities','Countries','Landmarks'].includes(category))return 'place';
@@ -67,7 +83,7 @@ export async function loadPamAdaptiveModel(loadOriginalModel){
  }
  for(const row of rows)routingCategories.push(route(row[2]));
  return {...original,questions,targets,weights,knownMask,routingCategories,
-  adaptive:{originalTargets:oldN,expansionTargets:rows.length,originalQuestions:oldF,expansionQuestions:EXTRA_QUESTIONS,
+  adaptive:{originalTargets:oldN,expansionTargets:rows.length,originalQuestions:oldF,expansionQuestions:EXTRA_QUESTIONS,generatedQuestions:generated.questions.length,generatedTopics:generated.questions.map(q=>({id:q.id,text:q.text,origin:q.origin})),
    answeredExpansionCells:rows.reduce((n,r)=>n+r[3].replace(/U/g,'').length,0)}
  };
 }
