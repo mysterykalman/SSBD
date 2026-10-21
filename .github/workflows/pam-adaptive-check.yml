@@ -25,3 +25,5 @@ jobs:
         run: node --test test/pam-expanded-model.test.mjs
       - name: Validate adaptive question selection
         run: node --test test/pam-adaptive-question-selection.test.mjs
+      - name: Record 20-question gameplay diagnostics
+        run: node --test test/pam-expanded-gameplay-diagnostic.test.mjs
