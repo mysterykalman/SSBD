@@ -16,6 +16,8 @@ const knownAt=(q,t)=>!KNOWN||KNOWN[q*N+t]===1;
 const polarity=s=>s&1;
 const strength=s=>(s&2)?2:1;
 const CATEGORY_Q=Object.freeze({animal:0,vegetable:1,mineral:2,other:3});
+const ADAPTIVE_CATEGORIES=Object.freeze({person:'Person',place:'Place',animal_plant:'Animal or Plant',object:'Object',entertainment:'Entertainment',other:'Other'});
+const ROUTING=Array.isArray(model.routingCategories)&&model.routingCategories.length===N?model.routingCategories:null;
 const REGULAR_ANSWERS=new Set(['yes','probably','maybe','unknown','doubtful','probably_not','no']);
 
 const REDUNDANCY_SCORE_FLOOR=0.99;
@@ -85,9 +87,18 @@ function applyMaybe(game,q){
 }
 function setCategory(game,value){
  if(game.turn!==0)throw new Error('Category can only be chosen at the start of a Pam round');
- const selected=CATEGORY_Q[value];if(selected==null)throw new Error('Unsupported Pam category');
+ const adaptive=Boolean(ROUTING);
+ const selected=adaptive?ADAPTIVE_CATEGORIES[value]:CATEGORY_Q[value];
+ if(selected==null)throw new Error('Unsupported Pam category');
  game.category=value;
- for(const q of Object.values(CATEGORY_Q)){applyPolarity(game,q,q===selected,2);game.asked.add(q);}
+ if(adaptive){
+  // Coarse first-turn partition; keep alternatives possible for imperfect
+  // metadata instead of removing them from the candidate pool entirely.
+  for(let t=0;t<N;t++)game.scores[t]+=ROUTING[t]===value?8:-8;
+  for(const q of Object.values(CATEGORY_Q))game.asked.add(q);
+ }else{
+  for(const q of Object.values(CATEGORY_Q)){applyPolarity(game,q,q===selected,2);game.asked.add(q);}
+ }
  game.turn=1;game.history.push({kind:'category',value,turn:1});
  return choose(game);
 }
@@ -204,7 +215,7 @@ function makeGuess(game,reason='forced'){
 }
 function choose(game){
  if(game.status!=='playing')throw new Error('game finished');
- if(game.turn===0)return{kind:'category',number:1,text:'First things first. What kind of thing is it?',options:Object.keys(CATEGORY_Q),questionsAsked:0,maxQuestions:game.budget};
+ if(game.turn===0)return{kind:'category',number:1,text:'First things first. What kind of thing is it?',options:Object.keys(ROUTING?ADAPTIVE_CATEGORIES:CATEGORY_Q),questionsAsked:0,maxQuestions:game.budget};
  if(game.turn>=game.budget)return makeGuess(game,'question_limit');
  if(shouldHunch(game))return{kind:'hunch',index:top(game).index,confidence:top(game).p,reason:'confidence',questionsAsked:game.turn,maxQuestions:game.budget,continuePrice:game.continuePrice,continueCost:game.continueCost};
  const next=bestQuestion(game);if(!next)return makeGuess(game,'no_questions');
