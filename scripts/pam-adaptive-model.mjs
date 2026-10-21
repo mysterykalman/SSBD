@@ -51,7 +51,22 @@ export async function loadPamAdaptiveModel(loadOriginalModel){
    if(state!=='U'){weights[pos]=STATUS[state];knownMask[pos]=1}
   }
  }
- return {...original,questions,targets,weights,knownMask,
+ const route=category=>{
+  if(['People'].includes(category))return 'person';
+  if(['Cities','Countries','Landmarks'].includes(category))return 'place';
+  if(['Movies','TV Shows','Music Groups','Musicals'].includes(category))return 'entertainment';
+  if(['Animals','Plants'].includes(category))return 'animal_plant';
+  if(['Brands','Car Companies','Art & Monuments'].includes(category))return 'other';
+  return 'object';
+ };
+ const routingCategories=[];
+ for(let t=0;t<oldN;t++){
+  const categoryStates=[0,1,2,3].map(q=>original.weights[q*oldN+t]);
+  const selected=categoryStates.indexOf(3);
+  routingCategories.push(selected===0||selected===1?'animal_plant':selected===2?'object':'object');
+ }
+ for(const row of rows)routingCategories.push(route(row[2]));
+ return {...original,questions,targets,weights,knownMask,routingCategories,
   adaptive:{originalTargets:oldN,expansionTargets:rows.length,originalQuestions:oldF,expansionQuestions:EXTRA_QUESTIONS,
    answeredExpansionCells:rows.reduce((n,r)=>n+r[3].replace(/U/g,'').length,0)}
  };
