@@ -145,49 +145,48 @@ function redundancyFactor(game,q){
  return factor;
 }
 function bestQuestion(game){
- const pool=candidatePool(game),poolTop=pool[0];
- const denom=pool.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[poolTop])/3),0);
- const candidates=[];
- let bestBase=-Infinity,baselineQ=null;
+ const pool=candidatePool(game);
+ if(!pool.length)return null;
+ const highest=game.scores[pool[0]];
+ const weighted=pool.map(t=>({target:t,weight:Math.exp((game.scores[t]-highest)/3)}));
+ const total=weighted.reduce((sum,item)=>sum+item.weight,0);
+ const leaders=weighted.slice(0,Math.min(8,weighted.length));
+ const leaderTotal=leaders.reduce((sum,item)=>sum+item.weight,0);
+ let best=null;
+ // A good question must distinguish plausible answers, not simply be
+ // answerable by the largest number of them. Unknown classifications make
+ // no prediction and cannot be credited as a useful split.
  for(let q=4;q<F;q++){
   if(game.asked.has(q))continue;
-  let yes=0,no=0,strong=0,knownTotal=0;
-  for(const t of pool){
+  let yes=0,no=0,strong=0,leaderYes=0,leaderNo=0;
+  for(const item of weighted){
+   const t=item.target,w=item.weight;
    if(!knownAt(q,t))continue;
-   const s=stateAt(q,t),w=Math.exp((game.scores[t]-game.scores[poolTop])/3);
-   knownTotal+=w;
-   if(polarity(s))yes+=w;else no+=w;
-   if(strength(s)===2)strong+=w;
+   const state=stateAt(q,t);
+   if(polarity(state))yes+=w;else no+=w;
+   if(strength(state)===2)strong+=w;
   }
-  if(knownTotal<=0)continue;
-  const balance=1-Math.abs(yes-no)/knownTotal;
-  const certainty=strong/knownTotal;
-  const coverage=knownTotal/denom;
-  // Prefer questions which separate the current leaders, rather than merely
-  // dividing a broad candidate pool. The full-pool balance remains dominant.
-  const leaders=pool.slice(0,Math.min(8,pool.length));
-  let leaderYes=0,leaderNo=0,leaderKnown=0;
-  for(const t of leaders){
-   if(!knownAt(q,t))continue;
-   const w=Math.exp((game.scores[t]-game.scores[poolTop])/3);
-   leaderKnown+=w;
-   if(polarity(stateAt(q,t)))leaderYes+=w;else leaderNo+=w;
+  if(yes<=0||no<=0)continue; // No demonstrable discrimination.
+  for(const item of leaders){
+   if(!knownAt(q,item.target))continue;
+   if(polarity(stateAt(q,item.target)))leaderYes+=item.weight;
+   else leaderNo+=item.weight;
   }
-  const leaderBalance=leaderKnown>0?(1-Math.abs(leaderYes-leaderNo)/leaderKnown)*(leaderKnown/Math.max(1e-9,leaders.reduce((sum,t)=>sum+Math.exp((game.scores[t]-game.scores[poolTop])/3),0))):0;
-  const base=(balance*0.72+leaderBalance*0.2+certainty*0.08)*coverage;
-  candidates.push({q,base});
-  if(base>bestBase+1e-12){bestBase=base;baselineQ=q;}
- }
- if(baselineQ==null)return null;
- let selectedQ=baselineQ,selectedBase=bestBase,bestAdjusted=-Infinity;
- for(const candidate of candidates){
-  if(candidate.base+1e-12<bestBase*REDUNDANCY_SCORE_FLOOR)continue;
-  const adjusted=candidate.base*redundancyFactor(game,candidate.q);
-  if(adjusted>bestAdjusted+1e-12||(Math.abs(adjusted-bestAdjusted)<=1e-12&&candidate.base>selectedBase+1e-12)){
-   selectedQ=candidate.q;selectedBase=candidate.base;bestAdjusted=adjusted;
+  const known=yes+no,coverage=known/total;
+  const split=4*yes*no/(known*known);
+  const leadKnown=leaderYes+leaderNo;
+  const leaderSplit=leadKnown>0?4*leaderYes*leaderNo/(leadKnown*leadKnown)*(leadKnown/leaderTotal):0;
+  // The coverage penalty is squared: a 50/50 split of five known answers
+  // must not outrank a moderately balanced split of the whole candidate pool.
+  const information=(0.72*split+0.28*leaderSplit)*coverage*coverage;
+  const reliability=0.85+0.15*(strong/known);
+  const score=information*reliability*redundancyFactor(game,q);
+  if(!best||score>best.score+1e-12||
+     (Math.abs(score-best.score)<=1e-12&&q<best.index)){
+   best={index:q,score,gain:information,coverage};
   }
  }
- return{index:selectedQ,gain:selectedBase};
+ return best;
 }
 function shouldHunch(game){
  if(game.deferGuessOnce){game.deferGuessOnce=false;return false;}
