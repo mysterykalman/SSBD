@@ -10,18 +10,13 @@ const model=await loadPamAdaptiveModel(()=>loadPam1775Model(loadPamClassicModel)
 const N=model.targets.length,known=model.knownMask,weights=model.weights;
 globalThis.window={PAM_CLASSIC_MODEL:{
  questions:model.questions,targets:model.targets,weightsB64:weights.toString('base64'),
- knownMaskB64:known.toString('base64'),layout:'question-major',states:4
+ knownMaskB64:known.toString('base64'),routingCategories:model.routingCategories,layout:'question-major',states:4
 }};
 globalThis.atob=x=>Buffer.from(x,'base64').toString('binary');
 await import(pathToFileURL(resolve('src/client/mom-mode/engine.js')).href+'?adaptive-playback=1');
 const Engine=window.PamClassic20Q;
 function oracle(q,t){const offset=q*N+t;if(!known[offset])return 'unknown';const state=weights[offset];return state===3?'yes':state===2?'no':state===1?'probably':'probably_not'}
-function category(t){
- if(t>=1775)return 'other';
- let best=0;
- for(let q=1;q<4;q++)if(weights[q*N+t]>weights[best*N+t])best=q;
- return ['animal','vegetable','mineral','other'][best];
-}
+function category(t){return model.routingCategories[t]}
 function play(t){
  const game=Engine.createGame({budget:20,minGuessQuestions:7});
  let next=Engine.setCategory(game,category(t));
