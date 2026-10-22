@@ -2,7 +2,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {loadPamClassicModel} from './pam-classic-model.mjs';
-import {loadPam1775Model} from './pam-quality-model.mjs';
+import {loadPamExpandedModel} from './pam-quality-model.mjs';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const momDir=join(root,'src','client','mom-mode');
@@ -10,15 +10,15 @@ const generatedPath=join(momDir,'knowledge.generated.js');
 const stylesPath=join(momDir,'styles.css');
 const classicStylesPath=join(momDir,'classic.css');
 
-const [{questions,targets,weights,knownMask,baseTargetCount,extensionCount,qualityCount,totalExtensionCount},previous,baseStyles,classicStyles]=await Promise.all([
-  loadPam1775Model(loadPamClassicModel),
+const [{questions,targets,weights,knownMask,baseTargetCount,extensionCount,qualityCount,newQualityCount=0,totalExtensionCount},previous,baseStyles,classicStyles]=await Promise.all([
+  loadPamExpandedModel(loadPamClassicModel),
   readFile(generatedPath,'utf8'),
   readFile(stylesPath,'utf8'),
   readFile(classicStylesPath,'utf8')
 ]);
 
 if(questions.length!==156)throw new Error(`Expected 156 Pam questions, found ${questions.length}`);
-if(targets.length!==1775)throw new Error(`Expected 1775 Pam targets, found ${targets.length}`);
+if(targets.length!==1775+newQualityCount)throw new Error(`Expected ${1775+newQualityCount} Pam targets, found ${targets.length}`);
 if(baseTargetCount!==1200)throw new Error(`Expected 1200 base Pam targets, found ${baseTargetCount}`);
 if(extensionCount!==200)throw new Error(`Expected 200 first-wave Pam extension targets, found ${extensionCount}`);
 if(qualityCount!==375)throw new Error(`Expected 375 quality Pam targets, found ${qualityCount}`);
