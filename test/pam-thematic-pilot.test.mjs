@@ -25,3 +25,12 @@ for(const soft of [false,true])test('actual thematic reasoner identifies all 16 
  }
  assert.equal(results.length,16);
 });
+
+test('question-family cooldown waits for two repeats and reduces unknown questions',()=>{
+ let unknown=0;
+ for(let i=0;i<model.targets.length;i++) {
+  const out=oracleThematicGame(model,i);
+  unknown+=out.log.filter(event=>event.answer==='unknown').length;
+ }
+ assert.ok(unknown<=4,'An overaggressive family penalty caused excessive out-of-scope questions: '+unknown);
+});

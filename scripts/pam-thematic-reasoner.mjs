@@ -57,7 +57,9 @@ function questionUtility(game,q){
  // A good interviewer doesn't ask redundant fine-grained time/location facts.
  if(last.at(-1)===family)utility*=.72;
  if(last.at(-2)===family)utility*=.88;
- if(last.slice(-2).every(x=>x===family))utility*=.025;
+ // Apply the severe repeat penalty only after TWO previous same-family questions.
+ // Array.every() on one previous question was incorrectly triggering the penalty.
+ if(last.length>=2&&last.slice(-2).every(x=>x===family))utility*=.025;
  if(q.field==='movie_year'&&game.turn<12)utility*=.06;
  if(q.field==='movie_year'&&game.mass.length>40)utility*=.4;
  return {q,utility,yes,no,unknown,family,coverage};
