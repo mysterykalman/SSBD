@@ -9,17 +9,18 @@ import {applyVerifiedPamFacts} from './pam-verified-facts.mjs';
 import {applyReviewedPamCorrections} from './pam-reviewed-corrections.mjs';
 import {loadThematicRoster,compileThematicModel,collisionAudit,oracleTrial} from './pam-thematic-lab.mjs';
 import {oracleThematicGame} from './pam-thematic-reasoner.mjs';
+import {reconcilePamIdentities} from './pam-target-identity.mjs';
 
 const norm=v=>String(v).normalize('NFKC').trim().toLocaleLowerCase('en').replace(/\s+/g,' ');
 export function inventoryCombined(base,roster){
  if(base.targets.length!==1775||base.questions.length!==156||roster.length!==1650)throw Error('Actual 1775 + 1650 required');
  const original=new Map(base.targets.map((name,i)=>[norm(name),i]));
- const overlaps=roster.filter(x=>original.has(norm(x.name))).map(x=>({id:x.id,name:x.name,originalIndex:original.get(norm(x.name)),category:x.category}));
- const newEntries=roster.filter(x=>!original.has(norm(x.name)));
+ const {newEntries,overlaps:rawOverlaps,aliases}=reconcilePamIdentities(base.targets,roster);
+ const overlaps=rawOverlaps.map(x=>({...x,originalIndex:original.get(norm(x.name))}));
  const names=new Map();const duplicates=[];
  for(const x of newEntries){const k=norm(x.name);if(names.has(k))duplicates.push([x.name,names.get(k)]);else names.set(k,x.name);}
  const counts={};for(const x of roster)counts[x.category]=(counts[x.category]||0)+1;
- return{oldTargets:base.targets.length,recoveredCandidates:roster.length,crossLibraryExactNameOverlaps:overlaps,internalDuplicates:duplicates,uniqueNewNames:newEntries.length,combinedUniqueNames:base.targets.length+newEntries.length,categories:counts,newEntries};
+ return{oldTargets:base.targets.length,recoveredCandidates:roster.length,crossLibraryExactNameOverlaps:overlaps,resolvedAliases:aliases,internalDuplicates:duplicates,uniqueNewNames:newEntries.length,combinedUniqueNames:base.targets.length+newEntries.length,categories:counts,newEntries};
 }
 export function benchmarkThematicCohorts(roster,{limit=20,softEvery=3,trialCap=1650}={}){
  const model=compileThematicModel(roster);
