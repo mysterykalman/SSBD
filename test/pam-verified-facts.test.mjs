@@ -4,7 +4,7 @@ import {applyVerifiedPamFacts} from '../scripts/pam-verified-facts.mjs';
 import {pamTraitIndex} from '../scripts/pam-classic-model.mjs';
 
 test('source-backed answers populate unknown cells without rewriting known answers',async()=>{
- const targets=['an aye-aye','a binturong','a snow leopard'],questions=Array(156).fill('?');
+ const targets=['an aye-aye','a binturong','a snow leopard','a caracal','a serval','a harpy eagle'],questions=Array(156).fill('?');
  const weights=Buffer.alloc(targets.length*156),knownMask=Buffer.alloc(weights.length);
  const index=pamTraitIndex.nocturnal*targets.length;
  weights[index]=2;knownMask[index]=1;
@@ -19,5 +19,7 @@ test('source-backed answers populate unknown cells without rewriting known answe
  assert.equal(model.knownMask[q],0);
  const unsupportedCold=pamTraitIndex.cold*targets.length+2;
  assert.equal(enriched.knownMask[unsupportedCold],0,'Cold-climate habitat is not evidence that the snow leopard itself is cold');
- assert.ok(enriched.verifiedEnrichment.applied.some(x=>x.target==='a caracal')===false);
+ assert.ok(enriched.verifiedEnrichment.applied.some(x=>x.target==='a caracal'));
+ assert.ok(enriched.verifiedEnrichment.applied.some(x=>x.target==='a serval'));
+ assert.ok(enriched.verifiedEnrichment.applied.some(x=>x.target==='a harpy eagle'));
 });

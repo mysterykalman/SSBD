@@ -13,7 +13,7 @@ const after=await applyReviewedPamCorrections(before);
 const n=after.targets.length,q=after.questions.length;
 test('review batch 001 covers explicitly reviewed complete 156-question rows and individually sourced scoped fixes',()=>{
  assert.equal(n,1775);assert.equal(q,156);assert.equal(doc.rows.length,24);
- assert.equal(new Set(doc.rows.map(x=>x.name)).size,2);
+ assert.equal(new Set(doc.rows.map(x=>x.name)).size,doc.rows.length);
  assert.equal(after.reviewedCorrections.fullReviews.length,doc.rows.length);
  for (const row of doc.rows) {
    assert.equal(after.targets[row.targetIndex],row.name);

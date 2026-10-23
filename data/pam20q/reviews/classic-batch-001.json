@@ -468,7 +468,7 @@
     },
     {
       "target": "a binturong",
-      "targetIndex": 1216,
+      "targetIndex": 1215,
       "questionIndex": 125,
       "question": "Is it furry",
       "oldState": 1,
@@ -478,7 +478,7 @@
     },
     {
       "target": "a snow leopard",
-      "targetIndex": 1236,
+      "targetIndex": 1231,
       "questionIndex": 90,
       "question": "Does it have a long tail",
       "oldState": 2,
@@ -488,7 +488,7 @@
     },
     {
       "target": "a snow leopard",
-      "targetIndex": 1236,
+      "targetIndex": 1231,
       "questionIndex": 131,
       "question": "Does it have paws",
       "oldState": 1,
@@ -498,7 +498,7 @@
     },
     {
       "target": "a snow leopard",
-      "targetIndex": 1236,
+      "targetIndex": 1231,
       "questionIndex": 115,
       "question": "Is it a carnivore",
       "oldState": 1,
@@ -508,7 +508,7 @@
     },
     {
       "target": "a snow leopard",
-      "targetIndex": 1236,
+      "targetIndex": 1231,
       "questionIndex": 125,
       "question": "Is it furry",
       "oldState": 1,
@@ -518,7 +518,7 @@
     },
     {
       "target": "a snow leopard",
-      "targetIndex": 1236,
+      "targetIndex": 1231,
       "questionIndex": 150,
       "question": "Can it jump",
       "oldState": 2,
@@ -528,7 +528,7 @@
     },
     {
       "target": "a caracal",
-      "targetIndex": 1233,
+      "targetIndex": 1229,
       "questionIndex": 115,
       "question": "Is it a carnivore",
       "oldState": 1,
@@ -538,7 +538,7 @@
     },
     {
       "target": "a caracal",
-      "targetIndex": 1233,
+      "targetIndex": 1229,
       "questionIndex": 125,
       "question": "Is it furry",
       "oldState": 1,
@@ -548,7 +548,7 @@
     },
     {
       "target": "a caracal",
-      "targetIndex": 1233,
+      "targetIndex": 1229,
       "questionIndex": 131,
       "question": "Does it have paws",
       "oldState": 1,
@@ -558,7 +558,7 @@
     },
     {
       "target": "a serval",
-      "targetIndex": 1234,
+      "targetIndex": 1230,
       "questionIndex": 115,
       "question": "Is it a carnivore",
       "oldState": 1,
@@ -568,7 +568,7 @@
     },
     {
       "target": "a serval",
-      "targetIndex": 1234,
+      "targetIndex": 1230,
       "questionIndex": 125,
       "question": "Is it furry",
       "oldState": 1,
@@ -578,7 +578,7 @@
     },
     {
       "target": "a serval",
-      "targetIndex": 1234,
+      "targetIndex": 1230,
       "questionIndex": 131,
       "question": "Does it have paws",
       "oldState": 1,
@@ -588,7 +588,7 @@
     },
     {
       "target": "a serval",
-      "targetIndex": 1234,
+      "targetIndex": 1230,
       "questionIndex": 60,
       "question": "Is it tall",
       "oldState": 2,
@@ -598,7 +598,7 @@
     },
     {
       "target": "a harpy eagle",
-      "targetIndex": 1222,
+      "targetIndex": 1221,
       "questionIndex": 115,
       "question": "Is it a carnivore",
       "oldState": 2,
