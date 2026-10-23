@@ -29,6 +29,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run complete Pam regression suite
-        run: node --test test/pam-classic20q.test.mjs test/pam-quality375.test.mjs test/pam-question-redundancy.test.mjs test/pam-reviewed-corrections.test.mjs test/pam-reviewed-gameplay.test.mjs
+        run: node --test test/pam-classic20q.test.mjs test/pam-quality375.test.mjs test/pam-question-redundancy.test.mjs test/pam-reviewed-corrections.test.mjs test/pam-reviewed-gameplay.test.mjs test/pam-thematic-pilot.test.mjs
       - name: Run production build
         run: npm run build
