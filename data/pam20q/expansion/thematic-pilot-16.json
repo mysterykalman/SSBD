@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "status": "research_pilot_unreviewed_not_for_release",
+  "intent": "Small reproducible cross-category Pam engine experiment. The 16 target identities are illustrative and not certified to correspond to frozen roster IDs. Does not certify Part B integration or editorial approvals.",
+  "targets": [
+    {
+      "name": "Paris",
+      "category": "city",
+      "positiveTags": [
+        "europe",
+        "france"
+      ]
+    },
+    {
+      "name": "London",
+      "category": "city",
+      "positiveTags": [
+        "europe",
+        "uk"
+      ]
+    },
+    {
+      "name": "Toronto",
+      "category": "city",
+      "positiveTags": [
+        "north-america",
+        "canada"
+      ]
+    },
+    {
+      "name": "New York City",
+      "category": "city",
+      "positiveTags": [
+        "north-america",
+        "us"
+      ]
+    },
+    {
+      "name": "Albert Einstein",
+      "category": "person",
+      "positiveTags": [
+        "science",
+        "physics"
+      ]
+    },
+    {
+      "name": "Marie Curie",
+      "category": "person",
+      "positiveTags": [
+        "science",
+        "chemistry"
+      ]
+    },
+    {
+      "name": "William Shakespeare",
+      "category": "person",
+      "positiveTags": [
+        "writing"
+      ]
+    },
+    {
+      "name": "Taylor Swift",
+      "category": "person",
+      "positiveTags": [
+        "music"
+      ]
+    },
+    {
+      "name": "Titanic (1997 film)",
+      "category": "movie",
+      "positiveTags": [
+        "historical-drama"
+      ]
+    },
+    {
+      "name": "Jurassic Park (1993 film)",
+      "category": "movie",
+      "positiveTags": [
+        "science-fiction",
+        "dinosaurs"
+      ]
+    },
+    {
+      "name": "The Lion King (1994 film)",
+      "category": "movie",
+      "positiveTags": [
+        "animated"
+      ]
+    },
+    {
+      "name": "The Matrix (1999 film)",
+      "category": "movie",
+      "positiveTags": [
+        "science-fiction",
+        "virtual-reality"
+      ]
+    },
+    {
+      "name": "Apple Inc.",
+      "category": "brand",
+      "positiveTags": [
+        "electronics"
+      ]
+    },
+    {
+      "name": "Nike",
+      "category": "brand",
+      "positiveTags": [
+        "apparel"
+      ]
+    },
+    {
+      "name": "LEGO",
+      "category": "brand",
+      "positiveTags": [
+        "toys"
+      ]
+    },
+    {
+      "name": "Toyota",
+      "category": "brand",
+      "positiveTags": [
+        "vehicles"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "city",
+      "text": "Is it a city?",
+      "field": "topic",
+      "scope": "all"
+    },
+    {
+      "id": "person",
+      "text": "Is it a real person?",
+      "field": "topic",
+      "scope": "all"
+    },
+    {
+      "id": "movie",
+      "text": "Is it a movie?",
+      "field": "topic",
+      "scope": "all"
+    },
+    {
+      "id": "brand",
+      "text": "Is it a company or commercial brand?",
+      "field": "topic",
+      "scope": "all"
+    },
+    {
+      "id": "europe",
+      "text": "Is the city in Europe?",
+      "field": "geography",
+      "scope": "city"
+    },
+    {
+      "id": "north-america",
+      "text": "Is the city in North America?",
+      "field": "geography",
+      "scope": "city"
+    },
+    {
+      "id": "france",
+      "text": "Is the city in France?",
+      "field": "geography",
+      "scope": "city"
+    },
+    {
+      "id": "canada",
+      "text": "Is the city in Canada?",
+      "field": "geography",
+      "scope": "city"
+    },
+    {
+      "id": "uk",
+      "text": "Is the city in the United Kingdom?",
+      "field": "geography",
+      "scope": "city"
+    },
+    {
+      "id": "us",
+      "text": "Is the city in the United States?",
+      "field": "geography",
+      "scope": "city"
+    },
+    {
+      "id": "science",
+      "text": "Is the person known for scientific research?",
+      "field": "occupation",
+      "scope": "person"
+    },
+    {
+      "id": "physics",
+      "text": "Is the person associated with physics?",
+      "field": "occupation",
+      "scope": "person"
+    },
+    {
+      "id": "chemistry",
+      "text": "Is the person associated with chemistry?",
+      "field": "occupation",
+      "scope": "person"
+    },
+    {
+      "id": "writing",
+      "text": "Is the person known for writing?",
+      "field": "occupation",
+      "scope": "person"
+    },
+    {
+      "id": "music",
+      "text": "Is the person known for music?",
+      "field": "occupation",
+      "scope": "person"
+    },
+    {
+      "id": "animated",
+      "text": "Is the film animated?",
+      "field": "movie_genre",
+      "scope": "movie"
+    },
+    {
+      "id": "science-fiction",
+      "text": "Is the film science fiction?",
+      "field": "movie_genre",
+      "scope": "movie"
+    },
+    {
+      "id": "historical-drama",
+      "text": "Is the film a historical drama?",
+      "field": "movie_genre",
+      "scope": "movie"
+    },
+    {
+      "id": "dinosaurs",
+      "text": "Does the film feature dinosaurs?",
+      "field": "movie_subject",
+      "scope": "movie"
+    },
+    {
+      "id": "virtual-reality",
+      "text": "Does the film explore simulated reality?",
+      "field": "movie_subject",
+      "scope": "movie"
+    },
+    {
+      "id": "electronics",
+      "text": "Is the company known for consumer electronics?",
+      "field": "brand_sector",
+      "scope": "brand"
+    },
+    {
+      "id": "apparel",
+      "text": "Is it known for clothing or sportswear?",
+      "field": "brand_sector",
+      "scope": "brand"
+    },
+    {
+      "id": "toys",
+      "text": "Is it known for toys?",
+      "field": "brand_sector",
+      "scope": "brand"
+    },
+    {
+      "id": "vehicles",
+      "text": "Does the company manufacture vehicles?",
+      "field": "brand_sector",
+      "scope": "brand"
+    }
+  ],
+  "semantics": "A scoped question is known only for explicitly represented targets in its scope. The four broad topic questions are known for all 16. Unknown is not No."
+}
