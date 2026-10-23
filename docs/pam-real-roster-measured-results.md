@@ -9,7 +9,7 @@ The reproducible GitHub Actions job `research-benchmark` run 39883432414 finishe
 | Original names | 1,775 |
 | Recovered research candidate names | 1,650 |
 | Exact-name collisions | 1 |
-| Distinct names in combined list | 3,424 |
+| Distinct identities in combined list after resolving Dove | **3,425** |
 | Workbook-derived experimental questions | 351 |
 | Candidate x question positions | 579,150 |
 | Known positions in recovered research | 104,374 |
@@ -20,7 +20,7 @@ The reproducible GitHub Actions job `research-benchmark` run 39883432414 finishe
 | Correct within 20 questions, exact response | 0/33 |
 | Correct with softened every third response | 0/33 |
 
-The lone exact spelling conflict is `Dove` (brand, PAM-1326) versus an original `Dove`. This is a **referent collision**, not necessarily a duplicate identity; do not simply remove it without checking.
+The lone exact spelling conflict is `Dove` (brand, PAM-1326) versus the original `dove` animal. It is now explicitly disambiguated as `Dove (personal care brand)`, preserving both distinct identities for a **3,425-target** combined preview without changing the original answer.
 
 The largest repeated-profile groups include 100 historic sites, 100 natural landmarks, 100 built landmarks, 80 sculptures and 80 rock musicians. Source research is incomplete for distinguishing individual subjects.
 
@@ -36,6 +36,6 @@ The largest repeated-profile groups include 100 historic sites, 100 natural land
 
 The live game is **not** production-ready for these 1,649 net new identities: no full combined 20-question engine integration, human factual approval or novel-question approval has been completed. The existing roster-based experiment identifies zero of its sampled targets; 1,503 have indistinguishable profiles, so model tuning alone cannot overcome missing facts.
 
-The full GitHub CI workflow is **not green**. One older selection-regression gate still fails with six specific wrong-first-guess targets and slightly excessive repeated question families. A separate knowledge audit flags five legacy contradictions involving fictional or deceased subjects. Neither should be concealed by relaxing checks.
+The independent recovered-roster benchmark job now succeeds and its 3,425-target identity reconciliation is covered by regression tests. The full GitHub CI workflow is **not green**. One older selection-regression gate still fails with six specific wrong-first-guess targets and slightly excessive repeated question families. A separate knowledge audit flags five legacy contradictions involving fictional or deceased subjects. Neither should be concealed by relaxing checks.
 
 GitHub Actions run: https://github.com/mysterykalman/SSBD/actions/runs/39883432414
