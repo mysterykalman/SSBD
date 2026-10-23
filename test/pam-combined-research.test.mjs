@@ -6,7 +6,12 @@ const merged=await loadPamCombinedResearch();
 test('real recovered thematic roster is physically combined with untouched original answers',()=>{
  const m=merged.metadata;
  assert.equal(m.originalTargets,1775);assert.equal(m.sourceRoster,1650);
- assert.equal(m.netNewTargets+m.overlaps.length,1650);
+ assert.equal(m.netNewTargets,1650);
+ assert.equal(m.overlaps.length,1);
+ assert.equal(m.resolvedAliases.length,1);
+ assert.ok(merged.targets.includes('Dove (personal care brand)'));
+ assert.ok(merged.targets.includes('dove'));
+ assert.equal(m.combinedTargets,3425);
  assert.equal(m.combinedTargets,1775+m.netNewTargets);
  assert.equal(merged.targets.length,m.combinedTargets);
  assert.equal(merged.questions.length,m.combinedQuestions);

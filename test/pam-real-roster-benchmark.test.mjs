@@ -13,7 +13,11 @@ test('actual original 1775 and thematic 1650 names are reconciled without accide
  assert.equal(inventory.oldTargets,1775);
  assert.equal(inventory.recoveredCandidates,1650);
  assert.equal(inventory.internalDuplicates.length,0);
- assert.equal(inventory.uniqueNewNames+inventory.crossLibraryExactNameOverlaps.length,1650);
+ assert.equal(inventory.uniqueNewNames,1650);
+ assert.equal(inventory.crossLibraryExactNameOverlaps.length,1);
+ assert.equal(inventory.resolvedAliases.length,1);
+ assert.equal(inventory.resolvedAliases[0].disambiguatedName,'Dove (personal care brand)');
+ assert.equal(inventory.combinedUniqueNames,3425);
  assert.equal(inventory.combinedUniqueNames,1775+inventory.uniqueNewNames);
 });
 test('real roster has a compiled question set with explicit unknowns',()=>{
