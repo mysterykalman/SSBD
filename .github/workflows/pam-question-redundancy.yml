@@ -32,3 +32,19 @@ jobs:
         run: node --test test/pam-classic20q.test.mjs test/pam-quality375.test.mjs test/pam-question-redundancy.test.mjs test/pam-reviewed-corrections.test.mjs test/pam-reviewed-gameplay.test.mjs test/pam-thematic-pilot.test.mjs test/pam-real-roster-benchmark.test.mjs test/pam-combined-research.test.mjs
       - name: Run production build
         run: npm run build
+
+  research-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Profile all 1650 recovered candidates and test 33 stratified subjects
+        run: node scripts/pam-real-roster-quickcheck.mjs artifacts/pam-real-roster-quickcheck.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pam-real-roster-quickcheck
+          path: artifacts/pam-real-roster-quickcheck.json
