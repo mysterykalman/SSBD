@@ -10,7 +10,7 @@ import {applyReviewedPamCorrections} from './pam-reviewed-corrections.mjs';
 import {loadThematicRoster,compileThematicModel,collisionAudit,oracleTrial} from './pam-thematic-lab.mjs';
 import {oracleThematicGame} from './pam-thematic-reasoner.mjs';
 
-const norm=v=>String(v).normalize('NFKC').trim().toLocaleLowerCase('en').replace(/\\s+/g,' ');
+const norm=v=>String(v).normalize('NFKC').trim().toLocaleLowerCase('en').replace(/\s+/g,' ');
 export function inventoryCombined(base,roster){
  if(base.targets.length!==1775||base.questions.length!==156||roster.length!==1650)throw Error('Actual 1775 + 1650 required');
  const original=new Map(base.targets.map((name,i)=>[norm(name),i]));
@@ -45,7 +45,7 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
  const benchmark=benchmarkThematicCohorts(roster);
  const report={status:'RESEARCH_ONLY_NOT_PRODUCTION_APPROVAL',date:'2026-10-22',inventory:{...inventory,newEntries:undefined},benchmark:{...benchmark,trials:undefined},limits:['Candidate labels and inferred questions have not been individually verified','Thematic engine is run with all 1650 candidate profiles, but NOT integrated with 1775 classic gameplay','No new production target or approved question is claimed']};
  const dest=process.argv[2]||'artifacts/pam-real-roster-benchmark.json';
- await mkdir(dirname(dest),{recursive:true});await writeFile(dest,JSON.stringify(report,null,2)+'\\n');
- await writeFile(dest.replace(/\\.json$/,'')+'-trials.json',JSON.stringify(benchmark.trials,null,2)+'\\n');
+ await mkdir(dirname(dest),{recursive:true});await writeFile(dest,JSON.stringify(report,null,2)+'\n');
+ await writeFile(dest.replace(/\.json$/,'')+'-trials.json',JSON.stringify(benchmark.trials,null,2)+'\n');
  console.log(JSON.stringify({file:dest,candidates:inventory.recoveredCandidates,uniqueNew:inventory.uniqueNewNames,overlaps:inventory.crossLibraryExactNameOverlaps.length,questions:benchmark.questions,exact:benchmark.exactSolved,soft:benchmark.softSolved,trials:benchmark.tested,colliding:benchmark.collisions.collidingProfiles}));
 }
